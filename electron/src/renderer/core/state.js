@@ -99,8 +99,79 @@ function loadHubSectionHeights(){
   try { return JSON.parse(localStorage.getItem(HUB_SECTION_HEIGHTS_KEY) || '{}'); }
   catch(e){ return {}; }
 }
-const UI_THEME_OPTIONS = ['daylight','moonlight','midnight','redEclipse','clearSky','clearStar','afterRain','rainbow','atDawn','atDusk','atDay','blueEclipse','clearAurora','atTwilight','atSunset','clearComet','atDaybreak','afterSunset','atSunrise','atNight','atNoon','clearDusk','atMidnight','clearMoon','clearGalaxy','clearNebula','afterStorm','afterSnow','atMorning','clearSun','atEvening','clearMeteor'];
-const UI_LANGUAGE_OPTIONS = ['en','ja','ko','th','zh','vi','id','es','pt','fr','de','ru','it','nl','pl','uk','tr','qd'];
+// Themes and locales installed from DraconDex-PKG. Filled once at boot by
+// applyInstalledPackages() below, from window.api.pkg.active(). Empty until
+// then on purpose: a slow or failed package load degrades to exactly the
+// built-in behaviour rather than to an empty picker.
+const INSTALLED_PACKAGES = { themes: [], langs: [], views: [] };
+
+// Built-in options. The live registries below start as copies of these and are
+// EXTENDED in place when packages load, so every `UI_THEME_OPTIONS.includes(x)`
+// call site keeps working with no change.
+const UI_THEME_OPTIONS_BUILTIN = ['daylight','moonlight','midnight','redEclipse','clearSky','clearStar','afterRain','rainbow','atDawn','atDusk','atDay','blueEclipse','clearAurora','atTwilight','atSunset','clearComet','atDaybreak','afterSunset','atSunrise','atNight','atNoon','clearDusk','atMidnight','clearMoon','clearGalaxy','clearNebula','afterStorm','afterSnow','atMorning','clearSun','atEvening','clearMeteor'];
+const UI_LANGUAGE_OPTIONS_BUILTIN = ['en','ja','ko','th','zh','vi','id','es','pt','fr','de','ru','it','nl','pl','uk','tr','qd'];
+
+const UI_THEME_OPTIONS = UI_THEME_OPTIONS_BUILTIN.slice();
+const UI_LANGUAGE_OPTIONS = UI_LANGUAGE_OPTIONS_BUILTIN.slice();
+
+/**
+ * Replace the installed-package registry and re-extend both option lists in
+ * place. Called at boot and again after an install or uninstall.
+ *
+ * A downloaded package must never redefine a built-in out from under the app.
+ * Themes are safe by construction — an installed one is `pkg:<id>`, so it
+ * cannot collide with a bare built-in name. Locales share one namespace (a
+ * package supplying `th` really is the `th` the app already has), so there the
+ * built-in wins and the package is skipped.
+ */
+function applyInstalledPackages(active){
+  INSTALLED_PACKAGES.themes = Array.isArray(active?.themes) ? active.themes : [];
+  INSTALLED_PACKAGES.langs  = Array.isArray(active?.langs)  ? active.langs  : [];
+  INSTALLED_PACKAGES.views  = Array.isArray(active?.views)  ? active.views  : [];
+
+  // splice+push rather than reassign: these are `const`, and every consumer
+  // holds the same array reference.
+  UI_THEME_OPTIONS.splice(0, UI_THEME_OPTIONS.length, ...UI_THEME_OPTIONS_BUILTIN);
+  for (const t of INSTALLED_PACKAGES.themes) {
+    const id = `pkg:${t.id}`;
+    if (!UI_THEME_OPTIONS.includes(id)) UI_THEME_OPTIONS.push(id);
+  }
+  UI_LANGUAGE_OPTIONS.splice(0, UI_LANGUAGE_OPTIONS.length, ...UI_LANGUAGE_OPTIONS_BUILTIN);
+  for (const l of INSTALLED_PACKAGES.langs) {
+    if (!UI_LANGUAGE_OPTIONS.includes(l.locale)) UI_LANGUAGE_OPTIONS.push(l.locale);
+  }
+}
+
+/**
+ * Take the result of window.api.pkg.active() and make the app aware of it:
+ * extend the option lists, and merge any installed locale into i18n.js's L so
+ * t() resolves its keys like any built-in language.
+ *
+ * A package locale is merged UNDER the built-in table for its code when one
+ * exists, so a package can add keys but never rewrite the app's own strings.
+ */
+function loadInstalledPackages(active){
+  applyInstalledPackages(active);
+  for (const l of INSTALLED_PACKAGES.langs) {
+    if (!l?.locale || !l.keys) continue;
+    L[l.locale] = Object.assign({}, l.keys, L[l.locale] || {});
+    if (typeof LANGUAGE_LABELS === 'object' && LANGUAGE_LABELS && !LANGUAGE_LABELS[l.locale]) {
+      LANGUAGE_LABELS[l.locale] = l.label || l.locale;
+    }
+  }
+}
+
+/** The palette an installed theme package carries, or null. */
+function installedThemeVars(theme){
+  const t = INSTALLED_PACKAGES.themes.find(x => `pkg:${x.id}` === theme);
+  return t ? t.vars : null;
+}
+
+/** The key table an installed locale package carries, or null. */
+function installedLangKeys(code){
+  const l = INSTALLED_PACKAGES.langs.find(x => x.locale === code);
+  return l ? l.keys : null;
+}
 // Plan part2 #New Workspace — which top-level app layout is active. 'drake'
 // (today's nav-rail+left-panel+split-pane Builder) is the default so
 // nobody's UI changes on upgrade; 'wyvern' (newcomer/simple) and 'dragon'
@@ -135,8 +206,21 @@ function autoUiSizeFromScreen(){
   const stepped = Math.round((w / 1920) * 100 / UI_SIZE_STEP) * UI_SIZE_STEP;
   return Math.min(130, Math.max(80, stepped));
 }
-// The 10 palette tokens a custom theme overrides (mockup 27).
-const CUSTOM_THEME_TOKENS = ['--bg','--surface','--raised','--hover','--border','--t1','--t2','--t3','--accent','--accentH'];
+// Every palette token a custom or installed theme may override.
+//
+// Was 10 (mockup 27) until theme packages arrived. The built-in blocks in
+// css/themes.css actually use 15: the 12 below that appear in all 32 themes,
+// plus --on-accent (15 of 32) and --button/--on-button (12 of 32). Injecting
+// only 10 left --danger/--success/--button/--on-accent/--on-button at whatever
+// the PREVIOUS theme had put on <body> — a half-applied theme, which reads as a
+// subtle colour bug rather than an obvious failure.
+//
+// applyUiSettings() clears every token in this list before setting the ones a
+// theme provides, so widening it is safe for existing 10-token custom themes:
+// the five new ones simply fall through to css/themes.css as they did before.
+const CUSTOM_THEME_TOKENS = ['--bg','--surface','--raised','--hover','--border',
+  '--t1','--t2','--t3','--accent','--accentH','--danger','--success',
+  '--button','--on-accent','--on-button'];
 
 // Cloud Sync (Supabase Token Sync) is switched off since v4.5.0. The repo is
 // open source now, and making every user or forker stand up their own

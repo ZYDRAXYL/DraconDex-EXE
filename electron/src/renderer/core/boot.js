@@ -18,14 +18,28 @@ async function init() {
   // precisely so the Welcome window can draw vault colours and run
   // colorPicker() when creating a vault.
   S.isWelcome = new URLSearchParams(location.search).get('welcome') === '1';
-  const [colors, recentColors, nexuses, windowId] = await Promise.all([
+  const [colors, recentColors, nexuses, windowId, installedPackages] = await Promise.all([
     api.color.getAll(),
     api.color.getRecent(),
     api.nexus.getAll(),
     api.window.getId(),
+    // Themes/locales/view presets installed from DraconDex-PKG. It joins wave 1
+    // because it is free here (no data dependency) and it MUST land before
+    // anything renders: t() reads L, which an installed locale extends, and
+    // applyUiSettings() needs an installed theme's palette to have arrived.
+    api.pkg.active().catch(() => null),
   ]);
   S.colors = colors; S.recentColors = recentColors; S.nexuses = nexuses;
   S._windowId = windowId;
+  // Never let a package failure block boot — a null here just means the app
+  // behaves exactly as it did before packages existed.
+  if (installedPackages) {
+    loadInstalledPackages(installedPackages);
+    // applyUiSettings() already ran at the top of init() against the built-in
+    // registries. Re-run it only when the active theme actually came from a
+    // package, so the common case pays nothing.
+    if (String(S.settings.theme).startsWith('pkg:')) applyUiSettings();
+  }
   // Longest single stall of the boot: that first await is what triggers
   // getDB() → open the SQLite file + run initDB() migrations in main.
   window.__splash?.set(80);

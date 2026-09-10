@@ -21,7 +21,7 @@ const SETTING_GROUPS = {
   workspace: ['theme', 'textsize', 'tooltoggle', 'style', 'startup'],
   user: ['account', 'profile'],
   appdata: ['tokensync', 'database', 'backup', 'cloudstorage', 'versions'],
-  plugin: ['plugin', 'pluginsettings'],
+  plugin: ['plugin', 'pluginsettings', 'packages'],
 };
 function settingGroupPages(group){
   const pages = SETTING_GROUPS[group] || SETTING_GROUPS.workspace;
@@ -38,6 +38,7 @@ const SETTING_PAGE_LABEL_KEY = {
   tokensync: 'settingPageTokenSync', database: 'settingPageDatabase', backup: 'prefs_backup',
   cloudstorage: 'settingPageCloudStorage', versions: 'settingPageVersions',
   plugin: 'prefs_plugin', pluginsettings: 'settingPagePluginSettings',
+  packages: 'settingPagePackages',
 };
 // Populated by each page's owning file at parse time — key is 'group.page'.
 // A page renderer may be synchronous (returns final HTML) or kick off an

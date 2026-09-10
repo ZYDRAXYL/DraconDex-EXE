@@ -27,6 +27,7 @@ const supabaseSetup = require('./src/db/supabase-setup');
 const drive     = require('./src/db/drive');
 const update    = require('./src/db/update');
 const plugin    = require('./src/db/plugin');
+const pkg       = require('./src/db/pkg');
 const dbTransfer = require('./src/db/db-transfer');
 const cloud     = require('./src/db/cloud');
 
@@ -59,6 +60,7 @@ module.exports = {
   ...drive,
   ...update,
   ...plugin,
+  ...pkg,
   ...dbTransfer,
   ...cloud,
 };

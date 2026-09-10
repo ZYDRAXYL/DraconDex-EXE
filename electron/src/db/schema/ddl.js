@@ -108,6 +108,36 @@ const APP_DDL_SQL = `
     -- be resolved at install time (fail_code says why); such a row counts as
     -- missing, so the plugin stays un-launchable until the user retries it.
     -- (No backticks in this file — DDL_SQL is one template literal.)
+    -- Packages installed from ZYDRAXYL/DraconDex-PKG (themes, locales, view
+    -- presets). App-level like plugin/app_setting, NOT vault-level: a package
+    -- belongs to the install, not to one Nexus, so it deliberately stays out of
+    -- the shared vault.sql the Flutter side also generates from.
+    --
+    -- payload_json holds the whole payload rather than a path on disk. These
+    -- are a few KB of JSON, they are read at boot on every start, and keeping
+    -- them in the DB means an install is one transaction that either happened
+    -- or did not — no half-written file to reconcile.
+    --
+    -- source_sha256 is the hash the catalog declared, recorded so a later
+    -- integrity re-check can tell "this payload was tampered with on disk"
+    -- apart from "PKG republished this package".
+    CREATE TABLE IF NOT EXISTS installed_package (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pkg_id TEXT NOT NULL UNIQUE,
+      kind TEXT NOT NULL,
+      name TEXT NOT NULL,
+      version TEXT NOT NULL,
+      display_json TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      source_repo TEXT NOT NULL,
+      source_release TEXT NOT NULL,
+      source_asset TEXT NOT NULL,
+      source_sha256 TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      installed_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS plugin_dependency (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       plugin_ref INTEGER NOT NULL REFERENCES plugin(id) ON DELETE CASCADE,

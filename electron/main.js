@@ -977,6 +977,16 @@ h('update:setAutoCheck', (v)   => db.setAutoCheck(v));
 // must resolve the calling plugin from event.sender, not from an argument.
 // `preview` and `install` each take the pasted repo URL and nothing else —
 // install re-resolves it from scratch rather than trusting the preview.
+// Packages from ZYDRAXYL/DraconDex-PKG. pkg.js does its own validation of
+// everything the remote catalog claims — these are pass-throughs, same as the
+// plugin handlers above them.
+h('pkg:list',       ()            => db.pkgList());
+h('pkg:active',     ()            => db.pkgActive());
+h('pkg:catalog',    (release)     => db.pkgCatalog(release));
+h('pkg:install',    (id, release) => db.pkgInstall(id, release));
+h('pkg:uninstall',  (id)          => db.pkgUninstall(id));
+h('pkg:setEnabled', (id, on)      => db.pkgSetEnabled(id, on));
+
 h('plugin:list',      ()    => db.pluginList());
 h('plugin:listOrgRepos', () => db.pluginListOrgRepos());
 h('plugin:preview',   (url) => db.pluginPreview(url));

@@ -254,6 +254,17 @@ contextBridge.exposeInMainWorld('api', {
     stop:      (id)  => inv('plugin:stop', id),
     isRunning: (id)  => inv('plugin:isRunning', id),
   },
+  // Packages (themes / locales / view presets) from ZYDRAXYL/DraconDex-PKG.
+  // The fetch happens in main because index.html's CSP sets connect-src 'none' —
+  // the renderer cannot reach the network at all, by design.
+  pkg: {
+    list:       ()            => inv('pkg:list'),
+    active:     ()            => inv('pkg:active'),
+    catalog:    (release)     => inv('pkg:catalog', release),
+    install:    (id, release) => inv('pkg:install', id, release),
+    uninstall:  (id)          => inv('pkg:uninstall', id),
+    setEnabled: (id, on)      => inv('pkg:setEnabled', id, on),
+  },
   importdock: {
     list:          (nx)     => inv('importdock:list', nx),
     add:           (nx,fs2) => inv('importdock:add', nx,fs2),

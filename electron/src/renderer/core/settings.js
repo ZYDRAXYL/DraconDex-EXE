@@ -25,9 +25,17 @@ function applyUiSettings(){
   // as inline CSS vars; built-ins clear them and use style.css rules.
   const custom = String(S.settings.theme).startsWith('custom:')
     ? (S.settings.customThemes || []).find(ct => `custom:${ct.id}` === S.settings.theme) : null;
-  document.body.dataset.theme = custom ? 'custom' : S.settings.theme;
+  // A theme installed from DraconDex-PKG applies exactly like a user-made
+  // custom one — inline CSS variables on <body>, under data-theme="custom".
+  // index.html's CSP is why: connect-src 'none' and style-src 'self' mean a
+  // downloaded stylesheet can be neither fetched here nor <link>ed, so a
+  // package's palette has to arrive as data and be set as properties.
+  const installed = String(S.settings.theme).startsWith('pkg:')
+    ? installedThemeVars(S.settings.theme) : null;
+  const vars = custom?.vars || installed;
+  document.body.dataset.theme = (custom || installed) ? 'custom' : S.settings.theme;
   for (const tok of CUSTOM_THEME_TOKENS) {
-    if (custom && custom.vars?.[tok]) document.body.style.setProperty(tok, custom.vars[tok]);
+    if (vars && vars[tok]) document.body.style.setProperty(tok, vars[tok]);
     else document.body.style.removeProperty(tok);
   }
   document.documentElement.style.setProperty('--fsc', String((S.settings.fontScale || 100) / 100));
@@ -51,6 +59,9 @@ function applyUiSettings(){
 function setUiSetting(key, value){
   const isCustomTheme = String(value).startsWith('custom:') &&
     (S.settings.customThemes || []).some(ct => `custom:${ct.id}` === value);
+  // UI_THEME_OPTIONS already carries `pkg:<id>` for every installed theme
+  // package (state.js's applyInstalledPackages extends it in place), so an
+  // installed theme passes this gate without a second condition.
   if(key === 'theme' && !UI_THEME_OPTIONS.includes(value) && !isCustomTheme) return;
   if(key === 'nameMode' && !['unique','classic'].includes(value)) return;
   if(key === 'fontScale'){
