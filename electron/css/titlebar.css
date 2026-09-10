@@ -1,0 +1,165 @@
+/* Window shell chrome — frameless #window-frame, the title/tab bar, project
+   tabs, the settings + layout menus, and the min/max/close window controls. */
+#window-frame{height:100%;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+/* Popped-out Builder tab window (Plan part3 #2) — just that tab's content,
+   no Nexus Nest tree / nav rail / settings. Window controls + .title-drag
+   stay so the popup remains movable/closable. */
+#window-frame.popup-mode #nav-sidebar,
+#window-frame.popup-mode #left-panel,
+#window-frame.popup-mode #builder-tabs,
+#window-frame.popup-mode #layout-menu-wrap,
+#window-frame.popup-mode #hub-toggle-btn,
+#window-frame.popup-mode #titlebar-vault,
+#window-frame.popup-mode #settings-menu-wrap,
+#window-frame.popup-mode #titlebar-update-btn,
+#window-frame.popup-mode #status-bar{display:none}
+#title-tab-bar{
+	height:38px;background:var(--bg);border-bottom:1px solid var(--border);
+	display:flex;align-items:center;gap:6px;flex-shrink:0;
+	-webkit-app-region:drag;
+}
+/* Mirrors #nav-sidebar + #left-panel's widths (both static vars) so the builder
+   tab strip that follows lines up with #main-area's left edge below. Tracks the
+   collapsed state via the same class applyLeftPanelState() toggles onto #app. */
+#title-left-zone{
+	width:calc(var(--nav) + var(--sidebar));flex-shrink:0;
+	display:flex;align-items:center;overflow:hidden;height:100%;
+	position:relative;
+}
+/* +1px: #left-panel keeps its 1px border-right (just transparent) even at
+   width:0 when collapsed, so #main-area's real left edge is nav width + 1px. */
+#title-tab-bar.left-panel-collapsed #title-left-zone{width:calc(var(--nav) + 1px)}
+#title-tab-bar.left-panel-collapsed #titlebar-vault{display:none}
+.tab-brand{
+	width:44px;height:38px;display:flex;align-items:center;justify-content:center;
+	color:var(--t2);flex-shrink:0;
+}
+.tab-brand .icon{width:24px;height:24px}
+.tab-brand .brand-img{height:24px;width:24px}
+#project-tabs{
+	display:flex;align-items:flex-end;gap:2px;min-width:0;max-width:60vw;
+	height:100%;overflow-x:auto;overflow-y:hidden;padding-top:5px;
+	-webkit-app-region:no-drag;
+}
+#project-tabs::-webkit-scrollbar{height:0}
+.project-tab{
+	height:32px;min-width:136px;max-width:220px;padding:0 8px 0 11px;
+	border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;
+	background:var(--raised);color:var(--t2);display:flex;align-items:center;gap:8px;
+	font-size:calc(12.5px * var(--fsc,1));cursor:pointer;transition:all var(--ease);
+	font-family:inherit;-webkit-app-region:no-drag;
+}
+.project-tab:hover{background:var(--hover);color:var(--t1)}
+.project-tab.active{background:var(--surface);border-color:var(--border);color:var(--t1)}
+.project-tab .tab-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--accent)}
+.project-tab .tab-name{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-tab .tab-close{
+	width:20px;height:20px;border:none;border-radius:var(--rs);background:transparent;
+	color:var(--t3);cursor:pointer;display:flex;align-items:center;justify-content:center;
+	font-size:calc(15px * var(--fsc,1));line-height:1;font-family:inherit;flex-shrink:0;
+}
+.project-tab .tab-close:hover{color:var(--t1)}
+.title-tab-add{
+	width:28px;height:28px;border:none;border-radius:var(--r);background:transparent;
+	color:var(--t2);font-size:calc(20px * var(--fsc,1));line-height:1;cursor:pointer;font-family:inherit;
+	-webkit-app-region:no-drag;
+}
+.title-tab-add:hover{color:var(--t1)}
+.title-drag{flex:1;height:100%;min-width:24px}
+/* Plan process1 part2 #1.2: green "update available" indicator next to the
+   settings gear — hidden by default, shown by update.js's
+   updateTitlebarIndicator() once a newer release is found. Uses the app's
+   existing --success token (same green as #toast.ok) rather than a new color. */
+.title-update-btn{
+	width:38px;height:34px;border:none;border-radius:var(--r);background:transparent;
+	color:var(--success);display:flex;align-items:center;justify-content:center;cursor:pointer;
+	-webkit-app-region:no-drag;flex-shrink:0;
+}
+.title-update-btn.hidden{display:none}
+.title-update-btn .icon{width:17px;height:17px}
+.title-update-btn:hover{background:var(--hover)}
+#settings-menu-wrap{
+	position:relative;height:100%;display:flex;align-items:center;flex-shrink:0;
+	-webkit-app-region:no-drag;
+}
+.title-settings-btn{
+	width:38px;height:34px;border:none;border-radius:var(--r);background:transparent;
+	color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;
+	-webkit-app-region:no-drag;
+}
+.title-settings-btn .icon{width:17px;height:17px}
+.title-settings-btn:hover,.title-settings-btn.active{background:var(--hover);color:var(--t1)}
+#settings-menu{
+	position:absolute;top:38px;right:0;width:292px;background:var(--surface);
+	border:1px solid var(--border);border-radius:0 0 var(--r) var(--r);
+	box-shadow:var(--shadow-menu);padding:12px;z-index:300;
+	color:var(--t1);
+}
+#settings-menu.hidden{display:none}
+.settings-head{
+	display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;
+	font-size:calc(12px * var(--fsc,1));font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);
+}
+.settings-close{
+	width:24px;height:24px;border:none;border-radius:var(--rs);background:transparent;
+	color:var(--t3);cursor:pointer;font-family:inherit;font-size:calc(14px * var(--fsc,1));line-height:1;
+}
+.settings-close:hover{color:var(--t1)}
+.settings-group{padding:10px 0;border-top:1px solid var(--border)}
+.settings-group:first-child{border-top:none;padding-top:0}
+.settings-label{font-size:calc(11px * var(--fsc,1));font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--t3);margin-bottom:8px}
+.settings-label-row{display:flex;align-items:center;justify-content:space-between}
+.settings-options{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.settings-options.lang{grid-template-columns:repeat(5,1fr)}
+.settings-option{
+	height:30px;border:1px solid var(--border);border-radius:var(--rs);background:var(--bg);
+	color:var(--t2);font-size:calc(12px * var(--fsc,1));font-weight:600;cursor:pointer;font-family:inherit;
+}
+.settings-option:hover{background:var(--hover);color:var(--t1)}
+.settings-option.active{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+.settings-select{
+	width:100%;height:34px;border:1px solid var(--border);border-radius:var(--rs);
+	background:var(--bg);color:var(--t1);font-size:calc(12.5px * var(--fsc,1));font-weight:600;
+	font-family:inherit;padding:0 10px;outline:none;cursor:pointer;
+}
+.settings-select:focus{border-color:var(--accent)}
+.settings-select option{background:var(--surface);color:var(--t1)}
+.theme-list{
+	display:flex;flex-direction:column;gap:5px;
+	/* Plan part3 setting#1: show exactly 4 rows before scrolling — .theme-item
+	   is 33px tall (19px swatch + 12px padding + 2px border), gap 5px. */
+	max-height:calc(33px * 4 + 5px * 3);overflow-y:auto;padding-right:3px;
+}
+.theme-item{
+	display:flex;align-items:center;gap:9px;width:100%;
+	padding:6px 8px;border:1px solid var(--border);border-radius:var(--rs);
+	background:var(--bg);color:var(--t2);cursor:pointer;font-family:inherit;
+	font-size:calc(12px * var(--fsc,1));font-weight:600;text-align:left;transition:background var(--ease),border-color var(--ease);
+}
+.theme-item:hover{background:var(--hover);color:var(--t1)}
+.theme-item.active{border-color:var(--accent);color:var(--t1)}
+.theme-swatches{
+	display:inline-flex;flex-shrink:0;border-radius:4px;overflow:hidden;
+	border:1px solid var(--border);
+}
+.theme-swatches i{width:13px;height:19px;display:block}
+.theme-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.theme-check{flex-shrink:0;color:var(--accent);font-weight:700;font-size:calc(13px * var(--fsc,1))}
+.settings-slider{width:100%;accent-color:var(--accent);cursor:pointer}
+.settings-slider-scale{
+	display:flex;justify-content:space-between;margin-top:5px;color:var(--t3);
+	font-size:calc(10.5px * var(--fsc,1));font-weight:600;
+}
+#window-controls{
+	height:100%;display:flex;align-items:stretch;flex-shrink:0;
+	-webkit-app-region:no-drag;
+}
+.window-btn{
+	width:46px;height:38px;border:none;border-radius:0;background:transparent;
+	color:var(--t2);font-size:calc(13px * var(--fsc,1));cursor:pointer;font-family:inherit;
+}
+.window-btn:hover{color:var(--t1)}
+.window-btn.close:hover{background:var(--danger);color:var(--on-danger)}
+
+#app{display:flex;flex:1;min-height:0;position:relative}
+

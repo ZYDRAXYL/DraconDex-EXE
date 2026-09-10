@@ -1,0 +1,104 @@
+name: Publish package (GitHub Packages)
+
+# Publishes the app's npm package (@zydraxyl/dracondex) to GitHub Packages
+# (https://npm.pkg.github.com), which is what backs the repo's "Packages"
+# section.
+#
+# Publishing a GitHub release triggers this automatically, so a release ends up
+# with both the Windows build assets (build-electron.yml) and the package. A
+# manual run can publish the current package.json version on its own, or just
+# pack it to inspect the tarball without publishing.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Pack only — build the tarball but do not publish'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-package-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@zydraxyl'
+          cache: npm
+
+      # --ignore-scripts skips the ensure-electron postinstall: publishing never
+      # needs the ~100 MB Electron binary, only the test dependencies.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run regression tests
+        run: node --test "electron/test/*.test.mjs"
+
+      - name: Resolve package name and version
+        id: meta
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          echo "name=$name"       >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Publishing $name@$version"
+
+          # A release publishing a version other than its own tag would ship the
+          # wrong code under that version, so stop rather than guess.
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag='${{ github.event.release.tag_name }}'
+            if [ "${tag#v}" != "$version" ]; then
+              echo "::error::Release tag '$tag' does not match package.json version '$version'."
+              exit 1
+            fi
+          fi
+
+      - name: Build the tarball
+        run: npm pack
+
+      - name: Show tarball contents
+        run: |
+          tarball=$(ls -1 zydraxyl-dracondex-*.tgz)
+          size=$(du -h "$tarball" | cut -f1)
+          {
+            echo "### \`${{ steps.meta.outputs.name }}@${{ steps.meta.outputs.version }}\`"
+            echo ""
+            echo "Tarball: \`$tarball\` ($size, $(tar -tzf "$tarball" | wc -l) files)"
+          } >> "$GITHUB_STEP_SUMMARY"
+          tar -tzf "$tarball" | head -40
+
+      - name: Publish to GitHub Packages
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          name='${{ steps.meta.outputs.name }}'
+          version='${{ steps.meta.outputs.version }}'
+
+          # The registry rejects a re-publish of an existing version with a 409,
+          # which would fail a re-run of an otherwise fine release. Skip instead.
+          if npm view "$name@$version" version --registry=https://npm.pkg.github.com > /dev/null 2>&1; then
+            echo "$name@$version is already published — nothing to do."
+            echo "Skipped: \`$name@$version\` is already published." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          npm publish
+          echo "Published \`$name@$version\` to GitHub Packages." >> "$GITHUB_STEP_SUMMARY"

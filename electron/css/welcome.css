@@ -1,0 +1,143 @@
+/* Welcome window (v4.6.0) — src/renderer/core/welcome.js.
+   The Welcome screen runs in its own Electron window (main.js
+   createWelcomeWindow) but shares index.html, so it starts life wearing the
+   whole app shell. body.welcome-mode strips that back to a bare two-column
+   picker: title bar (drag region + window buttons) on top, vault list left,
+   hero right. Linked LAST in index.html so these hide rules win over the
+   layout files without !important. */
+
+/* ── Chrome the Welcome window has no use for ───────────────────────── */
+body.welcome-mode #nav-sidebar,
+body.welcome-mode #hub-toggle-btn,
+body.welcome-mode #builder-tabs,
+body.welcome-mode #layout-menu-wrap,
+body.welcome-mode #search-bar,
+body.welcome-mode #left-panel-resize,
+body.welcome-mode #workspace-toolbar,
+body.welcome-mode #status-bar{display:none}
+
+/* Fixed-width list: there is no resize handle here, and applyLeftPanelWidth()
+   never runs in this window, so the panel keeps one honest width. */
+body.welcome-mode #left-panel{width:220px}
+body.welcome-mode #main-inner{display:flex;align-items:center;justify-content:center;padding:24px}
+
+/* ── Hero ───────────────────────────────────────────────────────────── */
+.welcome-hero{
+	display:flex;flex-direction:column;align-items:center;text-align:center;
+	gap:var(--sp-5);max-width:520px;width:100%;
+}
+.welcome-title{font-size:var(--fs-xl);color:var(--t1);font-weight:600}
+.welcome-text{font-size:var(--fs-body);color:var(--t2);line-height:var(--lh-relaxed);margin:0}
+
+.welcome-actions{display:flex;gap:var(--sp-3);flex-wrap:wrap;justify-content:center}
+.welcome-actions .btn{min-width:180px}
+
+/* Empty-state hint under the (empty) vault list in the left panel. */
+.welcome-side-empty{
+	padding:var(--sp-5);font-size:var(--fs-sm);color:var(--t3);
+	line-height:var(--lh-relaxed);text-align:center;
+}
+
+/* ── Recent vaults ──────────────────────────────────────────────────── */
+/* Up to three, newest first, from the NEXUS_RECENT_KEY MRU (state.js). */
+.welcome-recent{width:100%;display:flex;flex-direction:column;gap:var(--sp-2)}
+.welcome-recent-label{
+	font-size:var(--fs-xs);color:var(--t3);text-transform:uppercase;
+	letter-spacing:.06em;text-align:left;
+}
+.welcome-recent-row{display:flex;flex-direction:column;gap:var(--sp-1)}
+.welcome-recent-card{
+	display:flex;align-items:center;gap:var(--sp-3);width:100%;
+	padding:var(--sp-4) var(--sp-5);
+	background:var(--raised);border:1px solid var(--border);border-radius:var(--r);
+	color:var(--t1);font-size:var(--fs-body);font-family:inherit;text-align:left;
+	cursor:pointer;transition:background var(--ease),border-color var(--ease);
+}
+.welcome-recent-card:hover{background:var(--hover);border-color:var(--accent)}
+.welcome-recent-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── First-run setup wizard ─────────────────────────────────────────── */
+/* The wizard has no left panel — it is one centered column, so the step lists
+   below are sized in rows to keep every step the same height in a 760x560
+   window (main.js createWelcomeWindow). Only the step body scrolls; the
+   heading, the progress dots and the Back/Skip/Next row stay put. */
+body.welcome-wizard-mode #left-panel{display:none}
+
+/* Sized by its content, not stretched: every step body is capped in rows
+   below, so the whole column stays short enough to sit centred in the pane
+   (#main-inner already centres it) instead of stranding the buttons at the
+   bottom of a mostly-empty window. */
+.welcome-wizard{
+	--wz-name-row:30px;   /* .welcome-name-row, 5 of them visible */
+	--wz-theme-row:97px;  /* .prefs-theme-cell with the shrunk preview below */
+	width:100%;max-width:640px;
+	display:flex;flex-direction:column;gap:var(--sp-5);text-align:center;
+}
+.welcome-wizard-head{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:var(--sp-2)}
+.welcome-wizard-head .welcome-title{margin-bottom:0}
+/* The "you can change this later in Settings" reassurance, on every step. */
+.welcome-wizard-note{
+	background:var(--raised);border-radius:var(--rl);padding:var(--sp-1) var(--sp-5);
+	font-size:var(--fs-xs);color:var(--t2);line-height:var(--lh-snug);
+}
+.welcome-wizard-body{min-height:0;padding-right:var(--sp-1)}
+.welcome-wizard-foot{
+	display:flex;justify-content:center;gap:var(--sp-3);flex-shrink:0;
+	padding-top:var(--sp-5);border-top:1px solid var(--border);
+}
+
+/* Progress dots — replaces the old left-panel step list. */
+.welcome-wizard-dots{display:flex;gap:var(--sp-2);justify-content:center}
+.welcome-dot{
+	width:7px;height:7px;border-radius:50%;background:var(--hover);
+	cursor:pointer;transition:background var(--ease),transform var(--ease);
+}
+.welcome-dot:hover{transform:scale(1.3)}
+.welcome-dot.done{background:var(--t3)}
+.welcome-dot.active{background:var(--accent);transform:scale(1.3)}
+
+/* Theme step: three rows of the shared card mockup, the rest on scroll. The
+   preview is shortened here only — at its Setting-window height of 80px three
+   rows do not fit this window. */
+.welcome-wizard .ctm-preview.mini{height:56px}
+.welcome-theme-scroll{
+	overflow-y:auto;
+	max-height:calc(var(--wz-theme-row) * 3 + 12px * 2); /* 12px = .prefs-theme-grid gap */
+}
+
+/* Module-name step: the two vocabularies as parallel lists, scrolled in step
+   with each other (welcomeSyncNameScroll in core/welcome.js). */
+.welcome-name-cols{display:flex;gap:var(--sp-3);align-items:flex-start}
+.welcome-name-box{
+	flex:1;min-width:0;border:1px solid var(--border);border-radius:var(--r);
+	background:var(--bg);cursor:pointer;overflow:hidden;
+	transition:border-color var(--ease);
+}
+.welcome-name-box:hover{border-color:var(--accentH)}
+.welcome-name-box.active{border-color:var(--accent)}
+.welcome-name-head{
+	padding:var(--sp-2) var(--sp-3);font-size:var(--fs-sm);font-weight:600;
+	color:var(--t2);border-bottom:1px solid var(--border);background:var(--surface);
+}
+.welcome-name-box.active .welcome-name-head{color:var(--accent)}
+.welcome-name-list{overflow-y:auto;max-height:calc(var(--wz-name-row) * 5)}
+.welcome-name-row{
+	height:var(--wz-name-row);display:flex;align-items:center;justify-content:center;
+	font-size:var(--fs-sm);color:var(--t2);
+	overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 var(--sp-2);
+}
+.welcome-name-box.active .welcome-name-row{color:var(--t1)}
+
+/* Layout step: "recommended" pin. Top-LEFT is taken by .prefs-theme-check. */
+.welcome-reco{
+	position:absolute;top:6px;right:6px;z-index:1;
+	background:var(--accent);color:var(--on-accent);border-radius:var(--rs);
+	padding:1px var(--sp-2);font-size:var(--fs-micro);font-weight:600;
+}
+
+/* The Setting window's language list is 320px tall — too tall for this window
+   once the heading, dots and button row have taken their share. */
+.welcome-wizard .lang-list{max-height:calc(var(--wz-name-row) * 6)}
+.welcome-wizard .prefs-lang-shell{text-align:left}
+
+.welcome-login-body{display:flex;flex-direction:column;gap:var(--sp-3);align-items:center}

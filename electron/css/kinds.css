@@ -1,0 +1,482 @@
+/* The 15 v3 module kinds — Chronicler, Wanderer, Narrator, Author, Scribe,
+   Drafter, Viewer, Connector, Sketcher, Designer — plus the Sage Hut and
+   Import Dock sections and the shared canvas/format toolbars. */
+/* ═══ v3 redo pass — builder tab strip, title-bar vault label, header chips
+   (progress.md mockups 01-33; decisions (o), A.2/A.3) ═══════════════════ */
+.titlebar-vault{font-size:calc(12px * var(--fsc,1));color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+/* Lives inline in #title-tab-bar now (moved from a second row below it), so it
+   needs its own no-drag region and chips shrunk to fit the fixed 38px bar. */
+#builder-tabs{
+	display:flex;align-items:center;gap:2px;min-width:0;flex-shrink:1;
+	height:100%;overflow-x:auto;overflow-y:hidden;margin-left:-6px;
+	-webkit-app-region:no-drag;
+}
+#builder-tabs.empty{display:none}
+#builder-tabs::-webkit-scrollbar{height:0}
+#builder-tabs .project-tab{background:var(--raised);height:30px;min-width:120px;border-radius:var(--r);border-bottom:1px solid transparent}
+#builder-tabs .project-tab.active{
+	background:var(--raised);border-color:var(--border);color:var(--t1);
+	box-shadow:inset 0 2px 0 var(--accent);
+}
+#builder-tabs .project-tab .ek{
+	font-size:calc(9.5px * var(--fsc,1));color:var(--t3);border:1px solid var(--border);
+	border-radius:3px;padding:0 4px;flex-shrink:0;letter-spacing:.03em;
+}
+/* accent "create Major module" rail tool (mockup 01) */
+#nav-sidebar .nav-btn.create{background:var(--accent);color:var(--on-accent);border-radius:var(--r)}
+#nav-sidebar .nav-btn.create:hover{background:var(--accentH)}
+/* module header chips row (tags + link count) */
+.module-head .kind-chip{
+	display:inline-block;font-size:calc(11px * var(--fsc,1));font-weight:500;color:var(--t2);
+	border:1px solid var(--border);border-radius:9px;padding:1px 9px;
+	vertical-align:2px;margin-left:6px;
+}
+/* ── Chronicler: one-line event rows, side-by-side dates, graph icons ── */
+.chr-ev-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chr-ev-date{font-size:calc(11.5px * var(--fsc,1));color:var(--t3);flex-shrink:0;margin-right:6px}
+.chr-daterow{display:flex;gap:14px;flex-wrap:wrap}
+/* 300px is the width a full 5-box date row actually needs (52+52+70+52+52 plus
+   separators). Below that the two dates wrap to their own lines instead of
+   squeezing the year field to nothing — which is what happens in the Downline
+   list's narrow right-hand column, as opposed to the wide Oneline inspector. */
+.chr-daterow .fg{flex:1;min-width:300px}
+.chr-insp-foot{display:flex;justify-content:flex-end;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+.chr-node-icon{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--t2)}
+.chr-node-icon .icon{width:14px;height:14px}
+.chr-node-icon .kicon-img-icon{width:14px;height:14px;border-radius:50%;object-fit:cover}
+.chr-downline-graph.is-panning{cursor:grabbing}
+
+.module-head .module-handle{
+	display:inline-block;font-size:calc(11px * var(--fsc,1));font-weight:500;color:var(--accentH);
+	border:1px solid var(--accent);border-radius:9px;padding:1px 9px;vertical-align:2px;
+}
+.module-head .mtags{display:flex;gap:6px;margin-top:7px;align-items:center;flex-wrap:wrap}
+/* floating canvas toolbar (mockup 03) */
+.ctoolbar-float{
+	position:absolute;top:12px;left:14px;z-index:3;display:flex;gap:5px;
+	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:5px;
+}
+.czoom .zsep{width:1px;height:12px;background:var(--border);margin:0 3px}
+/* Chronicler Down-line view: vertical proportional line + event list (mockup 22) */
+.chr-downline{display:flex;gap:22px;align-items:flex-start}
+.chr-downline-graph{flex:0 0 340px;min-width:0;position:relative;overflow:hidden}
+.chr-downline-note{font-size:calc(10.5px * var(--fsc,1));color:var(--t3);margin-top:6px}
+.chr-downline-list{flex:1;min-width:0}
+/* Chronicler event inspector (Plan part3 #2/#2.1/#2.2): shared below-graph
+   (One-line) and per-row dropdown (Down-line) editable panel, one open at a time */
+.chr-insp-row{margin-bottom:8px}
+.chr-insp-row .objrow .tree-chev{margin-left:2px}
+.chr-insp-body{
+	padding:14px 16px 4px;margin-top:6px;
+	background:var(--raised);border:1px solid var(--border);border-radius:var(--r);
+	animation:chrInspOpen .14s ease;
+}
+@keyframes chrInspOpen{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+/* ── Custom-calendar panel + unit pages (Process 8 part 1) ── */
+/* The bar wrapper is the positioning context the panel overlays: the panel is
+   absolutely placed over the view bar rather than pushing the grid down. */
+.chr-cal-barwrap{position:relative}
+.chr-cal-bar{margin-bottom:10px}
+.chr-cal-panel{
+	position:absolute;top:0;left:0;right:0;z-index:5;
+	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+	box-shadow:var(--shadow-menu);padding:8px 10px 12px;max-height:70vh;overflow-y:auto;
+}
+.chr-cal-panel-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chr-cal-pagebar{margin-left:0}
+.chr-cal-panel-btn{padding:4px 9px;font-size:calc(11px * var(--fsc,1));white-space:nowrap}
+.chr-cal-panel-body{padding:2px}
+.chr-cal-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap}
+.chr-cal-mainrow{margin-bottom:9px}
+.chr-cal-eq{font-size:calc(12.5px * var(--fsc,1));color:var(--t2)}
+.chr-cal-num{width:80px}
+.chr-cal-unitname{font-size:calc(12.5px * var(--fsc,1));color:var(--t1);font-weight:500}
+.chr-cal-sel{padding:5px 7px;background:var(--raised);border:1px solid var(--border);
+	border-radius:var(--rs);color:var(--t1);font-size:calc(12.5px * var(--fsc,1));font-family:inherit}
+.chr-cal-hint{font-size:calc(11px * var(--fsc,1));color:var(--t3);margin:2px 0 8px}
+.chr-cal-toggles{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:8px 0}
+.chr-cal-modechip{font-size:calc(10.5px * var(--fsc,1));color:var(--accentH);
+	border:1px solid var(--accent);border-radius:9px;padding:1px 8px}
+/* Auto-fill rather than a fixed count: a unit may have 3 children or 40. */
+.chr-cal-grid-edit{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin:6px 0 10px}
+.chr-cal-cellin{display:flex;flex-direction:column;gap:3px}
+.chr-cal-cellin span{font-size:calc(10.5px * var(--fsc,1));color:var(--t3);
+	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chr-cal-previewlabel{font-size:calc(10.5px * var(--fsc,1));color:var(--t3);
+	text-transform:uppercase;letter-spacing:.04em;margin:10px 0 5px}
+.chr-cal-preview{display:grid;gap:1px;background:var(--border);border:1px solid var(--border);
+	border-radius:var(--rs);overflow:hidden}
+.chr-cal-pcell{background:var(--raised);color:var(--t2);font-size:calc(10.5px * var(--fsc,1));
+	text-align:center;padding:5px 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chr-cal-variant{margin-top:10px}
+/* Leading blanks that push day 1 under its real weekday — visually empty, so
+   no background of their own. */
+.chr-cal-blank{background:var(--bg);pointer-events:none}
+
+/* Chronicler calendar view (Plan part5 #3) */
+.chr-calendar{display:flex;flex-direction:column}
+.chr-cal-settings{
+	display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;
+	padding:12px 14px;margin-bottom:10px;
+	background:var(--raised);border:1px solid var(--border);border-radius:var(--r);
+}
+.chr-cal-settings .fg{min-width:120px}
+.chr-cal-settings .fg input{width:100%}
+.chr-cal-grid{display:grid;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.chr-cal-dowcell{background:var(--raised);color:var(--t3);font-size:11px;font-weight:600;text-align:center;padding:6px 4px}
+.chr-cal-cell{background:var(--surface);min-height:64px;padding:4px 5px;display:flex;flex-direction:column;gap:2px}
+.chr-cal-daynum{font-size:11px;color:var(--t3)}
+.chr-cal-ev{
+	font-size:10.5px;color:#fff;border-radius:4px;padding:1px 5px;cursor:pointer;
+	white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+/* Classifier grid card icon (mockup 21) */
+.cls-card-icon{
+	width:34px;height:34px;border-radius:50%;border:2px solid var(--border);
+	display:flex;align-items:center;justify-content:center;margin:0 auto 8px;
+}
+.cls-card-icon .icon{width:16px;height:16px}
+
+/* ═══ TimeMap "Wanderer" (Phase 9, mockup 10) ═══════════════════════════ */
+.wanderer-split{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.wnd-map-pane{height:380px;border:none;border-radius:0;border-bottom:1px solid var(--border)}
+.wnd-tl-pane{min-height:200px;background:var(--surface);padding:8px 4px}
+.wnd-refline{font-size:calc(11px * var(--fsc,1));color:var(--t3);margin:2px 0 10px}
+/* Wanderer Area view (Plan part5 W5) */
+.wnd-area-top{display:flex;min-height:0}
+.wnd-area-top .wnd-map-pane{flex:1;min-width:0}
+.wnd-arealist-pane{width:260px;flex:0 0 260px;background:var(--surface);border-left:1px solid var(--border);border-bottom:1px solid var(--border);overflow-y:auto;padding:8px}
+.wnd-area-row{margin-bottom:6px}
+.wnd-area-body{padding:8px 10px;margin-top:4px;background:var(--raised);border:1px solid var(--border);border-radius:var(--r)}
+
+/* Story "Narrator" route board (Phase 10, mockup 11) */
+.nar-layout{display:flex;gap:12px;align-items:stretch;min-height:0}
+.nar-board{position:relative;flex:1;min-width:0;height:560px;overflow:hidden;
+	background:var(--raised);border:1px solid var(--border);border-radius:var(--r);
+	background-image:linear-gradient(rgba(90,90,114,.14) 1px,transparent 1px),linear-gradient(90deg,rgba(90,90,114,.14) 1px,transparent 1px);
+	background-size:24px 24px;
+}
+.nar-board.is-panning{cursor:grabbing}
+/* Plan part5 Narrator #3: top-center slide-in notice — same idiom as
+   #toast's transform+opacity+transition, repositioned to slide down from
+   the top-center of the board instead of up from the bottom-right. Lives
+   as a sibling of #nar-graph so it never pans/zooms with the board. */
+.nar-notice{position:absolute;top:14px;left:50%;z-index:5;
+	background:var(--raised);border:1px solid var(--border);border-radius:var(--r);
+	padding:9px 15px;font-size:calc(13px * var(--fsc,1));color:var(--t1);
+	box-shadow:var(--shadow-float);
+	transform:translateX(-50%) translateY(-40px);opacity:0;transition:all .2s ease;pointer-events:none;
+}
+.nar-notice.show{transform:translateX(-50%) translateY(0);opacity:1}
+#nar-graph{position:relative;width:2400px;height:1600px;transform-origin:0 0}
+#nar-edges{position:absolute;inset:0;pointer-events:none}
+.nar-node{position:absolute;width:190px;background:rgba(24,24,31,.92);border:1.5px solid var(--border);
+	border-radius:var(--r);padding:8px 10px;cursor:grab;user-select:none;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.nar-node.sel{box-shadow:0 0 0 3px rgba(99,102,241,.35),0 4px 16px rgba(0,0,0,.35)}
+.nar-node.edge-from{outline:2px dashed var(--accent);outline-offset:2px}
+.nar-node-head{display:flex;align-items:center;gap:3px}
+.nar-node .nn-name{font-size:calc(12.5px * var(--fsc,1));font-weight:650;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nar-node .nn-snippet{font-size:calc(10.5px * var(--fsc,1));color:var(--t2);margin-top:3px;line-height:1.45;
+	display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nar-node .nn-snippet.ghost{color:var(--t3);font-style:italic}
+.nar-node .nn-count{font-size:calc(9.5px * var(--fsc,1));color:var(--accentH);margin-top:3px}
+.nar-node .nn-desc{font-size:calc(9.5px * var(--fsc,1));color:var(--t3);font-style:italic;margin-top:3px;
+	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nar-conv{width:300px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);
+	border:1px solid var(--border);border-radius:var(--r);overflow:hidden;max-height:560px}
+.nar-talks{flex:1;overflow-y:auto;padding:6px 8px}
+.nar-talk{display:flex;gap:5px;align-items:center;margin-bottom:6px}
+.nar-talk .nt-speaker{width:84px;flex-shrink:0}
+.nar-talk .nt-text{flex:1;min-width:0}
+.nar-talk input{background:var(--raised);border:1px solid var(--border);border-radius:var(--rs);
+	padding:5px 8px;color:var(--t1);font-size:calc(12px * var(--fsc,1))}
+.nar-talk-new{padding:8px;border-top:1px solid var(--border)}
+/* Process 8 part 2 — one ordered list of two row kinds. .nar-row is the drag
+   handle wrapper both kinds share; .drop-before/.drop-after come from the
+   generic reorder rules the module tree and Author's chapter list use. */
+.nar-row{border-radius:var(--rs)}
+.nar-grip{flex:0 0 auto;display:flex;align-items:center;color:var(--t3);cursor:grab;opacity:.55}
+.nar-grip:hover{color:var(--t2);opacity:1}
+.nar-grip .icon{width:13px;height:13px}
+.nar-row.drop-before{box-shadow:inset 0 2px 0 0 var(--accent)}
+.nar-row.drop-after{box-shadow:inset 0 -2px 0 0 var(--accent)}
+.nar-choice{border:1px dashed var(--border);padding:6px;margin-bottom:6px;background:var(--raised)}
+.nar-choice-head{display:flex;gap:5px;align-items:center}
+.nar-choice-head .nt-text{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);
+	border-radius:var(--rs);padding:5px 8px;color:var(--t1);font-size:calc(12px * var(--fsc,1))}
+.nar-choice-opts{margin:6px 0 0 12px;border-left:2px solid var(--border);padding-left:8px}
+/* The conversation panel is only 300px wide, so an option's four controls
+   wrap onto two lines: the option text owns the first, the effect kind and
+   its value share the second. One row of four would truncate every label. */
+.nar-choice-opt{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:6px}
+.nar-choice-opt input,.nar-choice-opt select{background:var(--surface);border:1px solid var(--border);
+	border-radius:var(--rs);padding:4px 6px;color:var(--t1);font-size:calc(11.5px * var(--fsc,1));min-width:0}
+.nar-choice-opt .nco-text{flex:1 1 calc(100% - 34px);order:1}
+.nar-choice-opt > .btn{order:2;flex:0 0 auto}
+.nar-choice-opt .nco-kind{flex:1 1 calc(45% - 4px);order:3}
+.nar-choice-opt .nco-effect,.nar-choice-opt .nco-jump{flex:1 1 calc(55% - 4px);order:4}
+.nar-read-choice{margin:6px 0;padding-left:10px;border-left:2px solid var(--border)}
+.nar-read-choice-opt{font-size:calc(12.5px * var(--fsc,1));color:var(--t2);line-height:1.7}
+.nar-read-choice-opt .ghost{color:var(--t3)}
+.nar-reader{max-width:760px}
+.nar-read-sec{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+	padding:12px 16px;margin-bottom:12px}
+.nar-read-sec h4{font-size:calc(13.5px * var(--fsc,1));margin-bottom:6px}
+.nar-read-line{font-size:calc(13px * var(--fsc,1));color:var(--t2);line-height:1.8}
+.nar-read-line.ghost{color:var(--t3)}
+.nar-read-branch{font-size:calc(11px * var(--fsc,1));color:var(--accentH);margin-top:8px;border-top:1px dashed var(--border);padding-top:7px}
+
+/* Book "Author" (Phase 11, mockup 12) */
+.author-layout{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;min-height:480px}
+.author-chapters{width:230px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:10px 0;overflow-y:auto}
+.au-col-label{padding:0 14px 8px;font-size:calc(10.5px * var(--fsc,1));font-weight:700;letter-spacing:.05em;color:var(--t2)}
+.author-chapters .li{margin:0 6px}
+.author-chapters .li.au-add{color:var(--t3);gap:6px}
+.author-main{flex:1;min-width:0;padding:14px 18px;overflow-y:auto;background:var(--bg)}
+.au-editor{height:calc(100vh - 300px);min-height:420px;display:flex;flex-direction:column}
+/* Author rich-text (contenteditable) editor (Plan part5 Author #1/#2) */
+.au-rich-toolbar{display:flex;gap:4px;padding:6px 0;flex-wrap:wrap;align-items:center}
+.au-rich-toolbar .btn{min-width:30px;font-size:calc(12px * var(--fsc,1));font-weight:700;color:var(--t2)}
+.au-rich-sep{width:1px;align-self:stretch;background:var(--border);margin:2px 6px}
+.au-rich-body{
+	flex:1;min-height:240px;padding:12px;font-size:calc(14px * var(--fsc,1));line-height:1.8;
+	color:var(--t1);border:1px solid var(--border);border-radius:var(--r);
+	background:var(--surface);overflow-y:auto;outline:none;
+}
+.au-rich-body:focus{border-color:var(--accent)}
+/* Author Book view — paginated reading + .doc export (Plan part5 Author #5) */
+.au-book-export{width:100%;margin-top:10px;justify-content:center}
+.au-book-pages{display:flex;flex-direction:column;align-items:flex-start;gap:24px;background:var(--bg);overflow-x:auto}
+.au-book-page{
+	width:600px;height:820px;flex-shrink:0;overflow:hidden;box-sizing:border-box;
+	padding:40px 48px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+	box-shadow:0 4px 16px rgba(0,0,0,.25);font-size:calc(13.5px * var(--fsc,1));line-height:1.8;color:var(--t2);
+}
+.au-book-measure{position:fixed;left:-9999px;top:0;visibility:hidden;pointer-events:none}
+.au-book-chapter-h{font-size:calc(17px * var(--fsc,1));color:var(--t1);margin-bottom:14px}
+.au-outline-sec{margin-bottom:14px}
+.au-outline-ch{font-size:calc(13px * var(--fsc,1));font-weight:650;color:var(--t1);cursor:pointer;padding:4px 0}
+.au-outline-ch:hover{color:var(--accentH)}
+.au-outline-h{font-size:calc(12px * var(--fsc,1));color:var(--t2);padding:2px 0}
+.au-outline-h.ghost{color:var(--t3)}
+.au-reading{max-width:680px;font-size:calc(13.5px * var(--fsc,1));line-height:2;color:var(--t2)}
+
+/* Chat "Scribe" (Phase 12, mockup 06) — bubble stream + input row */
+.chs-main{display:flex;flex-direction:column;padding:0}
+.chs-stream{flex:1;overflow-y:auto;padding:16px 18px;min-height:0}
+.chs-day{text-align:center;font-size:calc(10.5px * var(--fsc,1));color:var(--t3);margin:10px 0 12px}
+.chs-row{display:flex;justify-content:flex-end;margin-bottom:10px}
+.chs-row.left{justify-content:flex-start}
+.chs-bubble{position:relative;max-width:70%;background:var(--accent);color:var(--on-accent);
+	border-radius:14px 14px 4px 14px;padding:8px 12px 6px;font-size:calc(12.5px * var(--fsc,1));line-height:1.55;
+	box-shadow:0 2px 10px rgba(0,0,0,.25);cursor:grab;user-select:none}
+.chs-bubble:active{cursor:grabbing}
+.chs-bubble .chs-text{overflow-wrap:break-word}
+.chs-bubble .chs-text .wikilink{color:var(--on-accent);text-decoration:underline;cursor:pointer}
+.chs-bubble .chs-time{display:block;text-align:right;font-size:calc(9.5px * var(--fsc,1));opacity:.75;margin-top:3px}
+.chs-bubble .chs-acts{position:absolute;left:-90px;top:50%;transform:translateY(-50%);
+	display:none;gap:2px}
+.chs-row.left .chs-bubble .chs-acts{left:auto;right:-90px}
+.chs-row:hover .chs-acts{display:flex}
+.chs-inputrow{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);background:var(--surface)}
+.chs-inputrow input{flex:1;background:var(--raised);border:1px solid var(--border);border-radius:18px;
+	padding:9px 14px;color:var(--t1);font-size:calc(12.5px * var(--fsc,1))}
+.chs-inputrow input:focus{outline:none;border-color:var(--accent)}
+.chs-snippet{display:block;font-size:calc(10px * var(--fsc,1));color:var(--t3);font-weight:400;
+	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.author-chapters .li .cnt{font-size:calc(10px * var(--fsc,1));color:var(--t3);background:var(--raised);
+	border-radius:8px;padding:1px 7px;flex-shrink:0}
+.chs-transcript{padding:14px 18px}
+.chs-tr-row{display:flex;gap:12px;padding:5px 0;border-bottom:1px dashed var(--border);font-size:calc(12.5px * var(--fsc,1))}
+.chs-tr-time{color:var(--t3);flex-shrink:0;font-size:calc(11px * var(--fsc,1));padding-top:1px;min-width:110px}
+.chs-tr-text{color:var(--t2);overflow-wrap:break-word}
+
+/* Doc "Drafter" (Phase 13, mockup 13) + shared md format bar */
+.drafter-hint{font-size:calc(11px * var(--fsc,1));color:var(--t3);margin:2px 0 10px}
+.mded-fmtbar{display:flex;gap:4px;padding:6px 0}
+.mded-fmtbar .btn{min-width:30px;font-size:calc(11px * var(--fsc,1));font-weight:700;color:var(--t2)}
+
+/* Analys "Viewer" / Relation "Connector" (Phase 14, mockups 14/32/33/15) */
+.vw-filterlabel{font-size:calc(11px * var(--fsc,1));color:var(--t3)}
+.vw-chip{font-size:calc(10.5px * var(--fsc,1));color:var(--accentH);border:1px solid var(--accent);border-radius:10px;padding:2px 9px}
+.vw-chip-or{font-size:calc(10px * var(--fsc,1));color:var(--t3);font-weight:700}
+
+/* Obsidian-style filter popup (Plan part6 #1-2) — reuses .kind-popup's base
+   floating-panel chrome, wider than the 280px icon/kind-list baseline since
+   nested group/rule rows need more horizontal room. Live-saves on every
+   control, no Save/Cancel footer, matching every other .kind-popup. */
+.filter-popup{padding:12px;width:380px;max-height:calc(100vh - 40px);overflow-y:auto}
+.fp-groups{display:flex;flex-direction:column;gap:2px}
+.fp-group{border:1px solid var(--border);border-radius:var(--rs);padding:8px;background:var(--raised)}
+.fp-rules{display:flex;flex-direction:column}
+.fp-or-divider{display:flex;align-items:center;gap:8px;font-size:calc(10.5px * var(--fsc,1));font-weight:700;color:var(--t3);margin:6px 0}
+.fp-or-divider::before,.fp-or-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.fp-rule-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.fp-rule-row:last-child{margin-bottom:0}
+.fp-field,.fp-op{flex-shrink:0}
+.fp-input{flex:1;min-width:0}
+.fp-field,.fp-op,.fp-input{
+	background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);
+	color:var(--t1);font:inherit;font-size:calc(11.5px * var(--fsc,1));padding:4px 6px;
+}
+select.fp-input[multiple]{padding:2px}
+.fp-group-actions{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.fp-add-group{margin-top:10px;width:100%;justify-content:center}
+.fp-empty{font-size:calc(11px * var(--fsc,1));padding:4px 0}
+.vw-table{width:100%;border-collapse:collapse;font-size:calc(12.5px * var(--fsc,1))}
+.vw-table th{text-align:left;font-size:calc(10.5px * var(--fsc,1));font-weight:700;letter-spacing:.05em;color:var(--t3);
+	padding:8px 10px;border-bottom:1px solid var(--border)}
+.vw-table td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--t2)}
+.vw-table tbody tr{cursor:pointer}
+.vw-table tbody tr:hover td{background:var(--raised)}
+.vw-table .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.vw-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.vw-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+	padding:10px 12px;cursor:pointer}
+.vw-card:hover{background:var(--raised)}
+.vw-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.vw-card-name{font-size:calc(13px * var(--fsc,1));font-weight:650}
+.vw-card-kind{font-size:calc(10px * var(--fsc,1));color:var(--t3);flex-shrink:0}
+.vw-card-src{font-size:calc(10.5px * var(--fsc,1));color:var(--t3);margin-top:4px}
+.vw-card-time{font-size:calc(11px * var(--fsc,1));color:var(--t2);margin-top:2px}
+.vw-card-tags{margin-top:6px}
+.vw-board{display:flex;gap:12px;align-items:flex-start;overflow-x:auto;padding-bottom:8px}
+.vw-col{min-width:230px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px}
+.vw-col-head{display:flex;justify-content:space-between;font-size:calc(11px * var(--fsc,1));font-weight:700;color:var(--accentH);
+	padding:2px 4px 8px}
+.vw-col-head .cnt{color:var(--t3)}
+.vw-col-card{background:var(--raised);border:1px solid var(--border);border-radius:var(--rs);
+	padding:8px 10px;margin-bottom:8px;cursor:pointer}
+.vw-col-card:hover{border-color:var(--accent)}
+.vw-kindchecks{display:flex;flex-wrap:wrap;gap:8px}
+.vw-kc{font-size:calc(12px * var(--fsc,1));color:var(--t2);display:flex;align-items:center;gap:4px}
+.vw-groupby{background:var(--raised);border:1px solid var(--border);border-radius:var(--rs);color:var(--t1);padding:3px 6px}
+.cn-wrap{position:relative}
+.cn-board{height:600px}
+#cn-graph{position:relative;width:1600px;height:1100px;transform-origin:0 0}
+#cn-edges{position:absolute;inset:0;pointer-events:none}
+.cn-node{position:absolute;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:grab;user-select:none;width:52px}
+.cn-circle{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;
+	border:2px solid var(--accent);background:var(--surface);color:var(--t2)}
+.cn-name{font-size:calc(11px * var(--fsc,1));color:var(--t1);white-space:nowrap}
+.cn-edge-label{font-size:calc(9.5px * var(--fsc,1));color:var(--accentH);background:var(--surface);border:1px solid var(--border);
+	border-radius:8px;padding:1px 6px;text-align:center;width:max-content;max-width:138px;margin:0 auto;
+	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cn-count{font-size:calc(10.5px * var(--fsc,1));color:var(--t3);margin-left:8px}
+
+/* Drawing "Sketcher" (Phase 15, mockup 28) — the canvas is a fixed dark
+   drawing surface (like the Gallery/Export thumbnails' #0b0b10), not the
+   ambient app theme: pen strokes include near-white (#f8fafc), which would
+   vanish against a light theme's background otherwise. */
+.sk-board{height:600px;background:#0b0b10;background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1px);background-size:22px 22px}
+#sk-stage{position:relative;transform-origin:0 0}
+#sk-canvas{position:absolute;inset:0;cursor:crosshair;touch-action:none}
+.sk-tools{position:absolute;left:14px;top:14px;z-index:4;display:flex;align-items:center;gap:6px;
+	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:6px 10px;
+	box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.sk-tools .btn.act{background:var(--accent);color:var(--on-accent)}
+.sk-tools .zsep{width:1px;height:16px;background:var(--border)}
+.sk-swatch{width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.sk-swatch.act{border-color:var(--t1)}
+.sk-width{display:flex;align-items:center;width:22px;cursor:pointer;padding:6px 0;border-radius:4px}
+.sk-width span{display:block;width:100%;background:var(--t2);border-radius:2px}
+.sk-width.act span{background:var(--accentH)}
+.sk-export{position:absolute;right:14px;top:14px;z-index:4}
+.sk-pin{position:absolute;z-index:3;display:flex;align-items:center;gap:5px;cursor:grab;user-select:none;
+	background:var(--surface);border:1.5px solid var(--accent);border-radius:var(--r);padding:5px 10px;
+	font-size:calc(11.5px * var(--fsc,1));color:var(--accentH);box-shadow:0 3px 12px rgba(0,0,0,.3)}
+.sk-pin small{color:var(--t3)}
+.sk-pin .sk-pin-x{padding:0 4px}
+.sk-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.sk-thumb{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px;cursor:pointer}
+.sk-thumb:hover{border-color:var(--accent)}
+.sk-thumb img{width:100%;border-radius:var(--rs);background:#0b0b10;aspect-ratio:16/11;object-fit:cover}
+.sk-thumb span{display:block;font-size:calc(11.5px * var(--fsc,1));color:var(--t2);margin-top:6px}
+.sk-exportview{max-width:820px}
+
+/* Graph "Designer" (Phase 16, mockup 31) */
+.dg-node{position:absolute;z-index:2;transform:translate(-50%,-50%);cursor:grab;user-select:none;
+	display:flex;align-items:center;justify-content:center;text-align:center;
+	background:var(--surface);border:2px solid var(--accent);border-radius:var(--r);
+	min-width:110px;min-height:40px;padding:8px 14px;font-size:calc(12.5px * var(--fsc,1));font-weight:600}
+.dg-node.edge-from{outline:2px dashed var(--accent);outline-offset:3px}
+.dg-circle{border-radius:50%;width:120px;height:120px;min-width:120px;padding:10px}
+.dg-text{background:transparent;border-color:transparent;min-width:60px}
+.dg-diamond{background:transparent;border:none;width:130px;height:130px}
+.dg-diamond .dg-diamond-box{position:absolute;inset:14px;background:var(--surface);
+	border:2px solid var(--accent);transform:rotate(45deg);border-radius:8px}
+.dg-diamond .dg-label{position:relative;z-index:1;max-width:90px}
+/* Process 8 part 2 — the wider shape palette.
+   Border-drawable shapes are plain rules on the node itself. The rest are
+   .dg-poly: a clip-path plate painted in the node colour with an inset copy
+   punched out in var(--surface), which leaves a 2px outline a border cannot
+   draw on a polygon. Both layers must carry the same clip-path. */
+.dg-rounded{border-radius:14px}
+.dg-ellipse{border-radius:50%;width:150px;height:92px}
+.dg-pill{border-radius:999px;padding:8px 20px}
+.dg-poly{background:transparent;border:none;width:132px;height:100px}
+.dg-poly .dg-poly-box{position:absolute;inset:0;background:var(--dg-col,var(--accent))}
+.dg-poly .dg-poly-box::after{content:'';position:absolute;inset:2px;background:var(--surface)}
+.dg-poly .dg-label{position:relative;z-index:1;max-width:88px}
+.dg-hexagon .dg-poly-box,.dg-hexagon .dg-poly-box::after{clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+.dg-parallelogram .dg-poly-box,.dg-parallelogram .dg-poly-box::after{clip-path:polygon(18% 0,100% 0,82% 100%,0 100%)}
+.dg-triangle .dg-poly-box,.dg-triangle .dg-poly-box::after{clip-path:polygon(50% 4%,100% 100%,0 100%)}
+.dg-star .dg-poly-box,.dg-star .dg-poly-box::after{clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.dg-cross .dg-poly-box,.dg-cross .dg-poly-box::after{clip-path:polygon(34% 0,66% 0,66% 34%,100% 34%,100% 66%,66% 66%,66% 100%,34% 100%,34% 66%,0 66%,0 34%,34% 34%)}
+.dg-note .dg-poly-box,.dg-note .dg-poly-box::after{clip-path:polygon(0 0,78% 0,100% 22%,100% 100%,0 100%)}
+.dg-shape-popup{padding:10px;width:274px}
+.dg-shape-popup .ipk-cell{font-size:calc(16px * var(--fsc,1))}
+.dg-pin{flex-direction:row;gap:6px;font-weight:500;border-width:1.5px;min-height:34px}
+.dg-pin small{color:var(--t3)}
+.dg-edge-label{cursor:pointer}
+.dg-matrix th{white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.dg-matrix td{text-align:center;color:var(--t3)}
+.dg-matrix td.dg-mx-hit{color:var(--accentH)}
+
+/* Sage Hut section (Phase 17, mockup 25) */
+.sh-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:14px 0 20px}
+.sh-tile{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);
+	border-radius:var(--r);padding:12px 16px;display:flex;flex-direction:column;gap:4px}
+.sh-tile .sh-k{font-size:calc(11px * var(--fsc,1));color:var(--t3)}
+.sh-tile .sh-v{font-size:1.5em;font-weight:700}
+.sh-section{font-size:calc(10.5px * var(--fsc,1));font-weight:700;letter-spacing:.05em;color:var(--t2);margin:8px 0 10px}
+.sh-bar-row{display:flex;align-items:center;gap:12px;padding:7px 0;cursor:pointer}
+.sh-bar-row:hover .sh-bar-name{color:var(--accentH)}
+.sh-bar-name{width:240px;flex-shrink:0;font-size:calc(12.5px * var(--fsc,1));color:var(--t1);display:flex;align-items:center;gap:6px;
+	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh-bar-track{flex:1;height:12px;background:var(--raised);border-radius:6px;overflow:hidden}
+.sh-bar-fill{display:block;height:100%;border-radius:6px}
+.sh-bar-val{width:70px;text-align:right;font-size:calc(12px * var(--fsc,1));color:var(--t2);flex-shrink:0}
+.sh-node{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:4px;
+	font-size:calc(10.5px * var(--fsc,1));color:var(--t2);cursor:pointer;background:var(--surface);border:1px solid var(--border);
+	border-radius:10px;padding:2px 8px;max-width:150px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.sh-node:hover{color:var(--accentH);border-color:var(--accent)}
+.sh-node .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+/* Import Dock section + file viewer (Phase 18, mockup 29) */
+.dock-folder{display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer}
+.dock-folder .cnt{margin-left:auto;font-weight:400}
+.dock-ficon{font-size:calc(12px * var(--fsc,1));color:var(--t3)}
+.dock-png,.dock-jpg,.dock-jpeg,.dock-gif,.dock-webp,.dock-svg{color:#38bdf8}
+.dock-md{color:#34d399}
+.dock-docx{color:#facc15}
+.dock-chip{margin-left:auto;flex-shrink:0;font-size:calc(9.5px * var(--fsc,1));border:1px solid var(--border);border-radius:8px;
+	padding:1px 7px;color:var(--accentH);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dock-chip.ghost{color:var(--t3)}
+.fv-wrap{min-height:0}
+.fv-imgwrap{height:520px;overflow:auto;display:flex;align-items:center;justify-content:center;
+	border:1px solid var(--border);border-radius:var(--r);
+	background-image:linear-gradient(45deg,rgba(90,90,114,.12) 25%,transparent 25%,transparent 75%,rgba(90,90,114,.12) 75%),linear-gradient(45deg,rgba(90,90,114,.12) 25%,transparent 25%,transparent 75%,rgba(90,90,114,.12) 75%);
+	background-size:24px 24px;background-position:0 0,12px 12px}
+.fv-imgwrap img{max-width:80%;max-height:80%;transition:transform .12s}
+.fv-pre{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+	padding:14px 16px;font-size:calc(12.5px * var(--fsc,1));color:var(--t2);white-space:pre-wrap;max-height:520px;overflow:auto}
+.fv-foot{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 14px;
+	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);font-size:calc(12px * var(--fsc,1))}
+.fv-foot .pk{color:var(--t3)}
+.fv-useimg{display:flex;align-items:center;gap:5px;color:var(--t2);font-size:calc(11.5px * var(--fsc,1))}
+.disp-thumb{display:block;height:64px;border-radius:var(--rs);overflow:hidden;margin-bottom:8px;background:var(--raised)}
+.disp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.disp-thumb:has(img:not([src])){display:none}
+.disp-thumb.disp-empty{display:none}
+

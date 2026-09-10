@@ -1,0 +1,45 @@
+node_modules/
+DraconDexPortable/
+build/
+dist/
+tmp-user-data/
+*.log
+
+
+tmp-driver-data/
+tmp-driver-data2/
+.worktrees/
+.claude/worktrees/
+tmp-driver-data-a2/
+tmp-driver-data-b/
+
+module-showcase/
+
+# Databases. The app's own data lives in a data dir chosen at runtime
+# (tmp-user-data/ in dev), never in the repo — anything matching here is real
+# user content and must not be published. The -wal/-shm sidecars matter as
+# much as the .db: a WAL holds recently-written pages.
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+old_db_data/
+
+# Secrets — none are committed and none should be. Every credential this
+# app uses (Supabase URL/anon key, Google client id/secret) is entered in the
+# app UI at runtime and stored in the local app_setting table, not in source.
+#
+# The Android release keystore moved to ZYDRAXYL/DraconDex-APK with the rest of
+# the Flutter build; the keystore patterns below stay as a belt-and-braces guard
+# against one ever being dropped in this tree by accident.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.keystore
+*.jks
+
+# Editor / IDE
+.idea/

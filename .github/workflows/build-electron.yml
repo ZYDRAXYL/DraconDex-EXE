@@ -1,0 +1,306 @@
+name: Build Electron (Windows)
+
+# Builds all three Electron build types the repo defines and publishes them as
+# GitHub release assets:
+#   build:installer -> DraconDex-Setup-<version>.exe   (NSIS installer)
+#   build:exe       -> DraconDex-Portable-<version>.exe (single-file portable)
+#   build:portable  -> DraconDex-<version>-win-x64.zip  (portable app folder)
+#
+# Pushing a v* tag publishes a release. A manual run can publish too (draft by
+# default). Pull requests only build + upload workflow artifacts.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (default: v<version from package.json>)'
+        required: false
+        default: ''
+      draft:
+        description: 'Publish as a draft release'
+        type: boolean
+        default: true
+      prerelease:
+        description: 'Mark the release as a pre-release'
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'electron/**'
+      - 'src/assets/brand/**'
+      - 'src/schema/generated/**'
+      - 'sdb.lock.json'
+      - '.github/workflows/build-electron.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-electron-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    # Consumed by the `mirror` job below, which re-publishes this release to
+    # the public ZYDRAXYL/DraconDex-REL repo.
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+    env:
+      # No signing certificate is configured; stop electron-builder from
+      # hunting for one (and from prompting) on the runner.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Cache Electron download
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~\AppData\Local\electron\Cache
+            ~\AppData\Local\electron-builder\Cache
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: electron-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Replaces the old `npm run schema:check`. That verified the committed
+      # DDL against src/schema/vault.sql, which is possible only inside one
+      # checkout — vault.sql lives in ZYDRAXYL/DraconDex-SDB now. This makes the
+      # equivalent guarantee across the boundary: every vendored artifact must
+      # be byte-identical to the release sdb.lock.json pins.
+      - name: Vendored DraconDex-SDB artifacts match the pinned release
+        run: npm run sdb:check
+
+      - name: Run regression tests
+        run: node --test "electron/test/*.test.mjs"
+
+      - name: Resolve version and release tag
+        id: meta
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $tag = '${{ github.event.inputs.tag }}'
+          if ($env:GITHUB_REF -like 'refs/tags/*') {
+            $tag = $env:GITHUB_REF -replace '^refs/tags/', ''
+          }
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "v$version" }
+
+          if ($tag.TrimStart('v') -ne $version) {
+            Write-Warning "Tag '$tag' does not match package.json version '$version'."
+          }
+
+          "version=$version"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "tag=$tag"          | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "version=$version tag=$tag"
+
+      # Order matters: `build:portable` renames DraconDexPortable/win-unpacked
+      # to DraconDex-<version>, so it has to run after the two targets that
+      # regenerate win-unpacked as an intermediate.
+      - name: Build NSIS installer
+        run: npm run build:installer
+
+      - name: Build single-file portable exe
+        run: npm run build:exe
+
+      - name: Build portable app folder
+        run: npm run build:portable
+
+      - name: Collect release assets
+        id: assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '${{ steps.meta.outputs.version }}'
+          $out = 'DraconDexPortable'
+          $dist = 'dist-release'
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+
+          $folder = Join-Path $out "DraconDex-$version"
+          if (-not (Test-Path $folder)) {
+            throw "Portable app folder not found: $folder"
+          }
+          $zip = Join-Path $dist "DraconDex-$version-win-x64.zip"
+          if (Get-Command 7z -ErrorAction SilentlyContinue) {
+            7z a -tzip -mx=5 $zip $folder | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "7z failed with exit code $LASTEXITCODE" }
+          } else {
+            Compress-Archive -Path $folder -DestinationPath $zip -CompressionLevel Optimal
+          }
+
+          foreach ($name in @("DraconDex-Setup-$version.exe", "DraconDex-Portable-$version.exe")) {
+            $src = Join-Path $out $name
+            if (-not (Test-Path $src)) { throw "Expected build output not found: $src" }
+            Copy-Item $src -Destination $dist
+          }
+
+          # Hash everything before opening the output file. Streaming
+          # Get-ChildItem straight into Out-File makes PowerShell create
+          # checksums-sha256.txt inside $dist while the enumeration of $dist is
+          # still running, so the lazily-yielded checksums file reaches
+          # Get-FileHash while Out-File still holds it open ("used by another
+          # process"). Collecting first also keeps the file out of its own list.
+          $checksumName = 'checksums-sha256.txt'
+          $checksums = Join-Path $dist $checksumName
+          $assets = @(Get-ChildItem $dist -File | Where-Object { $_.Name -ne $checksumName })
+          $lines = @($assets | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          })
+          $lines | Out-File -FilePath $checksums -Encoding utf8
+
+          Get-ChildItem $dist -File | ForEach-Object {
+            "{0,-44} {1,8:N1} MB" -f $_.Name, ($_.Length / 1MB)
+          } | Tee-Object -Variable listing
+          ($listing -join "`n") | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      # Non-fatal on purpose. GitHub Actions artifact storage is an
+      # account-wide quota that can fill up ("Failed to CreateArtifact:
+      # Artifact storage quota has been hit"), and this step sits BEFORE the
+      # release is published — so a full quota used to kill the job after
+      # every installer had already built successfully, and no release was
+      # ever created. The artifact is a 30-day convenience; the release is the
+      # deliverable, and it must not be blocked by one.
+      #
+      # This does NOT weaken the empty-output guard: "Collect release assets"
+      # above already hard-fails (and is not continue-on-error) when an
+      # expected build output is missing, so `if-no-files-found` here is only
+      # ever the second line of defence.
+      - name: Upload build artifacts
+        continue-on-error: true
+        uses: actions/upload-artifact@v6
+        with:
+          name: dracondex-win-${{ steps.meta.outputs.version }}
+          path: dist-release/*
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check gh's exit codes by hand: `gh release view` is expected to fail
+          # when the release does not exist yet, so native errors must not throw.
+          $PSNativeCommandUseErrorActionPreference = $false
+          $tag = '${{ steps.meta.outputs.tag }}'
+          $version = '${{ steps.meta.outputs.version }}'
+          $files = @(Get-ChildItem 'dist-release' -File | ForEach-Object { $_.FullName })
+
+          gh release view $tag *> $null
+          $exists = ($LASTEXITCODE -eq 0)
+
+          if ($exists) {
+            Write-Host "Release $tag already exists - uploading assets."
+            gh release upload $tag --clobber @files
+          } else {
+            $ghArgs = @('release', 'create', $tag,
+                        '--title', "DraconDex $version",
+                        '--generate-notes')
+            if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+              # A manual run may target a tag that does not exist yet; gh
+              # creates it from the checked-out commit.
+              if ('${{ github.event.inputs.draft }}' -eq 'true') { $ghArgs += '--draft' }
+              if ('${{ github.event.inputs.prerelease }}' -eq 'true') { $ghArgs += '--prerelease' }
+            } else {
+              $ghArgs += '--verify-tag'
+            }
+            gh @ghArgs @files
+          }
+          if ($LASTEXITCODE -ne 0) { throw "gh release step failed with exit code $LASTEXITCODE" }
+
+  # DraconDex-EXE is private, so nothing outside it can read this release —
+  # not the in-app update check, not the website's download page. Re-publish
+  # it to the public ZYDRAXYL/DraconDex-REL mirror, which is what both now
+  # read. Runs on ubuntu (the script is bash/jq/gh) against the very artifact
+  # the build job just uploaded, so no asset is re-built or re-downloaded.
+  mirror:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # Non-fatal on purpose. The artifact is the fast path — it skips
+      # re-downloading assets that were just built — but GitHub Actions
+      # artifact storage is an account-wide quota that can be full ("Failed to
+      # CreateArtifact: Artifact storage quota has been hit"), and the mirror
+      # must not be the reason a published release goes un-mirrored. When this
+      # step fails, dist-release stays empty and mirror-release.sh falls back
+      # to pulling the assets off the release itself.
+      - name: Download the built assets
+        id: assets
+        continue-on-error: true
+        uses: actions/download-artifact@v6
+        with:
+          name: dracondex-win-${{ needs.build.outputs.version }}
+          path: dist-release
+
+      - name: Mirror the release to the public release repo
+        env:
+          # Legacy second mirror: nothing reads DraconDex-REL since both
+          # update checks moved to DraconDex-WEB, so an unset RELEASE_REPO_TOKEN
+          # skips this step instead of reddening every release build.
+          OPTIONAL_TARGET: 'true'
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A token with `contents: write` on ZYDRAXYL/DraconDex-REL. The
+          # workflow's own GITHUB_TOKEN is scoped to THIS repo and cannot
+          # write to another one, so this secret is required — the step fails
+          # loudly rather than leaving the mirror silently behind.
+          TARGET_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
+          # Empty when the download above failed, which sends the script
+          # down its "fetch the assets from the source release" path.
+          ASSETS_DIR: ${{ steps.assets.outcome == 'success' && 'dist-release' || '' }}
+        run: bash .github/scripts/mirror-release.sh '${{ needs.build.outputs.tag }}'
+
+      # Same mirror, second target: the assets also land directly on
+      # ZYDRAXYL/DraconDex-WEB (the site repo itself), so its download pages can
+      # link straight to files hosted in that repo instead of a third one.
+      # See "Refresh the web repo's static release data" below for why.
+      # The two web-repo steps below carry their own secret (WEB_REPO_TOKEN) and
+      # their own target, so a failure of the DraconDex-REL mirror above —
+      # a missing RELEASE_REPO_TOKEN, say — must not take the download page's
+      # data down with it. `!cancelled()` runs them anyway; the job still
+      # reports the earlier failure.
+      - name: Mirror the release into the public web repo
+        if: ${{ !cancelled() }}
+        env:
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ZYDRAXYL/DraconDex-WEB
+          # A token with `contents: write` on ZYDRAXYL/DraconDex-WEB — a
+          # different repo than RELEASE_REPO_TOKEN's, hence its own secret.
+          TARGET_TOKEN: ${{ secrets.WEB_REPO_TOKEN }}
+          ASSETS_DIR: ${{ steps.assets.outcome == 'success' && 'dist-release' || '' }}
+        run: bash .github/scripts/mirror-release.sh '${{ needs.build.outputs.tag }}'
+
+      # assets/js/releases.js on the website used to call api.github.com at
+      # every visitor's page load — a public repo works, but the anonymous
+      # API is capped at 60 req/hour per IP, which a traffic spike or a
+      # shared office/campus IP can exhaust for everyone behind it at once.
+      # Snapshotting the release list into a file GitHub Pages serves removes
+      # that runtime API dependency entirely.
+      - name: Refresh the web repo's static release data
+        if: ${{ !cancelled() }}
+        env:
+          WEB_TOKEN: ${{ secrets.WEB_REPO_TOKEN }}
+        run: bash .github/scripts/update-web-releases-json.sh

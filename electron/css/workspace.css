@@ -1,0 +1,218 @@
+/* Workspace styles (Plan part2 #New Workspace) — chrome overrides layered
+   on top of body[data-workspace], set early by index.html's splash script
+   and authoritatively by applyWorkspaceStyle() (core/boot.js). Loaded last
+   in the cascade so its overrides always win over the fixed chrome rules
+   in nav-hub.css/layout.css/titlebar.css. Wyvern, Dragon, and the Setting
+   window's own "Workspace Style" picker mockups all land in this one file
+   per the "one file per system" convention now that a workspace-style
+   system exists at all. */
+
+/* Wyvern: no nav-rail, no left panel/Nexus-Nest tree, no split-layout
+   picker, no legacy tab strip — mirrors .popup-mode's hide-list
+   (titlebar.css) except #settings-menu-wrap stays visible (the only way
+   back into Setting to switch styles again) and #status-bar stays visible
+   (still useful footer info for a newcomer, unlike a focused popup tab). */
+body[data-workspace="wyvern"] #nav-sidebar,
+body[data-workspace="wyvern"] #left-panel,
+body[data-workspace="wyvern"] #left-panel-resize,
+body[data-workspace="wyvern"] #builder-tabs,
+body[data-workspace="wyvern"] #layout-menu-wrap,
+body[data-workspace="wyvern"] #hub-toggle-btn,
+body[data-workspace="wyvern"] #titlebar-vault{display:none}
+
+#workspace-toolbar{
+	/* display:flex was missing here (Process5 part1 fix) — every other rule
+	   on this element (flex-direction/align-items/gap) was a silent no-op
+	   without it, so the toolbar was laying its buttons out via plain block
+	   flow the whole time rather than the flex column it was written for;
+	   only visually forgiving in the vertical case (block-level buttons
+	   still stack), but broke outright once horizontal mode (below) needed
+	   a real flex row. #nav-sidebar (nav-hub.css) already had this. */
+	display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;
+	width:var(--nav);flex-shrink:0;border-right:1px solid var(--border);background:var(--surface);
+}
+#workspace-toolbar.hidden{display:none}
+.wyvern-toolbar-sep{width:70%;height:1px;background:var(--border);margin:2px 0}
+
+/* Horizontal nav orientation (Plan process5 part1) — #nav-sidebar (Drake/
+   Dragon) or #workspace-toolbar (Wyvern) gets reparented by
+   applyNavOrientation() (core/boot.js) from its normal #app-row slot into
+   #nav-toolbar-h (index.html), a slim strip directly under the title bar.
+   Same element/markup/onclick handlers throughout — this is a pure layout
+   swap, column -> row, nothing re-renders. #nav-toolbar-h carries no fixed
+   height of its own, so it collapses to 0 whenever nothing has been
+   reparented into it (vertical mode, the common case).
+   ID-based compound selectors below (not a shared class) deliberately —
+   #nav-sidebar/#workspace-toolbar's own base column-layout rules are ID
+   selectors too, so only an equal-or-higher-specificity ID selector can
+   reliably outrank them regardless of file/rule order. */
+#nav-toolbar-h{display:flex;flex-shrink:0;overflow:hidden}
+/* Process 6 part 1: #nav-toolbar-h used to just be a row with the reparented
+   nav element as its only real child, sized to 44px by that element's own
+   fixed height — the mount itself never stretched to the window, and there
+   was no resize lever (#nav-sidebar-resize stays behind in #app, hidden
+   outright below). Switching to a column stacks the nav row above its own
+   resize handle (#nav-toolbar-h-resize, index.html — a static child that
+   survives applyNavOrientation()'s reparenting since that only ever
+   appendChild()s the nav element, never clears the mount) so dragging it
+   changes --navh the same way #nav-sidebar-resize drives --nav vertically. */
+body[data-nav-orientation="horizontal"] #nav-toolbar-h{flex-direction:column}
+body[data-nav-orientation="vertical"] #nav-toolbar-h-resize{display:none}
+body[data-nav-orientation="horizontal"] #title-left-zone{width:var(--sidebar)}
+body[data-nav-orientation="horizontal"] #nav-sidebar-resize{display:none}
+body[data-nav-orientation="horizontal"] #nav-sidebar,
+body[data-nav-orientation="horizontal"] #workspace-toolbar{
+	flex-direction:row;width:100%;height:var(--navh,44px);padding:0 10px;gap:6px;
+	border-right:none;border-bottom:1px solid var(--border);
+}
+body[data-nav-orientation="horizontal"] #nav-sidebar-spacer,
+body[data-nav-orientation="horizontal"] .nav-logo-btn{display:none}
+body[data-nav-orientation="horizontal"] #nav-sidebar .nav-btn,
+body[data-nav-orientation="horizontal"] #workspace-toolbar .nav-btn{
+	width:auto;height:32px;aspect-ratio:auto;padding:0 10px;gap:6px;justify-content:center;
+}
+body[data-nav-orientation="horizontal"] .wyvern-toolbar-sep{width:1px;height:24px;margin:0 2px}
+/* .rail-sep (nav-hub.css) is a horizontal rule meant to divide a column of
+   STACKED buttons — in a horizontal row it needs to divide left-to-right
+   instead, same section boundary (Hub tools vs. pinned modules) just
+   rotated onto the other axis. */
+body[data-nav-orientation="horizontal"] .rail-sep{width:0;height:60%;border-top:none;border-left:1px solid var(--border);margin:0 5px}
+/* The active-module indicator bar (nav-hub.css .nav-btn.active::after) is
+   positioned for a vertical column (a bar on the button's left edge) — in a
+   horizontal row that reads as floating in empty space instead of marking
+   the selected button, so it moves to the bottom edge here to match the
+   row's own axis. */
+body[data-nav-orientation="horizontal"] .nav-btn.active::after{
+	left:22%;right:22%;top:auto;bottom:-4px;width:auto;height:3px;
+}
+/* Button display mode (icon/label/both) — only meaningful in horizontal
+   orientation; vertical mode keeps its existing width-driven .nav-expanded
+   behavior (nav-hub.css) untouched. 'both' matches the global .nav-label
+   default already being display:none, so only 'label' needs to force it
+   visible while also hiding the icon; 'icon' is the existing global default
+   and needs no override. */
+body[data-nav-orientation="horizontal"][data-nav-display="both"] #nav-sidebar .nav-label,
+body[data-nav-orientation="horizontal"][data-nav-display="both"] #workspace-toolbar .nav-label,
+body[data-nav-orientation="horizontal"][data-nav-display="label"] #nav-sidebar .nav-label,
+body[data-nav-orientation="horizontal"][data-nav-display="label"] #workspace-toolbar .nav-label{
+	display:inline-block;
+}
+body[data-nav-orientation="horizontal"][data-nav-display="label"] #nav-sidebar .nav-btn .icon,
+body[data-nav-orientation="horizontal"][data-nav-display="label"] #workspace-toolbar .nav-btn .icon,
+body[data-nav-orientation="horizontal"][data-nav-display="label"] #nav-sidebar .nav-btn .kicon-img-icon{
+	display:none;
+}
+
+/* Wyvern drill-down breadcrumb (replaces the docked Nest tree entirely).
+   Reused verbatim by Dragon's own breadcrumb below — same markup/classes,
+   only the board underneath it differs. */
+.wyvern-breadcrumb{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:calc(13px * var(--fsc,1))}
+.wyvern-crumb{cursor:pointer;color:var(--t2)}
+.wyvern-crumb:last-child{color:var(--t1);font-weight:600;cursor:default}
+.wyvern-crumb:hover:not(:last-child){color:var(--accentH)}
+.wyvern-crumb-sep{color:var(--t3)}
+
+/* Dragon: keeps nav-sidebar/hub-toggle/titlebar-vault/status-bar (per
+   Plan.md's "แสดง tool ตามเดิม") — only the left-panel Nest tree and the
+   Builder's tab strip/split-layout picker hide, replaced by the ERP
+   console below. */
+body[data-workspace="dragon"] #left-panel,
+body[data-workspace="dragon"] #left-panel-resize,
+body[data-workspace="dragon"] #builder-tabs,
+body[data-workspace="dragon"] #layout-menu-wrap{display:none}
+
+/* Dragon's ERP console (src/renderer/dragon.js) — toolbar + KPI strip +
+   either grouped app tiles or a flat record table. Everything below is
+   token-driven so all 32 themes get it for free; the only inline colors the
+   renderer writes are per-module/per-kind accents, which fall back to
+   var(--accent). */
+.erp-head{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4)}
+.erp-toolbar{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;margin:var(--sp-4) 0}
+/* max-width + margin-right:auto keeps the field a toolbar control rather
+   than letting it eat the whole row, and still pushes the view switch and
+   the create button to the far right. */
+.erp-search{display:flex;align-items:center;gap:var(--sp-2);flex:1;min-width:160px;max-width:340px;margin-right:auto;
+	padding:0 var(--sp-4);height:32px;background:var(--surface);
+	border:1px solid var(--border);border-radius:var(--r);color:var(--t3)}
+.erp-search:focus-within{border-color:var(--accent)}
+.erp-search .icon{width:14px;height:14px;flex-shrink:0}
+.erp-search input{flex:1;min-width:0;background:none;border:none;outline:none;
+	color:var(--t1);font-size:var(--fs-body);font-family:inherit}
+.erp-viewtabs{display:flex;gap:2px;padding:2px;background:var(--surface);
+	border:1px solid var(--border);border-radius:var(--r)}
+/* Segmented control over the shared .btn.btn-g ghost button — only the
+   tighter box and the selected segment's fill are Dragon's own. */
+.erp-viewtab{gap:var(--sp-1);height:26px;padding:0 var(--sp-3);
+	border-radius:var(--rs);font-size:var(--fs-sm)}
+.erp-viewtab.active{background:var(--raised);color:var(--t1)}
+.erp-viewtab .icon{width:13px;height:13px;margin-right:0}
+.erp-viewtab-l{white-space:nowrap}
+
+/* KPI strip — the level's own counts, the thing an ERP landing page leads
+   with. auto-fit keeps all four on one row at normal widths and folds them
+   into two without a media query in a narrow pane. */
+.erp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+	gap:var(--sp-3);margin-bottom:var(--sp-5)}
+.erp-kpi{padding:var(--sp-4) var(--sp-5);background:var(--surface);
+	border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--r)}
+.erp-kpi-v{font-size:calc(22px * var(--fsc,1));line-height:var(--lh-flat);font-weight:600;color:var(--t1)}
+.erp-kpi-l{margin-top:var(--sp-1);font-size:var(--fs-xs);color:var(--t2)}
+
+/* Tiles view — one section per kind, like an ERP launchpad's app groups. */
+.erp-group{margin-bottom:var(--sp-6)}
+.erp-group-head{display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3);
+	padding-bottom:var(--sp-2);border-bottom:1px solid var(--border)}
+.erp-group-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.erp-group-name{font-size:var(--fs-label);font-weight:600;color:var(--t1)}
+.erp-group-count{padding:1px var(--sp-2);background:var(--raised);border-radius:var(--rs);
+	font-size:var(--fs-micro);color:var(--t2)}
+.erp-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:var(--sp-3)}
+.erp-tile{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-4);
+	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+	cursor:pointer;transition:border-color var(--ease),background var(--ease)}
+.erp-tile:hover{background:var(--raised);border-color:var(--accent)}
+.erp-tile-ic{display:flex;align-items:center;justify-content:center;flex-shrink:0;
+	width:30px;height:30px;border:1px solid var(--border);border-radius:var(--rs);opacity:.9}
+.erp-tile-ic .icon{width:15px;height:15px}
+.erp-tile-body{min-width:0;flex:1}
+.erp-tile-name{font-size:var(--fs-body);color:var(--t1);
+	white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.erp-tile-meta{font-size:var(--fs-xs);color:var(--t2)}
+.erp-tile-badge{flex-shrink:0;min-width:20px;padding:1px var(--sp-2);text-align:center;
+	background:var(--raised);border-radius:var(--rs);font-size:var(--fs-micro);color:var(--t2)}
+
+/* Table view — the same records as a flat ERP list. Wrapped in its own
+   overflow-x container so a narrow Builder pane scrolls the table instead
+   of the page. */
+.erp-table-wrap{overflow-x:auto;background:var(--surface);
+	border:1px solid var(--border);border-radius:var(--r)}
+.erp-table{width:100%;border-collapse:collapse;font-size:var(--fs-body)}
+.erp-table th{padding:var(--sp-3) var(--sp-4);text-align:left;white-space:nowrap;
+	background:var(--raised);border-bottom:1px solid var(--border);
+	font-size:var(--fs-xs);font-weight:600;color:var(--t2)}
+.erp-table td{padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--border);color:var(--t1)}
+.erp-table tbody tr{cursor:pointer}
+.erp-table tbody tr:hover td{background:var(--hover)}
+.erp-table tbody tr:last-child td{border-bottom:none}
+/* The name cell's icon sits inline rather than turning the <td> into a flex
+   box — a display:flex cell drops out of the table's column sizing and the
+   header stops lining up with it. */
+.erp-row-ic{display:inline-flex;align-items:center;vertical-align:middle;margin-right:var(--sp-2)}
+.erp-row-ic .icon{width:14px;height:14px}
+.erp-table .erp-num{text-align:right;color:var(--t2)}
+.erp-table .erp-act{text-align:right;width:1%;white-space:nowrap}
+
+/* Setting window → Workspace → Workspace Style page (core/workspace-style.js)
+   — CSS-drawn wireframe mockups reusing the Theme page's .prefs-theme-cell/
+   -grid/-name/-check idiom for the cards themselves; only these small
+   preview-block rules are new. */
+.wsp-cell-preview{display:flex;gap:3px;height:56px;padding:4px;margin-bottom:6px;
+	border:1px solid var(--border);border-radius:var(--rs);overflow:hidden;background:var(--bg)}
+.wsp-blk{border-radius:2px}
+/* Dragon's mockup is the ERP console in miniature: a KPI row over a tile
+   grid, drawn with the same block idiom as the other two cells. */
+.wsp-erp-mini{display:flex;flex-direction:column;gap:3px;flex:1;padding:3px;background:var(--bg)}
+.wsp-erp-kpis{display:flex;gap:2px}
+.wsp-erp-kpis i{flex:1;height:9px;border-radius:2px;background:var(--accent);opacity:.5}
+.wsp-erp-tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;flex:1}
+.wsp-erp-tiles i{border-radius:2px;background:var(--raised)}

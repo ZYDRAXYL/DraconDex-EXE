@@ -1,0 +1,52 @@
+{
+  "lockVersion": 1,
+  "self": "EXE",
+  "source": {
+    "repo": "ZYDRAXYL/DraconDex-SDB",
+    "ref": "be803f8b5a666d93f2080a245a8ebf971085bbf2",
+    "version": "1.0.0",
+    "_comment": "An immutable ref, deliberately: a commit SHA rather than a branch. sdb-check resolves this through raw.githubusercontent, and pinning 'main' would not be a pin \u2014 main moves, so the drift check would verify against whatever SDB happens to be rather than against the version this repo actually vendored. Moving the pin is a reviewable commit, which is the whole point. Same idea as DraconDex-PWA's app-source.json commit field."
+  },
+  "expect": {
+    "vaultSchemaVersion": 4,
+    "supabaseSchemaVersion": 2
+  },
+  "vendored": {
+    "src/schema/generated/vault-ddl.electron.js": {
+      "artifact": "generated/electron/vault-ddl.electron.js",
+      "sha256": "c44dbc1c51711f4d429a5e0b6f3f4fc235ac2b5bea1eb0c132d5d67993be7844"
+    },
+    "electron/src/db/supabase-schema.js": {
+      "artifact": "generated/electron/supabase-schema.js",
+      "sha256": "5c8b631db18a16b2c8c9e120835c02e3cd222c153f93957d26489ec0fd5d556f"
+    },
+    "src/assets/brand/DraconDex_BlackIn.png": {
+      "artifact": "assets/brand/DraconDex_BlackIn.png",
+      "sha256": "e04929e6a55983c60ff6bd176c16003dae4f11122191c9413122c161c0a2ad23"
+    },
+    "src/assets/brand/DraconDex_BlackOut.png": {
+      "artifact": "assets/brand/DraconDex_BlackOut.png",
+      "sha256": "18a8066cddd1b8e5c2a7133e0dc02a922e6c14ffa35d96ab41ff33065017186b"
+    },
+    "src/assets/brand/DraconDex_Color.png": {
+      "artifact": "assets/brand/DraconDex_Color.png",
+      "sha256": "cb9844e845917614e99f7f110f90684589754432b2b925858f68ae4402b995bd"
+    },
+    "src/assets/brand/DraconDex_Icon.ico": {
+      "artifact": "assets/brand/DraconDex_Icon.ico",
+      "sha256": "56d6efc2718a38b39209842adc14123db58230cc3b3c0f0a65bacd414611b428"
+    },
+    "src/assets/brand/DraconDex_Shade.png": {
+      "artifact": "assets/brand/DraconDex_Shade.png",
+      "sha256": "28f12c2aabf2a2e3762f46d52e782b737df90f076dd73fdbe4748991ebaf8077"
+    },
+    "src/assets/brand/DraconDex_WhiteIn.png": {
+      "artifact": "assets/brand/DraconDex_WhiteIn.png",
+      "sha256": "f24a09d575b0515c5c02314f869f52dae0ad25ca40fede3f7c7b5f83f7006190"
+    },
+    "src/assets/brand/DraconDex_WhiteOut.png": {
+      "artifact": "assets/brand/DraconDex_WhiteOut.png",
+      "sha256": "7677500149b9655d06460bc69ac31c46a1b7323fe9c85f1c8680247b1a107821"
+    }
+  }
+}

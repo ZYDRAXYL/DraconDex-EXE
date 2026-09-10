@@ -1,0 +1,85 @@
+/* Design tokens — :root custom properties (colors, radii, fonts, sizes).
+   Every other file in css/ consumes these; nothing here targets a component. */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{height:100%;overflow:hidden}
+
+:root{
+	--bg:      #0f0f13;
+	--surface: #18181f;
+	--raised:  #22222d;
+	--hover:   #2a2a38;
+	--border:  #2e2e3f;
+	--t1:      #e8e8f0;
+	--t2:      #9090a8;
+	--t3:      #5a5a72;
+	--accent:  #6366f1;
+	--accentH: #818cf8;
+	--danger:  #ef4444;
+	--success: #22c55e;
+	/* --button (optional; declared by 13 of the 32 themes) — primary-button fill
+	   for themes that want the CTA to differ from --accent. Always consumed as
+	   var(--button, var(--accent)), so the 19 themes that omit it fall back
+	   correctly; don't add it to them just for symmetry. */
+	--r:8px; --rs:4px; --rl:12px;
+	--nav:42px; --sidebar:264px;
+	/* Written by core.js:507 but not consumed by any CSS rule — scaling is done
+	   with a transform on .ui-scale-wrap instead. Kept to document the contract. */
+	--ui-scale:1;
+	--ease:.15s ease;
+	/* Process 7 part 1 — toggle-animation duration, overwritten inline on
+	   documentElement by core/settings.js's applyUiSettings() from the
+	   Workspace "animation speed" setting; this default only matters before
+	   that first runs. */
+	--anim-dur:.15s;
+	/* Font-scale multiplier (80–130%), overwritten inline on documentElement by
+	   core.js. It was referenced 300+ times as var(--fsc,1) but never declared;
+	   the inline override still wins, so declaring it here changes nothing and
+	   just makes the token real to anyone reading :root. */
+	--fsc:1;
+
+	/* Ink for text/icons sitting ON a filled --accent / --button / --danger
+	   surface. Defaults to the #fff that was previously hardcoded at 26 sites,
+	   so this block on its own is a no-op; themes whose fill is too light for
+	   white override the one they need (see the per-theme blocks below).
+	   Three independent literals on purpose — writing --on-button:var(--on-accent)
+	   would freeze the alias at :root and per-theme overrides would never reach
+	   it, the same trap documented on --bg2 further down. */
+	--on-accent: #fff;
+	--on-button: #fff;
+	--on-danger: #fff;
+	--ink-dark:  #1a1a26;
+
+	/* ── Scales below are vocabulary for NEW code. The ~2200 px literals already
+	   in this file are deliberately NOT retrofitted; values here are the measured
+	   modes of what the file already uses, so new rules match the existing look
+	   instead of introducing a second spacing/type rhythm. ── */
+
+	/* Spacing — the 8 values covering ~95% of existing padding/gap/margin */
+	--sp-0:2px; --sp-1:4px; --sp-2:6px; --sp-3:8px;
+	--sp-4:10px; --sp-5:12px; --sp-6:14px; --sp-7:16px;
+
+	/* Type — pre-multiplied by --fsc so new code cannot bypass the font-scale
+	   setting the way the inline font-size:Npx in the renderers used to. */
+	--fs-micro:  calc(10px   * var(--fsc,1));
+	--fs-tiny:   calc(10.5px * var(--fsc,1));
+	--fs-xs:     calc(11px   * var(--fsc,1));
+	--fs-sm:     calc(12px   * var(--fsc,1));
+	--fs-label:  calc(12.5px * var(--fsc,1));
+	--fs-body:   calc(13px   * var(--fsc,1));
+	--fs-body-l: calc(13.5px * var(--fsc,1));
+	--fs-lg:     calc(14px   * var(--fsc,1));
+	--fs-xl:     calc(15px   * var(--fsc,1));
+
+	--lh-flat:1; --lh-snug:1.4; --lh-normal:1.45; --lh-relaxed:1.5; --lh-loose:1.8;
+
+	/* Elevation — the 4 shadow values that already appear 3x each */
+	--shadow-pop:   0 8px 24px rgba(0,0,0,.3);
+	--shadow-float: 0 8px 24px rgba(0,0,0,.4);
+	--shadow-menu:  0 18px 44px rgba(0,0,0,.42);
+	--shadow-modal: 0 24px 64px rgba(0,0,0,.55);
+
+	/* For new code only. The three existing mono stacks stay as they are —
+	   'Courier New' on the hex fields is a deliberate fixed-width-digit choice. */
+	--mono: ui-monospace,'Cascadia Mono','Segoe UI Mono','Courier New',monospace;
+}
+

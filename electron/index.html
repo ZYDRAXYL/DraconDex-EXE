@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <!-- Content-Security-Policy. Must be a meta tag, not a webRequest header:
+       this document is loaded with loadFile(), so it is a file:// page and has
+       no HTTP response headers for onHeadersReceived to rewrite.
+
+       Read this honestly: script-src needs 'unsafe-inline' because the boot
+       script below is inline and the whole UI is built on inline onclick=
+       handlers, so this policy does NOT stop inline-handler XSS. What it does
+       buy is real all the same — connect-src 'none' means a compromised
+       renderer has no way to phone data out (every network call in this app
+       goes through window.api to the main process, so nothing legitimate
+       breaks), remote <script src> can't be loaded, plugins/objects are off,
+       and <base> can't be hijacked to re-point relative URLs.
+       Tightening script-src further means migrating ~500 inline handlers to
+       delegated listeners — a separate job, not a quick win. -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'none';
+    script-src 'self' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: blob: ddx-file:;
+    font-src 'self';
+    media-src 'self' blob: ddx-file:;
+    connect-src 'none';
+    object-src 'none';
+    frame-src 'none';
+    base-uri 'none';
+    form-action 'none';">
+  <title>Novel Manager</title>
+  <!-- style.css was split into css/ (Plan part1). ORDER IS BEHAVIOUR: these are
+       contiguous slices of the old file and the cascade depends on them staying
+       in this sequence — tokens → themes → base → chrome → layout → components
+       → legacy → v3. Adding a file? Put it where its rules used to live. -->
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/titlebar.css">
+  <link rel="stylesheet" href="css/nav-hub.css">
+  <link rel="stylesheet" href="css/inspector.css">
+  <link rel="stylesheet" href="css/editor.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/shared-carryover.css">
+  <link rel="stylesheet" href="css/compat.css">
+  <link rel="stylesheet" href="css/kinds.css">
+  <link rel="stylesheet" href="css/builder.css">
+  <link rel="stylesheet" href="css/workspace.css">
+  <!-- Last on purpose: welcome-mode strips the app chrome down to a bare
+       two-column picker, so its hide rules must win over every layout file
+       above without needing !important. -->
+  <link rel="stylesheet" href="css/welcome.css">
+</head>
+<body>
+<div id="splash">
+  <img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img splash-logo" alt="DraconDex">
+  <div id="splash-track"><div id="splash-fill"></div></div>
+  <div id="splash-pct" data-no-i18n>0%</div>
+</div>
+<script>
+/* Boot splash. Runs before the ~700KB of app JS below parses — a synchronous
+   script blocks paint, so everything here lands before the first frame. */
+(function(){
+  /* (a) Theme, early. body[data-theme] is normally set by applyUiSettings()
+     (core.js), but that is the first line of init(), which only runs after all
+     30 script tags have parsed — so a light-theme user got a black flash for
+     the whole boot. This is a deliberately reduced copy: theme only, no --fsc /
+     zoom / lang. applyUiSettings() stays authoritative and re-applies the lot a
+     few hundred ms later, so anything guessed wrong here self-corrects. Keep the
+     storage key and the 'midnight' default in sync with core.js. */
+  try{
+    var saved = JSON.parse(localStorage.getItem('novel-manager-ui-settings') || '{}');
+    var theme = typeof saved.theme === 'string' ? saved.theme : 'midnight';
+    if (theme.indexOf('custom:') === 0){
+      var ct = (saved.customThemes || []).filter(function(c){ return 'custom:' + c.id === theme; })[0];
+      document.body.dataset.theme = ct ? 'custom' : 'midnight';
+      if (ct) for (var k in (ct.vars || {})) document.body.style.setProperty(k, ct.vars[k]);
+    } else {
+      document.body.dataset.theme = theme;
+    }
+  }catch(e){ document.body.dataset.theme = 'midnight'; }
+
+  /* (a2) Workspace style, early — same reasoning as theme above (Plan part2
+     #New Workspace): a real ?workspace= query param always wins, for manual
+     QA, same idiom as boot.js's ?nexus=/?popup= reads. applyWorkspaceStyle()
+     in boot.js re-applies authoritatively once S.settings exists. */
+  try{
+    var qsWorkspace = new URLSearchParams(location.search).get('workspace');
+    var workspace = ['drake','wyvern','dragon'].indexOf(qsWorkspace) !== -1 ? qsWorkspace
+      : (['drake','wyvern','dragon'].indexOf(saved.workspaceStyle) !== -1 ? saved.workspaceStyle : 'drake');
+    document.body.dataset.workspace = workspace;
+    /* (a3) Nav orientation, early (Process 5 part1) — same reasoning as (a2)
+       above: a real reparent only happens once applyNavOrientation() (boot.js)
+       runs, but the CSS this attribute drives (workspace.css) needs to be
+       correct before first paint or a wide/tall #nav-sidebar in the wrong
+       axis flashes for a frame. Defaults mirror NAV_ORIENTATION_DEFAULT
+       (core/state.js) — keep the two in sync. */
+    var navOrientDefault = { drake:'vertical', wyvern:'horizontal', dragon:'vertical' };
+    var savedNavOrient = (saved.navOrientation || {})[workspace];
+    document.body.dataset.navOrientation = (savedNavOrient === 'horizontal' || savedNavOrient === 'vertical')
+      ? savedNavOrient : navOrientDefault[workspace];
+    document.body.dataset.navDisplay = ['icon','label','both'].indexOf(saved.navHorizontalDisplay) !== -1
+      ? saved.navHorizontalDisplay : 'both';
+  }catch(e){ document.body.dataset.workspace = 'drake'; document.body.dataset.navOrientation = 'vertical'; document.body.dataset.navDisplay = 'both'; }
+
+  /* (b) Progress controller. Ticks come from real checkpoints — the script tags
+     below, then init() in core.js — never a timer pretending to be progress. */
+  var born = Date.now(), pct = 0, over = false;
+  function el(id){ return document.getElementById(id); }
+  window.__splash = {
+    set: function(n){
+      if (over) return;
+      pct = Math.max(pct, Math.min(100, n));
+      var f = el('splash-fill'), p = el('splash-pct');
+      if (f) f.style.width = pct + '%';
+      if (p) p.textContent = pct + '%';
+    },
+    finish: function(){
+      if (over) return;
+      over = true;
+      var s = el('splash'), f = el('splash-fill'), p = el('splash-pct');
+      if (f) f.style.width = '100%';
+      if (p) p.textContent = '100%';
+      if (!s) return;
+      /* Min on-screen time so a warm boot flashes the splash instead of
+         strobing it, then fade (matches the .26s transition in style.css). */
+      setTimeout(function(){
+        s.classList.add('splash-hide');
+        setTimeout(function(){ s.remove(); }, 320);
+      }, Math.max(0, 500 - (Date.now() - born)));
+    },
+  };
+  /* #splash is position:fixed/inset:0 — if boot dies before finish() it would
+     swallow every click on the app underneath. Always leave an exit. */
+  setTimeout(function(){ window.__splash.finish(); }, 20000);
+})();
+</script>
+<div id="window-frame">
+<header id="title-tab-bar">
+  <div id="title-left-zone">
+    <div class="tab-brand" title="DraconDex">
+      <img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img" alt="DraconDex">
+    </div>
+    <span id="titlebar-vault" class="titlebar-vault">DraconDex</span>
+  </div>
+  <div id="builder-tabs" aria-label="Open modules"></div>
+  <div class="title-drag"></div>
+  <div id="layout-menu-wrap">
+    <button class="title-layout-btn" id="layout-menu-btn" title="Split layout" aria-haspopup="true" aria-expanded="false" data-no-i18n>▢</button>
+    <div id="layout-menu" class="hidden"></div>
+  </div>
+  <!-- Plan process1 part2 #1.2: hidden until initVersionCheck() (update.js)
+       finds a newer release; clicking it opens the Setting → appdata →
+       Versions page instead of duplicating the download/dismiss actions
+       already on that page and in the update modal. -->
+  <button class="title-update-btn hidden" id="titlebar-update-btn" title="Update available" onclick="openSettingWindow('appdata','versions')">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+  </button>
+  <div id="settings-menu-wrap">
+    <button class="title-settings-btn" id="settings-menu-btn" title="Settings" aria-haspopup="true" aria-expanded="false">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+    <div id="settings-menu" class="hidden"></div>
+  </div>
+  <div id="window-controls">
+    <button class="window-btn" id="win-min" title="Minimize">-</button>
+    <button class="window-btn" id="win-max" title="Maximize">▢</button>
+    <button class="window-btn close" id="win-close" title="Close">x</button>
+  </div>
+</header>
+<!-- Process 5 part1: horizontal-nav mount — applyNavOrientation() (core/boot.js)
+     reparents #nav-sidebar (Drake/Dragon) or #workspace-toolbar (Wyvern) in
+     here when that style's orientation setting is 'horizontal'. Empty and
+     height:0 (workspace.css) the rest of the time. -->
+<div id="nav-toolbar-h">
+  <div id="nav-toolbar-h-resize" class="panel-resize-handle panel-resize-handle-v" onmousedown="startNavHorizontalResize(event)" title="Resize navbar"></div>
+</div>
+<div id="app">
+  <nav id="nav-sidebar">
+    <button class="nav-logo-btn" id="nav-logo-btn" title="DraconDex">
+      <img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img" alt="DraconDex">
+    </button>
+    <div id="nav-sidebar-spacer" style="flex:1"></div>
+    <button class="nav-btn nav-util" id="btn-import-db" title="Import DB">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      <span class="nav-label">Import DB</span>
+    </button>
+    <button class="nav-btn nav-util" id="btn-export-db" title="Export DB">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <span class="nav-label">Export DB</span>
+    </button>
+    <button class="nav-btn" data-panel="hashtag" title="ป้ายกำกับ">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="4" y1="9" x2="20" y2="9"/>
+        <line x1="4" y1="15" x2="20" y2="15"/>
+        <line x1="10" y1="3" x2="8" y2="21"/>
+        <line x1="16" y1="3" x2="14" y2="21"/>
+      </svg>
+      <span class="nav-label">ป้ายกำกับ</span>
+    </button>
+    <button class="nav-btn" data-panel="colors" title="สี">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <circle cx="7.5" cy="10.5" r="1.5"/>
+        <circle cx="11.5" cy="7.5" r="1.5"/>
+        <circle cx="16.5" cy="9.5" r="1.5"/>
+        <circle cx="15.5" cy="14.5" r="1.5"/>
+      </svg>
+      <span class="nav-label">สี</span>
+    </button>
+  </nav>
+  <div id="nav-sidebar-resize" class="panel-resize-handle" onmousedown="startNavRailResize(event)" title="Resize panel"></div>
+  <aside id="left-panel">
+    <div id="search-bar">
+      <button id="hub-toggle-btn" class="hub-toggle" title="Toggle hub panel">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      </button>
+      <input id="search-input" placeholder="ค้นหา..." autocomplete="off">
+    </div>
+    <div id="left-panel-inner"></div>
+    <div id="left-panel-foot"></div>
+  </aside>
+  <div id="left-panel-resize" class="panel-resize-handle" onmousedown="startLeftPanelResize(event)" title="Resize panel"></div>
+  <div id="workspace-toolbar" class="hidden"></div>
+  <main id="main-area"><div id="main-inner"></div></main>
+</div>
+<footer id="status-bar"></footer>
+</div>
+<div id="modal-overlay" class="hidden">
+  <div id="modal">
+    <div id="modal-head"><span id="modal-title"></span><button id="modal-close">✕</button></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+  <!-- i18n data + Core + Director loaded immediately; Timeline/Relation/Map/Hashtag lazy-loaded on first use -->
+  <script src="src/renderer/i18n.js"></script>
+  <script>__splash.set(15)</script>
+  <script src="src/renderer/markdown.js"></script>
+  <script src="src/renderer/sanitize.js"></script>
+  <script src="src/renderer/mdeditor.js"></script>
+  <!-- core.js was split into src/renderer/core/ (Plan part1). These are classic
+       scripts sharing one global scope and each file is a verbatim slice of the
+       old core.js, so ORDER MATTERS: state.js must parse first (every other
+       file's top level reads S / I / the UI_* tables), and the rest keep the
+       original sequence. init() is still called from search.js, last. -->
+  <script src="src/renderer/core/state.js"></script>
+  <script src="src/renderer/core/boot.js"></script>
+  <script src="src/renderer/core/calendar-engine.js"></script>
+  <script src="src/renderer/core/ui.js"></script>
+  <script src="src/renderer/core/settings.js"></script>
+  <script src="src/renderer/core/setting-window.js"></script>
+  <script src="src/renderer/core/workspace-style.js"></script>
+  <script src="src/renderer/core/tool-toggle.js"></script>
+  <script src="src/renderer/core/startup-settings.js"></script>
+  <script src="src/renderer/core/account.js"></script>
+  <script src="src/renderer/core/db-transfer.js"></script>
+  <script src="src/renderer/core/theme.js"></script>
+  <script src="src/renderer/core/chrome.js"></script>
+  <script src="src/renderer/core/nav.js"></script>
+  <script src="src/renderer/core/pickers.js"></script>
+  <script src="src/renderer/core/views.js"></script>
+  <script src="src/renderer/core/nexus.js"></script>
+  <script src="src/renderer/core/nexus-options.js"></script>
+  <script src="src/renderer/core/welcome.js"></script>
+  <script src="src/renderer/core/router.js"></script>
+  <script src="src/renderer/core/shortcuts.js"></script>
+  <script>__splash.set(35)</script>
+  <script src="src/renderer/builder.js"></script>
+  <!-- hub.js split into src/renderer/hub/ (Plan part1) — verbatim slices,
+       kinds.js first (it owns MODULE_KINDS / KIND_* consts). -->
+  <script src="src/renderer/hub/kinds.js"></script>
+  <script src="src/renderer/hub/sections.js"></script>
+  <script src="src/renderer/hub/tree.js"></script>
+  <script src="src/renderer/hub/popups.js"></script>
+  <script src="src/renderer/hub/menus.js"></script>
+  <script src="src/renderer/hub/edit.js"></script>
+  <script src="src/renderer/hub/open.js"></script>
+  <script src="src/renderer/hub/legacy-migrate.js"></script>
+  <script src="src/renderer/inspector.js"></script>
+  <script src="src/renderer/versions.js"></script>
+  <script src="src/renderer/pluginpanel.js"></script>
+  <script src="src/renderer/iconpicker.js"></script>
+  <script src="src/renderer/mod/classifier.js"></script>
+  <script src="src/renderer/mod/classifier-detail.js"></script>
+  <script src="src/renderer/mod/manager.js"></script>
+  <script src="src/renderer/mod/manager-graph.js"></script>
+  <script src="src/renderer/mod/detail.js"></script>
+  <script src="src/renderer/mod/locator.js"></script>
+  <script src="src/renderer/mod/chronicler.js"></script>
+  <script src="src/renderer/mod/chronicler-graph.js"></script>
+  <script src="src/renderer/mod/chronicler-calendar.js"></script>
+  <script src="src/renderer/mod/narrator.js"></script>
+  <script src="src/renderer/mod/narrator-dialogue.js"></script>
+  <script src="src/renderer/mod/author.js"></script>
+  <script src="src/renderer/mod/chatscribe.js"></script>
+  <script src="src/renderer/mod/drafter.js"></script>
+  <script src="src/renderer/mod/viewer.js"></script>
+  <script src="src/renderer/mod/connector.js"></script>
+  <script src="src/renderer/mod/sketcher.js"></script>
+  <script src="src/renderer/mod/designer.js"></script>
+  <script src="src/renderer/mod/item.js"></script>
+  <script src="src/renderer/mod/sagehut.js"></script>
+  <script src="src/renderer/mod/fileviewer.js"></script>
+  <script src="src/renderer/mod/wanderer.js"></script>
+  <script>__splash.set(50)</script>
+  <script src="src/renderer/sync.js"></script>
+  <script src="src/renderer/supabase.js"></script>
+  <script src="src/renderer/drive.js"></script>
+  <script src="src/renderer/cloud.js"></script>
+  <script src="src/renderer/update.js"></script>
+  <script src="src/renderer/plugin.js"></script>
+  <script src="src/renderer/pkg.js"></script>
+  <script src="src/renderer/wyvern.js"></script>
+  <script src="src/renderer/dragon.js"></script>
+  <script>__splash.set(55)</script>
+  <script src="src/renderer/search.js"></script>
+</body>
+</html>

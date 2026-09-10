@@ -1,0 +1,335 @@
+/* Shared components — buttons, form controls, the color grid, #modal, the
+   modeless floating panel, the Preferences panel, setBusy(), the boot splash,
+   uiPrompt/uiConfirm and the first-run guide coach-marks. */
+/* ICONS — base rule every inline <svg class="icon"> in the app relies on for
+   its size/stroke; component-scoped rules elsewhere override the size for
+   their own context. Restored (Process 4 part 1) after it was lost in the
+   legacy Director/Navigator/Hero/Writer CSS deletion (v.4.10.0) — without it
+   every icon fell back to the browser's default replaced-element size
+   instead of 1em, blowing up layout wherever an icon appears. */
+.icon{
+	width:1em;height:1em;
+	stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+	fill:none;display:inline-block;vertical-align:middle;
+	transition:transform var(--ease), stroke var(--ease);
+}
+/* BUTTONS */
+.btn{
+	display:inline-flex;align-items:center;gap:6px;
+	padding:7px 15px;border:none;border-radius:var(--r);
+	cursor:pointer;font-size:calc(13.5px * var(--fsc,1));font-weight:500;
+	transition:all var(--ease);font-family:inherit;
+}
+.btn .icon{width:14px;height:14px;margin-right:2px}
+/* A disabled .btn had no styling at all, so it looked exactly like a live one
+   — both for the busy state syncBtnBusy sets and for a genuinely unavailable
+   action (e.g. Launch on a plugin missing a dependency). Same treatment
+   base.css already gives select:disabled. Pointer events stay ON (unlike
+   .bnav:disabled in builder.css) so the button's title= tooltip still explains
+   WHY it is unavailable. */
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-p{background:var(--button, var(--accent));color:var(--on-button)}
+.btn-p:hover{background:var(--accentH)}
+.btn-s{background:var(--raised);color:var(--t1);border:1px solid var(--border)}
+.btn-s:hover{background:var(--hover)}
+.btn-d{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn-d:hover{background:var(--danger);color:var(--on-danger)}
+.btn-g{background:transparent;color:var(--t2)}
+.btn-g:hover{background:var(--hover);color:var(--t1)}
+.btn-i{padding:4px;width:28px;height:28px;justify-content:center;border-radius:var(--rs);font-size:calc(14px * var(--fsc,1))}
+.btn-i .icon{margin-right:0;width:15px;height:15px}
+/* Icon-only buttons highlight just the icon on hover, not their background —
+   wins by source order (equal specificity) over whichever .btn-p/.btn-s/.btn-g
+   hover rule it's paired with, without touching those shared rules (labeled
+   buttons still use their background-fill hover). .btn-d keeps its red
+   warning fill — a destructive-action cue, not decorative hover chrome. */
+.btn-i:not(.btn-d):hover{background:transparent}
+.btn-i.btn-i-sm{width:20px;height:20px;padding:2px}
+.btn-i.btn-i-sm .icon{width:11px;height:11px}
+
+/* FORMS */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:calc(11px * var(--fsc,1));color:var(--t3);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.fg input,.fg textarea,.fg select{
+	width:100%;background:var(--bg);border:1px solid var(--border);
+	border-radius:var(--r);color:var(--t1);padding:8px 11px;
+	font-size:calc(13.5px * var(--fsc,1));font-family:inherit;outline:none;
+	transition:border-color var(--ease);
+}
+.fg input:focus,.fg textarea:focus,.fg select:focus{border-color:var(--accent)}
+.fg textarea{resize:vertical;min-height:72px}
+.fg select option{background:var(--raised)}
+.fg input[type="checkbox"]{width:auto;padding:0}
+
+/* COLOR GRID */
+.cgrid{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+#cpicker-grid{max-height:112px;overflow-y:auto;padding-right:2px}
+.cswatch{
+	width:26px;height:26px;border-radius:50%;cursor:pointer;
+	border:3px solid transparent;transition:all var(--ease);
+}
+.cswatch:hover{transform:scale(1.15)}
+.cswatch.sel{border-color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.3)}
+
+.symswatch{
+	width:30px;height:30px;padding:0;border-radius:var(--rs);cursor:pointer;
+	display:inline-flex;align-items:center;justify-content:center;font-size:calc(15px * var(--fsc,1));line-height:1;
+	border:1px solid var(--border);background:var(--raised);color:var(--t1);
+	transition:transform var(--ease),background var(--ease),border-color var(--ease),box-shadow var(--ease);
+}
+.symswatch:hover{transform:translateY(-1px);background:var(--hover);border-color:var(--t3)}
+.symswatch.sel{background:var(--accent);color:var(--on-accent);border-color:var(--accent);box-shadow:0 0 0 1px rgba(99,102,241,.25)}
+
+/* Char-elements picker (modal-in-modal) — clickable "insert boxes" that
+   toggle selected state, replacing a native checkbox list so multi-select
+   reads visually instead of relying on tiny checkbox hit-targets. */
+.elem-pick-grid{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.elem-pick{
+	display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;
+	background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);
+	color:var(--t2);transition:background var(--ease),border-color var(--ease),color var(--ease);
+}
+.elem-pick:hover{border-color:var(--t3)}
+.elem-pick.sel{background:color-mix(in srgb, var(--accent) 15%, var(--bg));border-color:var(--accent);color:var(--t1)}
+
+/* MODAL */
+#modal-overlay{
+	position:fixed;inset:0;background:rgba(0,0,0,.65);
+	display:flex;align-items:center;justify-content:center;
+	z-index:100;backdrop-filter:blur(4px);
+}
+#modal-overlay.hidden{display:none}
+#modal{
+	background:var(--surface);border:1px solid var(--border);
+	border-radius:var(--rl);width:480px;max-width:95vw;
+	max-height:88vh;display:flex;flex-direction:column;
+	box-shadow:var(--shadow-modal);
+}
+#modal-head{
+	display:flex;align-items:center;padding:15px 18px;
+	border-bottom:1px solid var(--border);
+}
+#modal-title{flex:1;font-size:calc(14px * var(--fsc,1));font-weight:700}
+#modal-close{
+	background:none;border:none;color:var(--t3);cursor:pointer;
+	font-size:calc(15px * var(--fsc,1));padding:3px 6px;border-radius:var(--rs);line-height:1;
+}
+#modal-close:hover{color:var(--t1)}
+#modal-body{padding:18px;overflow-y:auto;flex:1}
+.mfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+
+/* FLOATING (MODELESS) PANEL — like #modal but no backdrop, so the app below
+   stays interactive (Plan part3 setting#2). */
+.floating-panel{
+	position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+	max-width:95vw;max-height:90vh;
+	background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);
+	box-shadow:0 24px 60px rgba(0,0,0,.5);z-index:150;display:flex;flex-direction:column;overflow:hidden;
+}
+.fp-head{
+	display:flex;align-items:center;justify-content:space-between;padding:15px 18px;
+	border-bottom:1px solid var(--border);font-size:calc(14px * var(--fsc,1));font-weight:700;flex-shrink:0;
+}
+.fp-close{
+	background:none;border:none;color:var(--t3);cursor:pointer;
+	font-size:calc(15px * var(--fsc,1));padding:3px 6px;border-radius:var(--rs);line-height:1;
+}
+.fp-close:hover{color:var(--t1)}
+.fp-close .icon{width:15px;height:15px;display:block}
+.fp-body{padding:18px;overflow-y:auto;flex:1;min-height:0}
+
+/* SETTING WINDOW (Plan part1 #Setting) — two-level sidebar-nav layout hosted
+   inside .floating-panel, replacing the old flat PREFERENCES PANEL below
+   (whose .prefs-* content classes it still reuses for the Theme/Text&Size
+   pages moved in from there). */
+.setting-shell{display:flex;height:100%;gap:16px}
+.setting-sidebar{width:190px;flex-shrink:0;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.setting-nav-head{
+	text-align:left;padding:8px 10px;color:var(--t2);
+	font-family:inherit;font-size:calc(12.5px * var(--fsc,1));font-weight:700;
+	text-transform:uppercase;letter-spacing:.02em;
+}
+.setting-nav-group.open>.setting-nav-head{color:var(--t1)}
+.setting-nav-pages{display:flex;flex-direction:column;gap:1px;padding-left:8px;margin-bottom:4px}
+.setting-nav-item{
+	text-align:left;padding:7px 10px;border:none;border-radius:var(--rs);background:transparent;
+	color:var(--t2);cursor:pointer;font-family:inherit;font-size:calc(12px * var(--fsc,1));
+}
+.setting-nav-item:hover{background:var(--hover);color:var(--t1)}
+.setting-nav-item.active{background:var(--accent);color:var(--on-accent)}
+.setting-content{flex:1;min-width:0;overflow-y:auto}
+
+/* Slider+number row (Plan part2 #1) — 5:1 width ratio, both inputs kept in
+   sync live via inline oninput on the JS side; this only lays them out. */
+.size-slider-row{display:grid;grid-template-columns:5fr 1fr;gap:8px;align-items:center}
+
+/* Module-name read-only compare list (Plan part2 #3) — reuses welcome.css's
+   .welcome-name-* box/row classes for the two-column layout; scoped here to
+   relax them (nothing here is clickable, unlike the wizard's picker) and to
+   define its own row-height var since --wz-name-row lives under
+   .welcome-wizard only. Height clamps between 4 and 5 visible rows, scaling
+   with viewport height in between since the Setting window itself is a
+   fixed-size floating panel. */
+.setting-name-cols{--wz-name-row:26px;margin-top:8px}
+.setting-name-cols .welcome-name-box{cursor:default}
+.setting-name-cols .welcome-name-box:hover{border-color:var(--border)}
+.setting-name-cols .welcome-name-list{max-height:clamp(calc(var(--wz-name-row) * 4), 26vh, calc(var(--wz-name-row) * 5))}
+
+/* PREFERENCES PANEL — sidebar-nav layout hosted inside .floating-panel */
+.prefs-shell{display:flex;height:100%;gap:16px}
+.prefs-sidebar{width:160px;flex-shrink:0;display:flex;flex-direction:column;gap:2px}
+.prefs-nav-item{
+	text-align:left;padding:8px 10px;border:none;border-radius:var(--rs);background:transparent;
+	color:var(--t2);cursor:pointer;font-family:inherit;font-size:calc(12.5px * var(--fsc,1));font-weight:600;
+}
+.prefs-nav-item:hover{background:var(--hover);color:var(--t1)}
+.prefs-nav-item.active{background:var(--accent);color:var(--on-accent)}
+.prefs-content{flex:1;min-width:0;overflow-y:auto}
+.prefs-theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:4px}
+.prefs-theme-cell{
+	position:relative;border:1px solid var(--border);border-radius:var(--r);padding:8px;cursor:pointer;
+	background:var(--bg);transition:border-color var(--ease);
+}
+.prefs-theme-cell:hover{border-color:var(--accentH)}
+.prefs-theme-cell.active{border-color:var(--accent)}
+.prefs-theme-name{margin-top:6px;font-size:calc(11.5px * var(--fsc,1));font-weight:600;color:var(--t1);
+	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prefs-theme-tools{display:none;position:absolute;top:6px;right:6px;gap:4px;background:var(--surface);
+	border-radius:var(--rs);padding:2px 4px}
+.prefs-theme-cell:hover .prefs-theme-tools{display:flex}
+.prefs-theme-tools span{cursor:pointer;color:var(--t3);padding:0 2px;font-size:calc(11px * var(--fsc,1))}
+.prefs-theme-tools span:hover{color:var(--accentH)}
+.prefs-theme-check{position:absolute;top:6px;left:6px;color:var(--accent);font-weight:700;
+	background:var(--surface);border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;
+	font-size:calc(10px * var(--fsc,1))}
+.prefs-theme-add{
+	display:flex;align-items:center;justify-content:center;min-height:112px;
+	border:1px dashed var(--border);color:var(--t3);font-size:28px;font-weight:300;
+}
+.prefs-theme-add:hover{border-color:var(--accentH);color:var(--accentH)}
+.prefs-lang-shell{display:flex;gap:16px;margin-top:4px}
+.lang-list{width:220px;flex-shrink:0;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.lang-item{
+	display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;
+	border:1px solid var(--border);border-radius:var(--rs);background:var(--bg);color:var(--t2);
+	cursor:pointer;font-size:calc(12px * var(--fsc,1));font-weight:600;
+}
+.lang-item:hover{background:var(--hover);color:var(--t1)}
+.lang-item.active{border-color:var(--accent);color:var(--t1)}
+.prefs-lang-preview{
+	flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);
+	padding:14px;display:flex;flex-direction:column;gap:8px;font-size:calc(13px * var(--fsc,1));color:var(--t1);
+}
+.prefs-advanced{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+
+#confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)}
+#confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);width:360px;max-width:92vw;padding:20px;box-shadow:var(--shadow-modal)}
+.confirm-msg{font-size:calc(13px * var(--fsc,1));color:var(--t1);line-height:1.5;white-space:pre-wrap}
+.confirm-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+/* setBusy() — the app's only loading affordance (see core.js). Theme tokens
+   only; sits above panel content but below every dialog layer. */
+.busy-veil{
+	position:absolute;inset:0;z-index:90;
+	display:flex;align-items:center;justify-content:center;gap:10px;
+	background:color-mix(in srgb, var(--bg) 72%, transparent);
+	backdrop-filter:blur(1px);font-size:calc(12.5px * var(--fsc,1));color:var(--t2);
+}
+.busy-spin{
+	width:16px;height:16px;flex-shrink:0;border-radius:50%;
+	border:2px solid var(--border);border-top-color:var(--accent);
+	animation:busy-spin .7s linear infinite;
+}
+.busy-text{color:var(--t2)}
+@keyframes busy-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.busy-spin{animation-duration:2.4s}}
+
+/* Process 7 part 1 — shared toggle-open/close animation, driven by
+   core/ui.js's animateToggleOpen()/animateToggleCloseThenCommit() on any
+   element a toggle shows/hides (Hub accordion .acc-body, Nest tree
+   .nest-children, Module Inspector .module-inspector). --anim-dur is
+   written once by applyUiSettings() from the Workspace "animation speed"
+   setting (core/settings.js), so every consumer here picks up a live
+   change without touching this file. A CSS `animation` (not `transition`)
+   is required specifically because every one of these elements is
+   destroyed and recreated by a full innerHTML re-render on each toggle —
+   there is no "before" state for a transition to interpolate from, but an
+   `animation` plays from its own `from` keyframe regardless of when the
+   class landed on the node. */
+.anim-toggle-in{animation:animToggleIn var(--anim-dur,.15s) ease}
+.anim-toggle-out{animation:animToggleOut var(--anim-dur,.15s) ease}
+@keyframes animToggleIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes animToggleOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-4px)}}
+
+/* Boot splash — the full-window loader shown from first paint until init()
+   finishes (markup + controller live inline at the top of index.html so they
+   exist before any app JS parses). z-index clears every dialog layer, the
+   highest of which is #guide-overlay at 1200; it is removed from the DOM once
+   faded, so nothing here ever competes with the app for a click. */
+#splash{
+	position:fixed;inset:0;z-index:2000;
+	display:flex;flex-direction:column;align-items:center;justify-content:center;
+	gap:var(--sp-7);background:var(--bg);
+	transition:opacity .26s ease;
+}
+#splash.splash-hide{opacity:0;pointer-events:none}
+/* .brand-img carries the per-theme content:url() logo swap (see below), so the
+   splash only needs to override its 30px size. */
+#splash .splash-logo{height:88px;width:88px}
+#splash-track{
+	width:220px;height:4px;border-radius:var(--rs);
+	background:var(--raised);overflow:hidden;
+}
+#splash-fill{
+	height:100%;width:0;border-radius:var(--rs);
+	background:var(--button, var(--accent));
+	transition:width .3s ease;
+}
+#splash-pct{font-size:var(--fs-xs);color:var(--t3);font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){#splash,#splash-fill{transition:none}}
+
+/* uiPrompt() — the text-entry sibling of uiConfirm. Reuses the whole confirm
+   chrome; only needs a wider box and top spacing for its .fg field. */
+#confirm-box.wide{width:460px}
+#confirm-box .fg{margin:12px 0 0}
+#confirm-box .fg textarea{min-height:110px;font-family:var(--mono,ui-monospace,monospace);font-size:calc(12px * var(--fsc,1))}
+
+/* First-run coach-marks guide (src/renderer/guide.js) — theme-token colors only */
+#guide-overlay{position:fixed;inset:0;z-index:1200;pointer-events:none}
+.guide-catch{position:absolute;inset:0;pointer-events:auto}
+.guide-spotlight{position:fixed;border-radius:var(--r);pointer-events:none;
+	box-shadow:0 0 0 9999px rgba(0,0,0,.6),0 0 0 2px var(--accent);
+	transition:left .18s ease,top .18s ease,width .18s ease,height .18s ease}
+.guide-pop{position:fixed;width:280px;max-width:92vw;pointer-events:auto;
+	background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);
+	padding:14px 16px;box-shadow:var(--shadow-modal);
+	transition:left .18s ease,top .18s ease}
+.guide-pop-title{font-size:calc(14px * var(--fsc,1));font-weight:700;color:var(--t1);margin-bottom:6px}
+.guide-pop-text{font-size:calc(12.5px * var(--fsc,1));color:var(--t2);line-height:1.5}
+.guide-pop-foot{display:flex;gap:6px;align-items:center;margin-top:14px}
+.guide-step{font-size:calc(11px * var(--fsc,1));color:var(--t3)}
+
+/* Modal: separate description (hint callout) from data (labeled sections) */
+.modal-hint{
+	display:flex;gap:8px;align-items:flex-start;
+	background:var(--raised);border:1px solid var(--border);
+	border-left:3px solid var(--accent);border-radius:var(--rs);
+	padding:8px 11px;margin:0 0 14px;
+	color:var(--t2);font-size:calc(12.5px * var(--fsc,1));line-height:1.45;
+}
+.modal-hint .icon{width:14px;height:14px;flex-shrink:0;margin-top:1px;color:var(--accent)}
+.modal-section-h{
+	display:flex;align-items:center;gap:8px;
+	font-size:calc(11px * var(--fsc,1));font-weight:700;color:var(--t3);
+	text-transform:uppercase;letter-spacing:.05em;
+	margin:16px 0 6px;
+}
+.modal-section-h.first{margin-top:4px}
+.modal-section-h .count{
+	background:var(--raised);border:1px solid var(--border);
+	color:var(--t2);border-radius:999px;
+	padding:0 7px;font-size:calc(10px * var(--fsc,1));line-height:16px;font-weight:600;
+}
+/* Data rows inside a modal aren't row-clickable — only their action button is */
+.modal-data .li{cursor:default;background:var(--bg);border:1px solid var(--border);margin-bottom:4px}
+.modal-data .li:hover{background:var(--bg);color:var(--t2)}
+

@@ -1,0 +1,55 @@
+/* Base element styling — body typography, Thai line-breaking, bare <select>,
+   and the UI-scale transform wrapper. No component classes. */
+
+/* Thai line-breaking (companion to the font stack above): the 4 long-text
+   surfaces (.dv, .wchat-bubble, .chs-bubble .chs-text, .chs-tr-text) used
+   `word-break:break-word`, which the spec defines as `overflow-wrap:anywhere`
+   — that tells the engine it may break at ANY character, which suppresses
+   Blink's ICU dictionary Thai word-segmenter and splits Thai mid-syllable
+   (Thai has no inter-word spaces, so there is nothing else holding words
+   together). `overflow-wrap:break-word` only force-breaks a word that would
+   overflow the line on its own, so long unbreakable URLs are still contained
+   — the original intent — while Thai segmentation is restored.
+   Not using `line-break:` — its values only affect CJK punctuation, not Thai.
+   Line-height is deliberately NOT bumped globally for Thai: `th` is the
+   default locale, so that would reflow every row/chip/button in the app's
+   default appearance. Only the few `line-height:1` sites that can hold
+   translated Thai are candidates, and only if they visibly clip. */
+
+/* Plan part4 #1: bare <select> elements with no wrapper class (many v3
+   module toolbars/modals) fell through to the OS-native white dropdown —
+   this base rule themes every <select> in the app by default so none of
+   them need an ad-hoc class; the more specific .fg/.form-row/etc. select
+   rules elsewhere just reinforce the same look for their own layout needs.
+   Chromium (Electron) does honor background/color on <option>, including
+   inside the native popup list, unlike some other engines. */
+select{
+	font-family:inherit;background:var(--surface);color:var(--t1);
+	border:1px solid var(--border);border-radius:var(--rs);
+	padding:6px 9px;font-size:calc(13px * var(--fsc,1));cursor:pointer;outline:none;
+}
+select:focus{border-color:var(--accent)}
+select:disabled{opacity:.5;cursor:not-allowed}
+select option{background:var(--surface);color:var(--t1)}
+
+/* Process 6 part 1: same "no ad-hoc class needed" reasoning as <select>
+   above — only a handful of scroll surfaces (the relation-graph underboard,
+   the tag-suggestions dropdown) had their own ::-webkit-scrollbar rule;
+   every other scrollable region (left panel, Hub accordion bodies, modals,
+   the Setting window, ...) fell through to Chromium's default, unstyled
+   (white) scrollbar the moment its content overflowed. Themed once here so
+   it's covered app-wide by default; a component with its own more specific
+   rule (like the relation-graph one) still wins as before. */
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:var(--t3)}
+*::-webkit-scrollbar-corner{background:transparent}
+
+/* UI scale via transform instead of non-standard zoom */
+.ui-scale-wrap {
+	transform-origin: top left;
+	width: 100vw;
+	height: 100vh;
+	overflow: hidden;
+}
