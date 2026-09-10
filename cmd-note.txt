@@ -1,0 +1,50 @@
+command inuse
+
+    To test the app.
+    - npm start 
+    
+    to build the app (portable folder -> DraconDexPortable/DraconDex-<version>/).
+    - npm run build:portable
+
+    to build a windows installer (DraconDexPortable/DraconDex-Setup-<version>.exe).
+    - npm run build:installer
+
+    to build the old single-file exe.
+    - npm run build:exe
+
+    To install package modules.
+    - npm install
+
+    to rebuild module like sqlite.
+    - npm rebuild 
+
+    to test from electron check.
+    - npx electron .
+    - npx electron filename
+
+    to run app build from terminal.
+    - "app name.exe"
+
+command inuse (flutter / Android APK)
+
+    to download flutter packages (run inside flutter).
+    - flutter pub get
+
+    to check code problems.
+    - flutter analyze
+
+    to run tests.
+    - flutter test
+
+    to test on a phone/emulator.
+    - flutter run
+
+    to build the APK (result in flutter/build/app/outputs/flutter-apk/).
+    - flutter build apk --release --split-per-abi
+    - flutter build apk --release
+
+    to install on a phone over USB.
+    - adb install build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+
+    no PC setup: GitHub -> Actions -> "Build Flutter APK" -> Run workflow
+    -> download "release-apks" artifact.

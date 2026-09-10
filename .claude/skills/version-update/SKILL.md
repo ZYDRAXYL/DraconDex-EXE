@@ -492,7 +492,11 @@ deletions — of real app source across the whole accumulated diff since the
 anchor (the same diff Flow A step 3 gathered), plus any uncommitted work:
 
 ```bash
-paths='src electron/main.js electron/preload.js electron/database.js electron/index.html css scripts test flutter'
+# The app-source paths for THIS repo. Each chain repo has its own source
+# root, so read it from chain/chain.json's `owns` for `self` rather than
+# assuming the old monorepo layout:
+#   EXE -> electron/  ·  APK -> flutter/  ·  SDB -> schema/ supabase/  ·  PKG -> packages/
+paths=$(node -e "const c=require('./chain/chain.json');console.log(c.repos[c.self].owns.join(' '))")
 git diff --shortstat <anchor>..HEAD -- $paths
 git diff --shortstat -- $paths            # unstaged
 git diff --shortstat --staged -- $paths   # staged

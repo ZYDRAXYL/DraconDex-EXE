@@ -40,6 +40,9 @@ const APP_DIR = 'electron';
 const app = (f) => `${APP_DIR}/${f}`;
 const SOURCE_ROOTS = [app('src'), app('css'), app('scripts')];
 const ENTRY_FILES = ['main.js', 'preload.js', 'preload-plugin.js', 'database.js', 'start.js', 'ensure-electron.js', 'index.html'];
+// `flutter` and `old_db_data` were monorepo neighbours; after the multi-repo
+// split neither exists here. Kept out of the walk anyway so a stray local copy
+// cannot quietly widen a size or orphan report.
 const SKIP_DIRS = new Set(['node_modules', 'vendor', 'flutter', 'old_db_data', '.git']);
 
 // Data files: long by nature, exempt from the size bands. Plan.md names this

@@ -1,0 +1,106 @@
+name: Mirror releases
+
+# DraconDex-EXE is private. api.github.com/repos/ZYDRAXYL/DraconDex-EXE/releases
+# answers 404 to anyone without a token — which is every install of the app and
+# every visitor of the website — so the in-app update check (electron/src/db/
+# update.js — and DraconDex-APK's update_service.dart) reads a PUBLIC
+# mirror instead: ZYDRAXYL/DraconDex-REL. The download page
+# (ZYDRAXYL/DraconDex-WEB assets/js/releases.js) reads a static
+# assets/data/releases.json snapshot committed straight into that repo — see
+# "Refresh the web repo's static release data" below for why it isn't a live
+# API call either.
+#
+# The build workflows fill both mirrors themselves as part of publishing (see
+# the `mirror` job in build-electron.yml / build-apk.yml). This workflow is the
+# manual lever for everything they cannot cover:
+#
+#   * backfilling the releases published before the mirrors existed (tag: all)
+#   * re-mirroring one tag whose mirror step failed (e.g. a missing secret)
+#   * a release created by hand in the GitHub UI
+#
+# It needs two secrets: RELEASE_REPO_TOKEN, a token with `contents: write` on
+# ZYDRAXYL/DraconDex-REL, and WEB_REPO_TOKEN, the same for ZYDRAXYL/DraconDex-WEB.
+# A workflow's own GITHUB_TOKEN is scoped to the repo it runs in and cannot
+# write anywhere else.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to mirror, or "all" for every published release'
+        required: true
+        default: 'all'
+      limit:
+        description: 'How many releases back to walk when tag is "all"'
+        required: false
+        default: '100'
+  # Only fires for releases published by a human or a PAT: GitHub deliberately
+  # does not re-trigger workflows for events raised by a workflow's own
+  # GITHUB_TOKEN, which is why the build workflows mirror inline instead of
+  # relying on this.
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-releases
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Resolve what to mirror
+        id: what
+        run: |
+          set -euo pipefail
+          if [[ '${{ github.event_name }}' == 'release' ]]; then
+            target='${{ github.event.release.tag_name }}'
+          else
+            target='${{ github.event.inputs.tag }}'
+          fi
+          if [[ "$target" == 'all' ]]; then target='--all'; fi
+          if [[ -z "$target" ]]; then
+            echo "::error::No tag to mirror."
+            exit 1
+          fi
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "Mirroring: $target"
+
+      - name: Mirror to the public release repo
+        env:
+          # Legacy second mirror: nothing reads DraconDex-REL since both
+          # update checks moved to DraconDex-WEB, so an unset RELEASE_REPO_TOKEN
+          # skips this step instead of reddening every release build.
+          OPTIONAL_TARGET: 'true'
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
+          MAX: ${{ github.event.inputs.limit || '100' }}
+        run: bash .github/scripts/mirror-release.sh '${{ steps.what.outputs.target }}'
+
+      # The two web-repo steps below carry their own secret (WEB_REPO_TOKEN) and
+      # their own target, so a failure of the DraconDex-REL mirror above —
+      # a missing RELEASE_REPO_TOKEN, say — must not take the download page's
+      # data down with it. `!cancelled()` runs them anyway; the job still
+      # reports the earlier failure.
+      - name: Mirror into the public web repo
+        if: ${{ !cancelled() }}
+        env:
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ZYDRAXYL/DraconDex-WEB
+          TARGET_TOKEN: ${{ secrets.WEB_REPO_TOKEN }}
+          MAX: ${{ github.event.inputs.limit || '100' }}
+        run: bash .github/scripts/mirror-release.sh '${{ steps.what.outputs.target }}'
+
+      - name: Refresh the web repo's static release data
+        if: ${{ !cancelled() }}
+        env:
+          WEB_TOKEN: ${{ secrets.WEB_REPO_TOKEN }}
+        run: bash .github/scripts/update-web-releases-json.sh

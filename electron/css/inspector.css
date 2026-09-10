@@ -1,0 +1,281 @@
+/* Module Inspector dock + the pickers and popups that hang off it (icon
+   collection, classifier type, kind popup, context menu, inline rename), plus
+   the Classifier / Manager / Locator view bodies. */
+/* Module Inspector dock (progress.md Phase 4) */
+.module-builder{display:flex;gap:0;margin:-18px -22px;min-height:calc(100% + 36px)}
+.module-main{flex:1;min-width:0;padding:18px 22px}
+.module-inspector{width:290px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);padding-bottom:14px}
+.insp-head{padding:10px 14px;border-bottom:1px solid var(--border);font-size:calc(11px * var(--fsc,1));font-weight:700;
+	letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;align-items:center;gap:7px}
+.insp-label{padding:10px 14px 4px;font-size:calc(10.5px * var(--fsc,1));font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--t3)}
+.prop{display:flex;align-items:center;gap:8px;padding:5px 14px;font-size:calc(12px * var(--fsc,1))}
+.prop .pk{width:88px;color:var(--t3);flex-shrink:0}
+.prop .pv{flex:1;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Editable text attributes (classifier-detail.js's contenteditable case)
+   need to visually read as a text box, same as .pv-input/.pv-textarea and
+   .cls-lv-inp already do — plain .pv is also used read-only elsewhere
+   (inspector.js), so this is scoped to the editable case only. */
+.prop .pv[contenteditable]{display:inline-block;background:var(--surface);border:1px solid var(--border);
+	border-radius:6px;padding:5px 8px}
+.prop .pv[contenteditable]:focus{border-color:var(--accent);outline:none}
+.prop .pv.ghost{color:var(--t3);font-style:italic}
+.prop .acts{margin-left:auto}
+.insp-desc-wrap{padding:4px 14px 8px}
+/* Rich-editor upgrade (Plan part6 #4b) — .insp-desc-editor hosts
+   createMarkdownEditor() at a fixed height (the dock has attributes/links/
+   etc. below it, unlike mod/detail.js's full-height main-pane version).
+   .mded-linkspanel's own 230px fixed width (mdeditor.js) doesn't fit next
+   to the editor body inside this dock's 220-500px range, so it's stacked
+   below instead of beside when opened here. */
+.insp-desc-editor{height:220px}
+.module-inspector .mded-cols{flex-direction:column}
+.module-inspector .mded-linkspanel{width:100%;max-height:140px}
+.insp-desc-static .md-preview{background:var(--raised);border:1px solid var(--border);border-radius:var(--rs);
+	padding:7px 9px;font-size:calc(12px * var(--fsc,1))}
+.insp-desc-hint{margin:5px 0 0;font-size:calc(10.5px * var(--fsc,1));color:var(--t3);font-style:italic}
+.insp-chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 14px 10px;align-items:center}
+.insp-attr:hover .acts{display:flex}
+.insp-attr .acts{display:none;gap:2px}
+.htag{font-size:calc(10.5px * var(--fsc,1));border:1px solid var(--border);border-radius:9px;padding:1px 8px;color:var(--t2);background:transparent;cursor:default}
+.htag.lk{border-color:var(--accent);color:var(--accentH);cursor:pointer}
+.htag.lk:hover{background:var(--hover)}
+
+/* Icon Collection picker (progress.md Phase 5) */
+.ipk-tabs{display:flex;gap:6px;margin-bottom:10px}
+.ipk-tab{padding:5px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--raised);
+	color:var(--t2);font-size:calc(12px * var(--fsc,1));font-family:inherit;cursor:pointer}
+.ipk-tab:hover{background:var(--hover);color:var(--t1)}
+.ipk-tab.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.ipk-tab-disabled{opacity:.4;cursor:default}
+.ipk-tab-disabled:hover{background:var(--raised);color:var(--t2)}
+.ipk-symbol{font-size:calc(17px * var(--fsc,1))}
+.ipk-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:10px}
+.ipk-cell{width:36px;height:36px;border:1px solid var(--border);border-radius:var(--rs);background:var(--raised);
+	color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:calc(16px * var(--fsc,1))}
+.ipk-cell:hover{background:var(--hover);color:var(--t1)}
+.ipk-cell.sel{border-color:var(--accent);background:rgba(99,102,241,.15);color:var(--t1)}
+.ipk-color-row,.ipk-preview-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.ipk-color-row .pk,.ipk-preview-row .pk{width:60px;flex-shrink:0;color:var(--t3);font-size:calc(11.5px * var(--fsc,1))}
+.ipk-colors{display:flex;flex-wrap:wrap;gap:6px}
+.ipk-colors .cswatch{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.ipk-colors .cswatch.sel{border-color:var(--t1)}
+.kicon-glyph{font-size:calc(14px * var(--fsc,1));line-height:1}
+
+/* Uploaded tab (Icon Collection picker) — native upload + canvas circular crop */
+.ipk-grid#ipk-upload-pane{display:flex;flex-direction:column;align-items:center;gap:10px}
+.icrop-empty{width:100%;padding:28px 14px;border:1px dashed var(--border);border-radius:var(--r);
+	display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--t3);cursor:pointer;text-align:center}
+.icrop-empty:hover{background:var(--hover);color:var(--t2)}
+.icrop-empty .icon{width:24px;height:24px}
+.icrop-stage{position:relative;width:220px;height:220px}
+#icrop-canvas{display:block;width:220px;height:220px;cursor:grab}
+#icrop-canvas:active{cursor:grabbing}
+.icrop-mask{position:absolute;top:0;left:0;width:220px;height:220px;border-radius:50%;
+	box-shadow:0 0 0 9999px rgba(0,0,0,.55);pointer-events:none}
+.icrop-zoom{width:100%;accent-color:var(--accent)}
+.icrop-actions{display:flex;gap:8px;justify-content:flex-end;width:100%}
+.icrop-result{display:flex;flex-direction:column;align-items:center;gap:8px}
+.icrop-result-img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}
+.icrop-preview-img{width:15px;height:15px;border-radius:50%;object-fit:cover}
+
+/* Classifier type picker (progress.md Phase 5) */
+.typegrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.typecard{border:1px solid var(--border);border-radius:var(--r);padding:11px;cursor:pointer}
+.typecard:hover{border-color:var(--t3)}
+.typecard.sel{border-color:var(--accent);background:rgba(99,102,241,.08)}
+.typecard h5{font-size:calc(12.5px * var(--fsc,1));margin-bottom:3px;display:flex;gap:6px;align-items:center}
+.typecard h5 .icon{width:14px;height:14px}
+.typecard p{font-size:calc(10.5px * var(--fsc,1));color:var(--t3);line-height:1.45}
+
+/* Module create-modal kind picker (list of module cards w/ icon+color+desc) */
+.kindgrid{max-height:280px;overflow-y:auto;padding-right:2px}
+.kindgrid.locked .kindcard{cursor:default}
+.kindgrid.locked .kindcard:hover{border-color:var(--accent)}
+
+/* Instant-create / icon-edit popups (position set inline via JS — hub.js's
+   positionPopupNear) — same floating-above-everything z-index as .wlink-float */
+.kind-popup{
+	position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);
+	border-radius:var(--r);box-shadow:var(--shadow-menu);
+}
+.kind-list-popup{width:280px;max-height:360px;overflow-y:auto;padding:6px}
+.kind-list-item{display:flex;align-items:flex-start;gap:9px;padding:7px 8px;border-radius:var(--rs);cursor:pointer}
+.kind-list-item:hover{background:var(--hover)}
+.kind-list-item .kicon{width:16px;height:16px;flex-shrink:0;margin-top:1px}
+.kind-list-item .kicon .icon{width:16px;height:16px;stroke-width:2.2}
+.kli-text{display:flex;flex-direction:column;gap:1px;min-width:0}
+.kli-name{font-size:calc(12.5px * var(--fsc,1));color:var(--t1)}
+.kli-desc{font-size:calc(10.5px * var(--fsc,1));color:var(--t3);line-height:1.35}
+/* Plan part1 #4 (this round) reverses a prior round's "whole popup scrolls
+   as one block" decision: only the icon/symbol swatch grid gets its own
+   fixed-height, independently scrolling box (mouse-wheel over the grid
+   only) — preview/tabs/color rows stay fixed in place. .icon-edit-popup
+   itself keeps only a generous last-resort cap (positionPopupNear already
+   viewport-clamps it; this should essentially never engage in normal use,
+   it's just a safety net against an unusually large custom color palette). */
+.icon-edit-popup{padding:12px;width:280px;max-height:calc(100vh - 40px);overflow-y:auto}
+/* Tag-link popup (Plan part6 #3) — wraps hashtagSelector()'s own .fg/
+   .tag-add-box markup unchanged, just needs the floating-panel sizing. */
+.tag-link-popup{padding:12px;width:320px;max-height:calc(100vh - 40px);overflow-y:auto}
+/* 4 rows of .ipk-cell (36px) + 3 row-gaps (6px, .ipk-grid's own gap) = 162px.
+   #ipk-upload-pane deliberately excluded — it shares .ipk-grid's id-selector
+   override for a flex-column crop UI, not a swatch grid, and its 220x220px
+   crop canvas would clip badly inside a 162px box. */
+#ipk-icon-grid,#ipk-symbol-grid{max-height:162px;overflow-y:auto}
+/* Right-click context menu (hub.js) — reuses .kind-popup base + .kind-list-item
+   rows; Major-module variant appends action rows below the full create-list,
+   so it gets the same docked scrollable max-height as .icon-edit-popup above. */
+.context-menu-popup{width:280px;max-height:min(72vh,520px);overflow-y:auto;padding:6px}
+.ctx-sep{height:0;border-top:1px solid var(--border);margin:5px 0}
+/* Module edit modal sectioning (Plan part6 #4a) — same uppercase/spaced
+   typographic treatment as .insp-label, tuned for a modal body's padding
+   (no dock-specific horizontal offset) instead of copying it verbatim. */
+.mm-section-label{font-size:calc(10.5px * var(--fsc,1));font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);margin:2px 0 10px}
+.ctx-check{margin-left:auto;flex-shrink:0;color:var(--accent);font-weight:700}
+/* Per-vault actions on the Welcome list (core/nexus-options.js). Narrower than
+   the module context menu: five short verbs, no icons, no submenus. */
+.nexus-options-popup{width:210px;padding:6px}
+.kli-danger .kli-name{color:var(--danger)}
+/* "Create" row's hover submenu (openCreateSubmenu, hub.js) */
+.kli-submenu-parent{align-items:center}
+.kli-arrow{margin-left:auto;flex-shrink:0;color:var(--t3)}
+.ctx-submenu{width:280px;max-height:min(72vh,520px);overflow-y:auto;padding:6px}
+
+/* Inline rename (double-click a module name in the Nest row or its open
+   detail header) */
+.rename-input{
+	background:var(--bg);border:1px solid var(--accent);border-radius:var(--rs);
+	color:var(--t1);font:inherit;padding:1px 5px;min-width:0;
+}
+.li .rename-input{flex:1}
+/* Rename-mode focus lock (Plan part1 #5) — pointer-events:none kills every
+   :hover highlight app-wide (nothing left for the cursor to "land on"),
+   while the active rename box keeps working normally: typing needs no
+   pointer-events, and a click to place the caret only needs it re-enabled
+   on the input itself. Clicking anywhere else still blurs the input
+   (falls through to <body>), so click-outside-to-save/cancel still works.
+   The whole ANCESTOR CHAIN of the input also needs pointer-events:auto, not
+   just the input — Chromium's mousedown-to-focus handling for a descendant
+   can misfire when any ancestor has pointer-events:none, even though the
+   descendant itself re-enables it, so a click meant to place the caret
+   blurred (and saved/closed) the box instead. */
+body.renaming-lock *{pointer-events:none}
+body.renaming-lock .rename-input,
+body.renaming-lock *:has(.rename-input){pointer-events:auto}
+
+.togglerow{display:flex;align-items:center;gap:8px;font-size:calc(11px * var(--fsc,1));color:var(--t2);margin-top:7px}
+.tg{width:26px;height:14px;border-radius:7px;background:var(--raised);border:1px solid var(--border);position:relative;flex-shrink:0}
+.tg.on{background:var(--accent);border-color:var(--accent)}
+.tg::after{content:'';position:absolute;top:1px;left:2px;width:10px;height:10px;border-radius:50%;background:var(--t2)}
+.tg.on::after{left:auto;right:2px;background:var(--on-accent)}
+/* Nest-tree options popup rows (Plan part1 #2) — .togglerow's own
+   margin-top:7px is tuned for stacking inside a modal body, not a
+   .kind-popup, so give these their own tighter row padding/hover. */
+.nest-opt-row{padding:7px 8px;margin-top:0;border-radius:var(--rs);cursor:pointer}
+.nest-opt-row:hover{background:var(--hover)}
+/* the one 3-way row among the Nest options — not a toggle, so it opts out of
+   the hover affordance the boolean rows use and stacks label over control */
+.nest-sig-row{cursor:default;padding-top:9px}
+.nest-sig-row:hover{background:none}
+.nest-sig-label{font-size:calc(11px * var(--fsc,1));color:var(--t3);margin-bottom:5px}
+.nest-sig-row .name-mode-seg{gap:4px}
+/* nowrap + a popup floor: the longest label ("Type name") wraps to two lines in
+   several locales otherwise, which leaves the three buttons different heights */
+.nest-sig-row .name-mode-seg .btn{padding:4px 6px;font-size:calc(11px * var(--fsc,1));white-space:nowrap}
+.nest-options-popup{min-width:230px;padding:4px}
+
+/* Classifier views (progress.md Phase 5) */
+.classifier-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.viewbar{display:inline-flex;align-items:center;gap:0;margin-left:auto;border:1px solid var(--border);
+	border-radius:var(--rs);overflow:hidden;background:var(--surface)}
+.viewbar .vlbl{font-size:calc(10px * var(--fsc,1));color:var(--t3);padding:0 8px}
+.viewbar .vitem{font-size:calc(10.5px * var(--fsc,1));color:var(--t2);padding:5px 10px;border-left:1px solid var(--border);cursor:pointer}
+.viewbar .vitem:hover{background:var(--hover);color:var(--t1)}
+.viewbar .vitem.act{background:var(--accent);color:var(--on-accent);font-weight:600}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;flex-shrink:0;vertical-align:middle}
+.cls-table-wrap{overflow-x:auto}
+.cls-table{width:100%;border-collapse:collapse;font-size:calc(12.5px * var(--fsc,1))}
+.cls-table th{color:var(--t3);text-align:left;font-weight:600;font-size:calc(11px * var(--fsc,1));letter-spacing:.04em;
+	text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.cls-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--t2)}
+.cls-table td:first-child{color:var(--t1);white-space:nowrap}
+.cls-cell:focus{outline:1px solid var(--accent);outline-offset:-1px;background:var(--raised)}
+.cls-rowacts{display:flex;gap:2px;white-space:nowrap}
+.cls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.cls-card{border:1px solid var(--border);border-radius:var(--r);padding:14px 10px;text-align:center;cursor:pointer;background:var(--surface)}
+.cls-card:hover{background:var(--hover)}
+.cls-card-dot{width:26px;height:26px;border-radius:50%;margin:0 auto 8px}
+.cls-card-name{font-size:calc(12.5px * var(--fsc,1));color:var(--t1)}
+.cls-listdetail{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;min-height:260px}
+.cls-list{width:200px;flex-shrink:0;border-right:1px solid var(--border);padding:6px}
+.cls-detail{flex:1;padding:14px 16px;min-width:0}
+.cls-rel-wrap{display:flex;flex-direction:column;gap:10px}
+.cls-rel-add{align-self:flex-start}
+.cls-rel-list{margin-top:2px}
+.cls-rel-swatch{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.cls-rel-recent-lbl{font-size:calc(10.5px * var(--fsc,1));color:var(--t3);margin:6px 0 4px}
+.cls-rel-endpoints{display:flex;gap:10px}
+.cls-rel-endpoints>div{flex:1}
+.pv-input,.pv-textarea{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;
+	color:var(--t1);font-size:calc(12px * var(--fsc,1));padding:5px 8px;font-family:inherit}
+.pv-textarea{min-height:60px;resize:vertical}
+/* ── Classifier element level/condition table + links (Process 8 part 1) ── */
+.cls-lv-wrap{padding:6px 14px 10px}
+.cls-lv-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+.cls-lv-add{padding:3px 9px;font-size:calc(11px * var(--fsc,1))}
+/* Column widths come from a <colgroup> written per-row by
+   clsLevelColumnWidths() (level <=10% of the row, condition 30% of what's
+   left, info the rest, grip/action reserved as small fixed shares of the
+   same 100% budget) rather than from CSS, since the ratio depends on which
+   columns a given attribute actually has. */
+.cls-lv-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.cls-lv-table th{text-align:left;font-size:calc(10.5px * var(--fsc,1));font-weight:500;color:var(--t3);
+	padding:3px 6px;border-bottom:1px solid var(--border)}
+.cls-lv-table td{padding:2px 4px;vertical-align:middle}
+.cls-lv-table td.cls-lv-grip{text-align:center}
+.cls-lv-table td.cls-lv-act{text-align:right}
+.cls-lv-table tr.drop-before td{box-shadow:inset 0 2px 0 0 var(--accent)}
+.cls-lv-table tr.drop-after td{box-shadow:inset 0 -2px 0 0 var(--accent)}
+.cls-lv-inp{width:100%;padding:5px 7px;background:var(--raised);border:1px solid var(--border);
+	border-radius:var(--rs);color:var(--t1);font-size:calc(12.5px * var(--fsc,1));font-family:inherit;outline:none}
+.cls-lv-inp:focus{border-color:var(--accent)}
+.cls-lv-empty{font-size:calc(11.5px * var(--fsc,1));color:var(--t3);padding:3px 2px}
+.cls-link-label{margin-top:10px}
+.cls-link-list{padding:0 14px}
+.cls-link-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.cls-link-row:last-child{border-bottom:none}
+.cls-link-name{flex:1;min-width:0;font-size:calc(12.5px * var(--fsc,1));color:var(--t1);cursor:pointer;
+	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cls-link-name:hover{color:var(--accentH);text-decoration:underline}
+.cls-link-mod{font-size:calc(10.5px * var(--fsc,1));color:var(--t3);flex-shrink:0}
+.cls-link-lbl{font-size:calc(10.5px * var(--fsc,1));color:var(--accentH);border:1px solid var(--accent);
+	border-radius:9px;padding:0 7px;flex-shrink:0}
+.cls-tpl-editing{border-left:2px solid var(--accent)}
+
+/* Manager view (progress.md Phase 6) */
+.mgr-card{display:flex;flex-direction:column;align-items:center;gap:4px}
+.mgr-card-icon{display:flex;align-items:center;justify-content:center}
+.mgr-card-icon .icon{width:22px;height:22px}
+.mgr-card-icon .kicon-img-icon{width:22px;height:22px;border-radius:50%;object-fit:cover}
+.mgr-card-count{font-size:calc(10px * var(--fsc,1));color:var(--t3)}
+/* Process 8 part 2: "<majors below> / <own minors>" on a Manager list row. */
+.mgr-row-count{font-size:calc(10.5px * var(--fsc,1));color:var(--t3);margin-left:8px;flex-shrink:0}
+
+/* Canvas chrome: pan/zoom hint pill + zoom control (progress.md Phase 7,
+   cross-cutting per Section A.3 #6 — every canvas/graph kind gets these) */
+.chint{position:absolute;left:14px;bottom:14px;z-index:3;font-size:calc(10.5px * var(--fsc,1));color:var(--t3);
+	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:4px 10px}
+.czoom{position:absolute;right:14px;bottom:14px;z-index:3;display:flex;align-items:center;gap:7px;
+	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:4px 8px}
+.zbtn{width:18px;height:18px;border:1px solid var(--border);border-radius:4px;display:inline-flex;
+	align-items:center;justify-content:center;color:var(--t2);font-size:calc(12px * var(--fsc,1));background:var(--raised);cursor:pointer}
+.zbtn:hover{color:var(--t1)}
+.zlvl{color:var(--t1);font-size:calc(11px * var(--fsc,1));min-width:34px;text-align:center}
+
+/* Locator (progress.md Phase 7) */
+.locator-scalelbl{margin-left:auto;font-size:calc(11px * var(--fsc,1));color:var(--t3)}
+.map-whiteboard.locator-board{
+	background-image:linear-gradient(rgba(255,255,255,.11) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.11) 1px,transparent 1px),
+		linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+	background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+

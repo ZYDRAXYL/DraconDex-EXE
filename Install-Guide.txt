@@ -1,0 +1,146 @@
+This is Easy Guideline For Everyone To install the Program for Free.
+
+Step 1: After you download program of this file in your device
+
+    -Open this folder by use your IDE Program eg. VSCode ,AntiGravity ,and another
+    -After you open your IDE. Check that you has *all the important file we need*
+        -filename
+        electron/database.js
+        ,electron/index.html
+        ,electron/main.js
+        ,package.json
+        ,package-lock.json
+        ,electron/preload.js
+        ,electron/start.js
+        ,Style.css
+
+Step 2: After you got all the file. run this in your terminal.
+
+        npm install
+
+    -this should download need packages for this project.
+
+Step 3: Check that everything is ready to build
+
+    -Run this command to Test the program.
+
+        npm start
+
+    -Then you will found App that OpenUp
+    -Check if there was no any bugs
+
+Step 4: Build Program for Real use
+
+    -Run this command to starting build a program
+
+        npm run build:portable
+
+    -this builds a portable app FOLDER (around 200-220Mb)
+
+    -Other build options:
+
+        npm run build:installer
+
+    -builds a Windows installer (DraconDexPortable/DraconDex-Setup-<version>.exe)
+    -run it to install the app like a normal program (choose install folder,
+     desktop + start-menu shortcuts). Installed data is kept in your user
+     AppData folder, so it survives uninstall/update.
+
+        npm run build:exe
+
+    -builds the old single-file portable .exe instead
+
+Step 5: Check your App
+
+    -The built app folder should be in
+
+        DraconDexPortable/DraconDex-<version>/
+
+    -Open DraconDex.exe inside it to check that the App was builded Correctly
+
+Step last: Carry it on a flash drive
+
+    -Copy the whole DraconDex-<version> folder to your flash drive.
+    -On any Windows PC, open the folder and run DraconDex.exe — no install needed.
+    -Your data is saved in "novel-manager-data" next to the exe,
+     so your novels travel with the folder.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  FLUTTER ANDROID APP (Mobile Version)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Requirement before start:
+    - Flutter SDK 3.44.4 or newer  (https://flutter.dev/docs/get-started/install)
+    - Android Studio with Android SDK 24+
+    - A phone with USB debugging ON  OR  an Android emulator
+
+Step 1: Go to the flutter folder
+
+        cd flutter
+
+Step 2: Download all packages
+
+        flutter pub get
+
+Step 3: Check that Flutter and Android is ready
+
+        flutter doctor
+
+    - Make sure Android toolchain shows no red X
+
+Step 4: Test the app on your phone or emulator
+
+        flutter run
+
+    - Connect your phone with USB and allow USB debugging when asked
+    - App will launch on your phone
+
+Step 5: Build the APK file
+
+    Option A - Split APK (smaller file, recommended for sharing):
+
+        flutter build apk --release --split-per-abi
+
+    Option B - Universal APK (works on all devices):
+
+        flutter build apk --release
+
+    Option C - No PC setup needed (GitHub Actions):
+
+        - Go to the repo page on GitHub -> Actions tab
+        - Open the "Build Flutter APK" workflow -> Run workflow
+        - When it finishes, download the "release-apks" artifact
+          (a zip that contains the APK files from Step 6)
+
+Step 6: Find your APK
+
+    - APK files will be in this folder:
+
+        flutter/build/app/outputs/flutter-apk/
+
+    - File names:
+        app-arm64-v8a-release.apk   (for most modern phones)
+        app-armeabi-v7a-release.apk (for older phones)
+        app-release.apk             (universal, larger size)
+
+Step 7: Install APK on your phone
+
+    Option A - USB cable:
+
+        adb install build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+
+    Option B - File transfer:
+        - Copy the APK file to your phone storage
+        - Open the APK file on your phone to install
+        - Allow "Install unknown apps" if asked
+
+Step last: Transfer your data from PC to phone
+
+    1. Open the PC app and go to the export option in settings
+       (or find novel-manager.db in your user data folder)
+    2. Copy the .db file to your phone
+    3. Open the Android app -> Settings -> Import Database
+    4. Select the .db file
+    5. All your projects will appear

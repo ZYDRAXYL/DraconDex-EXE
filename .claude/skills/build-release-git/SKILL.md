@@ -71,7 +71,7 @@ floor for routine work, not a ceiling on judgment:
    and can lag; the published list is authoritative:
 
    ```bash
-   curl -s https://api.github.com/repos/ZYDRAXYL/DraconDex-APP/releases | grep '"tag_name"'
+   curl -s https://api.github.com/repos/ZYDRAXYL/DraconDex-EXE/releases | grep '"tag_name"'
    ```
 
    Tag names are `v<version>` with no extra prefix — `4.7.1` → `v4.7.1`.
@@ -87,7 +87,7 @@ floor for routine work, not a ceiling on judgment:
    and every one of them starts its own Windows build.
 
 5. **Report the run.** The workflow takes several minutes. Point the user at
-   <https://github.com/ZYDRAXYL/DraconDex-APP/actions/workflows/build-electron.yml>
+   <https://github.com/ZYDRAXYL/DraconDex-EXE/actions/workflows/build-electron.yml>
    and confirm the release afterwards via the `releases` API call above —
    four assets are expected:
 

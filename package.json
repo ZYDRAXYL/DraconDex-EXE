@@ -1,0 +1,83 @@
+{
+  "name": "@zydraxyl/dracondex",
+  "productName": "DraconDex",
+  "version": "4.16.1",
+  "description": "Novel data management app",
+  "main": "electron/main.js",
+  "license": "MIT",
+  "author": "ZYDRAXYL",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ZYDRAXYL/DraconDex-EXE.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "files": [
+    "electron/**/*",
+    "!electron/test/**",
+    "src/assets/brand/**/*",
+    "src/schema/generated/**/*"
+  ],
+  "scripts": {
+    "start": "node ./electron/start.js",
+    "postinstall": "node ./electron/ensure-electron.js",
+    "sdb:check": "node tools/sdb-check.mjs",
+    "sdb:vendor": "node tools/sdb-vendor.mjs",
+    "chain:survey": "node tools/chain-survey.mjs",
+    "chain:propagate": "node tools/chain-propagate.mjs",
+    "build:portable": "electron-builder --win dir --publish never && node electron/scripts/finish-portable.mjs",
+    "build:exe": "electron-builder --win portable --publish never",
+    "build:installer": "electron-builder --win nsis --publish never"
+  },
+  "dependencies": {
+    "node-sqlite3-wasm": "^0.8.59"
+  },
+  "devDependencies": {
+    "electron": "^42.5.0",
+    "electron-builder": "^26.15.3",
+    "playwright-core": "^1.61.1"
+  },
+  "build": {
+    "appId": "com.dracondex.app",
+    "productName": "DraconDex",
+    "asar": true,
+    "directories": {
+      "output": "DraconDexPortable"
+    },
+    "files": [
+      "package.json",
+      "electron/**/*",
+      "!electron/test/**",
+      "!electron/scripts/**",
+      "src/assets/brand/**/*",
+      "src/schema/generated/**/*"
+    ],
+    "electronLanguages": [
+      "en-US",
+      "th"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "icon": "src/assets/brand/DraconDex_Icon.ico",
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "DraconDex-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "DraconDex-Portable-${version}.${ext}"
+    }
+  }
+}
