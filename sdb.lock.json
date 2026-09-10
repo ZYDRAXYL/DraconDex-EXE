@@ -3,8 +3,9 @@
   "self": "EXE",
   "source": {
     "repo": "ZYDRAXYL/DraconDex-SDB",
-    "ref": "main",
-    "version": "1.0.0"
+    "ref": "be803f8b5a666d93f2080a245a8ebf971085bbf2",
+    "version": "1.0.0",
+    "_comment": "An immutable ref, deliberately: a commit SHA rather than a branch. sdb-check resolves this through raw.githubusercontent, and pinning 'main' would not be a pin \u2014 main moves, so the drift check would verify against whatever SDB happens to be rather than against the version this repo actually vendored. Moving the pin is a reviewable commit, which is the whole point. Same idea as DraconDex-PWA's app-source.json commit field."
   },
   "expect": {
     "vaultSchemaVersion": 4,
