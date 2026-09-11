@@ -53,6 +53,24 @@ const MANIFEST_NAMES = ['dracondex-plugin.json', 'dracondex-extension.json'];
 // Tried in order when the URL carries no explicit branch/tag.
 const REF_CANDIDATES = ['main', 'master'];
 
+// Repos that exist to be COPIED, not installed. Both carry a `.dracondex`
+// marker on purpose — so a repo made from one already opts into the
+// recommend list without its author doing anything — which is exactly why
+// the marker cannot be the thing that filters them back out. Recommending a
+// template to a user looking for a plugin is nonsense: installing it yields
+// a working-but-empty plugin whose id collides with every other copy.
+//
+// Matched on the repo NAME, lowercased, and only ever consulted by
+// pluginListOrgRepos(). It is NOT an install block: pasting either link
+// still installs, which is what someone poking at the template expects.
+// Lives here rather than next to that function so `node --test` can reach it
+// without pulling in electron, the same reason the validators are here.
+const TEMPLATE_REPOS = new Set(['dracondex-pgi-template', 'dracondex-ext-template']);
+
+function isTemplateRepoName(name) {
+  return TEMPLATE_REPOS.has(String(name == null ? '' : name).toLowerCase());
+}
+
 // ---------------------------------------------------------------------------
 // Manifest validation — rejects before anything is written to disk or the DB.
 // ---------------------------------------------------------------------------
@@ -385,7 +403,7 @@ module.exports = {
   PLUGIN_ID_RE, PLUGIN_TABLE_RE, PLUGIN_COLUMN_RE, FULL_TABLE_RE, LEGACY_TABLE_RE,
   REPO_SEG_RE, COL_TYPES, RESERVED_COLS,
   MAX_TABLES_PER_PLUGIN, MAX_COLS_PER_TABLE, MAX_FILES, MAX_FILE_BYTES,
-  MANIFEST_NAMES, REF_CANDIDATES,
+  MANIFEST_NAMES, REF_CANDIDATES, TEMPLATE_REPOS, isTemplateRepoName,
   PANEL_ID_RE, MAX_PANELS, MAX_NET_ORIGINS, CONTEXT_KINDS, MAX_DEPENDENCIES,
   validateManifest, parseRepoUrl, rawUrl,
   manifestPanels, manifestNetOrigins, manifestContextKinds, manifestDependencies, netOriginAllowed,

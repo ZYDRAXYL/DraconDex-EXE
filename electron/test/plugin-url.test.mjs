@@ -10,6 +10,7 @@ const require_ = createRequire(import.meta.url);
 const {
   parseRepoUrl, validateManifest, rawUrl,
   manifestPanels, manifestNetOrigins, manifestContextKinds, manifestDependencies, netOriginAllowed,
+  isTemplateRepoName, TEMPLATE_REPOS,
 } = require_('../src/db/plugin-manifest.js');
 
 test('parseRepoUrl accepts every shape a user can copy out of GitHub', () => {
@@ -298,4 +299,42 @@ test('manifestDependencies reads back a stored manifest\'s dependency URLs', () 
   assert.deepEqual(manifestDependencies({ dependencies: ['acme/x', 'acme/y'] }), ['acme/x', 'acme/y']);
   assert.deepEqual(manifestDependencies({ dependencies: ['acme/x', '', 42, null] }), ['acme/x'], 'malformed entries dropped, not surfaced');
   assert.deepEqual(manifestDependencies({ dependencies: 'acme/x' }), [], 'must be an array');
+});
+
+test('isTemplateRepoName excludes every template repo from the recommend list', () => {
+  // Both templates ship a `.dracondex` marker so that a repo made from one is
+  // recommendable immediately — which means the marker check in
+  // pluginListOrgRepos cannot be what keeps the templates themselves out.
+  // This is that second filter, and it is the whole reason it exists.
+  for (const name of ['DraconDex-PGI-Template', 'DraconDex-EXT-Template']) {
+    assert.equal(isTemplateRepoName(name), true, name);
+    assert.equal(isTemplateRepoName(name.toLowerCase()), true, name);
+    assert.equal(isTemplateRepoName(name.toUpperCase()), true, name);
+  }
+});
+
+test('isTemplateRepoName does not swallow a real plugin with a template-ish name', () => {
+  // Equality on the whole name, never a substring: a plugin called
+  // "DraconDex-PGI-TemplateEngine" is a plugin, and dropping it from the list
+  // would be a silent, unexplained absence.
+  for (const name of [
+    'DraconDex-PGI-Claude',
+    'DraconDex-PGI-TemplateEngine',
+    'DraconDex-EXT-Templates',
+    'my-dracondex-ext-template',
+    'template',
+    '',
+  ]) {
+    assert.equal(isTemplateRepoName(name), false, name);
+  }
+  // Not a string, and the two values a GitHub payload can actually carry.
+  for (const value of [null, undefined, 0, {}]) {
+    assert.equal(isTemplateRepoName(value), false, String(value));
+  }
+});
+
+test('TEMPLATE_REPOS holds lowercase names, since the lookup lowercases its input', () => {
+  // A capital letter added here would make that entry unmatchable — the bug
+  // would be a template quietly reappearing in the list, with nothing failing.
+  for (const name of TEMPLATE_REPOS) assert.equal(name, name.toLowerCase());
 });
