@@ -87,8 +87,9 @@ pins the version in `sdb.lock.json`.
   palettes.
 - **Sandboxed plugins**, installed by pasting a single `.git` link. Each
   plugin gets its own database tables and runs in a separate, tightly
-  restricted window. See [docs/PLUGINS.md](https://github.com/ZYDRAXYL/DraconDex-APP/blob/main/docs/PLUGINS.md) and the
-  [plugin template](https://github.com/ZYDRAXYL/DraconDex-PGI-Template).
+  restricted window. See [docs/PLUGINS.md](https://github.com/ZYDRAXYL/DraconDex-APP/blob/main/docs/PLUGINS.md) and, to
+  write one, the [extension template](https://github.com/ZYDRAXYL/DraconDex-EXT-Template)
+  (or the older [plugin template](https://github.com/ZYDRAXYL/DraconDex-PGI-Template)).
 - **Portable by design** — the portable build keeps your data next to the
   executable, so a whole project folder travels on a flash drive.
 - **Backups you own.** Everything works fully offline: export/import the

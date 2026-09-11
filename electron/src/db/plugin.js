@@ -22,7 +22,7 @@ const { app } = require('electron');
 const { getAppDB } = require('./core');
 const {
   PLUGIN_TABLE_RE, FULL_TABLE_RE, MAX_FILE_BYTES,
-  MANIFEST_NAMES, REF_CANDIDATES,
+  MANIFEST_NAMES, REF_CANDIDATES, isTemplateRepoName,
   validateManifest, parseRepoUrl, rawUrl,
   manifestPanels, manifestNetOrigins, manifestContextKinds, manifestDependencies, netOriginAllowed,
 } = require('./plugin-manifest');
@@ -92,10 +92,11 @@ async function repoHasDracondexMarker(repoName) {
 // accounts, so there's no need to know which kind of account ZYDRAXYL is.
 //
 // Process 1 part 2 — narrowed to repos that actually carry a `.dracondex`
-// marker file at their root (repoHasDracondexMarker above), and the plugin
-// template repo is excluded by name unconditionally: it also carries the
-// marker (so a freshly-forked plugin already has it), but recommending the
-// template itself back to the user would be nonsensical.
+// marker file at their root (repoHasDracondexMarker above), and the template
+// repos are excluded by name unconditionally (isTemplateRepoName): they carry
+// the marker too, on purpose, so that a repo made from one already opts in —
+// which is why the marker cannot be what filters them back out. Recommending
+// a template back to the user would be nonsensical.
 async function pluginListOrgRepos() {
   let res;
   try {
@@ -109,7 +110,7 @@ async function pluginListOrgRepos() {
   try { repos = await res.json(); } catch (e) { return { ok: false }; }
   if (!Array.isArray(repos)) return { ok: false };
   const candidates = repos.filter((repo) =>
-    !repo.is_template && !repo.archived && String(repo.name).toLowerCase() !== 'dracondex-pgi-template');
+    !repo.is_template && !repo.archived && !isTemplateRepoName(repo.name));
   const marked = await Promise.all(candidates.map((repo) => repoHasDracondexMarker(repo.name)));
   return {
     ok: true,
