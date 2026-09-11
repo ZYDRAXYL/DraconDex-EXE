@@ -920,6 +920,25 @@ h('sync:pull',          (nx,vaultId)   => db.syncPullVault(nx,vaultId));
 h('sync:pullByToken',   (nx,tok,pw)    => db.syncPullByToken(nx,tok,pw));
 h('sync:deleteUpload',  (vaultId)      => db.syncDeleteUpload(vaultId));
 
+// DDX Transfer (src/db/transfer.js) — hand a whole Nexus to another device
+// through the service in ZYDRAXYL/DraconDex-TRX. Unlike sync:*, there is no
+// account and no config step, so there is nothing to log in to here.
+//
+// The transfer key never crosses this boundary in either direction: the main
+// process makes it, keeps it, and hands the renderer a QR/link string with it
+// already embedded in the fragment. `transfer:receive` takes the nexus to
+// apply into as an explicit argument for the same reason db:importNexusFile
+// does — applySnapshot is wipe-and-rebuild, and the ambient current nexus is
+// the wrong thing to trust across a network round trip (see the runWithVault
+// note above and src/db/vault-context.js).
+h('transfer:getConfig', ()                  => db.getTransferConfig());
+h('transfer:setConfig', (url)               => db.setTransferConfig(url));
+h('transfer:send',      (nx, opts)          => db.transferSend(nx, opts || {}));
+h('transfer:status',    (id)                => db.transferStatus(id));
+h('transfer:cancel',    (id)                => db.transferCancel(id));
+h('transfer:verify',    (code, pin, linkKey) => db.transferVerify(code, pin, linkKey || null));
+h('transfer:receive',   (id, targetNexusId) => db.transferReceive(id, targetNexusId));
+
 // "Bring your own Supabase project" setup — check the user's own project and
 // install the schema Cloud Sync needs (src/db/supabase-setup.js). The access
 // token supabase:install takes is used for that one Management API call and is

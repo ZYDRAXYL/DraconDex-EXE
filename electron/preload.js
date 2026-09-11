@@ -199,6 +199,15 @@ contextBridge.exposeInMainWorld('api', {
     pullByToken:  (nx,tok,pw)  => inv('sync:pullByToken', nx,tok,pw),
     deleteUpload: (vaultId)    => inv('sync:deleteUpload', vaultId),
   },
+  transfer: {
+    getConfig: ()                 => inv('transfer:getConfig'),
+    setConfig: (url)              => inv('transfer:setConfig', url),
+    send:      (nx, opts)         => inv('transfer:send', nx, opts),
+    status:    (id)               => inv('transfer:status', id),
+    cancel:    (id)               => inv('transfer:cancel', id),
+    verify:    (code, pin, linkKey) => inv('transfer:verify', code, pin, linkKey),
+    receive:   (id, targetNexusId) => inv('transfer:receive', id, targetNexusId),
+  },
   supabase: {
     getSetup:   ()          => inv('supabase:getSetup'),
     setSetup:   (u,k)       => inv('supabase:setSetup', u,k),

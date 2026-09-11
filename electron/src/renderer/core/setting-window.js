@@ -20,7 +20,7 @@
 const SETTING_GROUPS = {
   workspace: ['theme', 'textsize', 'tooltoggle', 'style', 'startup'],
   user: ['account', 'profile'],
-  appdata: ['tokensync', 'database', 'backup', 'cloudstorage', 'versions'],
+  appdata: ['tokensync', 'transfer', 'database', 'backup', 'cloudstorage', 'versions'],
   plugin: ['plugin', 'pluginsettings', 'packages'],
 };
 function settingGroupPages(group){
@@ -35,7 +35,8 @@ const SETTING_PAGE_LABEL_KEY = {
   theme: 'theme', textsize: 'settingPageTextSize', tooltoggle: 'settingPageToolToggle',
   style: 'settingPageWorkspaceStyle', startup: 'settingPageStartup',
   account: 'settingPageAccount', profile: 'settingPageProfile',
-  tokensync: 'settingPageTokenSync', database: 'settingPageDatabase', backup: 'prefs_backup',
+  tokensync: 'settingPageTokenSync', transfer: 'settingPageTransfer',
+  database: 'settingPageDatabase', backup: 'prefs_backup',
   cloudstorage: 'settingPageCloudStorage', versions: 'settingPageVersions',
   plugin: 'prefs_plugin', pluginsettings: 'settingPagePluginSettings',
   packages: 'settingPagePackages',

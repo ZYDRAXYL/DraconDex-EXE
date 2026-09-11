@@ -136,6 +136,23 @@
 	padding:7px 10px;font-family:monospace;font-size:calc(13px * var(--fsc,1));color:var(--t1);
 	letter-spacing:.5px;user-select:all}
 .sync-hint{font-size:calc(11px * var(--fsc,1));color:var(--t3);margin:2px 0 8px;line-height:1.45}
+
+/* DDX Transfer (src/renderer/transfer.js) — the code and PIN are read aloud
+   and typed across from another screen, so they get a monospace face and
+   generous tracking. A run-together 0/O or 1/l is the entire failure mode of
+   this screen, and it is also why the code alphabet excludes I, L, O and U. */
+.trx-codebox{text-align:center;padding:8px 0}
+.trx-label{font-size:calc(10.5px * var(--fsc,1));color:var(--t2);
+	text-transform:uppercase;letter-spacing:.08em}
+.trx-value{font-family:monospace;font-size:calc(26px * var(--fsc,1));font-weight:600;
+	letter-spacing:.12em;color:var(--t1);margin:2px 0 12px;user-select:all;word-break:break-all}
+.trx-value.trx-pin{font-size:calc(21px * var(--fsc,1));color:var(--accent)}
+.trx-code-input{font-family:monospace;font-size:calc(17px * var(--fsc,1));
+	letter-spacing:.12em;text-align:center;text-transform:uppercase}
+.trx-qr{display:flex;justify-content:center;margin:4px 0 10px}
+/* The white plate and the padding are not decoration: the quiet zone is part
+   of the QR spec, and a dark-themed card without it does not scan. */
+.trx-qr svg{width:190px;height:190px;background:#fff;padding:10px;border-radius:var(--rs)}
 .sync-upload-row{display:flex;justify-content:space-between;align-items:center;gap:12px;
 	padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);margin-bottom:6px}
 .sync-upload-row-mine{border-color:var(--accent)}

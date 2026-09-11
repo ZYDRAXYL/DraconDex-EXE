@@ -32,6 +32,18 @@
       "releases": "sdb-v*",
       "versionSource": "sdb.json#sdbVersion"
     },
+    "TRX": {
+      "repo": "DraconDex-TRX",
+      "role": "service",
+      "private": false,
+      "owns": [
+        "netlify/",
+        "public/",
+        "netlify.toml"
+      ],
+      "releases": null,
+      "versionSource": "package.json#version"
+    },
     "EXE": {
       "repo": "DraconDex-EXE",
       "role": "app",
@@ -90,7 +102,10 @@
   "chains": {
     "exe": [
       "APP",
-      "SDB",
+      [
+        "SDB",
+        "TRX"
+      ],
       "EXE",
       [
         "PKG",
@@ -100,7 +115,10 @@
     ],
     "apk": [
       "APP",
-      "SDB",
+      [
+        "SDB",
+        "TRX"
+      ],
       "APK",
       [
         "PKG",
@@ -110,7 +128,10 @@
     ],
     "pwa": [
       "APP",
-      "SDB",
+      [
+        "SDB",
+        "TRX"
+      ],
       [
         "EXE",
         "APK"
@@ -151,6 +172,11 @@
       "carries": "claude-tooling"
     },
     {
+      "from": "APP",
+      "to": "TRX",
+      "carries": "claude-tooling"
+    },
+    {
       "from": "SDB",
       "to": "EXE",
       "carries": "generated-schema"
@@ -159,6 +185,16 @@
       "from": "SDB",
       "to": "APK",
       "carries": "generated-schema"
+    },
+    {
+      "from": "TRX",
+      "to": "EXE",
+      "carries": "transfer-api"
+    },
+    {
+      "from": "TRX",
+      "to": "APK",
+      "carries": "transfer-api"
     },
     {
       "from": "EXE",
