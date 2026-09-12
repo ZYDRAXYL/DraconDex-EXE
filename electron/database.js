@@ -29,6 +29,7 @@ const update    = require('./src/db/update');
 const plugin    = require('./src/db/plugin');
 const pkg       = require('./src/db/pkg');
 const dbTransfer = require('./src/db/db-transfer');
+const transfer  = require('./src/db/transfer');
 const cloud     = require('./src/db/cloud');
 
 module.exports = {
@@ -62,5 +63,6 @@ module.exports = {
   ...plugin,
   ...pkg,
   ...dbTransfer,
+  ...transfer,
   ...cloud,
 };

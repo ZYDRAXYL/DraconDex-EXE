@@ -1,6 +1,6 @@
 ---
 name: multi-repository-architecture
-description: The contract for DraconDex's 7-repository architecture — which of APP/SDB/EXE/APK/PWA/PKG/WEB owns a given file, which direction changes flow, and where a new piece of work belongs. Read this BEFORE creating a file, moving code between repos, or answering "where does this live" — guessing produces a change in the wrong repo that the chain then propagates everywhere. Use when starting work in any DraconDex repo, when a change touches more than one repo, when adding a repo or an edge to the chain, or when asked "อยู่ repo ไหน", "ควรแก้ที่ไหน", "โครงสร้าง repo", "multi-repo", "which repo owns this".
+description: The contract for DraconDex's 8-repository architecture — which of APP/SDB/TRX/EXE/APK/PWA/PKG/WEB owns a given file, which direction changes flow, and where a new piece of work belongs. Read this BEFORE creating a file, moving code between repos, or answering "where does this live" — guessing produces a change in the wrong repo that the chain then propagates everywhere. Use when starting work in any DraconDex repo, when a change touches more than one repo, when adding a repo or an edge to the chain, or when asked "อยู่ repo ไหน", "ควรแก้ที่ไหน", "โครงสร้าง repo", "multi-repo", "which repo owns this".
 ---
 
 <!-- mirrored-from-app: do not edit here -->
@@ -18,12 +18,13 @@ view for the repo you are standing in with:
 node tools/chain-lib.mjs
 ```
 
-## The seven repos
+## The eight repos
 
 | Repo | Role | Owns | Releases |
 |---|---|---|---|
 | **APP** | hub | `.claude/` (the source of every skill), `chain/`, `docs/`, `process/` | — |
 | **SDB** | schema | `schema/vault.sql`, `schema/version.json`, `supabase/`, `assets/` masters | `sdb-v*` |
+| **TRX** | service | `netlify/`, `public/` — the DDX Transfer hand-off service | — (deploys on push) |
 | **EXE** | app | `electron/**` | `v*` |
 | **APK** | app | `flutter/**` | `flutter-v*` |
 | **PWA** | build | `tools/`, `shim/`, `dist/` | — |
@@ -33,10 +34,15 @@ node tools/chain-lib.mjs
 ## The three chains
 
 ```
-EXE   APP > SDB > EXE > PKG, WEB, PWA
-APK   APP > SDB > APK > PKG, WEB, PWA
-PWA   APP > SDB > EXE, APK > PWA > WEB
+EXE   APP > SDB, TRX > EXE > PKG, WEB, PWA
+APK   APP > SDB, TRX > APK > PKG, WEB, PWA
+PWA   APP > SDB, TRX > EXE, APK > PWA > WEB
 ```
+
+SDB and TRX sit side by side: both are contracts the two apps are built
+against, neither is a step between them. TRX is upstream only — the service
+treats a vault as an opaque blob, so no app change can ever require a change
+there, and that one-directionality is what keeps the graph acyclic.
 
 Changes flow **left to right, never backwards.** That single property is what
 prevents an infinite propagation loop, and it is why `chain.json`'s `edges` are
@@ -51,13 +57,21 @@ directed.
 | an Electron renderer, main, or db file | **EXE** | |
 | a Flutter widget, provider, or dao | **APK** | PWA builds from this same tree — never fork it |
 | the browser shims, the lane router, the PWA build | **PWA** | |
+| the DDX Transfer API, its web pages, its expiry/limits | **TRX** | change the API and BOTH clients follow — see the wire-format rule below |
 | a theme, a locale pack, a view preset shipped as a download | **PKG** | |
 | a *built-in* theme or locale | **EXE** / **APK** | `themes.css` + `state.js`'s `UI_THEME_OPTIONS`; `i18n.js`'s `L` |
 | the website, the download page, the Docs manuals | **WEB** | |
 | a skill, an agent, `chain.json` | **APP** | then `node tools/mirror-claude.mjs` |
 | a plan, a process write-up, the changelog | **APP** | `Plan.md`, `process/`, `docs/CHANGELOG.md` stay project-wide |
 
-## Two rules that are not negotiable
+## Three rules that are not negotiable
+
+**0. The DDX Transfer wire format is a three-way contract.**
+`public/assets/js/ddx-crypto.js` in **TRX** is the source of truth;
+`electron/src/db/transfer-crypto.js` in **EXE** and
+`lib/data/services/ddx_transfer_service.dart` in **APK** must agree with it
+byte for byte. A mismatch does not throw — it delivers a vault that imports as
+nonsense. Change one, change all three.
 
 **1. Never hand-edit a generated or mirrored file at its destination.**
 Every one carries a header naming its source. Edit the source; let the chain
