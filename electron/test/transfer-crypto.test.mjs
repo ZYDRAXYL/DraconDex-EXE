@@ -138,6 +138,39 @@ test('transfer-crypto.js stays free of electron and database imports', () => {
   assert.deepEqual(requires, ['crypto'], `unexpected imports: ${requires.join(', ')}`);
 });
 
+test('transfer.js reaches gzip only through the form a browser can shim', () => {
+  // DraconDex-PWA bundles this file for the browser with esbuild and aliases
+  // each Node built-in to a shim/. A browser's only gzip is CompressionStream,
+  // which is a stream — so `zlib.gzipSync` cannot be shimmed at any cost, and
+  // using it breaks the desktop lane's build outright rather than at runtime.
+  //
+  // This is a regression guard, not a style rule: gzipSync is exactly what was
+  // here first, and it took a failed PWA build to notice.
+  const src = readSource('../src/db/transfer.js');
+
+  assert.doesNotMatch(src, /zlib\.(gzip|gunzip|deflate|inflate|brotliCompress|brotliDecompress)Sync\b/,
+    'sync zlib cannot be shimmed for the browser lane — use the callback form');
+
+  // And the callback form has to actually be the one in use, so this test
+  // cannot pass by gzip having been dropped altogether.
+  assert.match(src, /zlib\.gzip\(/, 'the callback form of gzip must be used');
+  assert.match(src, /zlib\.gunzip\(/, 'the callback form of gunzip must be used');
+});
+
+test('a lane without gzip still sends, and says so in the manifest', () => {
+  // CompressionStream is absent on older Safari. The send path falls back to an
+  // uncompressed payload rather than failing, which is only safe because every
+  // receiver branches on the manifest's `compression` field — this file, the
+  // browser implementation in DraconDex-TRX, and the Dart one in DraconDex-APK
+  // all do. A hardcoded 'gzip' here would make that fallback silently corrupt.
+  const src = readSource('../src/db/transfer.js');
+  assert.doesNotMatch(src, /compression:\s*'gzip'/,
+    "the manifest must report what actually happened, not assume gzip");
+  assert.match(src, /compression\s*=\s*'none'/, 'the uncompressed fallback must exist');
+  assert.match(src, /s\.manifest\.compression === 'gzip'/,
+    'the receive path must branch on the manifest, not assume gzip');
+});
+
 test('the transfer URL is validated before a vault is sent to it', () => {
   // Same rule and same reason as sync.js's isAllowedSyncUrl: whatever is
   // stored here is where an entire vault gets uploaded, so a renderer-side

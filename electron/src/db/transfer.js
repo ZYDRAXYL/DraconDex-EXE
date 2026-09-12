@@ -24,7 +24,15 @@
 // never the key. That is not ceremony: it is what lets the browser build in
 // DraconDex-PWA run this code unchanged, since it touches `fetch` but never
 // `http.createServer`, a file dialog, or `fs`.
+//
+// `zlib` is the one Node built-in this file does need, so the PWA lane shims
+// it like the other thirteen. That shim can only be async — a browser's only
+// gzip is CompressionStream, which is a stream, not a sync call — so gzip is
+// reached through the callback form below and never through gzipSync. Both
+// call sites were already inside async functions.
 const zlib = require('zlib');
+const gzip = (buf) => new Promise((ok, no) => zlib.gzip(buf, (e, r) => (e ? no(e) : ok(r))));
+const gunzip = (buf) => new Promise((ok, no) => zlib.gunzip(buf, (e, r) => (e ? no(e) : ok(r))));
 const { getAppSetting, setAppSetting } = require('./versions');
 const { serializeVault, applySnapshot } = require('./sync');
 const {
@@ -137,7 +145,18 @@ async function transferSend(nexusId, { allowTypedCode = true, name = null } = {}
   const snapshot = serializeVault(nexusId);
   if (!snapshot) return { ok: false, code: 'not_found' };
   const plain = Buffer.from(JSON.stringify(snapshot), 'utf8');
-  const gz = zlib.gzipSync(plain);
+
+  // A lane whose runtime has no gzip sends the payload uncompressed rather
+  // than failing outright — older Safari has no CompressionStream, and a
+  // vault that transfers slightly larger beats one that cannot transfer.
+  // `compression` in the manifest is what makes the choice legible to the
+  // receiver, which is why it is recorded rather than assumed.
+  let gz = plain;
+  let compression = 'none';
+  try {
+    gz = await gzip(plain);
+    compression = 'gzip';
+  } catch (_) { /* uncompressed */ }
 
   const key = newKey();
   const created = await call('/api/create', { method: 'POST', json: { sizeBytes: gz.length } });
@@ -158,7 +177,7 @@ async function transferSend(nexusId, { allowTypedCode = true, name = null } = {}
     v: 1,
     name: String(name || snapshot?.nexus?.name || 'Nexus'),
     sizeBytes: plain.length,
-    compression: 'gzip',
+    compression,
     createdAt: Date.now(),
     source: 'exe',
   };
@@ -277,7 +296,7 @@ async function transferReceive(transferId, targetNexusId) {
   const body = Buffer.concat(parts);
   let payload;
   try {
-    const json = s.manifest.compression === 'gzip' ? zlib.gunzipSync(body) : body;
+    const json = s.manifest.compression === 'gzip' ? await gunzip(body) : body;
     payload = JSON.parse(json.toString('utf8'));
   } catch (_) {
     return { ok: false, code: 'bad_payload' };
