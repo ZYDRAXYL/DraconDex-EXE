@@ -34,6 +34,7 @@ function applyUiSettings(){
     ? installedThemeVars(S.settings.theme) : null;
   const vars = custom?.vars || installed;
   document.body.dataset.theme = (custom || installed) ? 'custom' : S.settings.theme;
+  document.body.dataset.uiStyle = S.settings.uiStyle;
   for (const tok of CUSTOM_THEME_TOKENS) {
     if (vars && vars[tok]) document.body.style.setProperty(tok, vars[tok]);
     else document.body.style.removeProperty(tok);
@@ -64,6 +65,7 @@ function setUiSetting(key, value){
   // installed theme passes this gate without a second condition.
   if(key === 'theme' && !UI_THEME_OPTIONS.includes(value) && !isCustomTheme) return;
   if(key === 'nameMode' && !['unique','classic'].includes(value)) return;
+  if(key === 'uiStyle' && !UI_STYLE_OPTIONS.includes(value)) return;
   if(key === 'fontScale'){
     value = Math.min(130, Math.max(80, Math.round(Number(value) || 100)));
   }

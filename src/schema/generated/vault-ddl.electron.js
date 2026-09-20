@@ -943,6 +943,27 @@ const VAULT_DDL_SQL = `
       create_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- Nexus history (Procress 10 part 1). Structural Hub events on a
+    -- module — create/move/delete/copy — logged per Nexus, distinct from
+    -- module_version's per-module content edits. module_ref is
+    -- deliberately NOT a foreign key: a 'delete' row must outlive the module
+    -- row it describes, and a plain REFERENCES ... ON DELETE CASCADE would
+    -- erase the very record meant to remember the deletion. module_name is
+    -- a point-in-time snapshot for the same reason (the module may no
+    -- longer exist, or may have been renamed since). Retention comes from
+    -- app_setting 'nexusHistoryLimit' (src/db/versions.js), oldest pruned
+    -- beyond it — same shape as module_version's own retention.
+    CREATE TABLE IF NOT EXISTS nexus_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nexus_ref INTEGER NOT NULL REFERENCES nexus(id) ON DELETE CASCADE,
+      seq INTEGER NOT NULL,
+      action TEXT NOT NULL CHECK(action IN ('create','move','delete','copy')),
+      module_ref INTEGER,
+      module_name TEXT,
+      detail TEXT,
+      create_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     -- Import Dock (Phase 18). Files imported from a folder, listed in the
     -- hub section. linker_key optionally binds a file to a nest entity
     -- (module_5, cobj_3, ...); use_as_image marks an image file as that
