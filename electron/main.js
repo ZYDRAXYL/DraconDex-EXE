@@ -898,7 +898,7 @@ h('versions:restore', (id)   => db.restoreVersion(id));
 // every api.setting.* call site passes a literal, and 'versionLimit' is the
 // only one), so this is an allowlist rather than a denylist — a new secret
 // key added later is closed by default instead of open by default.
-const RENDERER_SETTING_KEYS = new Set(['versionLimit', 'startupMode']);
+const RENDERER_SETTING_KEYS = new Set(['versionLimit', 'startupMode', 'nexusHistoryLimit']);
 // Two gates, not one. The allowlist is the rule; isSecretKey() is the backstop
 // that survives someone widening the allowlist later without noticing they
 // just handed the renderer a refresh token. Cloud-provider credentials are
@@ -907,6 +907,14 @@ const RENDERER_SETTING_KEYS = new Set(['versionLimit', 'startupMode']);
 const rendererSettingAllowed = (k) => RENDERER_SETTING_KEYS.has(String(k)) && !isSecretKey(k);
 h('setting:get',      (k)    => (rendererSettingAllowed(k) ? db.getAppSetting(k) : null));
 h('setting:set',      (k,v)  => (rendererSettingAllowed(k) ? db.setAppSetting(k,v) : { ok: false }));
+
+// History limit (Procress 10 part 1) — byte usage + clear for whichever
+// vault this window has open; see db/versions.js's historyBytesUsed for why
+// none of these take a nexus id.
+h('history:bytesUsed',   () => db.historyBytesUsed());
+h('history:clearModule', () => { db.clearModuleHistory(); return { ok: true }; });
+h('history:clearNexus',  () => { db.clearNexusHistory(); return { ok: true }; });
+h('history:clearAll',    () => { db.clearAllHistory(); return { ok: true }; });
 
 // Cloud sync — Token Sync (Supabase) — snapshot push/pull per vault slot
 h('sync:getConfig',     ()             => db.getSyncConfig());
@@ -1033,6 +1041,18 @@ h('plugin:stop', (id) => {
   return { ok: true };
 });
 h('plugin:isRunning', (id) => !!findPluginWindow(id));
+
+// Extensions (Procress 10 part 1) — list-only, no install/sandbox surface.
+h('extension:listRepos', () => db.extensionListRepos());
+// Renderer passes just the repo NAME, never a URL: the actual link is built
+// here from a fixed origin, so a compromised renderer can only ever open a
+// github.com/ZYDRAXYL/<name> page, never an arbitrary shell.openExternal
+// target (see shell:composeMail's comment above for why that door matters).
+h('extension:openRepo', (name) => {
+  if (!/^[A-Za-z0-9._-]+$/.test(String(name || ''))) return { ok: false };
+  shell.openExternal(`https://github.com/ZYDRAXYL/${encodeURIComponent(name)}`);
+  return { ok: true };
+});
 
 // pluginApi.* bridge (preload-plugin.js) — plugin windows and plugin PANELS
 // only. Resolves the calling plugin from the calling contents itself, exactly

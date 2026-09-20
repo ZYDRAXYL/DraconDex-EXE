@@ -54,7 +54,7 @@ function assertHandleFree(handle, nexusRef, exceptId = null) {
   if (clash) throw new Error('handle already in use');
 }
 
-function createModule(data) {
+function createModule(data, { logHistory = true } = {}) {
   const d = getDB();
   const { nexus_ref, parent_id = null, name, kind, icon = null, icon_color = null, color = null, cat_type = null } = data;
   const handle = normalizeHandle(data.handle);
@@ -77,6 +77,11 @@ function createModule(data) {
       console.error('chronicler timeline seed error:', e);
     }
   }
+  // logHistory is false only from cloneModuleSubtree (duplicateModule logs
+  // one 'copy' event for the whole subtree itself) — every other caller
+  // (the Hub's create menu, Artisan's wizard, module import) is a genuine
+  // create and logs here, once, at the one path they all share.
+  if (logHistory) versions.recordNexusHistory(nexus_ref, 'create', id, name, null);
   return id;
 }
 
@@ -117,7 +122,7 @@ function cloneModuleSubtree(srcId, newParentId, isRoot) {
     icon_color: src.icon_color,
     color: src.color,
     cat_type: src.cat_type,
-  });
+  }, { logHistory: false });
   if (src.description) updateModuleDescription(newId, src.description);
   const children = d.prepare(`SELECT id FROM module WHERE parent_id=? ORDER BY display_order, id`).all(srcId);
   for (const c of children) cloneModuleSubtree(c.id, newId, false);
@@ -126,11 +131,14 @@ function cloneModuleSubtree(srcId, newParentId, isRoot) {
 
 function duplicateModule(id) {
   const d = getDB();
-  const src = d.prepare(`SELECT parent_id FROM module WHERE id=?`).get(id);
+  const src = d.prepare(`SELECT parent_id, nexus_ref, name FROM module WHERE id=?`).get(id);
   if (!src) return null;
   let newId;
   const tx = d.transaction(() => { newId = cloneModuleSubtree(id, src.parent_id, true); });
   tx();
+  // One 'copy' event for the whole subtree, not one per node — cloneModuleSubtree
+  // suppresses createModule's own logging for exactly this reason.
+  if (newId) versions.recordNexusHistory(src.nexus_ref, 'copy', newId, `${src.name} (Copy)`, null);
   return newId;
 }
 
@@ -146,7 +154,16 @@ function updateModuleDescription(id, description) {
   }
 }
 
-const deleteModule = (id) => getDB().prepare(`DELETE FROM module WHERE id=?`).run(id);
+function deleteModule(id) {
+  const d = getDB();
+  // Read the row BEFORE deleting — module_ref in nexus_history is not a
+  // foreign key precisely so this record survives the delete (see
+  // schema/vault.sql), but the name/nexus still have to be captured now.
+  const row = d.prepare(`SELECT nexus_ref, name FROM module WHERE id=?`).get(id);
+  const result = d.prepare(`DELETE FROM module WHERE id=?`).run(id);
+  if (row) versions.recordNexusHistory(row.nexus_ref, 'delete', id, row.name, null);
+  return result;
+}
 
 // Move a module to (possibly the same) parent and write display_order for
 // every child of that parent in the given final order — one call covers
@@ -157,6 +174,7 @@ const deleteModule = (id) => getDB().prepare(`DELETE FROM module WHERE id=?`).ru
 // renderer before this is ever called — see hub.js's onNestDrop.
 function moveModule(nexusRef, moduleId, newParentId, orderedSiblingIds) {
   const d = getDB();
+  const prev = d.prepare(`SELECT parent_id, name FROM module WHERE id=?`).get(moduleId);
   const tx = d.transaction(() => {
     d.prepare(`UPDATE module SET parent_id=? WHERE id=? AND nexus_ref=?`).run(newParentId, moduleId, nexusRef);
     orderedSiblingIds.forEach((id, idx) => {
@@ -164,6 +182,12 @@ function moveModule(nexusRef, moduleId, newParentId, orderedSiblingIds) {
     });
   });
   tx();
+  // Plain sibling reordering (newParentId === the module's own current
+  // parent) isn't a reparent — logging it would turn every drag-to-reorder
+  // in the Nest tree into a history row, drowning out actual moves.
+  if (prev && newParentId !== prev.parent_id) {
+    versions.recordNexusHistory(nexusRef, 'move', moduleId, prev.name, null);
+  }
 }
 
 const countModules = (nexusRef) => getDB().prepare(`SELECT COUNT(*) AS c FROM module WHERE nexus_ref=?`).get(nexusRef).c;

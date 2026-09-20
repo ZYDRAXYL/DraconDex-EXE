@@ -21,7 +21,7 @@ const SETTING_GROUPS = {
   workspace: ['theme', 'textsize', 'tooltoggle', 'style', 'startup'],
   user: ['account', 'profile'],
   appdata: ['tokensync', 'transfer', 'database', 'backup', 'cloudstorage', 'versions'],
-  plugin: ['plugin', 'pluginsettings', 'packages'],
+  plugin: ['extension', 'plugin', 'pluginsettings', 'packages'],
 };
 function settingGroupPages(group){
   const pages = SETTING_GROUPS[group] || SETTING_GROUPS.workspace;
@@ -32,14 +32,14 @@ const SETTING_GROUP_LABEL_KEY = {
   appdata: 'settingGroupAppdata', plugin: 'settingGroupPlugin',
 };
 const SETTING_PAGE_LABEL_KEY = {
-  theme: 'theme', textsize: 'settingPageTextSize', tooltoggle: 'settingPageToolToggle',
+  theme: 'settingPageAppearance', textsize: 'settingPageTextSize', tooltoggle: 'settingPageToolToggle',
   style: 'settingPageWorkspaceStyle', startup: 'settingPageStartup',
   account: 'settingPageAccount', profile: 'settingPageProfile',
   tokensync: 'settingPageTokenSync', transfer: 'settingPageTransfer',
   database: 'settingPageDatabase', backup: 'prefs_backup',
   cloudstorage: 'settingPageCloudStorage', versions: 'settingPageVersions',
   plugin: 'prefs_plugin', pluginsettings: 'settingPagePluginSettings',
-  packages: 'settingPagePackages',
+  packages: 'settingPagePackages', extension: 'settingPageExtension',
 };
 // Populated by each page's owning file at parse time — key is 'group.page'.
 // A page renderer may be synchronous (returns final HTML) or kick off an
@@ -141,18 +141,82 @@ function settingThemeGridCellHtml(key, name, vars, {active, isCustom, onclick, t
     ${active ? '<span class="prefs-theme-check">✓</span>' : ''}
   </div>`;
 }
+// Procress 10 part 1: "Theme" (Workspace group) renamed to "Appearance" and
+// split into two independently-collapsible subsections — the existing theme
+// grid, and a new UI-style (shape/elevation) picker. Both use the same
+// "boolean on S + renderSettingWindow()" idiom toggleSettingAdvanced()
+// already established on the Text&Size page, but as their own flags: sharing
+// one flag across two unrelated sections on two different pages would expand
+// one every time the other is opened.
 function settingThemePageHtml(){
+  return `<div class="settings-label">${t('settingPageAppearance')}</div>
+    ${settingThemeSectionHtml()}
+    ${settingUiStyleSectionHtml()}`;
+}
+registerSettingPage('workspace', 'theme', settingThemePageHtml);
+
+// Collapsed shows only the 3 basic built-ins (UI_THEME_OPTIONS_BUILTIN's
+// first three: daylight/moonlight/midnight); expanded shows every theme,
+// built-in and PKG-installed alike (getThemePalettes() already spans both —
+// core/settings.js's applyInstalledPackages extends UI_THEME_OPTIONS in
+// place). Custom themes and the add-box are never hidden behind the
+// collapse — hiding a user's own saved theme would look like data loss.
+function settingThemeSectionHtml(){
+  const expanded = !!S.settingThemeExpanded;
   const palettes = getThemePalettes();
-  const builtins = UI_THEME_OPTIONS.map(key =>
+  const shownBuiltins = expanded ? UI_THEME_OPTIONS : UI_THEME_OPTIONS_BUILTIN.slice(0, 3);
+  const builtins = shownBuiltins.map(key =>
     settingThemeGridCellHtml(key, t(key), palettes[key] || {}, {active: S.settings.theme === key})
   ).join('');
   const customs = (S.settings.customThemes || []).map(ct =>
     settingThemeGridCellHtml(`custom:${ct.id}`, ct.name, ct.vars || {}, {active: S.settings.theme === `custom:${ct.id}`, isCustom: true})
   ).join('');
   const addBox = `<div class="prefs-theme-cell prefs-theme-add" onclick="openCustomThemeModal()" title="${t('customThemeNew')}">+</div>`;
-  return `<div class="settings-label">${t('theme')}</div><div class="prefs-theme-grid">${builtins}${customs}${addBox}</div>`;
+  return `<div class="settings-group">
+      <div class="settings-label-row">
+        <span class="settings-label">${t('theme')}</span>
+        <button class="btn btn-s btn-sm" onclick="toggleSettingThemeExpanded()">${expanded ? t('settingCollapse') : t('settingShowAll')}</button>
+      </div>
+      <div class="prefs-theme-grid">${builtins}${customs}${addBox}</div>
+    </div>`;
 }
-registerSettingPage('workspace', 'theme', settingThemePageHtml);
+function toggleSettingThemeExpanded(){
+  S.settingThemeExpanded = !S.settingThemeExpanded;
+  renderSettingWindow();
+}
+
+// UI style (Procress 10 part 1, new) — shape/elevation preset, see
+// state.js's UI_STYLE_OPTIONS and css/ui-style.css. Collapsed shows the
+// first 3 presets, expanded shows all 5 — there is no "basic vs. all" split
+// for this one the way built-in vs. PKG themes has, so this just mirrors the
+// Theme section's collapse shape for a consistent page.
+const UI_STYLE_LABEL_KEY = {
+  roundedMinimal: 'uiStyleRoundedMinimal', cleanMinimal: 'uiStyleCleanMinimal',
+  fluent: 'uiStyleFluent', hardBlock: 'uiStyleHardBlock', oldPlain: 'uiStyleOldPlain',
+};
+function settingUiStyleSectionHtml(){
+  const expanded = !!S.settingUiStyleExpanded;
+  const shown = expanded ? UI_STYLE_OPTIONS : UI_STYLE_OPTIONS.slice(0, 3);
+  const current = S.settings.uiStyle || 'oldPlain';
+  const cells = shown.map((key) => {
+    const active = current === key;
+    return `<button type="button" class="theme-item${active ? ' active' : ''}" onclick="setUiSetting('uiStyle','${key}')">
+      <span class="theme-name">${t(UI_STYLE_LABEL_KEY[key])}</span>
+      ${active ? '<span class="theme-check">✓</span>' : ''}
+    </button>`;
+  }).join('');
+  return `<div class="settings-group">
+      <div class="settings-label-row">
+        <span class="settings-label">${t('settingUiStyle')}</span>
+        <button class="btn btn-s btn-sm" onclick="toggleSettingUiStyleExpanded()">${expanded ? t('settingCollapse') : t('settingShowAll')}</button>
+      </div>
+      <div class="theme-list">${cells}</div>
+    </div>`;
+}
+function toggleSettingUiStyleExpanded(){
+  S.settingUiStyleExpanded = !S.settingUiStyleExpanded;
+  renderSettingWindow();
+}
 
 // ═══ Workspace → Text&Size (language + UI size + font size merged, plus
 // an Advanced reveal carrying the per-area size sliders and — since they

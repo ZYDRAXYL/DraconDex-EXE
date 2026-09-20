@@ -3,9 +3,8 @@
   "self": "EXE",
   "source": {
     "repo": "ZYDRAXYL/DraconDex-SDB",
-    "ref": "be803f8b5a666d93f2080a245a8ebf971085bbf2",
-    "version": "1.0.0",
-    "_comment": "An immutable ref, deliberately: a commit SHA rather than a branch. sdb-check resolves this through raw.githubusercontent, and pinning 'main' would not be a pin \u2014 main moves, so the drift check would verify against whatever SDB happens to be rather than against the version this repo actually vendored. Moving the pin is a reviewable commit, which is the whole point. Same idea as DraconDex-PWA's app-source.json commit field."
+    "ref": "37d5317ce1cf947cc228059c81741417eee0d6f3",
+    "version": "1.0.0"
   },
   "expect": {
     "vaultSchemaVersion": 4,
@@ -14,7 +13,7 @@
   "vendored": {
     "src/schema/generated/vault-ddl.electron.js": {
       "artifact": "generated/electron/vault-ddl.electron.js",
-      "sha256": "c44dbc1c51711f4d429a5e0b6f3f4fc235ac2b5bea1eb0c132d5d67993be7844"
+      "sha256": "df5be959813b2ec1b82024ef89c6d2d14569e0ab35e8c839f9119f2d2f1f24f3"
     },
     "electron/src/db/supabase-schema.js": {
       "artifact": "generated/electron/supabase-schema.js",

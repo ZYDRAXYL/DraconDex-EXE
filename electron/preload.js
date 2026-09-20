@@ -187,6 +187,12 @@ contextBridge.exposeInMainWorld('api', {
     get: (k)   => inv('setting:get', k),
     set: (k,v) => inv('setting:set', k,v),
   },
+  history: {
+    bytesUsed:   () => inv('history:bytesUsed'),
+    clearModule: () => inv('history:clearModule'),
+    clearNexus:  () => inv('history:clearNexus'),
+    clearAll:    () => inv('history:clearAll'),
+  },
   sync: {
     getConfig:    ()           => inv('sync:getConfig'),
     setConfig:    (u,k)        => inv('sync:setConfig', u,k),
@@ -262,6 +268,10 @@ contextBridge.exposeInMainWorld('api', {
     launch:    (id)  => inv('plugin:launch', id),
     stop:      (id)  => inv('plugin:stop', id),
     isRunning: (id)  => inv('plugin:isRunning', id),
+  },
+  extension: {
+    listRepos: ()     => inv('extension:listRepos'),
+    openRepo:  (name) => inv('extension:openRepo', name),
   },
   // Packages (themes / locales / view presets) from ZYDRAXYL/DraconDex-PKG.
   // The fetch happens in main because index.html's CSP sets connect-src 'none' —

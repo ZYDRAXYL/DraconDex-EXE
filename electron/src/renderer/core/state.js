@@ -177,6 +177,12 @@ function installedLangKeys(code){
 // nobody's UI changes on upgrade; 'wyvern' (newcomer/simple) and 'dragon'
 // (expert/sandbox) are opt-in via Setting window -> Layout -> Workspace.
 const WORKSPACE_STYLE_OPTIONS = ['drake', 'wyvern', 'dragon'];
+// Procress 10 part 1 — shape/elevation preset, distinct from workspaceStyle
+// above (that picks the app's top-level LAYOUT; this only reshapes corner
+// radius and shadow depth, see css/ui-style.css). 'oldPlain' is the default
+// so nobody's UI changes on upgrade — it needs no CSS block of its own
+// because it IS tokens.css's own --r/--rs/--rl/--shadow-* values.
+const UI_STYLE_OPTIONS = ['roundedMinimal', 'cleanMinimal', 'fluent', 'hardBlock', 'oldPlain'];
 // Process 5 part1: each workspace style's own default nav orientation —
 // Drake/Dragon default to vertical (today's rail), Wyvern defaults to
 // horizontal (its own toolbar was always meant to read as a top strip, see
@@ -289,6 +295,7 @@ function loadUiSettings(){
   const hubQuickToggles = Object.assign({ kinds: true, sage: true, dock: true }, saved.hubQuickToggles || {});
   const statusToggles = Object.assign({ vault: true, breadcrumb: true, words: true, saveState: true }, saved.statusToggles || {});
   const workspaceStyle = WORKSPACE_STYLE_OPTIONS.includes(saved.workspaceStyle) ? saved.workspaceStyle : 'drake';
+  const uiStyle = UI_STYLE_OPTIONS.includes(saved.uiStyle) ? saved.uiStyle : 'oldPlain';
   // Process 5 part1: per-style nav orientation, sanitized against the
   // default map so an unknown/missing style key or garbage value falls back
   // cleanly rather than propagating into applyNavOrientation().
@@ -312,7 +319,7 @@ function loadUiSettings(){
   // preset is the "advanced" sub-setting, only meaningful while enabled.
   const animationsEnabled = saved.animationsEnabled !== false;
   const animationSpeed = ['fast', 'normal', 'slow'].includes(saved.animationSpeed) ? saved.animationSpeed : 'normal';
-  return { theme: theme2, language, size, nameMode, fontScale, customThemes, nestShowItems, nestShowMajorIcon, nestShowMinorIcon, nestSignatureMode, quickExtras, navToggles, hubQuickToggles, statusToggles, workspaceStyle, navOrientation, navHorizontalDisplay, navVerticalAlwaysLabel, dragonView, animationsEnabled, animationSpeed };
+  return { theme: theme2, language, size, nameMode, fontScale, customThemes, nestShowItems, nestShowMajorIcon, nestShowMinorIcon, nestSignatureMode, quickExtras, navToggles, hubQuickToggles, statusToggles, workspaceStyle, uiStyle, navOrientation, navHorizontalDisplay, navVerticalAlwaysLabel, dragonView, animationsEnabled, animationSpeed };
 }
 
 // Kind display names (Phase 22): the Unique set (KIND_LABEL, locale-

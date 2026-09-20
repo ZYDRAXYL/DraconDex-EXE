@@ -34,6 +34,9 @@
        in this sequence — tokens → themes → base → chrome → layout → components
        → legacy → v3. Adding a file? Put it where its rules used to live. -->
   <link rel="stylesheet" href="css/tokens.css">
+  <!-- Token-tier, not a component file: overrides tokens.css's own
+       --r/--rs/--rl/--shadow-* per data-ui-style, so it belongs beside it. -->
+  <link rel="stylesheet" href="css/ui-style.css">
   <link rel="stylesheet" href="css/themes.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/titlebar.css">
@@ -327,6 +330,7 @@
   <script src="src/renderer/cloud.js"></script>
   <script src="src/renderer/update.js"></script>
   <script src="src/renderer/plugin.js"></script>
+  <script src="src/renderer/extension.js"></script>
   <script src="src/renderer/pkg.js"></script>
   <script src="src/renderer/wyvern.js"></script>
   <script src="src/renderer/dragon.js"></script>

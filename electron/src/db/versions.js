@@ -56,6 +56,61 @@ const listVersions = (moduleRef) => getDB().prepare(`
   WHERE module_ref=? ORDER BY seq DESC
 `).all(moduleRef);
 
+// Nexus history (Procress 10 part 1) — structural Hub events (create/move/
+// delete/copy), separate from module_version's per-module content edits
+// above. Its own app_setting key rather than reusing 'versionLimit': the two
+// are independently sized (Plan.md asks for two separate limit numbers on
+// the Database settings page), and 'versionLimit' keeps its existing key so
+// installs upgrading in place don't have their module-history limit reset.
+const nexusHistoryLimit = () => {
+  const v = Number(getAppSetting('nexusHistoryLimit'));
+  return Number.isFinite(v) && v >= 1 ? Math.floor(v) : 50;
+};
+
+// No restore payload (unlike module_version) — Plan.md asks for a log and a
+// byte-usage/clear UI, not an undo-a-hub-op feature; adding one later only
+// means adding a payload column, not touching this shape. moduleRef/
+// moduleName are best-effort context for display, not identity: moduleRef
+// is not a foreign key (see schema/vault.sql's nexus_history comment), so a
+// 'delete' row outlives the module it names.
+function recordNexusHistory(nexusRef, action, moduleRef, moduleName, detail) {
+  try {
+    const d = getDB();
+    d.transaction(() => {
+      const seq = (d.prepare(`SELECT COALESCE(MAX(seq),0) AS m FROM nexus_history WHERE nexus_ref=?`).get(nexusRef).m) + 1;
+      d.prepare(`INSERT INTO nexus_history (nexus_ref, seq, action, module_ref, module_name, detail) VALUES (?,?,?,?,?,?)`)
+        .run(nexusRef, seq, action, moduleRef ?? null, moduleName ?? null, detail || null);
+      const limit = nexusHistoryLimit();
+      d.prepare(`
+        DELETE FROM nexus_history WHERE nexus_ref=? AND id NOT IN (
+          SELECT id FROM nexus_history WHERE nexus_ref=? ORDER BY seq DESC LIMIT ?)
+      `).run(nexusRef, nexusRef, limit);
+    })();
+  } catch (_) { /* history logging must never break the hub operation itself */ }
+}
+
+// Byte usage + clear, both for the Database setting page's "history limit"
+// section. Neither takes a nexusId: getDB() is already the one vault file
+// this call's window has open (v4.9.0 one-.ddx-per-Nexus), and Plan.md scopes
+// this display to "the currently open Nexus" specifically — not an arbitrary
+// one by id, which is what getVaultDB(id) is for elsewhere in this file's
+// siblings (sync.js) and would be the wrong tool here.
+function historyBytesUsed() {
+  const d = getDB();
+  const moduleBytes = d.prepare(`
+    SELECT COALESCE(SUM(LENGTH(action) + LENGTH(COALESCE(detail,'')) + LENGTH(COALESCE(payload,''))), 0) AS b
+    FROM module_version
+  `).get().b;
+  const nexusBytes = d.prepare(`
+    SELECT COALESCE(SUM(LENGTH(action) + LENGTH(COALESCE(module_name,'')) + LENGTH(COALESCE(detail,''))), 0) AS b
+    FROM nexus_history
+  `).get().b;
+  return { moduleBytes, nexusBytes };
+}
+const clearModuleHistory = () => getDB().prepare(`DELETE FROM module_version`).run();
+const clearNexusHistory = () => getDB().prepare(`DELETE FROM nexus_history`).run();
+function clearAllHistory() { clearModuleHistory(); clearNexusHistory(); }
+
 // Whitelisted restore ops — each re-applies a recorded before-state through
 // the owning db module (required lazily to avoid import cycles).
 const RESTORE_OPS = {
@@ -96,4 +151,7 @@ function restoreVersion(id) {
   return { ok: true };
 }
 
-module.exports = { recordVersion, listVersions, restoreVersion, getAppSetting, setAppSetting };
+module.exports = {
+  recordVersion, listVersions, restoreVersion, getAppSetting, setAppSetting,
+  recordNexusHistory, historyBytesUsed, clearModuleHistory, clearNexusHistory, clearAllHistory,
+};
