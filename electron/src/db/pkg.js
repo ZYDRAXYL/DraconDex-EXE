@@ -1,5 +1,5 @@
 'use strict';
-// Packages — themes, locales and view presets fetched from
+// Packages — themes, locales, view presets and UI styles fetched from
 // ZYDRAXYL/DraconDex-PKG's releases and installed into this machine's app.ddx.
 //
 // Why this lives in main and not the renderer: electron/index.html sets
@@ -34,7 +34,7 @@ const RELEASE_BASE = (!require('electron').app.isPackaged && process.env.DRACOND
 const CATALOG_TIMEOUT_MS = 15000;
 const PAYLOAD_TIMEOUT_MS = 30000;
 const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
-const KINDS = new Set(['theme', 'lang', 'view']);
+const KINDS = new Set(['theme', 'lang', 'view', 'uistyle']);
 
 // Must match DraconDex-PKG's tools/build-packages.mjs. Duplicated rather than
 // shared because the app cannot read that repo at runtime — but the app is the
@@ -48,6 +48,12 @@ const THEME_REQUIRED = ['--bg','--surface','--raised','--hover','--border',
 const VIEW_SETTINGS = new Set(['size','fontScale','animationsEnabled','animationSpeed',
   'workspaceStyle','navOrientation','navHorizontalDisplay','navVerticalAlwaysLabel',
   'nameMode','nestShowItems','nestShowMajorIcon','nestShowMinorIcon','nestSignatureMode','dragonView']);
+// The 7 shape/elevation tokens css/ui-style.css assigns per
+// body[data-ui-style="<name>"] — the same "inline vars on <body>" mechanism
+// theme uses, over a different, smaller vocabulary. Unlike theme's 12-of-15
+// split, all 7 are required: ui-style.css itself sets all 7 in every preset.
+const UISTYLE_TOKENS = new Set(['--r','--rs','--rl','--shadow-pop','--shadow-float','--shadow-menu','--shadow-modal']);
+const UISTYLE_REQUIRED = [...UISTYLE_TOKENS];
 
 const CSS_VALUE = /^[#a-zA-Z0-9\s(),.%/-]{1,80}$/;
 
@@ -117,6 +123,14 @@ function validatePayload(kind, payload) {
     const s = payload.settings;
     if (!s || typeof s !== 'object') return 'view has no settings';
     for (const k of Object.keys(s)) if (!VIEW_SETTINGS.has(k)) return `"${k}" is not a settable UI setting`;
+  } else if (kind === 'uistyle') {
+    const vars = payload.vars;
+    if (!vars || typeof vars !== 'object') return 'uistyle has no vars';
+    for (const [k, v] of Object.entries(vars)) {
+      if (!UISTYLE_TOKENS.has(k)) return `unknown ui-style token "${k}"`;
+      if (typeof v !== 'string' || !CSS_VALUE.test(v)) return `unsafe value for "${k}"`;
+    }
+    for (const req of UISTYLE_REQUIRED) if (!vars[req]) return `missing required token ${req}`;
   }
   return null;
 }
@@ -256,7 +270,7 @@ function pkgActive() {
     `SELECT pkg_id, kind, name, version, display_json, payload_json
        FROM installed_package WHERE enabled=1`
   ).all();
-  const themes = [], langs = [], views = [];
+  const themes = [], langs = [], views = [], uistyles = [];
   for (const r of rows) {
     const payload = safeParse(r.payload_json, null);
     if (!payload) continue;
@@ -268,8 +282,9 @@ function pkgActive() {
     if (r.kind === 'theme') themes.push({ id: r.pkg_id, name: r.name, display, vars: payload.vars });
     else if (r.kind === 'lang') langs.push({ id: r.pkg_id, locale: payload.locale, label: payload.label || payload.locale, display, keys: payload.keys });
     else if (r.kind === 'view') views.push({ id: r.pkg_id, name: r.name, display, settings: payload.settings });
+    else if (r.kind === 'uistyle') uistyles.push({ id: r.pkg_id, name: r.name, display, vars: payload.vars });
   }
-  return { themes, langs, views };
+  return { themes, langs, views, uistyles };
 }
 
 module.exports = { pkgList, pkgCatalog, pkgInstall, pkgUninstall, pkgSetEnabled, pkgActive };

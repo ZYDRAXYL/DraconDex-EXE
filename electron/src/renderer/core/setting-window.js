@@ -161,6 +161,18 @@ registerSettingPage('workspace', 'theme', settingThemePageHtml);
 // core/settings.js's applyInstalledPackages extends UI_THEME_OPTIONS in
 // place). Custom themes and the add-box are never hidden behind the
 // collapse — hiding a user's own saved theme would look like data loss.
+// Procress 10 part 2: a catalog theme package not yet downloaded, shown
+// locked (no onclick-to-select) with an inline Download button in place of
+// the swatch preview — the payload/colors only exist once installed, so
+// there's nothing real to preview here.
+function settingThemeCatalogCellHtml(p){
+  const btnSel = `#pkg-inline-${p.id}`;
+  return `<div class="prefs-theme-cell locked">
+    <div class="ctm-preview mini prefs-theme-cell-lockglyph">${I.import}</div>
+    <div class="prefs-theme-name" data-no-i18n>${x(pkgDisplayName(p))}</div>
+    <button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}">${I.import}</button>
+  </div>`;
+}
 function settingThemeSectionHtml(){
   const expanded = !!S.settingThemeExpanded;
   const palettes = getThemePalettes();
@@ -172,12 +184,17 @@ function settingThemeSectionHtml(){
     settingThemeGridCellHtml(`custom:${ct.id}`, ct.name, ct.vars || {}, {active: S.settings.theme === `custom:${ct.id}`, isCustom: true})
   ).join('');
   const addBox = `<div class="prefs-theme-cell prefs-theme-add" onclick="openCustomThemeModal()" title="${t('customThemeNew')}">+</div>`;
+  // Not-yet-downloaded catalog themes only ever show once expanded — the
+  // collapsed 3-slot view is reserved for the app's own basics, same rule
+  // custom themes already follow just above.
+  const notDownloaded = expanded
+    ? pkgCatalogGap('theme', UI_THEME_OPTIONS_BUILTIN).map(settingThemeCatalogCellHtml).join('') : '';
   return `<div class="settings-group">
       <div class="settings-label-row">
         <span class="settings-label">${t('theme')}</span>
         <button class="btn btn-s btn-sm" onclick="toggleSettingThemeExpanded()">${expanded ? t('settingCollapse') : t('settingShowAll')}</button>
       </div>
-      <div class="prefs-theme-grid">${builtins}${customs}${addBox}</div>
+      <div class="prefs-theme-grid">${builtins}${customs}${addBox}${notDownloaded}</div>
     </div>`;
 }
 function toggleSettingThemeExpanded(){
@@ -194,23 +211,41 @@ const UI_STYLE_LABEL_KEY = {
   roundedMinimal: 'uiStyleRoundedMinimal', cleanMinimal: 'uiStyleCleanMinimal',
   fluent: 'uiStyleFluent', hardBlock: 'uiStyleHardBlock', oldPlain: 'uiStyleOldPlain',
 };
+// Procress 10 part 2: a catalog uistyle package not yet downloaded — locked,
+// no onclick, Download button where the checkmark slot would be.
+function settingUiStyleCatalogItemHtml(p){
+  const btnSel = `#pkg-inline-${p.id}`;
+  return `<div class="theme-item locked">
+    <span class="theme-name" data-no-i18n>${x(pkgDisplayName(p))}</span>
+    <button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}">${I.import}</button>
+  </div>`;
+}
 function settingUiStyleSectionHtml(){
   const expanded = !!S.settingUiStyleExpanded;
   const shown = expanded ? UI_STYLE_OPTIONS : UI_STYLE_OPTIONS.slice(0, 3);
   const current = S.settings.uiStyle || 'oldPlain';
   const cells = shown.map((key) => {
     const active = current === key;
+    // Built-ins resolve through UI_STYLE_LABEL_KEY's i18n keys as before; an
+    // installed pkg: uistyle has no such key, so it shows its own
+    // displayName (pkgDisplayName, same helper pkg.js's Packages page uses),
+    // falling back to the raw key if that lookup somehow comes up empty.
+    const label = UI_STYLE_LABEL_KEY[key]
+      ? t(UI_STYLE_LABEL_KEY[key])
+      : pkgDisplayName(INSTALLED_PACKAGES.uistyles.find(u => `pkg:${u.id}` === key)) || key;
     return `<button type="button" class="theme-item${active ? ' active' : ''}" onclick="setUiSetting('uiStyle','${key}')">
-      <span class="theme-name">${t(UI_STYLE_LABEL_KEY[key])}</span>
+      <span class="theme-name"${UI_STYLE_LABEL_KEY[key] ? '' : ' data-no-i18n'}>${x(label)}</span>
       ${active ? '<span class="theme-check">✓</span>' : ''}
     </button>`;
   }).join('');
+  const notDownloaded = expanded
+    ? pkgCatalogGap('uistyle', UI_STYLE_OPTIONS_BUILTIN).map(settingUiStyleCatalogItemHtml).join('') : '';
   return `<div class="settings-group">
       <div class="settings-label-row">
         <span class="settings-label">${t('settingUiStyle')}</span>
         <button class="btn btn-s btn-sm" onclick="toggleSettingUiStyleExpanded()">${expanded ? t('settingCollapse') : t('settingShowAll')}</button>
       </div>
-      <div class="theme-list">${cells}</div>
+      <div class="theme-list">${cells}${notDownloaded}</div>
     </div>`;
 }
 function toggleSettingUiStyleExpanded(){
@@ -277,11 +312,21 @@ function sliderNumberRowHtml(labelHtml, { min, max, step = 1, value, commit }) {
       <input class="settings-number" type="number" min="${min}" max="${max}" value="${value}" oninput="this.previousElementSibling.value=this.value" onchange="${commit}">
     </div></div>`;
 }
+// Procress 10 part 2: a catalog lang package not yet downloaded — locked,
+// no onmouseenter preview / onclick select, Download button in place of the
+// checkmark slot.
+function settingLangCatalogItemHtml(p){
+  const btnSel = `#pkg-inline-${p.id}`;
+  return `<div class="lang-item locked">
+    <span data-no-i18n>${x(pkgDisplayName(p))}</span>
+    <button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}">${I.import}</button>
+  </div>`;
+}
 function settingTextSizePageHtml(){
   const rows = UI_LANGUAGE_OPTIONS.map(lang => `
     <div class="lang-item${S.settings.language===lang?' active':''}" onmouseenter="settingPreviewLang('${lang}')" onclick="setUiSetting('language','${lang}')">
       <span>${LANGUAGE_LABELS[lang]}</span>${S.settings.language===lang?'<span class="theme-check">✓</span>':''}
-    </div>`).join('');
+    </div>`).join('') + pkgCatalogGap('lang', UI_LANGUAGE_OPTIONS_BUILTIN).map(settingLangCatalogItemHtml).join('');
   const areaRows = Object.keys(SETTING_AREA_CONTAINERS).map(key =>
     sliderNumberRowHtml(`${t('settingArea_'+key)} (%)`, { min: 50, max: 150, value: (S.settings.areaScale||{})[key] ?? 100, commit: `setAreaScale('${key}', this.value)` })).join('');
   return `<div class="settings-label">${t('language')}</div>

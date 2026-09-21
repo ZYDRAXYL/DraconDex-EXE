@@ -17,7 +17,7 @@ function settingPkgPageHtml() {
 }
 registerSettingPage('plugin', 'packages', settingPkgPageHtml);
 
-const PKG_KIND_LABEL_KEY = { theme: 'pkgKindTheme', lang: 'pkgKindLang', view: 'pkgKindView' };
+const PKG_KIND_LABEL_KEY = { theme: 'pkgKindTheme', lang: 'pkgKindLang', view: 'pkgKindView', uistyle: 'pkgKindUistyle' };
 
 function pkgDisplayName(p) {
   const lang = S.settings?.language || 'th';
@@ -94,25 +94,75 @@ function pkgCatalogRowHtml(p) {
 // ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
-async function pkgInstallClick(id) {
-  syncBtnBusy(`#pkg-install-${id}`, true);
+/** Shared by every "Download"/"Install" button, wherever it's drawn. */
+async function pkgInstallCore(id, btnSel) {
+  syncBtnBusy(btnSel, true);
   const r = await api.pkg.install(id);
-  syncBtnBusy(`#pkg-install-${id}`, false);
-  if (!r?.ok) { toast(pkgErrText(r), 'error'); return; }
+  syncBtnBusy(btnSel, false);
+  if (!r?.ok) { toast(pkgErrText(r), 'error'); return false; }
   await pkgReloadActive();
   toast(t('pkgInstalled'), 'success');
+  return true;
+}
+
+async function pkgInstallClick(id) {
+  if (!await pkgInstallCore(id, `#pkg-install-${id}`)) return;
   pkgRefreshInstalled();
   pkgRefreshCatalog();
+}
+
+/**
+ * Install button drawn inline at a "choice" (Theme/UI style/Language picker)
+ * rather than on the Packages page itself — Procress 10 part 2. Beyond the
+ * shared install, this also refreshes the catalog cache those pickers read
+ * (S.pkgCatalogCache) and re-renders the Setting window, so the row the user
+ * just downloaded disappears from the locked list immediately instead of
+ * only updating once the Packages page happens to be opened.
+ */
+async function pkgInstallInline(id, btnSel) {
+  if (!await pkgInstallCore(id, btnSel)) return;
+  const cat = await api.pkg.catalog().catch(() => null);
+  if (cat) S.pkgCatalogCache = cat;
+  renderSettingWindow();
+}
+
+/**
+ * Catalog entries of `kind` that are (a) not installed and (b) not already
+ * one of the app's own built-ins — Procress 10 part 2's "choice" pages only
+ * ever need to show a genuine gap. Every package this repo has today is
+ * named after a built-in (theme-atDusk, lang-ja, uistyle-fluent, …), so this
+ * legitimately returns [] against the real catalog; it exists for the day a
+ * package introduces something the app doesn't already ship for free.
+ * `builtins` is one of UI_THEME_OPTIONS_BUILTIN / UI_STYLE_OPTIONS_BUILTIN /
+ * UI_LANGUAGE_OPTIONS_BUILTIN. A not-yet-installed catalog entry carries no
+ * payload (no `locale`/`name` — those only arrive once downloaded), so the
+ * underlying name is derived from the package's own `<kind>-<name>` id
+ * prefix, the convention every extracted package follows (theme-atDusk,
+ * lang-ja, uistyle-fluent, …). An id that doesn't follow it fails the strip
+ * and is treated as non-built-in (shown) — the safe default, since hiding a
+ * genuinely new package over a naming quirk is worse than one
+ * redundant-looking row.
+ */
+function pkgCatalogGap(kind, builtins) {
+  const packages = S.pkgCatalogCache?.packages;
+  if (!Array.isArray(packages)) return [];
+  const prefix = `${kind}-`;
+  return packages.filter(p => {
+    if (p.kind !== kind || p.installedVersion) return false;
+    const name = p.id.startsWith(prefix) ? p.id.slice(prefix.length) : null;
+    return name === null || !builtins.includes(name);
+  });
 }
 
 async function pkgUninstallClick(id) {
   if (!await uiConfirm(t('pkgConfirmUninstall'))) return;
   const r = await api.pkg.uninstall(id);
   if (!r?.ok) { toast(pkgErrText(r), 'error'); return; }
-  // If the theme or language being removed is the active one, fall back to a
-  // built-in before the registry loses it — otherwise applyUiSettings() lands
-  // on data-theme="custom" with no palette, which is a blank-looking app.
+  // If the theme, uistyle or language being removed is the active one, fall
+  // back to a built-in before the registry loses it — otherwise
+  // applyUiSettings() lands on a palette/shape with nothing behind it.
   if (S.settings.theme === `pkg:${id}`) setUiSetting('theme', 'midnight');
+  if (S.settings.uiStyle === `pkg:${id}`) setUiSetting('uiStyle', 'oldPlain');
   await pkgReloadActive();
   const langGone = !UI_LANGUAGE_OPTIONS.includes(S.settings.language);
   if (langGone) setUiSetting('language', 'th');
@@ -123,6 +173,7 @@ async function pkgUninstallClick(id) {
 
 function pkgUseClick(id, kind) {
   if (kind === 'theme') setUiSetting('theme', `pkg:${id}`);
+  else if (kind === 'uistyle') setUiSetting('uiStyle', `pkg:${id}`);
   else if (kind === 'lang') {
     const l = INSTALLED_PACKAGES.langs.find(x => `pkg:${x.id}` === `pkg:${id}` || x.id === id);
     if (l) setUiSetting('language', l.locale);
