@@ -192,6 +192,14 @@
 }
 .prefs-theme-cell:hover{border-color:var(--accentH)}
 .prefs-theme-cell.active{border-color:var(--accent)}
+/* Procress 10 part 2 — a catalog package not yet downloaded: greyed out like
+   a disabled button (.btn:disabled above), no hover/select affordance since
+   the cell itself carries no onclick; the Download button inside it stays
+   at full opacity so it still reads as the one actionable thing in the row. */
+.prefs-theme-cell.locked{opacity:.55;cursor:default}
+.prefs-theme-cell.locked:hover{border-color:var(--border)}
+.prefs-theme-cell.locked .btn{opacity:1}
+.prefs-theme-cell-lockglyph{align-items:center;justify-content:center;color:var(--t3)}
 .prefs-theme-name{margin-top:6px;font-size:calc(11.5px * var(--fsc,1));font-weight:600;color:var(--t1);
 	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prefs-theme-tools{display:none;position:absolute;top:6px;right:6px;gap:4px;background:var(--surface);
@@ -216,6 +224,10 @@
 }
 .lang-item:hover{background:var(--hover);color:var(--t1)}
 .lang-item.active{border-color:var(--accent);color:var(--t1)}
+/* Procress 10 part 2 — see .prefs-theme-cell.locked above; same treatment. */
+.lang-item.locked{opacity:.55;cursor:default}
+.lang-item.locked:hover{background:var(--bg);color:var(--t2)}
+.lang-item.locked .btn{opacity:1}
 .prefs-lang-preview{
 	flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);
 	padding:14px;display:flex;flex-direction:column;gap:8px;font-size:calc(13px * var(--fsc,1));color:var(--t1);

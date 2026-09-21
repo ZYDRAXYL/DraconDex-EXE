@@ -103,7 +103,7 @@ function loadHubSectionHeights(){
 // applyInstalledPackages() below, from window.api.pkg.active(). Empty until
 // then on purpose: a slow or failed package load degrades to exactly the
 // built-in behaviour rather than to an empty picker.
-const INSTALLED_PACKAGES = { themes: [], langs: [], views: [] };
+const INSTALLED_PACKAGES = { themes: [], langs: [], views: [], uistyles: [] };
 
 // Built-in options. The live registries below start as copies of these and are
 // EXTENDED in place when packages load, so every `UI_THEME_OPTIONS.includes(x)`
@@ -125,9 +125,10 @@ const UI_LANGUAGE_OPTIONS = UI_LANGUAGE_OPTIONS_BUILTIN.slice();
  * built-in wins and the package is skipped.
  */
 function applyInstalledPackages(active){
-  INSTALLED_PACKAGES.themes = Array.isArray(active?.themes) ? active.themes : [];
-  INSTALLED_PACKAGES.langs  = Array.isArray(active?.langs)  ? active.langs  : [];
-  INSTALLED_PACKAGES.views  = Array.isArray(active?.views)  ? active.views  : [];
+  INSTALLED_PACKAGES.themes   = Array.isArray(active?.themes)   ? active.themes   : [];
+  INSTALLED_PACKAGES.langs    = Array.isArray(active?.langs)    ? active.langs    : [];
+  INSTALLED_PACKAGES.views    = Array.isArray(active?.views)    ? active.views    : [];
+  INSTALLED_PACKAGES.uistyles = Array.isArray(active?.uistyles) ? active.uistyles : [];
 
   // splice+push rather than reassign: these are `const`, and every consumer
   // holds the same array reference.
@@ -139,6 +140,15 @@ function applyInstalledPackages(active){
   UI_LANGUAGE_OPTIONS.splice(0, UI_LANGUAGE_OPTIONS.length, ...UI_LANGUAGE_OPTIONS_BUILTIN);
   for (const l of INSTALLED_PACKAGES.langs) {
     if (!UI_LANGUAGE_OPTIONS.includes(l.locale)) UI_LANGUAGE_OPTIONS.push(l.locale);
+  }
+  // UI_STYLE_OPTIONS_BUILTIN/UI_STYLE_OPTIONS are declared further down this
+  // file (Procress 10 part 1's shape/elevation preset) — fine to reference
+  // here since this function only runs at boot, well after the whole script
+  // has evaluated.
+  UI_STYLE_OPTIONS.splice(0, UI_STYLE_OPTIONS.length, ...UI_STYLE_OPTIONS_BUILTIN);
+  for (const u of INSTALLED_PACKAGES.uistyles) {
+    const id = `pkg:${u.id}`;
+    if (!UI_STYLE_OPTIONS.includes(id)) UI_STYLE_OPTIONS.push(id);
   }
 }
 
@@ -172,6 +182,12 @@ function installedLangKeys(code){
   const l = INSTALLED_PACKAGES.langs.find(x => x.locale === code);
   return l ? l.keys : null;
 }
+
+/** The 7 shape/elevation vars an installed uistyle package carries, or null. */
+function installedUistyleVars(uiStyle){
+  const u = INSTALLED_PACKAGES.uistyles.find(x => `pkg:${x.id}` === uiStyle);
+  return u ? u.vars : null;
+}
 // Plan part2 #New Workspace — which top-level app layout is active. 'drake'
 // (today's nav-rail+left-panel+split-pane Builder) is the default so
 // nobody's UI changes on upgrade; 'wyvern' (newcomer/simple) and 'dragon'
@@ -182,7 +198,14 @@ const WORKSPACE_STYLE_OPTIONS = ['drake', 'wyvern', 'dragon'];
 // radius and shadow depth, see css/ui-style.css). 'oldPlain' is the default
 // so nobody's UI changes on upgrade — it needs no CSS block of its own
 // because it IS tokens.css's own --r/--rs/--rl/--shadow-* values.
-const UI_STYLE_OPTIONS = ['roundedMinimal', 'cleanMinimal', 'fluent', 'hardBlock', 'oldPlain'];
+//
+// Procress 10 part 2: split into a _BUILTIN literal plus a live array, same
+// shape as UI_THEME_OPTIONS/_BUILTIN above — applyInstalledPackages()
+// extends UI_STYLE_OPTIONS in place with `pkg:<id>` for every installed
+// uistyle package, so every existing UI_STYLE_OPTIONS.includes(x) call site
+// keeps working with no change.
+const UI_STYLE_OPTIONS_BUILTIN = ['roundedMinimal', 'cleanMinimal', 'fluent', 'hardBlock', 'oldPlain'];
+const UI_STYLE_OPTIONS = UI_STYLE_OPTIONS_BUILTIN.slice();
 // Process 5 part1: each workspace style's own default nav orientation —
 // Drake/Dragon default to vertical (today's rail), Wyvern defaults to
 // horizontal (its own toolbar was always meant to read as a top strip, see
@@ -227,6 +250,12 @@ function autoUiSizeFromScreen(){
 const CUSTOM_THEME_TOKENS = ['--bg','--surface','--raised','--hover','--border',
   '--t1','--t2','--t3','--accent','--accentH','--danger','--success',
   '--button','--on-accent','--on-button'];
+// The 7 shape/elevation tokens an installed uistyle package may override —
+// the same 7 css/ui-style.css sets per body[data-ui-style="<name>"]. Same
+// clear-then-set idiom as CUSTOM_THEME_TOKENS: applyUiSettings() clears every
+// one of these before setting the ones a pkg: uistyle provides (there is no
+// optional subset here, unlike theme — a uistyle package must set all 7).
+const CUSTOM_UISTYLE_TOKENS = ['--r','--rs','--rl','--shadow-pop','--shadow-float','--shadow-menu','--shadow-modal'];
 
 // Cloud Sync (Supabase Token Sync) is switched off since v4.5.0. The repo is
 // open source now, and making every user or forker stand up their own

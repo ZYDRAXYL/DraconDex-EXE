@@ -39,6 +39,17 @@ function applyUiSettings(){
     if (vars && vars[tok]) document.body.style.setProperty(tok, vars[tok]);
     else document.body.style.removeProperty(tok);
   }
+  // A uistyle installed from DraconDex-PKG applies exactly like a pkg: theme
+  // above — inline CSS vars on <body>, over the 7-token vocabulary
+  // css/ui-style.css's static body[data-ui-style="…"] rules use. A pkg:
+  // value simply matches no such rule, which is fine: the inline vars fully
+  // override it regardless of what dataset.uiStyle reads.
+  const uistyleVars = String(S.settings.uiStyle).startsWith('pkg:')
+    ? installedUistyleVars(S.settings.uiStyle) : null;
+  for (const tok of CUSTOM_UISTYLE_TOKENS) {
+    if (uistyleVars && uistyleVars[tok]) document.body.style.setProperty(tok, uistyleVars[tok]);
+    else document.body.style.removeProperty(tok);
+  }
   document.documentElement.style.setProperty('--fsc', String((S.settings.fontScale || 100) / 100));
   // Process 7 part 1: speed preset for the toggle-animation keyframes below
   // (nav-hub.css/inspector.css) — a single token so every consumer picks up

@@ -40,6 +40,15 @@ async function init() {
     // package, so the common case pays nothing.
     if (String(S.settings.theme).startsWith('pkg:')) applyUiSettings();
   }
+  // The DraconDex-PKG catalog (Procress 10 part 2 — locked "download this"
+  // rows on the Theme/UI-style/Language pages). Deliberately NOT in the
+  // Promise.all wave above: pkg.active() is a local DB read, but pkg.catalog()
+  // is a real network fetch with a 15s timeout, and joining the boot-critical
+  // wave with it would risk delaying first paint by that much on a slow or
+  // offline connection. Fire-and-forget instead; a no-op renderSettingWindow()
+  // call if no setting page happens to be open, same advisory posture every
+  // other package call in this file already takes.
+  api.pkg.catalog().then(r => { if (r?.ok) { S.pkgCatalogCache = r; renderSettingWindow(); } }).catch(() => {});
   // Longest single stall of the boot: that first await is what triggers
   // getDB() → open the SQLite file + run initDB() migrations in main.
   window.__splash?.set(80);

@@ -138,6 +138,13 @@
 }
 .theme-item:hover{background:var(--hover);color:var(--t1)}
 .theme-item.active{border-color:var(--accent);color:var(--t1)}
+/* Procress 10 part 2 — a catalog uistyle package not yet downloaded, same
+   treatment as .prefs-theme-cell.locked/.lang-item.locked (components.css).
+   A plain div, not a button like the selectable rows above: it has no
+   onclick of its own, only the Download button nested inside it does. */
+.theme-item.locked{cursor:default;opacity:.55}
+.theme-item.locked:hover{background:var(--bg);color:var(--t2)}
+.theme-item.locked .btn{opacity:1}
 .theme-swatches{
 	display:inline-flex;flex-shrink:0;border-radius:4px;overflow:hidden;
 	border:1px solid var(--border);
