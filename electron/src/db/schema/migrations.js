@@ -108,6 +108,27 @@ function migrateInlineColumns(db) {
       try { db.prepare(`ALTER TABLE import_file ADD COLUMN ${col} ${ddl}`).run(); } catch (_) {}
     }
   }
+  // v5 Part 7 (APP docs/V5.md §11.3–§11.6): every new column is nullable (or
+  // carries a DEFAULT), so each is one idempotent ADD COLUMN; the REFERENCES
+  // on entity_relation.valid_from/valid_to are legal under foreign_keys=ON
+  // only because their default is NULL.
+  for (const [table, col, ddl] of [
+    ['classifier_template', 'options', 'TEXT'],
+    ['story_choice_option', 'condition', 'TEXT'],
+    ['story_choice_option', 'set_ops', 'TEXT'],
+    ['book_chapter', 'synopsis', 'TEXT'],
+    ['book_chapter', 'status', 'TEXT'],
+    ['book_chapter', 'pov_key', 'TEXT'],
+    ['design_node', 'w', 'REAL'],
+    ['design_node', 'h', 'REAL'],
+    ['design_node', 'read_order', 'INTEGER'],
+    ['entity_relation', 'valid_from', 'INTEGER REFERENCES timeline_date(id)'],
+    ['entity_relation', 'valid_to', 'INTEGER REFERENCES timeline_date(id)'],
+  ]) {
+    if (hasTable(db, table) && !hasColumn(db, table, col)) {
+      try { db.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`).run(); } catch (_) {}
+    }
+  }
   // v5 Part 6 (APP docs/V5.md §10.4): which just-in-time tips this Nexus has
   // shown. NOT NULL with a DEFAULT, so existing rows backfill to '{}'.
   if (hasTable(db, 'nexus') && !hasColumn(db, 'nexus', 'taught')) {

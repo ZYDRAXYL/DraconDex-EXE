@@ -867,7 +867,14 @@ const VAULT_DDL_SQL = `
       jump_ref INTEGER REFERENCES story_dialogue(id) ON DELETE SET NULL,
       option_order INTEGER NOT NULL DEFAULT 0,
       create_at TEXT NOT NULL DEFAULT (datetime('now')),
-      update_at TEXT NOT NULL DEFAULT (datetime('now'))
+      update_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- v5 (APP docs/V5.md §11.6): story variables. JSON arrays, never a typed
+      -- expression — condition = AND of [{key,op,value}] comparisons that
+      -- must hold for the option to show; set_ops = [{key,op,value}] applied
+      -- when it is chosen. key is a cobj_<id> (a variable is a Classifier
+      -- object), so both columns hold entity keys an importer must remap.
+      condition TEXT,
+      set_ops TEXT
     );
 
     -- Book "Author" (Phase 11). An Author module IS a book; its chapters
@@ -881,7 +888,13 @@ const VAULT_DDL_SQL = `
       chapter_content TEXT,
       chapter_order INTEGER NOT NULL DEFAULT 0,
       create_at TEXT NOT NULL DEFAULT (datetime('now')),
-      update_at TEXT NOT NULL DEFAULT (datetime('now'))
+      update_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- v5 (APP docs/V5.md §11.6): the corkboard card. status is free text
+      -- the app offers a short list for; pov_key is an entity key (usually a
+      -- cobj_ character) — an importer must remap it.
+      synopsis TEXT,
+      status TEXT,
+      pov_key TEXT
     );
 
     -- Chat "Scribe" (Phase 12). A Scribe module holds chat sessions
@@ -1026,7 +1039,12 @@ const VAULT_DDL_SQL = `
       color TEXT,
       linker_key TEXT,
       create_at TEXT NOT NULL DEFAULT (datetime('now')),
-      update_at TEXT NOT NULL DEFAULT (datetime('now'))
+      update_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- v5 (APP docs/V5.md §11.6): comic panels and balloons. NULL w/h = the
+      -- shape's natural size; read_order NULL = not part of the reading order.
+      w REAL,
+      h REAL,
+      read_order INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS design_edge (
@@ -1082,6 +1100,12 @@ const VAULT_DDL_SQL = `
       module_ref INTEGER REFERENCES module(id) ON DELETE SET NULL,
       rel_type TEXT,
       directed INTEGER NOT NULL DEFAULT 1,
+      -- v5 (APP docs/V5.md §11.6): a relation that holds only for a span of
+      -- story time ("married 1020–1045"), on Chronicler's own date rows.
+      -- NULL = open on that side. rel_type 'ctpl_<id>' marks a row a
+      -- Classifier relation FIELD owns (§11.3).
+      valid_from INTEGER REFERENCES timeline_date(id),
+      valid_to INTEGER REFERENCES timeline_date(id),
       UNIQUE(from_key, to_key, label, rel_type)
     );
 
@@ -1160,7 +1184,13 @@ const VAULT_DDL_SQL = `
       has_condition INTEGER NOT NULL DEFAULT 0,
       level_steps TEXT,
       display_order INTEGER NOT NULL DEFAULT 0,
-      update_at TEXT NOT NULL DEFAULT (datetime('now'))
+      update_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- v5 (APP docs/V5.md §11.3): per-type settings, JSON. select /
+      -- multi-select: {"choices":[...]}; formula: {"expr":"{HP} * 2"};
+      -- relation: {"targetKinds":[...]}. attribute_type has no CHECK, so the
+      -- new types (number, select, multi, checkbox, url, relation, formula)
+      -- need no rebuild.
+      options TEXT
     );
 
     CREATE TABLE IF NOT EXISTS classifier_attribute (
@@ -1205,6 +1235,62 @@ const VAULT_DDL_SQL = `
       spec TEXT NOT NULL DEFAULT '{}',
       update_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(nexus_ref, kind, name)
+    );
+
+    -- Diviner (v5, APP docs/V5.md §11.5) — random tables and dice. A Diviner
+    -- module holds tables; a table rolls either its dice against each
+    -- entry's range, or (dice NULL) a weighted pick. mode 'join' rolls every
+    -- row and joins the results — the name generator. An entry may point at
+    -- an entity, or at divt_<table id> to roll that table in turn (depth-
+    -- capped and cycle-checked in the app).
+    CREATE TABLE IF NOT EXISTS diviner_table (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      module_ref INTEGER NOT NULL REFERENCES module(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      dice TEXT,
+      mode TEXT NOT NULL DEFAULT 'pick',
+      display_order INTEGER NOT NULL DEFAULT 0,
+      update_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS diviner_entry (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      table_ref INTEGER NOT NULL REFERENCES diviner_table(id) ON DELETE CASCADE,
+      weight INTEGER NOT NULL DEFAULT 1,
+      range_lo INTEGER,
+      range_hi INTEGER,
+      entry_text TEXT,
+      linker_key TEXT,
+      display_order INTEGER NOT NULL DEFAULT 0
+    );
+
+    -- Roll history. result_text copies the outcome at roll time, so editing
+    -- or deleting the entry later does not rewrite what was rolled.
+    CREATE TABLE IF NOT EXISTS diviner_roll (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      table_ref INTEGER NOT NULL REFERENCES diviner_table(id) ON DELETE CASCADE,
+      dice_result TEXT,
+      entry_ref INTEGER REFERENCES diviner_entry(id) ON DELETE SET NULL,
+      result_text TEXT,
+      create_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Trash (v5, APP docs/V5.md §11.4). A deleted module subtree is kept as a
+    -- snapshot (the same format a .mddx export writes) plus every relation
+    -- that touched it, in or out; then the rows are deleted for real. Restore
+    -- imports the snapshot back under parent_ref (top level if that parent
+    -- is gone). Nothing else in the schema knows the trash exists — no
+    -- deleted_at column any query could forget to filter on.
+    CREATE TABLE IF NOT EXISTS trash (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nexus_ref INTEGER NOT NULL REFERENCES nexus(id) ON DELETE CASCADE,
+      parent_ref INTEGER REFERENCES module(id) ON DELETE SET NULL,
+      name TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      module_count INTEGER NOT NULL DEFAULT 1,
+      payload TEXT NOT NULL,
+      relations TEXT NOT NULL DEFAULT '[]',
+      deleted_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
 `;

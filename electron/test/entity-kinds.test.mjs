@@ -61,6 +61,8 @@ const SEED = {
     return one(`INSERT INTO timeline_event (timeline_id, event_name, start_at) VALUES (?, 'Ev', ?)`, tl, dt);
   },
   sdlg: () => one(`INSERT INTO story_dialogue (module_ref, name) VALUES (?, 'Dlg')`, mkModule('Nar', 'narrator')),
+  skpg: () => one(`INSERT INTO sketch_page (module_ref, name) VALUES (?, 'Page')`, mkModule('Sk2', 'sketcher')),
+  ctpl: () => one(`INSERT INTO classifier_template (module_ref, description) VALUES (?, 'Field')`, mkModule('Cls2', 'classifier')),
 };
 const synced = Object.keys(ENTITY_KINDS).filter((p) => ENTITY_KINDS[p].sync);
 
@@ -105,4 +107,45 @@ test('every family, every pair: nothing dropped through serialize → apply', ()
 
 test('entityKeyMaps names the missing map instead of dropping rows', () => {
   assert.throws(() => entityKeyMaps({ modMap: new Map() }), /no \w+Map for/);
+});
+
+test('Part 7 key columns come across remapped: field relations, time spans, POV, choice conditions', () => {
+  freshVault();
+  const cls = mkModule('Cast', 'classifier');
+  const a = one(`INSERT INTO classifier_object (module_ref, name) VALUES (?, 'A')`, cls);
+  const b = one(`INSERT INTO classifier_object (module_ref, name) VALUES (?, 'B')`, cls);
+  const f = one(`INSERT INTO classifier_template (module_ref, description, attribute_type, options) VALUES (?, 'Spouse', 'relation', '{"targetKinds":["cobj"]}')`, cls);
+  const d1 = one(`INSERT INTO timeline_date (day, month, years) VALUES (1, 1, 1020)`);
+  const d2 = one(`INSERT INTO timeline_date (day, month, years) VALUES (1, 1, 1045)`);
+  one(`INSERT INTO entity_relation (nexus_ref, from_key, to_key, rel_type, module_ref, valid_from, valid_to) VALUES (1,?,?,?,?,?,?)`,
+    `cobj_${a}`, `cobj_${b}`, `ctpl_${f}`, cls, d1, d2);
+  const book = mkModule('Book', 'author');
+  one(`INSERT INTO book_chapter (module_ref, name, synopsis, status, pov_key) VALUES (?, 'Ch1', 'They meet', 'draft', ?)`, book, `cobj_${a}`);
+  const nar = mkModule('Nar', 'narrator');
+  const dlg = one(`INSERT INTO story_dialogue (module_ref, name) VALUES (?, 'D')`, nar);
+  const talk = one(`INSERT INTO story_talk (dialogue_ref, row_type) VALUES (?, 'choice')`, dlg);
+  one(`INSERT INTO story_choice_option (talk_ref, option_text, condition, set_ops) VALUES (?, 'Go', ?, ?)`, talk,
+    JSON.stringify([{ key: `cobj_${a}`, op: '>=', value: '3' }, { key: 'cobj_99999', op: '=', value: '1' }]),
+    JSON.stringify([{ key: `cobj_${b}`, op: '+=', value: '1' }]));
+  const snap = JSON.parse(JSON.stringify(sync.serializeVault(1)));
+
+  freshVault();
+  mkModule('Pad', 'drafter');
+  one(`INSERT INTO classifier_object (module_ref, name) VALUES (1, 'pad')`); // shift cobj ids
+  one(`INSERT INTO classifier_template (module_ref, description) VALUES (1, 'pad')`); // shift ctpl ids
+  const r = sync.applySnapshot(1, snap);
+  assert.equal(r.ok, true);
+  const id = (sql, ...x) => db.prepare(sql).get(...x).id;
+  const A = id(`SELECT id FROM classifier_object WHERE name='A'`);
+  const B = id(`SELECT id FROM classifier_object WHERE name='B'`);
+  const F = id(`SELECT id FROM classifier_template WHERE description='Spouse'`);
+  const rel = db.prepare(`SELECT r.*, f.years fy, u.years uy FROM entity_relation r
+    LEFT JOIN timeline_date f ON r.valid_from=f.id LEFT JOIN timeline_date u ON r.valid_to=u.id`).get();
+  assert.deepEqual([rel.from_key, rel.to_key, rel.rel_type, rel.fy, rel.uy], [`cobj_${A}`, `cobj_${B}`, `ctpl_${F}`, 1020, 1045]);
+  assert.equal(db.prepare(`SELECT options FROM classifier_template WHERE id=?`).get(F).options, '{"targetKinds":["cobj"]}');
+  const ch = db.prepare(`SELECT synopsis, status, pov_key FROM book_chapter`).get();
+  assert.deepEqual({ ...ch }, { synopsis: 'They meet', status: 'draft', pov_key: `cobj_${A}` });
+  const op = db.prepare(`SELECT condition, set_ops FROM story_choice_option`).get();
+  assert.deepEqual(JSON.parse(op.condition), [{ key: `cobj_${A}`, op: '>=', value: '3' }], 'an unmappable condition entry is left out');
+  assert.deepEqual(JSON.parse(op.set_ops), [{ key: `cobj_${B}`, op: '+=', value: '1' }]);
 });

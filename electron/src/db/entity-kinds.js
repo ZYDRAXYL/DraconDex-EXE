@@ -129,6 +129,32 @@ const ENTITY_KINDS = {
     },
     search: ['name', 'description'],
   },
+  // v5 Part 7 (§11.6): a Sketcher page can be linked to — a Designer comic
+  // panel shows it, a relation can point at it.
+  skpg: {
+    table: 'sketch_page',
+    lookup: { sql: `SELECT id, name FROM sketch_page WHERE id=?`, type: 'page', module: 'sketcher' },
+    wiki: { sql: `SELECT p.id FROM sketch_page p JOIN module m ON p.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND p.name=? COLLATE NOCASE` },
+    sync: 'pageMap',
+    index: {
+      kind: 'page',
+      sql: `SELECT p.id, p.name, m.id mid, m.name mname, m.kind mkind
+        FROM sketch_page p JOIN module m ON p.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`,
+      row: (r) => ({ key: `skpg_${r.id}`, name: r.name, ...modRow(r) }),
+    },
+    search: ['name'],
+  },
+  // v5 Part 7 (§11.3): a Classifier field. Never an endpoint — it appears
+  // only as entity_relation.rel_type 'ctpl_<id>', naming the relation FIELD
+  // that owns the row, and must be remapped like any key when imported.
+  ctpl: {
+    table: 'classifier_template',
+    lookup: { sql: `SELECT id, description AS name FROM classifier_template WHERE id=?`, type: 'field', module: 'classifier' },
+    wiki: false,  // a field is not something a text links to
+    sync: 'ctplMap',
+    index: false, // not content: filters and the Exhibitor list its rows, not the field
+    search: false,
+  },
   exn: {
     table: 'exhibit_node',
     // A note node can hold [[links]] (db/wiki-sources.js), so it can be a
@@ -162,12 +188,18 @@ const ENTITY_KINDS = {
 };
 
 // Every column that stores an entity key — what an importer must remap.
+//   json: true  the column holds a JSON list of {key, …}, not one key
+//   only: re    only values matching re are keys (rel_type is free text too)
 const KEY_COLUMNS = [
   { table: 'entity_relation', cols: ['from_key', 'to_key'] },
+  { table: 'entity_relation', cols: ['rel_type'], only: /^ctpl_\d+$/ },
   { table: 'sketch_pin', cols: ['linker_key'] },
   { table: 'design_node', cols: ['linker_key'] },
   { table: 'exhibit_node', cols: ['linker_key'] },
   { table: 'exhibit_view', cols: ['bg_linker_key'] },
+  { table: 'book_chapter', cols: ['pov_key'] },
+  { table: 'story_choice_option', cols: ['condition', 'set_ops'], json: true },
+  { table: 'diviner_entry', cols: ['linker_key'] },
 ];
 
 // The importer's key maps, from the local id maps it built — by the names

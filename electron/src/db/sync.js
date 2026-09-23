@@ -373,7 +373,7 @@ function serializeVault(nexusId, moduleIds = null) {
     templates: all(`
       SELECT t.id, t.module_ref AS moduleId, t.object_ref AS objectId, t.description,
              t.attribute_type AS attributeType, t.levelable, t.has_condition AS hasCondition,
-             t.display_order AS displayOrder
+             t.display_order AS displayOrder, t.options
       FROM classifier_template t JOIN module m ON t.module_ref=m.id
       WHERE m.nexus_ref=? ORDER BY t.id`),
     attributes: all(`
@@ -459,7 +459,8 @@ function serializeVault(nexusId, moduleIds = null) {
     // defaults to 'talk' on re-insert) and its options would be gone.
     choiceOptions: all(`
       SELECT o.talk_ref AS talkId, o.option_text AS text, o.effect_kind AS effectKind,
-             o.effect_text AS effectText, o.jump_ref AS jumpId, o.option_order AS "order"
+             o.effect_text AS effectText, o.jump_ref AS jumpId, o.option_order AS "order",
+             o.condition, o.set_ops AS setOps
       FROM story_choice_option o
       JOIN story_talk tk ON o.talk_ref=tk.id JOIN story_dialogue d ON tk.dialogue_ref=d.id
       JOIN module m ON d.module_ref=m.id WHERE m.nexus_ref=? ORDER BY o.id`),
@@ -468,7 +469,7 @@ function serializeVault(nexusId, moduleIds = null) {
   const author = {
     chapters: all(`
       SELECT ch.id, ch.module_ref AS moduleId, ch.name, ch.chapter_content AS content,
-             ch.chapter_order AS "order"
+             ch.chapter_order AS "order", ch.synopsis, ch.status, ch.pov_key AS povKey
       FROM book_chapter ch JOIN module m ON ch.module_ref=m.id
       WHERE m.nexus_ref=? ORDER BY ch.id`),
   };
@@ -503,7 +504,7 @@ function serializeVault(nexusId, moduleIds = null) {
   const designer = {
     nodes: all(`
       SELECT n.id, n.module_ref AS moduleId, n.shape, n.x, n.y, n.node_text AS text,
-             n.color, n.linker_key AS linkerKey
+             n.color, n.linker_key AS linkerKey, n.w, n.h, n.read_order AS readOrder
       FROM design_node n JOIN module m ON n.module_ref=m.id
       WHERE m.nexus_ref=? ORDER BY n.id`),
     edges: all(`
@@ -515,10 +516,21 @@ function serializeVault(nexusId, moduleIds = null) {
   // the relation — without them every pull would silently reset them (the
   // Plan's Part 7 warning). Readers that predate v5 (the APK today) ignore
   // the extra fields; INSERT OR IGNORE on their side is unchanged.
+  // v5 Part 7 (§11.6): a time-bound relation carries its span as date KEYS
+  // (the same lookups.dates the events use), never the vault-local row ids.
   const relations = allGlobal(`
-    SELECT from_key AS fromKey, to_key AS toKey, label,
-           rel_type AS relType, directed, module_ref AS moduleId
-    FROM entity_relation WHERE nexus_ref=? ORDER BY id`);
+    SELECT r.from_key AS fromKey, r.to_key AS toKey, r.label,
+           r.rel_type AS relType, r.directed, r.module_ref AS moduleId,
+           f.day AS fDay, f.month AS fMonth, f.years AS fYears, f.hour AS fHour, f.minute AS fMinute,
+           u.day AS uDay, u.month AS uMonth, u.years AS uYears, u.hour AS uHour, u.minute AS uMinute
+    FROM entity_relation r
+    LEFT JOIN timeline_date f ON r.valid_from=f.id LEFT JOIN timeline_date u ON r.valid_to=u.id
+    WHERE r.nexus_ref=? ORDER BY r.id`).map(({ fDay, fMonth, fYears, fHour, fMinute, uDay, uMonth, uYears, uHour, uMinute, ...r }) => {
+    const from = fYears == null ? null : { day: fDay, month: fMonth, years: fYears, hour: fHour, minute: fMinute };
+    const to = uYears == null ? null : { day: uDay, month: uMonth, years: uYears, hour: uHour, minute: uMinute };
+    for (const d of [from, to]) if (d && !dates.some((x) => x.key === dateKey(d))) dates.push({ key: dateKey(d), ...d });
+    return { ...r, validFrom: from ? dateKey(from) : null, validTo: to ? dateKey(to) : null };
+  });
 
   // v5 Exhibitor scenes. Module-scoped like designer, so a module export
   // carries its own scene. A new top-level key: older readers skip it.
@@ -641,6 +653,16 @@ function remapEntityKey(key, maps) {
   if (!map) return null;
   const mapped = map.get(Number(m[2]));
   return mapped == null ? null : `${m[1]}_${mapped}`;
+}
+
+// A JSON list of {key, …} (story_choice_option.condition / set_ops) with
+// every key remapped; entries whose key cannot be mapped are left out.
+function remapKeyList(json, maps) {
+  let list;
+  try { list = JSON.parse(json); } catch (_) { return null; }
+  if (!Array.isArray(list)) return null;
+  const out = list.map((e) => ({ ...e, key: remapEntityKey(e?.key, maps) })).filter((e) => e.key);
+  return out.length ? JSON.stringify(out) : null;
 }
 
 // Shared by applySnapshot (whole-nexus wipe-and-rebuild, Token Sync pull)
@@ -772,11 +794,11 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       if (t.objectId != null && !cobjMap.has(t.objectId)) continue;
       const r = db.prepare(`
         INSERT INTO classifier_template (module_ref, object_ref, description, attribute_type,
-                                         levelable, has_condition, display_order)
-        VALUES (?,?,?,?,?,?,?)`)
+                                         levelable, has_condition, display_order, options)
+        VALUES (?,?,?,?,?,?,?,?)`)
         .run(mod(t.moduleId), t.objectId != null ? cobjMap.get(t.objectId) : null,
              t.description, t.attributeType ?? 'text', t.levelable ?? 0,
-             t.hasCondition ?? 0, t.displayOrder ?? 0);
+             t.hasCondition ?? 0, t.displayOrder ?? 0, t.options ?? null);
       ctplMap.set(t.id, r.lastInsertRowid);
     }
     for (const a of arr(cls.attributes)) {
@@ -856,19 +878,26 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
           tk.rowType === 'choice' ? 'choice' : 'talk', tk.order ?? 0);
       if (tk.id != null) talkMap.set(tk.id, r.lastInsertRowid);
     }
+    // condition / set_ops hold entity keys (§11.6) — remapped once every key
+    // map exists, below; stored raw here only for the ids.
+    const pendingKeyJson = []; // [table, col, id, json]
     for (const op of arr(nar.choiceOptions)) {
       if (!talkMap.has(op.talkId)) continue;
-      db.prepare(`INSERT INTO story_choice_option (talk_ref, option_text, effect_kind, effect_text, jump_ref, option_order) VALUES (?,?,?,?,?,?)`)
+      const r = db.prepare(`INSERT INTO story_choice_option (talk_ref, option_text, effect_kind, effect_text, jump_ref, option_order) VALUES (?,?,?,?,?,?)`)
         .run(talkMap.get(op.talkId), op.text ?? null, op.effectKind ?? 'none', op.effectText ?? null,
           op.jumpId != null ? (dlgMap.get(op.jumpId) ?? null) : null, op.order ?? 0);
+      if (op.condition) pendingKeyJson.push(['story_choice_option', 'condition', r.lastInsertRowid, op.condition]);
+      if (op.setOps) pendingKeyJson.push(['story_choice_option', 'set_ops', r.lastInsertRowid, op.setOps]);
     }
 
     const bchpMap = new Map();
+    const pendingKeys = []; // [table, col, id, key] — single-key columns, remapped below
     for (const ch of arr(sect(payload.author).chapters)) {
       if (mod(ch.moduleId) == null) continue;
-      const r = db.prepare(`INSERT INTO book_chapter (module_ref, name, chapter_content, chapter_order) VALUES (?,?,?,?)`)
-        .run(mod(ch.moduleId), ch.name, ch.content ?? null, ch.order ?? 0);
+      const r = db.prepare(`INSERT INTO book_chapter (module_ref, name, chapter_content, chapter_order, synopsis, status) VALUES (?,?,?,?,?,?)`)
+        .run(mod(ch.moduleId), ch.name, ch.content ?? null, ch.order ?? 0, ch.synopsis ?? null, ch.status ?? null);
       bchpMap.set(ch.id, r.lastInsertRowid);
+      if (ch.povKey) pendingKeys.push(['book_chapter', 'pov_key', r.lastInsertRowid, ch.povKey]);
     }
 
     const cht = sect(payload.chatscribe);
@@ -931,7 +960,16 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     // v5 Part 7 (§11.1/§11.2): the key maps come from db/entity-kinds.js —
     // every family that declares `sync` gets its map, by name. Registering
     // them by hand here is what dropped tlev_/sdlg_ endpoints on every pull.
-    const keyMaps = entityKeyMaps({ modMap, cobjMap, bchpMap, chssMap, evtMap, dlgMap, noteMap });
+    const keyMaps = entityKeyMaps({ modMap, cobjMap, ctplMap, bchpMap, chssMap, evtMap, dlgMap, noteMap, pageMap });
+    // Key columns written before the maps were complete (KEY_COLUMNS in
+    // db/entity-kinds.js): a single key that cannot be mapped is cleared; an
+    // entry of a JSON list that cannot be mapped is left out.
+    for (const [table, col, id, key] of pendingKeys) {
+      db.prepare(`UPDATE ${table} SET ${col}=? WHERE id=?`).run(remapEntityKey(key, keyMaps), id);
+    }
+    for (const [table, col, id, json] of pendingKeyJson) {
+      db.prepare(`UPDATE ${table} SET ${col}=? WHERE id=?`).run(remapKeyList(json, keyMaps), id);
+    }
 
     const dsg = sect(payload.designer);
     const dnodeMap = new Map();
@@ -949,10 +987,10 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       if (mod(n.moduleId) == null) continue;
       const k = n.linkerKey ? remapEntityKey(n.linkerKey, keyMaps) : null;
       const r = db.prepare(`
-        INSERT INTO design_node (module_ref, shape, x, y, node_text, color, linker_key)
-        VALUES (?,?,?,?,?,?,?)`)
+        INSERT INTO design_node (module_ref, shape, x, y, node_text, color, linker_key, w, h, read_order)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`)
         .run(mod(n.moduleId), n.shape ?? 'box', n.x ?? 0, n.y ?? 0,
-             n.text ?? null, n.color ?? null, k);
+             n.text ?? null, n.color ?? null, k, n.w ?? null, n.h ?? null, n.readOrder ?? null);
       dnodeMap.set(n.id, r.lastInsertRowid);
     }
     for (const e of arr(dsg.edges)) {
@@ -966,11 +1004,17 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     for (const rel of arr(payload.relations)) {
       const fk = remapEntityKey(rel.fromKey, keyMaps);
       const tk = remapEntityKey(rel.toKey, keyMaps);
-      if (!fk || !tk) { droppedRelations++; continue; }
-      db.prepare(`INSERT OR IGNORE INTO entity_relation (nexus_ref, from_key, to_key, label, rel_type, directed, module_ref)
-        VALUES (?,?,?,?,?,?,?)`)
-        .run(nexusId, fk, tk, rel.label ?? null, rel.relType ?? null,
-             rel.directed === 0 ? 0 : 1, rel.moduleId != null ? (mod(rel.moduleId) ?? null) : null);
+      // A Classifier relation FIELD's row names its field in rel_type
+      // (ctpl_<id>, §11.3) — the field's id changes too, and a row whose
+      // field did not come across has lost its owner, so it is dropped.
+      const rt = /^ctpl_\d+$/.test(rel.relType || '') ? remapEntityKey(rel.relType, keyMaps) : (rel.relType ?? null);
+      if (!fk || !tk || (rel.relType && rt == null)) { droppedRelations++; continue; }
+      db.prepare(`INSERT OR IGNORE INTO entity_relation (nexus_ref, from_key, to_key, label, rel_type, directed, module_ref, valid_from, valid_to)
+        VALUES (?,?,?,?,?,?,?,?,?)`)
+        .run(nexusId, fk, tk, rel.label ?? null, rt,
+             rel.directed === 0 ? 0 : 1, rel.moduleId != null ? (mod(rel.moduleId) ?? null) : null,
+             rel.validFrom ? (dateMap.get(rel.validFrom) ?? null) : null,
+             rel.validTo ? (dateMap.get(rel.validTo) ?? null) : null);
     }
 
     // v5 Exhibitor scenes — after every key map exists (note_ included).
