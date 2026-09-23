@@ -146,6 +146,8 @@ const INDEX_SQL = `
     CREATE INDEX IF NOT EXISTS idx_module_version_module  ON module_version(module_ref, seq);
     -- Composite matches addImportFiles' dedupe probe exactly (nexus_ref + file_path).
     CREATE INDEX IF NOT EXISTS idx_import_file_nexus      ON import_file(nexus_ref, file_path);
+    -- v5 Asset Nest: the Nest tree and a module's Assets strip list by owner.
+    CREATE INDEX IF NOT EXISTS idx_import_file_module     ON import_file(module_ref);
 `;
 
 

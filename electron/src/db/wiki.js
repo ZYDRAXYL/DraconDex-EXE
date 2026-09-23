@@ -34,9 +34,12 @@ const RESOLVERS = [
   ['bchp',  (d, n, nx) => scopedGet(d, `SELECT ch.id FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND ch.name=? COLLATE NOCASE`, nx, n)?.id, 'bchp_'],
   ['chss',  (d, n, nx) => scopedGet(d, `SELECT s.id FROM chat_session s JOIN module m ON s.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND s.name=? COLLATE NOCASE`, nx, n)?.id, 'chss_'],
   ['cobj',  (d, n, nx) => scopedGet(d, `SELECT o.id FROM classifier_object o JOIN module m ON o.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND o.name=? COLLATE NOCASE`, nx, n)?.id, 'cobj_'],
+  // v5 Asset Nest (§2.7): [[cover.png]] / [[file:cover.png]] reach an asset.
+  // Last on purpose — an asset's file name never shadows an entity's name.
+  ['file',  (d, n, nx) => scopedGet(d, `SELECT id FROM import_file WHERE (? IS NULL OR nexus_ref=?) AND file_name=? COLLATE NOCASE`, nx, n)?.id, 'file_'],
 ];
 
-// Optional memo for bulk passes (Plan part2 #2.4). A miss costs all 16
+// Optional memo for bulk passes (Plan part2 #2.4). A miss costs all 17
 // resolvers, and a rebuild resolves the same [[Name]] once per source that
 // mentions it — reindexWikiLinks only dedupes within one source. Scope is
 // deliberately ONE bulk operation, never process-lifetime: creating an
@@ -186,6 +189,7 @@ const KEY_LOOKUPS = {
   cobj:  { sql: `SELECT id, name FROM classifier_object WHERE id=?`,          type: 'object',    module: 'classifier' },
   tlev:  { sql: `SELECT id, event_name AS name FROM timeline_event WHERE id=?`, type: 'event',   module: 'chronicler' },
   sdlg:  { sql: `SELECT id, name FROM story_dialogue WHERE id=?`,            type: 'dialogue',  module: 'narrator' },
+  file:  { sql: `SELECT id, file_name AS name FROM import_file WHERE id=?`,   type: 'file',      module: 'dock' },
 };
 
 // Plan part2 #2.4: one .get() per key became one IN-query per key PREFIX.
@@ -438,6 +442,12 @@ function getEntityPath(key) {
         const r = d.prepare(`SELECT module_ref FROM story_dialogue WHERE id=?`).get(id);
         return r && { kind: 'sdlg', moduleId: r.module_ref, dialogueId: id };
       }
+      // v5 Asset Nest: an asset opens in the file viewer; moduleId (null when
+      // unfiled) lets the renderer reveal its node in the Nest.
+      case 'file': {
+        const r = d.prepare(`SELECT module_ref FROM import_file WHERE id=?`).get(id);
+        return r && { kind: 'file', moduleId: r.module_ref ?? null, fileId: id };
+      }
     }
   } catch (_) {}
   return null;
@@ -447,7 +457,7 @@ function getEntityPath(key) {
 // they were indexed with target_key NULL. Called from entity create paths.
 // Plan part2 #2.4: every matched row here resolves the SAME name (they only
 // differ by an optional ns: prefix), and a dangling name is the worst case
-// for resolveWikiName — all 16 resolvers miss. One memo + one transaction
+// for resolveWikiName — all 17 resolvers miss. One memo + one transaction
 // around the UPDATE loop; the memo is torn down on exit, since this function
 // is precisely what makes a previously-null resolution start succeeding.
 function resolveDanglingLinks(name, nexusId) {

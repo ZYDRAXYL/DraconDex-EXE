@@ -132,7 +132,7 @@ function mountConnectorBoard() {
     el.className = 'cn-node';
     el.style.left = `${p.x - NW / 2}px`;
     el.style.top = `${p.y - NW / 2}px`;
-    el.innerHTML = `<span class="cn-circle" style="border-color:${x(n.color || 'var(--accent)')}">${I.manager || ''}</span>
+    el.innerHTML = `<span class="cn-circle" style="border-color:${x(n.color || 'var(--accent)')}">${(n.kind === 'file' ? I.import : I.manager) || ''}</span>
       <span class="cn-name" data-no-i18n>${x(n.name)}</span>`;
     el.addEventListener('pointerdown', (ev) => {
       if (ev.button !== 0) return;

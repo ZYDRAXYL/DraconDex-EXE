@@ -51,6 +51,12 @@ async function openEntityByKey(key) {
     if (p.kind === 'tlev') S.pendingChroniclerEvent = p.eventId;
     if (p.kind === 'sdlg') S.pendingNarratorDialogue = p.dialogueId;
     await openModuleNode(p.moduleId);
+  } else if (p.kind === 'file') {
+    // v5 Asset Nest — assets open in the file viewer wherever they're filed.
+    S.activeModule = null; S.view = 'nexus';
+    document.querySelectorAll('.nav-btn[data-panel]').forEach(b => b.classList.remove('active'));
+    updateTopNavButton();
+    await openImportFile(p.fileId);
   }
   trackRecentEntity(key);
 }

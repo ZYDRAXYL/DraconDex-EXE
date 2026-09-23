@@ -10,7 +10,7 @@
 const { getDB } = require('./core');
 const { scopedAll } = require('./sqlscope');
 
-// One read transaction around the 6 vault-wide scans + the hashtag roll-up —
+// One read transaction around the 7 vault-wide scans + the hashtag roll-up —
 // outside one, each statement pays its own file-lock cycle (~2.5ms vs ~6µs).
 function viewerIndex(nexusId) {
   return getDB().readTx(() => _viewerIndex(nexusId))();
@@ -51,6 +51,16 @@ function _viewerIndex(nexusId) {
     LEFT JOIN use_color uc ON uc.id=m.color WHERE (? IS NULL OR m.nexus_ref=?)`,
     'module', r => ({ key: `module_${r.id}`, name: r.name, handle: r.handle, color: r.color_code,
       moduleId: r.mid ?? r.id, moduleName: r.mname ?? r.name, moduleKind: r.mkind ?? r.kind }));
+
+  // v5 Asset Nest (APP docs/V5.md §2.7) — assets as file_<id>, alongside the
+  // six above. This one line is what makes an asset filterable, linkable,
+  // quick-switchable and countable everywhere downstream. Unfiled assets
+  // (module_ref NULL) carry no module and so inherit no hashtags.
+  push(`SELECT f.id, f.file_name, f.file_type, f.source_kind, f.missing, m.id mid, m.name mname, m.kind mkind
+    FROM import_file f LEFT JOIN module m ON f.module_ref=m.id WHERE (? IS NULL OR f.nexus_ref=?)`,
+    'file', r => ({ key: `file_${r.id}`, name: r.file_name, color: null, moduleId: r.mid ?? null,
+      moduleName: r.mname ?? null, moduleKind: r.mkind ?? null,
+      fileType: r.file_type, sourceKind: r.source_kind, missing: !!r.missing }));
 
   // Source-module hashtags apply to every item of that module — the
   // filter's tag facet works on these.

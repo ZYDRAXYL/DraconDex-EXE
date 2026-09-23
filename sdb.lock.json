@@ -3,17 +3,17 @@
   "self": "EXE",
   "source": {
     "repo": "ZYDRAXYL/DraconDex-SDB",
-    "ref": "37d5317ce1cf947cc228059c81741417eee0d6f3",
-    "version": "1.0.0"
+    "ref": "7720b438280b38d6e00d007d6ac80bc5282878f2",
+    "version": "1.1.0"
   },
   "expect": {
-    "vaultSchemaVersion": 4,
+    "vaultSchemaVersion": 5,
     "supabaseSchemaVersion": 2
   },
   "vendored": {
     "src/schema/generated/vault-ddl.electron.js": {
       "artifact": "generated/electron/vault-ddl.electron.js",
-      "sha256": "df5be959813b2ec1b82024ef89c6d2d14569e0ab35e8c839f9119f2d2f1f24f3"
+      "sha256": "fe526661feb3eb59ddf10ec525d67991ed9fd7a39adb522ea145dbd76660d7b6"
     },
     "electron/src/db/supabase-schema.js": {
       "artifact": "generated/electron/supabase-schema.js",

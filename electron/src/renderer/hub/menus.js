@@ -81,6 +81,8 @@ function buildModuleContextMenuHtml(id, pinned) {
     </div>
     ${ctxRow(`ctxImportModule(${id})`, x(t('settingDbImportModule')))}
     ${ctxRow(`ctxExportModule(${id})`, x(t('settingDbExportModule')))}
+    ${ctxRow(`importDockPickFolder(${id})`, x(t('importFolderHere')))}
+    ${ctxRow(`openAddAssetUrlModal(${id})`, x(t('addAssetLink')))}
     <div class="ctx-sep"></div>`;
   // Plan part1 #3: modules with their own Builder page (any kind except the
   // pure-folder Collector, see KIND_MAIN_BUILDER) get "open in a new window"

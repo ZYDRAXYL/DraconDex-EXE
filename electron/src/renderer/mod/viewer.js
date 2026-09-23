@@ -10,8 +10,8 @@
 const VIEWER_VIEWS = ['table', 'cards', 'board'];
 const VIEWER_VIEW_LABEL = { table: 'Table', cards: 'Cards', board: 'Board' };
 // Locale-invariant kind badges, like KIND_LABEL (A.3 #7).
-const VIEWER_ITEM_KINDS = ['object', 'event', 'dialogue', 'chapter', 'chat', 'module'];
-const VIEWER_KIND_LABEL = { object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module' };
+const VIEWER_ITEM_KINDS = ['object', 'event', 'dialogue', 'chapter', 'chat', 'module', 'file'];
+const VIEWER_KIND_LABEL = { object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset' };
 
 // Plan part6 #1: Obsidian-style filter — groups of rules, AND within a
 // group, OR (union) between groups. Rule fields: kind (module type,

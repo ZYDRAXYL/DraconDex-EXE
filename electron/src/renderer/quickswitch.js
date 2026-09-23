@@ -42,8 +42,8 @@ function fuzzyScore(query, name) {
   return score - Math.floor(nn.length / 4);
 }
 
-const QS_BADGE = { object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module' };
-const QS_ICON_BY_KIND = { object: 'person', event: 'timeline', dialogue: 'narrator', chapter: 'book', chat: 'story', module: 'layer' };
+const QS_BADGE = { object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset' };
+const QS_ICON_BY_KIND = { object: 'person', event: 'timeline', dialogue: 'narrator', chapter: 'book', chat: 'story', module: 'layer', file: 'import' };
 
 async function qsBuildPool() {
   const [vi, qi, counts] = await Promise.all([

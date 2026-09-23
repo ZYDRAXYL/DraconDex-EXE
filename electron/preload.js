@@ -286,7 +286,8 @@ contextBridge.exposeInMainWorld('api', {
   },
   importdock: {
     list:          (nx)     => inv('importdock:list', nx),
-    add:           (nx,fs2) => inv('importdock:add', nx,fs2),
+    get:           (id)     => inv('importdock:get', id),
+    add:           (nx,fs2,m) => inv('importdock:add', nx,fs2,m),
     setLinker:     (id,k)   => inv('importdock:setLinker', id,k),
     setUseAsImage: (id,on)  => inv('importdock:setUseAsImage', id,on),
     delete:        (id)     => inv('importdock:delete', id),
@@ -294,6 +295,18 @@ contextBridge.exposeInMainWorld('api', {
     pickFolder:    ()       => inv('importdock:pickFolder'),
     readFile:      (id)     => inv('importdock:readFile', id),
     readFiles:     (ids)    => inv('importdock:readFiles', ids),
+    // v5 Asset Nest (APP docs/V5.md §2)
+    importFolder:  (nx,pm)  => inv('importdock:importFolder', nx,pm),
+    setModule:     (id,m)   => inv('importdock:setModule', id,m),
+    moduleAssets:  (mid)    => inv('importdock:moduleAssets', mid),
+    nestAssets:    (nx)     => inv('importdock:nestAssets', nx),
+    addUrl:        (nx,u,n,m) => inv('importdock:addUrl', nx,u,n,m),
+    openUrl:       (id)     => inv('importdock:openUrl', id),
+    openPath:      (id)     => inv('importdock:openPath', id),
+    sweep:         (nx)     => inv('importdock:sweep', nx),
+    relink:        (id)     => inv('importdock:relink', id),
+    relinkConfirm: (id)     => inv('importdock:relinkConfirm', id),
+    relinkFolder:  (nx)     => inv('importdock:relinkFolder', nx),
   },
   sagehut: {
     stats:      (nx) => inv('sagehut:stats', nx),

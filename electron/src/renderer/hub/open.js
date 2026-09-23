@@ -136,6 +136,7 @@ function buildModuleDetailHtml(m) {
         </h2>
         <div class="mtags">${tagChips}${linkChip}<button class="btn btn-g btn-i" onclick="openModuleTagPopup(${m.id}, this)" title="${t('tagLink')}">${I.plus}</button></div>
       </div>
+      ${buildModuleAssetsStripHtml(m)}
       ${mainHtml}
     </div>
     <div id="inspector-resize" class="panel-resize-handle" onmousedown="startInspectorResize(event)" title="${t('resizePanel')}"></div>

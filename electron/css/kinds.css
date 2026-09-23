@@ -460,6 +460,22 @@ select.fp-input[multiple]{padding:2px}
 .dock-png,.dock-jpg,.dock-jpeg,.dock-gif,.dock-webp,.dock-svg{color:#38bdf8}
 .dock-md{color:#34d399}
 .dock-docx{color:#facc15}
+/* v5 Asset Nest — one colour per asset class (mod/importdock.js assetClass) */
+.dock-image{color:#38bdf8}
+.dock-audio{color:#f472b6}
+.dock-video{color:#a78bfa}
+.dock-doc{color:#facc15}
+.dock-url{color:#34d399}
+.nest-asset-row .kicon{width:auto}
+.asset-missing{opacity:.5}
+.asset-missing .name{text-decoration:line-through dotted}
+.module-assets{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 4px;font-size:calc(11.5px * var(--fsc,1))}
+.module-assets .pk{color:var(--t3)}
+.module-assets .htag{cursor:pointer}
+.fv-media{display:flex;justify-content:center;padding:18px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
+.fv-media video{max-width:100%;max-height:520px}
+.fv-media audio{width:100%;max-width:560px}
+.fv-url{word-break:break-all;color:var(--t2)}
 .dock-chip{margin-left:auto;flex-shrink:0;font-size:calc(9.5px * var(--fsc,1));border:1px solid var(--border);border-radius:8px;
 	padding:1px 7px;color:var(--accentH);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dock-chip.ghost{color:var(--t3)}

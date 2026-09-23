@@ -86,6 +86,24 @@ function migrateInlineColumns(db) {
   if (!hasColumn(db, 'entity_relation', 'color')) {
     try { db.prepare(`ALTER TABLE entity_relation ADD COLUMN color INTEGER REFERENCES use_color(id)`).run(); } catch (_) {}
   }
+  // v5 Asset Nest (APP docs/V5.md §2.2) — plain ADD COLUMNs on import_file,
+  // mirroring SDB's vault.sql. Every NOT NULL one carries a DEFAULT (SQLite
+  // refuses it otherwise); module_ref's REFERENCES is legal under
+  // foreign_keys=ON only because its default is NULL. Existing rows backfill
+  // to source_kind='file', missing=0.
+  for (const [col, ddl] of [
+    ['module_ref',   `INTEGER REFERENCES module(id) ON DELETE SET NULL`],
+    ['source_kind',  `TEXT CHECK(source_kind IN ('file','url')) NOT NULL DEFAULT 'file'`],
+    ['sha256',       `TEXT`],
+    ['proxy',        `BLOB`],
+    ['proxy_type',   `TEXT`],
+    ['missing',      `INTEGER NOT NULL DEFAULT 0`],
+    ['last_seen_at', `TEXT`],
+  ]) {
+    if (!hasColumn(db, 'import_file', col)) {
+      try { db.prepare(`ALTER TABLE import_file ADD COLUMN ${col} ${ddl}`).run(); } catch (_) {}
+    }
+  }
   if (hasTable(db, 'world_project') && !hasColumn(db, 'world_project', 'color')) {
     try {
       db.prepare(`ALTER TABLE world_project ADD COLUMN color INTEGER REFERENCES use_color(id)`).run();

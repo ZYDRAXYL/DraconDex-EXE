@@ -314,7 +314,8 @@ function narratorLinkedModuleIds(d) {
 function narratorLinkableEntities(d, allow) {
   const linked = narratorLinkedModuleIds(d);
   return (d.entityIndex || []).filter(e =>
-    !String(e.key).startsWith('module_') && linked.has(e.moduleId) &&
+    // Assets (v5 file_<id>) are not story entities — a choice never links one.
+    !String(e.key).startsWith('module_') && e.kind !== 'file' && linked.has(e.moduleId) &&
     (!allow || allow.includes(e.kind)));
 }
 
