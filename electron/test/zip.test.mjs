@@ -47,11 +47,20 @@ test('stored + deflated entries, UTF-8 names, readable by unzip', () => {
   const nameLen = z.readUInt16LE(26), csize = z.readUInt32LE(18);
   const inflated = zlib.inflateRawSync(z.subarray(30 + nameLen, 30 + nameLen + csize));
   assert.equal(inflated.toString(), readFileSync(a, 'utf8'));
+  // Names straight from the central directory, with the UTF-8 flag set —
+  // not from an unzip listing, whose stdout goes through the console code
+  // page on Windows and garbles a correct Thai name.
+  const names = [];
+  for (let p = z.readUInt32LE(end + 16), i = 0; i < 3; i++) {
+    assert.equal(z.readUInt32LE(p), 0x02014b50);
+    assert.equal(z.readUInt16LE(p + 8) & 0x0800, 0x0800);
+    const n = z.readUInt16LE(p + 28);
+    names.push(z.subarray(p + 46, p + 46 + n).toString('utf8'));
+    p += 46 + n + z.readUInt16LE(p + 30) + z.readUInt16LE(p + 32);
+  }
+  assert.deepEqual(names, ['Nexus.ddx', 'media/img/ภาพ.png', 'media/vdo/c.bin']);
+  // And a real extractor accepts every entry (CRCs, sizes, offsets).
   let unzip = null;
   try { unzip = execFileSync('unzip', ['-t', out], { encoding: 'utf8' }); } catch (e) { if (e.code !== 'ENOENT') throw e; }
-  if (unzip !== null) {
-    assert.match(unzip, /No errors detected/);
-    const list = execFileSync('unzip', ['-Z1', out], { encoding: 'utf8' }).trim().split('\n');
-    assert.deepEqual(list, ['Nexus.ddx', 'media/img/ภาพ.png', 'media/vdo/c.bin']);
-  }
+  if (unzip !== null) assert.match(unzip, /No errors detected/);
 });
