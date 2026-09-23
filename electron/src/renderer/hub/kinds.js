@@ -59,6 +59,23 @@ const KIND_GROUPS = [
 ];
 const KIND_CATEGORY_KEY = { structure: 'kindCatStructure', view: 'kindCatView', data: 'kindCatData' };
 
+// v5 Part 6 — kind names in both modes (kindLabel() itself is in core/state.js).
+const kindUniqueLabel = (kind) => (typeof KIND_LABEL !== 'undefined' && KIND_LABEL[kind]) || kind;
+const kindClassicLabel = (kind) => (KIND_CLASSIC_KEY[kind] && L.en[KIND_CLASSIC_KEY[kind]] ? t(KIND_CLASSIC_KEY[kind]) : kindUniqueLabel(kind));
+// §10.5: the name in the current mode, then the other one as the secondary —
+// "Category · Classifier" in a Classic locale — so neither a new user nor an old one loses theirs.
+function kindLabelBoth(kind) {
+  const a = kindLabel(kind);
+  const b = S.settings?.nameMode === 'classic' ? kindUniqueLabel(kind) : kindClassicLabel(kind);
+  return a === b ? a : `${a} · ${b}`;
+}
+// Every name a kind answers to, for search: unique, classic in this locale,
+// and classic in English — so a search works in either mode (§10.5 / dragon).
+function kindSearchText(kind) {
+  const k = KIND_CLASSIC_KEY[kind];
+  return [kindUniqueLabel(kind), kindClassicLabel(kind), k ? L.en[k] : ''].filter(Boolean).join(' ');
+}
+
 // i18n key per kind's one-line description on the same cards.
 const KIND_DESC_KEY = {
   collector:'kindDescCollector', manager:'kindDescManager', inspector:'kindDescInspector',

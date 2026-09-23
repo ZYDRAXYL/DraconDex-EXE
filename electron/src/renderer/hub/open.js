@@ -100,7 +100,7 @@ function buildModuleDetailHtml(m) {
       ${pageHeadHtml({
         color: col, icon: moduleIconHtml(m), iconOnclick: `openModuleIconPopup(${m.id},this)`,
         title: nameHtml, titleText: m.name, forceOpen: renamingHead || S.editingHandleId === m.id,
-        after: `${moduleHandleHtml(m)}<span class="kind-chip" data-no-i18n>${x(kindLabel(m.kind))}</span>`,
+        after: `${moduleHandleHtml(m)}<span class="kind-chip" data-no-i18n>${x(kindLabelBoth(m.kind))}</span>`,
         tags: `${tagChips}${linkChip}<button class="btn btn-g btn-i" onclick="openModuleTagPopup(${m.id}, this)" title="${t('tagLink')}">${I.plus}</button>`,
       })}
       ${buildModuleAssetsStripHtml(m)}

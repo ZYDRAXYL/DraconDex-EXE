@@ -282,10 +282,10 @@ function rememberRecentKind(kind) {
 }
 
 function kindListRowHtml(k, parentId) {
-  return `<div class="kind-list-item" data-kind-row data-search="${x(`${kindLabel(k)} ${KIND_LABEL[k] || ''} ${t(KIND_DESC_KEY[k])}`.toLowerCase())}"
+  return `<div class="kind-list-item" data-kind-row data-search="${x(`${kindSearchText(k)} ${t(KIND_DESC_KEY[k])}`.toLowerCase())}"
       onclick="quickCreateModule('${k}',${parentId ?? 'null'})">
       <span class="kicon" style="color:${x(KIND_COLOR[k])}">${I[KIND_ICON[k]]}</span>
-      <span class="kli-text"><span class="kli-name">${x(kindLabel(k))}</span><span class="kli-desc">${t(KIND_DESC_KEY[k])}</span></span>
+      <span class="kli-text"><span class="kli-name">${x(kindLabelBoth(k))}</span><span class="kli-desc">${t(KIND_DESC_KEY[k])}</span></span>
     </div>`;
 }
 

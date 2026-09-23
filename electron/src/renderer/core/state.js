@@ -303,7 +303,10 @@ function loadUiSettings(){
   const language = UI_LANGUAGE_OPTIONS.includes(saved.language) ? saved.language : 'th';
   const savedSize = Number(saved.size);
   const size = Number.isFinite(savedSize) ? Math.min(UI_SIZE_MAX, Math.max(UI_SIZE_MIN, savedSize)) : autoUiSizeFromScreen();
-  const nameMode = saved.nameMode === 'classic' ? 'classic' : 'unique';
+  // v5 Part 6 (APP docs/V5.md §10.5, closes §7.8): Classic — the translated
+  // names — is the default. Only an explicit 'unique' keeps the English set;
+  // kindLabelBoth() shows the other name beside it either way.
+  const nameMode = saved.nameMode === 'unique' ? 'unique' : 'classic';
   const savedFont = Number(saved.fontScale);
   const fontScale = Number.isFinite(savedFont) ? Math.min(130, Math.max(80, Math.round(savedFont))) : 100;
   const customThemes = Array.isArray(saved.customThemes) ? saved.customThemes : [];

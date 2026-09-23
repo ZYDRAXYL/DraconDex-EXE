@@ -76,12 +76,14 @@ function dragonView() {
   return DRAGON_VIEW_OPTIONS.includes(S.settings.dragonView) ? S.settings.dragonView : 'tiles';
 }
 // Name OR kind label, so typing a kind ("Locator", or its Classic alias)
-// narrows to that group the same way clicking one would.
+// narrows to that group the same way clicking one would. Every name the kind
+// answers to, whatever the mode (§10.5) — Classic became the default, and an
+// English word must still find it.
 function dragonFilteredList() {
   const list = dragonBrowseCurrentList();
   const term = (S.dragonSearch || '').trim().toLowerCase();
   if (!term) return list;
-  return list.filter(m => `${m.name || ''} ${kindLabel(m.kind)}`.toLowerCase().includes(term));
+  return list.filter(m => `${m.name || ''} ${kindSearchText(m.kind)}`.toLowerCase().includes(term));
 }
 
 // KPI strip — the level's own numbers, deliberately NOT filtered by the
