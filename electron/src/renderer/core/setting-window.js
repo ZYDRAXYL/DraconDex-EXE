@@ -17,12 +17,25 @@
 // is built once at parse time, before S.supabaseReady has been read back from
 // the main process — a const array computed here would freeze the answer to
 // "no" for the whole session.
+//
+// v5 Part 6 (APP docs/V5.md §10.3): 17 pages → 13. Four pairs that are one
+// subject are shown as one page — each half keeps its own registered
+// renderer, run one after the other (SETTING_PAGE_MERGE), so the files that
+// register them (account.js, drive.js, plugin.js, db-transfer.js) did not
+// change. An old id still opens the page it now lives on (SETTING_PAGE_ALIAS).
 const SETTING_GROUPS = {
-  workspace: ['theme', 'textsize', 'tooltoggle', 'style', 'startup'],
-  user: ['account', 'profile'],
-  appdata: ['tokensync', 'transfer', 'database', 'backup', 'cloudstorage', 'versions'],
-  plugin: ['extension', 'plugin', 'pluginsettings', 'packages'],
+  workspace: ['theme', 'tooltoggle', 'style', 'startup'],
+  user: ['account'],
+  appdata: ['tokensync', 'transfer', 'database', 'cloudstorage', 'versions'],
+  plugin: ['extension', 'plugin', 'packages'],
 };
+const SETTING_PAGE_MERGE = {
+  theme: ['theme', 'textsize'],
+  account: ['account', 'profile'],
+  database: ['database', 'backup'],
+  plugin: ['plugin', 'pluginsettings'],
+};
+const SETTING_PAGE_ALIAS = { textsize: 'theme', profile: 'account', backup: 'database', pluginsettings: 'plugin' };
 function settingGroupPages(group){
   const pages = SETTING_GROUPS[group] || SETTING_GROUPS.workspace;
   return cloudSyncAvailable() ? pages : pages.filter(p => p !== 'tokensync');
@@ -56,6 +69,7 @@ function registerSettingPage(group, page, fn){
 // window always starts at the top the moment it's shown.
 let _settingWindowLastKey = null;
 function openSettingWindow(group, page){
+  page = SETTING_PAGE_ALIAS[page] || page;
   S.settingGroup = group || S.settingGroup || 'workspace';
   const pages = settingGroupPages(S.settingGroup);
   S.settingPage = page || (pages.includes(S.settingPage) ? S.settingPage : pages[0]);
@@ -65,7 +79,7 @@ function openSettingWindow(group, page){
 }
 function selectSettingPage(group, page){
   S.settingGroup = group;
-  S.settingPage = page;
+  S.settingPage = SETTING_PAGE_ALIAS[page] || page;
   renderSettingWindow();
 }
 function renderSettingWindow(){
@@ -106,9 +120,11 @@ function settingWindowNavHtml(){
   }).join('');
 }
 function settingWindowBodyHtml(){
-  const key = `${S.settingGroup}.${S.settingPage}`;
-  const renderer = SETTING_PAGE_RENDERERS[key];
-  const content = renderer ? renderer() : `<div class="empty"><p>${t('syncWorking')}</p></div>`;
+  const parts = (SETTING_PAGE_MERGE[S.settingPage] || [S.settingPage])
+    .map(p => SETTING_PAGE_RENDERERS[`${S.settingGroup}.${p}`]).filter(Boolean);
+  const content = parts.length
+    ? parts.map(fn => fn()).join('<div class="setting-merge-sep"></div>')
+    : `<div class="empty"><p>${t('syncWorking')}</p></div>`;
   return `<div class="setting-shell"><div class="setting-sidebar">${settingWindowNavHtml()}</div><div class="setting-content">${content}</div></div>`;
 }
 

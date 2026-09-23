@@ -158,6 +158,8 @@
 .setting-nav-item:hover{background:var(--hover);color:var(--t1)}
 .setting-nav-item.active{background:var(--accent);color:var(--on-accent)}
 .setting-content{flex:1;min-width:0;overflow-y:auto}
+/* v5 Part 6 §10.3: the rule between the two halves of a merged Setting page. */
+.setting-merge-sep{border-top:1px solid var(--border);margin:22px 0 16px}
 
 /* Slider+number row (Plan part2 #1) — 5:1 width ratio, both inputs kept in
    sync live via inline oninput on the JS side; this only lays them out. */
