@@ -65,7 +65,7 @@ function buildChatScribeMainHtml(m) {
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
   const viewBar = viewBarHtml(CHATSCRIBE_VIEWS, d.view, v => `setChatScribeView('${v}')`, v => CHATSCRIBE_VIEW_LABEL[v], { noI18n: true });
   const toolbar = `<div class="classifier-toolbar">
-    <button class="btn btn-p" onclick="openChatSessionModal(${m.id})">${I.plus} ${t('chatNewSession')}</button>
+    ${cmdBtn('scribe.newSession', { moduleId: m.id }, { cls: 'btn-p' })}
     ${viewBar}
   </div>`;
   if (!d.sessions.length) {

@@ -143,9 +143,9 @@ function buildExhibitorMainHtml(m) {
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
   const viewBar = viewBarHtml(EXH_VIEWS, d.view, v => `setExhibitorView('${v}')`, v => EXH_VIEW_LABEL[v], { noI18n: true });
   const toolbar = `<div class="classifier-toolbar">
-    <button class="btn btn-p" onclick="openExhibitorRelationModal()">${I.plus} ${t('addRelation')}</button>
+    ${cmdBtn('exhibitor.addRelation', { moduleId: d.moduleId }, { cls: 'btn-p' })}
     <span class="vw-filterlabel">${t('exhibitorFilter')}</span>${filterChipsHtml(d.def)}
-    <button class="btn btn-g btn-i" onclick="openSavedFilterPopup(this,${d.moduleId},S.exhibitorData.def)" title="${t('editFilter')}">${I.edit}</button>
+    ${cmdBtn('exhibitor.editFilter', { moduleId: d.moduleId }, { iconOnly: true })}
     ${viewBar}
   </div>`;
   if (d.view === 'scene') return toolbar + buildExhibitorSceneHtml(d);

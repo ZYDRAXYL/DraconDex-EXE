@@ -80,7 +80,7 @@ function buildAuthorMainHtml(m) {
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
   const viewBar = viewBarHtml(AUTHOR_VIEWS, d.view, v => `setAuthorView('${v}')`, v => AUTHOR_VIEW_LABEL[v]);
   const toolbar = `<div class="classifier-toolbar">
-    <button class="btn btn-p" onclick="openAuthorChapterModal(${m.id})">${I.plus} ${t('writeChapterNew')}</button>
+    ${cmdBtn('author.newChapter', { moduleId: m.id }, { cls: 'btn-p' })}
     ${viewBar}
   </div>`;
   if (!d.chapters.length) {

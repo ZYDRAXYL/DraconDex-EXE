@@ -13,6 +13,12 @@
 // was focused before the overlay opened; Alt+Enter (or the 📌 action)
 // pins the result onto the open Sketcher/Designer canvas — the deferred
 // "pin from Search Link" hook from M5.
+//
+// v5 Part 6 (APP docs/V5.md §10.2): it also runs COMMANDS (core/commands.js)
+// — every context-menu and toolbar action, by name. Not a second palette and
+// not a second shortcut: one Ctrl+P. Commands rank with things; a leading
+// `>` shows commands only. A command matches its translated name AND its
+// English one, so an English word still finds it under a Thai UI.
 
 let _qsItems = [];    // merged, annotated result pool
 let _qsShown = [];
@@ -42,8 +48,16 @@ function fuzzyScore(query, name) {
   return score - Math.floor(nn.length / 4);
 }
 
-const QS_BADGE = { object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset' };
-const QS_ICON_BY_KIND = { object: 'person', event: 'timeline', dialogue: 'narrator', chapter: 'book', chat: 'story', module: 'layer', file: 'import' };
+const QS_BADGE = { object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset', command: 'Command' };
+const QS_ICON_BY_KIND = { object: 'person', event: 'timeline', dialogue: 'narrator', chapter: 'book', chat: 'story', module: 'layer', file: 'import', command: 'func' };
+
+function qsCommandItems() {
+  return paletteCommands(_qsFocusEl).map(c => ({
+    key: `cmd:${c.id}`, cmd: c, name: c.name, alt: c.alt, color: 'var(--t3)',
+    badge: QS_BADGE.command, icon: (c.icon && I[c.icon]) || I[QS_ICON_BY_KIND.command],
+    moduleId: null, crumb: c.crumb, hint: c.hint, count: 0,
+  }));
+}
 
 async function qsBuildPool() {
   const [vi, qi, counts] = await Promise.all([
@@ -80,7 +94,7 @@ async function qsBuildPool() {
       count: counts[e2.key] || 0,
     });
   }
-  return items;
+  return items.concat(qsCommandItems());
 }
 
 // ── Scope evaluation against the module tree ────────────────────────────
@@ -92,7 +106,7 @@ function qsDescendants(id) {
 }
 
 function qsInScope(item) {
-  if (_qsScope === 'vault') return true;
+  if (_qsScope === 'vault' || item.cmd) return true;
   const ctx = S.activeModuleNode;
   if (!ctx || item.moduleId == null) return _qsScope === 'vault';
   if (_qsScope === 'level') {
@@ -143,6 +157,7 @@ async function qsPinToCanvas(item) {
 }
 
 async function qsOpenItem(item) {
+  if (item.cmd) { await runCommand(item.cmd.id, item.cmd.ctx); return; }
   if (/^(tlev|sdlg)_/.test(item.key)) {
     if (item.moduleId != null) await openModuleNode(item.moduleId);
     return;
@@ -191,6 +206,7 @@ async function openQuickSwitcher(seed = '') {
         <span><b data-no-i18n>Ctrl+Enter</b> ${t('qsInsertHint')}</span>
         ${canPin ? `<span><b data-no-i18n>Alt+Enter</b> ${t('qsPinHint')}</span>` : ''}
         <span><b data-no-i18n>Tab</b> ${t('qsScopeHint')}</span>
+        <span><b data-no-i18n>&gt;</b> ${t('qsCommandsHint')}</span>
         <span class="qs-count" id="qs-count"></span>
       </div>
     </div>`;
@@ -218,8 +234,9 @@ async function openQuickSwitcher(seed = '') {
           <span class="dot" style="background:${e.color || 'var(--accent)'}"></span>
           <span class="name">${x(e.name)}</span>
           ${e.handle ? `<span class="qs-handle" data-no-i18n>@${x(e.handle)}</span>` : ''}
+          ${e.hint ? `<span class="qs-handle" data-no-i18n>${x(e.hint)}</span>` : ''}
           ${e.count ? `<span class="qs-lc" data-no-i18n>🔗 ${e.count}</span>` : ''}
-          ${canPin ? `<span class="qs-pin" data-i="${i}" title="${t('qsPinHint')}">📌</span>` : ''}
+          ${canPin && !e.cmd ? `<span class="qs-pin" data-i="${i}" title="${t('qsPinHint')}">📌</span>` : ''}
           <span class="qs-crumb" data-no-i18n>${x(e.crumb)}</span>
           <span class="ek" data-no-i18n>${x(e.badge)}</span>
         </div>`).join('');
@@ -231,9 +248,13 @@ async function openQuickSwitcher(seed = '') {
   };
 
   const update = () => {
-    const qv = input.value.trim();
-    const pool = _qsItems.filter(e => qsInScope(e) && (!_qsKind || e.badge === _qsKind));
-    if (!qv) {
+    let qv = input.value.trim();
+    const cmdOnly = qv.startsWith('>');
+    if (cmdOnly) qv = qv.slice(1).trim();
+    const pool = _qsItems.filter(e => qsInScope(e) && (!_qsKind || e.badge === _qsKind) && (!cmdOnly || e.cmd));
+    if (cmdOnly && !qv) {
+      _qsShown = pool.slice(0, 50);
+    } else if (!qv) {
       const recent = (S.recentEntities || []).map(k => byKey.get(k))
         .filter(e => e && qsInScope(e) && (!_qsKind || e.badge === _qsKind));
       _qsShown = (recent.length ? recent : pool).slice(0, 20);
@@ -243,7 +264,7 @@ async function openQuickSwitcher(seed = '') {
       // fuzzy-matching over "name handle" as one string — that would let a
       // query straddle the boundary and match neither field on its own.
       _qsShown = pool
-        .map(e => ({ e, s: Math.max(fuzzyScore(qv, e.name), e.handle ? fuzzyScore(qv, e.handle) : -1) }))
+        .map(e => ({ e, s: Math.max(fuzzyScore(qv, e.name), e.handle ? fuzzyScore(qv, e.handle) : -1, e.alt ? fuzzyScore(qv, e.alt) : -1) }))
         .filter(r => r.s >= 0)
         .sort((a, b) => b.s - a.s)
         .slice(0, 50)
@@ -256,6 +277,7 @@ async function openQuickSwitcher(seed = '') {
   const accept = async (mode) => {
     const e = _qsShown[_qsIdx];
     if (!e) return;
+    if (e.cmd) mode = 'open'; // a command only runs — nothing to insert or pin
     if (mode === 'insert') {
       close();
       qsInsertLink(e.name);

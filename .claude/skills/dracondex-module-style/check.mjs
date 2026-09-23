@@ -234,6 +234,79 @@ console.log('=== module kind registry (hub/kinds.js) ===');
   }
 }
 
+// ═══ Global check 2d: every command is findable two ways ═══
+// V5.md §10.1. A button may only be hidden while its command stays reachable
+// another way, so the palette (Ctrl+P, which lists every COMMANDS entry by
+// construction) plus at least one more surface. This makes the rule a build
+// error instead of a review comment:
+//   (a) every entry names a surface besides the palette
+//   (b) every named surface's file really references the command
+//   (c) no menu is built from a raw `label: t(...)` — only via cmdItem(), so
+//       nothing lands in a context menu without also landing in the palette
+//   (d) every cmdItem / cmdBtn / runCommand / data-cmd id exists
+//   (e) every label key exists in the en locale
+console.log('=== command registry (core/commands.js) ===');
+{
+  const R = 'src/renderer/';
+  const SURFACE_FILES = {
+    'nest.ctx': ['hub/menus.js'], 'nest.head': ['hub/sections.js'], 'pane.ctx': ['hub/menus.js'],
+    'rail': ['hub/kinds.js'], 'settings.menu': ['core/settings.js'], 'shortcut': ['core/shortcuts.js'],
+    'dock': ['mod/importdock.js'], 'assets.strip': ['mod/importdock.js'], 'asset.ctx': ['mod/importdock.js'],
+    'asset.viewer': ['mod/fileviewer.js'], 'text.ctx': ['core/wiki-field.js'],
+    'canvas.ctx': ['mod/canvas-ctx.js'], 'classifier.ctx': ['mod/classifier-ctx.js'], 'exhibitor.ctx': ['mod/exhibitor-cards.js'],
+    'locator.page': ['mod/locator.js'], 'sketcher.board': ['mod/sketcher.js'], 'scribe.toolbar': ['mod/chatscribe.js'],
+  };
+  const surfaceFiles = (sf) => SURFACE_FILES[sf] || (sf.endsWith('.toolbar') ? [`mod/${sf.slice(0, -8)}.js`] : null);
+  const srcOf = (f) => { try { return read(app(R + f)); } catch (_) { return null; } };
+  const cmdSrc = srcOf('core/commands.js');
+  const block = cmdSrc?.match(/const COMMANDS = \{([\s\S]*?)\n\};/)?.[1];
+  if (!block) warn('could not locate `const COMMANDS` in core/commands.js');
+  else {
+    const en = locales.en || new Set();
+    const settingSrc = srcOf('core/setting-window.js') || '';
+    const settingGroups = settingSrc.match(/const SETTING_GROUPS\s*=\s*\{([\s\S]*?)\n\};/)?.[1] || '';
+    const settingLabels = new Map([...(settingSrc.match(/const SETTING_PAGE_LABEL_KEY\s*=\s*\{([\s\S]*?)\n\};/)?.[1] || '')
+      .matchAll(/([a-z]+)\s*:\s*'([A-Za-z0-9_]+)'/g)].map((x) => [x[1], x[2]]));
+    const heads = [...block.matchAll(/^  '([a-z]+\.[A-Za-z]+)':/gm)];
+    const ids = new Set(heads.map((h) => h[1]));
+    let bad = 0;
+    heads.forEach((h, i) => {
+      const id = h[1];
+      const body = block.slice(h.index, i + 1 < heads.length ? heads[i + 1].index : block.length);
+      const setting = body.match(/settingCmd\('([a-z]+)',\s*'([a-z]+)'\)/);
+      const surfaces = setting ? ['setting.nav'] : (body.match(/surfaces:\s*\[([^\]]*)\]/)?.[1].match(/'([^']+)'/g) || []).map((q) => q.slice(1, -1));
+      if (!surfaces.length) { bad++; err(`command ${id}: no surface besides the palette — it would be findable one way only (§10.1)`); }
+      for (const sf of surfaces) {
+        if (sf === 'setting.nav') {
+          if (!setting || !new RegExp(`\\b${setting[1]}:\\s*\\[[^\\]]*'${setting[2]}'`).test(settingGroups)) { bad++; err(`command ${id}: setting page is not in SETTING_GROUPS`); }
+          continue;
+        }
+        const files = surfaceFiles(sf);
+        if (!files) { bad++; err(`command ${id}: unknown surface '${sf}' — add it to SURFACE_FILES in check.mjs`); continue; }
+        if (!files.some((f) => (srcOf(f) || '').match(new RegExp(`['"]${id.replace('.', '\\.')}['"]`)))) { bad++; err(`command ${id}: surface '${sf}' (${files.join(', ')}) never references it`); }
+      }
+      const keys = setting ? [settingLabels.get(setting[2]), 'settingWindowTitle']
+        : [...(body.match(/(?:label|prefix):\s*(?:'[^']*'|\([^)]*\)\s*=>[^,]*?(?:'[^']*'[^,]*?)+)(?=,)/g) || [])].flatMap((l) => (l.match(/'([^']+)'/g) || []).map((q) => q.slice(1, -1)));
+      if (!keys.length) { bad++; err(`command ${id}: no label key found`); }
+      for (const k of keys) if (!k || !en.has(k)) { bad++; err(`command ${id}: label key '${k}' is not in the en locale`); }
+    });
+    // (c) + (d) across the renderer
+    const walk = (dir) => readdirSync(path.join(root, dir), { withFileTypes: true })
+      .flatMap((e) => (e.isDirectory() ? walk(`${dir}/${e.name}`) : e.name.endsWith('.js') ? [`${dir}/${e.name}`] : []));
+    for (const f of walk(app('src/renderer'))) {
+      if (f.endsWith('/core/commands.js')) continue;
+      const src = read(f);
+      const rel = f.slice(app(R).length);
+      if (/label:\s*t\(/.test(src)) { bad++; err(`${rel}: a menu item built with \`label: t(...)\` — build it with cmdItem() so it is also a palette command (§10.2)`); }
+      for (const m of src.matchAll(/(?:cmdItem|cmdBtn|runCommand)\(\s*'([^']+)'|data-cmd="([^"$]+)"/g)) {
+        const id = m[1] || m[2];
+        if (!ids.has(id)) { bad++; err(`${rel}: command '${id}' is not in COMMANDS`); }
+      }
+    }
+    if (!bad) ok(`${ids.size} commands, each in the palette and on at least one other surface`);
+  }
+}
+
 // ═══ Per-file lint ═══
 // Recursive: renderer code lives in src/renderer/{,mod/,core/,hub/,navigator/,
 // hero/}. A flat readdir here used to skip mod/ entirely and would now skip

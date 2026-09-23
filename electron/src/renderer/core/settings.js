@@ -235,7 +235,7 @@ function renderSettingsMenu(){
       ${uiSizeOnlySliderHtml()}
     </div>
     ${extraBlocks}
-    <button class="btn btn-p" style="width:100%;margin-top:4px" onclick="toggleSettingsMenu(false);openSettingWindow()">${I.settings} ${t('settingOpenWindow')}</button>
+    <button class="btn btn-p" style="width:100%;margin-top:4px" data-cmd="app.settings" onclick="toggleSettingsMenu(false);runCommand('app.settings')">${I.settings} ${t('settingOpenWindow')}</button>
   `;
 }
 

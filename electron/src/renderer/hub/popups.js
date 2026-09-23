@@ -61,44 +61,18 @@ function scheduleCtxSubmenuClose() {
   clearTimeout(_ctxSubmenuCloseTimer);
   _ctxSubmenuCloseTimer = setTimeout(() => document.querySelector('.ctx-submenu')?.remove(), 200);
 }
-function openCreateSubmenu(ev, parentId) {
-  // Plan part1 #7 / process3 part2: Collector gets its own "create folder"
-  // row at the top of this submenu (relabeled, no longer a standalone
-  // context-menu row of its own) — excluded from the generic kind list
-  // below so it doesn't also show up alphabetically as "Collector". The
-  // major/minor-module "+" popups (openKindPopup's own call) stay
-  // unfiltered and still list every kind including Collector.
-  openCtxSubmenu(ev, `
+// The module menu's "Create" flyout (COMMANDS['module.create'].subHtml).
+// Plan part1 #7 / process3 part2: Collector gets its own "create folder"
+// row at the top, and is excluded from the generic kind list below so it
+// doesn't also show up alphabetically as "Collector". The major/minor-module
+// "+" popups (openKindPopup) stay unfiltered and list every kind.
+function createSubmenuHtml(parentId) {
+  return `
     <div class="kind-list-item" onclick="closeAllPopups();quickCreateModule('collector',${parentId})">
       <span class="kicon" style="color:${x(KIND_COLOR.collector)}">${I[KIND_ICON.collector]}</span>
       <span class="kli-text"><span class="kli-name">${x(t('createFolder'))}</span><span class="kli-desc">${t(KIND_DESC_KEY.collector)}</span></span>
     </div>
-    <div class="ctx-sep"></div>` + buildKindListHtml(parentId, true));
-}
-
-// Plan process3 part2: "Move to" used to click-swap the whole popup's
-// content in place (openMoveToListInPlace, now removed) — now a hover
-// flyout like openCreateSubmenu/openPaneDirectionSubmenu above, so the rest
-// of the context menu (Rename/Delete/Pin/...) stays visible and reachable
-// while picking a target.
-function openMoveToSubmenu(ev, id) {
-  openCtxSubmenu(ev, buildMoveToListHtml(id));
-}
-
-// Plan part1 #3: "Open in new pane" direction flyout — same hover-submenu
-// shape as openCreateSubmenu above, reusing its singular .ctx-submenu
-// guard/close-timer as-is (only one flyout is ever open at a time; "Create"
-// and this one never hover simultaneously).
-function buildPaneDirectionListHtml(id) {
-  return [
-    ['left', t('paneDirLeft')], ['right', t('paneDirRight')],
-    ['top', t('paneDirTop')], ['bottom', t('paneDirBottom')],
-  ].map(([dir, label]) =>
-    `<div class="kind-list-item" onclick="closeAllPopups();openModuleInNewPane(${id},'${dir}')"><span class="kli-name">${x(label)}</span></div>`
-  ).join('');
-}
-function openPaneDirectionSubmenu(ev, id) {
-  openCtxSubmenu(ev, buildPaneDirectionListHtml(id));
+    <div class="ctx-sep"></div>` + buildKindListHtml(parentId, true);
 }
 
 // Cursor-anchored popup helper — inline onclick= attributes can't close over

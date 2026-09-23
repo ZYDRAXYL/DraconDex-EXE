@@ -54,7 +54,7 @@ function buildSketcherMainHtml(m) {
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
   const viewBar = viewBarHtml(SKETCHER_VIEWS, d.view, v => `setSketcherView('${v}')`, v => SKETCHER_VIEW_LABEL[v], { noI18n: true });
   const toolbar = `<div class="classifier-toolbar">
-    <button class="btn btn-p" onclick="openSketchPageModal(${m.id})">${I.plus} ${t('newPage')}</button>
+    ${cmdBtn('sketcher.newPage', { moduleId: m.id }, { cls: 'btn-p' })}
     ${viewBar}
   </div>`;
   if (!d.pages.length) {
@@ -73,16 +73,16 @@ function buildSketcherMainHtml(m) {
         </div>
       </div>
       <div class="sk-tools" data-no-i18n>
-        <button class="btn btn-g btn-i${skTool.mode === 'pen' ? ' act' : ''}" onclick="setSketchTool('pen')" title="${t('penTool')}">✏️</button>
-        <button class="btn btn-g btn-i${skTool.mode === 'eraser' ? ' act' : ''}" onclick="setSketchTool('eraser')" title="${t('eraserTool')}">🧽</button>
+        <button class="btn btn-g btn-i${skTool.mode === 'pen' ? ' act' : ''}" data-cmd="sketcher.pen" onclick="runCommand('sketcher.pen')" title="${t('penTool')}">✏️</button>
+        <button class="btn btn-g btn-i${skTool.mode === 'eraser' ? ' act' : ''}" data-cmd="sketcher.eraser" onclick="runCommand('sketcher.eraser')" title="${t('eraserTool')}">🧽</button>
         <span class="zsep"></span>
         ${SK_COLORS.map(c => `<span class="sk-swatch${skTool.color === c ? ' act' : ''}" style="background:${c}" onclick="setSketchColor('${c}')"></span>`).join('')}
         <span class="zsep"></span>
         ${SK_WIDTHS.map(w => `<span class="sk-width${skTool.width === w ? ' act' : ''}" onclick="setSketchWidth(${w})"><span style="height:${w}px"></span></span>`).join('')}
         <span class="zsep"></span>
-        <button class="btn btn-g btn-i" onclick="openSketchPinModal()" title="${t('pinModuleLink')}">🔗</button>
+        <button class="btn btn-g btn-i" data-cmd="sketcher.pinLink" onclick="runCommand('sketcher.pinLink')" title="${t('pinModuleLink')}">🔗</button>
       </div>
-      <button class="btn btn-p sk-export" onclick="exportSketchPng()">${I.export || '⬆'} ${t('exportPng')}</button>
+      ${cmdBtn('sketcher.exportPng', { moduleId: d.moduleId }, { cls: 'btn-p sk-export' })}
       <div class="chint" data-no-i18n>${t('sketcherHint')}</div>
       <div class="czoom" data-no-i18n>
         <button class="btn btn-g btn-i" onclick="sketchZoomBy(-0.15)">−</button>

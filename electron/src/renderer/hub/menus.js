@@ -2,28 +2,40 @@
 // pane-direction submenu, and the kind-picker popup that creates a module
 // instantly instead of opening the full form.
 // ═══ Right-click context menus (Nest row / Nav-sidebar) ════════════════
-// Plan process3 part2: shared row-builder for the simple (non-submenu,
-// non-icon) context-menu rows — same shape as core/nexus-options.js's own
-// local row() helper, so every "row of text that closes the menu and runs
-// one action" in the app looks and behaves identically. Named ctxRow (not
-// row) to avoid shadowing buildNestOptionsPopupHtml's own local `row` below.
-const ctxRow = (onclick, label, cls = '') =>
-  `<div class="kind-list-item ${cls}" onclick="closeAllPopups();${onclick}"><span class="kli-name">${label}</span></div>`;
-
+// v5 Part 6 (§10.2): the menu is built from COMMANDS (core/commands.js), so
+// every row here is also a palette command. openModuleContextMenu stays the
+// one entry point the Nest, Wyvern, Dragon and Manager rows call.
 function openModuleContextMenu(ev, id) {
-  ev.preventDefault();
-  ev.stopPropagation();
-  closeAllPopups();
-  S.ctxMenuPos = { x: ev.clientX, y: ev.clientY };
-  const m = findModuleNode(id);
-  if (!m) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup context-menu-popup';
-  pop.innerHTML = buildModuleContextMenuHtml(id, !!m.pinned);
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  positionPopupNear(pop, ctxAnchor(ev).getBoundingClientRect());
+  if (!findModuleNode(id)) { ev?.preventDefault?.(); return; }
+  openCtx('nest.module', ev, { moduleId: id });
 }
+
+// Plan process3 part2: every module is "Major" now — Create/Import/Export/Pin
+// are unconditional, except that v5 Part 4 (§8.8) makes "create inside",
+// "import a module here" and "import a folder here" folder-only (each
+// command's `when`). Open-in-tab/window/pane skip the collector, which has
+// no page of its own (KIND_PAGE); the pane flyout is Drake-only.
+CTX_PROVIDERS['nest.module'] = (c) => [
+  cmdItem('module.create', c),
+  cmdItem('module.importModule', c),
+  cmdItem('module.export', c),
+  cmdItem('module.importFolder', c),
+  cmdItem('module.addLink', c),
+  { sep: true },
+  cmdItem('module.openTab', c),
+  cmdItem('module.openWindow', c),
+  cmdItem('module.openPane', c),
+  isFolderCtx(c) ? null : { sep: true },
+  cmdItem('module.rename', c),
+  cmdItem('module.handle', c),
+  cmdItem('module.icon', c),
+  cmdItem('module.duplicate', c),
+  cmdItem('module.moveTo', c),
+  { sep: true },
+  cmdItem('module.delete', c),
+  { sep: true },
+  cmdItem('module.pin', c),
+];
 
 // Plan part1 #3: pop a module's own Builder page into a fresh floating
 // window — mirrors builderPopOutTab's own api.window.openBuilderTab call,
@@ -64,59 +76,20 @@ async function openModuleInNewPane(id, dir) {
   await builderFocusPane(newIdx, { kind: 'module', id });
 }
 
-// Plan process3 part2: every module is "Major" now (the term no longer means
-// top-level-only, see Process 3 Part 1's rename) — Create/Import/Export/Pin
-// used to be gated behind parent_id==null and are now unconditional.
-function buildModuleContextMenuHtml(id, pinned) {
-  let html = '';
-  // The create-list used to sit inline at the top of the menu (every kind,
-  // always visible) — moved behind one "Create" row with a hover submenu
-  // instead, decluttering the menu the same way a native app's context
-  // menu nests a submenu rather than flattening every option.
-  // Plan part1 #5: auto-parent to the right-clicked module — this used to
-  // hardcode parentId=null regardless of which module's menu was open,
-  // always creating a new top-level sibling instead of a child of `id`.
-  // v5 Part 4 (§8.8): only a collector holds modules, so "create inside",
-  // "import a module here" and "import a folder here" are folder actions.
-  const isFolder = findModuleNode(id)?.kind === 'collector';
-  html += `${isFolder ? `<div class="kind-list-item kli-submenu-parent" onmouseenter="openCreateSubmenu(event,${id})" onmouseleave="scheduleCtxSubmenuClose()">
-      <span class="kli-name">${x(t('create'))}</span><span class="kli-arrow">${I.chevronRight}</span>
-    </div>
-    ${ctxRow(`ctxImportModule(${id})`, x(t('settingDbImportModule')))}` : ''}
-    ${ctxRow(`ctxExportModule(${id})`, x(t('settingDbExportModule')))}
-    ${isFolder ? ctxRow(`importDockPickFolder(${id})`, x(t('importFolderHere'))) : ''}
-    ${ctxRow(`openAddAssetUrlModal(${id})`, x(t('addAssetLink')))}
-    <div class="ctx-sep"></div>`;
-  // Plan part1 #3: modules with their own Builder page (any kind except the
-  // pure-folder Collector, see KIND_PAGE) get "open in a new window"
-  // and a hover "open in a new pane" direction submenu. The pane submenu is
-  // meaningless in Wyvern (Plan part2 #New Workspace — no split panes at
-  // all there), so it's hidden rather than offering an action that would
-  // silently no-op or fight the single-pane guard in builderNavigate.
-  const m = findModuleNode(id);
-  if (m && m.kind !== 'collector') {
-    html += `
-    <div class="kind-list-item" onclick="closeAllPopups();openModuleInNewTab(${id})"><span class="kli-name">${x(t('openInNewTab'))}</span></div>
-    <div class="kind-list-item" onclick="closeAllPopups();openModuleInNewWindow(${id})"><span class="kli-name">${x(t('openInNewWindow'))}</span></div>
-    ${S.settings.workspaceStyle !== 'drake' ? '' : `<div class="kind-list-item kli-submenu-parent" onmouseenter="openPaneDirectionSubmenu(event,${id})" onmouseleave="scheduleCtxSubmenuClose()">
-      <span class="kli-name">${x(t('openInNewPane'))}</span><span class="kli-arrow">${I.chevronRight}</span>
-    </div>`}
-    <div class="ctx-sep"></div>`;
-  }
-  html += `
-    ${ctxRow(`startRenameModule(${id})`, x(t('rename')))}
-    ${ctxRow(`startEditModuleHandle(${id})`, x(t('moduleHandle')))}
-    ${ctxRow(`openModuleIconPopup(${id},ctxAnchor())`, x(t('clsColorIcon')))}
-    ${ctxRow(`duplicateModuleNode(${id})`, x(t('duplicate')))}
-    <div class="kind-list-item kli-submenu-parent" onmouseenter="openMoveToSubmenu(event,${id})" onmouseleave="scheduleCtxSubmenuClose()">
-      <span class="kli-name">${x(t('moveTo'))}</span><span class="kli-arrow">${I.chevronRight}</span>
-    </div>
-    <div class="ctx-sep"></div>
-    ${ctxRow(`deleteModuleNode(${id})`, x(t('delete')), 'kli-danger')}
-    <div class="ctx-sep"></div>
-    ${ctxRow(`toggleModulePin(${id})`, x(pinned ? t('unpin') : t('pin')))}`;
-  return html;
-}
+// The builder pane's right-click (builder.js openBuilderPaneContextMenu) —
+// registered here because builder.js loads before hub/ctxmenu.js.
+CTX_PROVIDERS['builder.pane'] = (c) => [
+  cmdItem('pane.split', c),
+  cmdItem('pane.close', c) ? { sep: true } : null,
+  cmdItem('pane.close', c),
+];
+
+// A Manager row is a module row, plus "unpick" when it was hand-picked.
+CTX_PROVIDERS['manager.row'] = (c) => {
+  const rest = CTX_PROVIDERS['nest.module'](c);
+  const unpick = cmdItem('manager.unpick', c);
+  return unpick ? [unpick, { sep: true }, ...rest] : rest;
+};
 
 async function ctxExportModule(id) {
   const m = findModuleNode(id);

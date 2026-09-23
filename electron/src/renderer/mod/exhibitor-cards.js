@@ -314,23 +314,23 @@ CTX_PROVIDERS['exhibitor.scene'] = ({ nodeId } = {}) => {
   const n = nodeId != null ? exhNodeById(nodeId) : null;
   if (!n) {
     return [
-      { label: t('exhibitorAddNote'), icon: 'plus', onClick: () => addExhibitorFreeNode('note') },
-      { label: t('exhibitorAddGroup'), icon: 'plus', onClick: () => addExhibitorFreeNode('group') },
+      cmdItem('exhibitor.addNote', { moduleId: d.moduleId }),
+      cmdItem('exhibitor.addGroup', { moduleId: d.moduleId }),
       { sep: true },
-      { label: t('exhibitorFit'), onClick: () => fitExhibitorScene() },
-      { label: t('ctxZoomIn'), icon: 'plus', onClick: () => zoomExhibitorScene(1.1) },
-      { label: t('ctxZoomOut'), icon: 'minus', onClick: () => zoomExhibitorScene(0.9) },
+      cmdItem('exhibitor.fit', { moduleId: d.moduleId }),
+      cmdItem('canvas.zoomIn'),
+      cmdItem('canvas.zoomOut'),
     ];
   }
-  const cobj = exhIsCobjKey(n.linker_key);
+  const c = { moduleId: d.moduleId, node: n };
   return [
-    n.linker_key ? { label: t('open'), icon: 'eye', onClick: () => openExhibitorNodeTarget(n.id) } : null,
-    exhIsTable(n) ? { label: t('exhCustomizeColumns'), icon: 'edit', onClick: () => openExhibitorFieldsModal(n.id) } : null,
-    cobj && !exhInTable(n) ? { label: t('exhCustomizeFields'), icon: 'edit', onClick: () => openExhibitorFieldsModal(n.id) } : null,
-    cobj && !exhInTable(n) ? { label: t('exhShowAsCard'), checked: exhIsCard(n), onClick: () => toggleExhibitorCard(n.id) } : null,
-    exhInTable(n) ? { label: t('exhRemoveFromTable'), onClick: () => exhUngroupRow(n.id) } : null,
-    n.linker_key ? { label: t('exhibitorLinkTo'), icon: 'relation', onClick: () => startExhibitorLink(n.id) } : null,
+    cmdItem('exhibitor.openNode', c),
+    cmdItem('exhibitor.columns', c),
+    cmdItem('exhibitor.fields', c),
+    cmdItem('exhibitor.showCard', c),
+    cmdItem('exhibitor.ungroup', c),
+    cmdItem('exhibitor.linkTo', c),
     { sep: true },
-    { label: t('exhibitorRemoveNode'), icon: 'delete', danger: true, onClick: () => removeExhibitorNode(n.id) },
-  ].filter(Boolean);
+    cmdItem('exhibitor.removeNode', c),
+  ];
 };

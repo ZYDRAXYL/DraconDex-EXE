@@ -4,7 +4,9 @@
 // positionPopupNear, positionSubmenuNear, ctxAnchor, the submenu grace
 // timer) rather than beside it. Adds:
 //   ctxMenu(ev, items)      a whole menu from data — [{label, icon, onClick,
-//                           danger, disabled, checked, hint, sub, sep}] —
+//                           danger, disabled, checked, hint, sub, subHtml,
+//                           sep}] — (subHtml: a hand-built flyout, e.g. the
+//                           grouped kind list) —
 //                           instead of another hand-built .kind-popup
 //   openCtxSubmenu(ev, html) the one hover-flyout opener the four copies in
 //                           popups.js / builder.js now call
@@ -35,13 +37,14 @@ function ctxItemsHtml(items) {
     if (it.sep) return '<div class="ctx-sep" role="separator"></div>';
     const i = _ctxActions.push(it) - 1;
     const icon = it.icon && I[it.icon] ? `<span class="kicon">${I[it.icon]}</span>` : '';
-    const cls = ['kind-list-item', it.sub ? 'kli-submenu-parent' : '', it.danger ? 'kli-danger' : '', it.disabled ? 'kli-disabled' : '']
+    const hasSub = !!(it.sub || it.subHtml);
+    const cls = ['kind-list-item', hasSub ? 'kli-submenu-parent' : '', it.danger ? 'kli-danger' : '', it.disabled ? 'kli-disabled' : '']
       .filter(Boolean).join(' ');
-    return `<div class="${cls}" role="menuitem" tabindex="-1" data-ci="${i}"${it.sub ? ' aria-haspopup="menu"' : ''}${it.disabled ? ' aria-disabled="true"' : ''}>
+    return `<div class="${cls}" role="menuitem" tabindex="-1" data-ci="${i}"${hasSub ? ' aria-haspopup="menu"' : ''}${it.disabled ? ' aria-disabled="true"' : ''}>
       ${icon}<span class="kli-name">${x(it.label)}</span>
       ${it.hint ? `<span class="kli-hint" data-no-i18n>${x(it.hint)}</span>` : ''}
       ${it.checked ? `<span class="ctx-check">${I.check}</span>` : ''}
-      ${it.sub ? `<span class="kli-arrow">${I.chevronRight || '›'}</span>` : ''}
+      ${hasSub ? `<span class="kli-arrow">${I.chevronRight || '›'}</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -56,7 +59,7 @@ function wireCtxItems(pop) {
     if (!row) return;
     const it = _ctxActions[Number(row.dataset.ci)];
     if (!it || it.disabled) return;
-    if (it.sub) { openCtxItemSubmenu(row, it); return; }
+    if (it.sub || it.subHtml) { openCtxItemSubmenu(row, it); return; }
     closeAllPopups();
     if (typeof it.onClick === 'function') it.onClick();
   });
@@ -64,7 +67,7 @@ function wireCtxItems(pop) {
     const row = e.target.closest('[data-ci]');
     if (!row) return;
     const it = _ctxActions[Number(row.dataset.ci)];
-    if (it?.sub) openCtxItemSubmenu(row, it);
+    if (it?.sub || it?.subHtml) openCtxItemSubmenu(row, it);
     else if (!pop.classList.contains('ctx-submenu')) scheduleCtxSubmenuClose();
   });
 }
@@ -91,6 +94,8 @@ function openCtxItemSubmenu(row, it) {
   const existing = document.querySelector('.ctx-submenu');
   if (existing && existing._ctxOwner === row) { cancelCtxSubmenuClose(); return existing; }
   existing?.remove();
+  // A hand-built flyout wires its own inline onclicks — no ctx-item wiring.
+  if (it.subHtml) return openCtxSubmenu({ currentTarget: row }, it.subHtml());
   const sub = typeof it.sub === 'function' ? it.sub() : it.sub;
   const pop = openCtxSubmenu({ currentTarget: row }, ctxItemsHtml(sub));
   if (pop) wireCtxItems(pop);

@@ -7,37 +7,38 @@
 // Contextual/Advanced tiers — nothing here is new capability, every item is
 // an action the board's toolbar or modal already had.
 
-const ctxZoomPair = (zoomIn, zoomOut) => [
-  { label: t('ctxZoomIn'), icon: 'plus', onClick: zoomIn },
-  { label: t('ctxZoomOut'), icon: 'minus', onClick: zoomOut },
-];
+// v5 Part 6: every row is a command (core/commands.js) — the same entry the
+// palette runs — so nothing on a canvas menu is findable only by right-click.
+const ctxZoomPair = () => [cmdItem('canvas.zoomIn'), cmdItem('canvas.zoomOut')];
 
 CTX_PROVIDERS['designer.canvas'] = () => {
   const d = S.designerData;
   if (!d) return [];
+  const c = { moduleId: d.moduleId };
   return [
-    { label: t('ctxAddShape'), icon: 'plus', sub: () => DG_SHAPES.map(sh => ({ label: `${DG_SHAPE_GLYPH[sh] || ''}  ${sh}`, onClick: () => addDesignNode(sh) })) },
-    { label: t('pinModuleLink'), icon: 'relation', onClick: () => openDesignPinModal() },
-    { label: t('edgeTool'), icon: 'move', onClick: () => startDesignEdge() },
+    cmdItem('designer.addShape', c),
+    cmdItem('designer.pinLink', c),
+    cmdItem('designer.edgeTool', c),
     { sep: true },
-    ...ctxZoomPair(() => designerZoomBy(0.15), () => designerZoomBy(-0.15)),
+    ...ctxZoomPair(),
     { sep: true },
-    { label: t('narratorLinkFilter'), icon: 'options', onClick: () => openDesignerLinkFilterModal(d.moduleId) },
+    cmdItem('designer.linkFilter', c),
   ];
 };
 
 CTX_PROVIDERS['sketcher.canvas'] = () => {
   const d = S.sketcherData;
   if (!d) return [];
+  const c = { moduleId: d.moduleId };
   return [
-    { label: t('penTool'), checked: skTool.mode === 'pen', onClick: () => setSketchTool('pen') },
-    { label: t('eraserTool'), checked: skTool.mode === 'eraser', onClick: () => setSketchTool('eraser') },
-    { label: t('pinModuleLink'), icon: 'relation', onClick: () => openSketchPinModal() },
+    cmdItem('sketcher.pen', c),
+    cmdItem('sketcher.eraser', c),
+    cmdItem('sketcher.pinLink', c),
     { sep: true },
-    { label: t('newPage'), icon: 'plus', onClick: () => openSketchPageModal(d.moduleId) },
-    { label: t('exportPng'), icon: 'export', onClick: () => exportSketchPng() },
+    cmdItem('sketcher.newPage', c),
+    cmdItem('sketcher.exportPng', c),
     { sep: true },
-    ...ctxZoomPair(() => sketchZoomBy(0.15), () => sketchZoomBy(-0.15)),
+    ...ctxZoomPair(),
   ];
 };
 
@@ -45,24 +46,27 @@ CTX_PROVIDERS['narrator.canvas'] = () => {
   const d = S.narratorData;
   if (!d) return [];
   return [
-    { label: t('addDialogue'), icon: 'plus', onClick: () => openNarratorDialogueModal(d.moduleId) },
+    cmdItem('narrator.addDialogue', { moduleId: d.moduleId }),
     { sep: true },
-    ...ctxZoomPair(() => zoomNarrator(1), () => zoomNarrator(-1)),
+    ...ctxZoomPair(),
   ];
 };
 
-CTX_PROVIDERS['manager.graph'] = () => ctxZoomPair(() => managerZoomBy(0.15), () => managerZoomBy(-0.15));
+CTX_PROVIDERS['manager.graph'] = () => ctxZoomPair();
 
 // Chronicler's downline graph and the one-line / compare timeline share a
-// menu: both are views of the same line.
-CTX_PROVIDERS['chronicler.graph'] = ({ resettable } = {}) => {
+// menu: both are views of the same line. (§10.6: with the top bar down to
+// Add Event, this menu and the floating strip carry the rest.)
+CTX_PROVIDERS['chronicler.graph'] = () => {
   const d = S.chroniclerData;
   if (!d) return [];
+  const c = { moduleId: d.moduleId };
   return [
-    d.activeId ? { label: t('addEvent'), icon: 'plus', onClick: () => openChroniclerEventModal(d.activeId) } : null,
-    { label: t('chrGraphOptions'), icon: 'options', onClick: () => openChroniclerGraphOptions(ctxAnchor()) },
-    resettable ? { label: t('chrResetView'), icon: 'return', onClick: () => resetChroniclerDownlineView() } : null,
-  ].filter(Boolean);
+    cmdItem('chronicler.addEvent', c),
+    cmdItem('chronicler.editLine', c),
+    cmdItem('chronicler.graphOptions', c),
+    cmdItem('chronicler.resetView', c),
+  ];
 };
 
 CTX_PROVIDERS['sagehut.graph'] = () => SAGEHUT_VIEWS.map(v => ({
@@ -70,8 +74,8 @@ CTX_PROVIDERS['sagehut.graph'] = () => SAGEHUT_VIEWS.map(v => ({
 }));
 
 CTX_PROVIDERS['exhibitor.graph'] = () => [
-  { label: t('addRelation'), icon: 'plus', onClick: () => openExhibitorRelationModal() },
-  { label: t('exhibitorOpenScene'), icon: 'relation', onClick: () => setExhibitorView('scene') },
+  cmdItem('exhibitor.addRelation', { moduleId: S.exhibitorData?.moduleId }),
+  cmdItem('exhibitor.openScene', { moduleId: S.exhibitorData?.moduleId }),
   { sep: true },
-  ...ctxZoomPair(() => exhibitorGraphZoomBy(0.1), () => exhibitorGraphZoomBy(-0.1)),
+  ...ctxZoomPair(),
 ];

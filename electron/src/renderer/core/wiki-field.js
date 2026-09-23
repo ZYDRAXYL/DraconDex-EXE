@@ -174,10 +174,7 @@ function initWikiFields() {
   document.addEventListener('contextmenu', (e) => {
     const el = e.target.closest?.(WIKI_FIELD_SEL);
     if (!el) return;
-    const has = wikiFieldHasSelection(el);
-    const pop = ctxMenu(e, [
-      { label: t('wikiConnectLink'), icon: 'relation', disabled: !has, hint: '[[ ]]', onClick: () => wrapWikiSelection(el) },
-    ]);
+    const pop = ctxMenu(e, [cmdItem('text.wikiLink', { el, always: true })]);
     // Keep the field focused while the menu is used: a blur would run the
     // field's own save-and-re-render and take the selection (and the
     // element) away before the wrap lands.

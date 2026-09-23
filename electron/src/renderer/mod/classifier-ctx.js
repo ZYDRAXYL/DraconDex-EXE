@@ -12,39 +12,41 @@
 const clsObjectById = (id) => S.classifierData?.objects.find(o => o.id === id)
   || (S.activeItemNode?.itemKind === 'classifier' && S.activeItemNode.id === id ? { id, name: S.activeItemNode.item?.name } : null);
 
+// v5 Part 6: rows are commands (core/commands.js). The selected object is
+// the palette's target for the object commands; a level row has none.
 CTX_PROVIDERS['classifier.object'] = ({ moduleId, objectId }) => {
-  const others = flattenModuleTree(S.moduleTree, 0).filter(({ m }) => m.kind === 'classifier' && m.id !== moduleId);
+  const c = { moduleId, objectId };
   return [
-    { label: t('open'), icon: 'eye', onClick: () => openItemNode('classifier', moduleId, objectId) },
+    cmdItem('classifier.openObject', c),
     { sep: true },
-    { label: t('rename'), icon: 'edit', onClick: () => openClassifierObjectModal(moduleId, objectId) },
-    { label: t('clsColorIcon'), icon: 'colors', onClick: () => openClassifierObjectModal(moduleId, objectId) },
-    { label: t('duplicate'), icon: 'copy', onClick: () => duplicateClassifierObject(objectId) },
-    { label: t('openInExhibitor'), icon: 'relation', onClick: () => openExhibitorFor(moduleId, `cobj_${objectId}`) },
-    {
-      label: t('moveTo'), icon: 'move', disabled: !others.length,
-      sub: () => others.map(({ m, depth }) => ({ label: `${'  '.repeat(depth)}${m.name}`, onClick: () => moveClassifierObject(objectId, m.id) })),
-    },
+    cmdItem('classifier.renameObject', c),
+    cmdItem('classifier.objectIcon', c),
+    cmdItem('classifier.duplicateObject', c),
+    cmdItem('classifier.objectExhibitor', c),
+    cmdItem('classifier.moveObject', c),
     { sep: true },
-    { label: t('delete'), icon: 'delete', danger: true, onClick: () => deleteClassifierObjectRow(objectId) },
+    cmdItem('classifier.deleteObject', c),
   ];
 };
 
 CTX_PROVIDERS['classifier.category'] = ({ moduleId }) => [
-  { label: t('addObject'), icon: 'plus', onClick: () => openClassifierObjectModal(moduleId) },
-  { label: t('clsFieldsOfCategory'), icon: 'edit', onClick: () => openClassifierFieldsModal(moduleId) },
-  { label: t('clsColorIcon'), icon: 'colors', onClick: () => openModuleIconPopup(moduleId, ctxAnchor()) },
+  cmdItem('classifier.addObject', { moduleId }),
+  cmdItem('classifier.fields', { moduleId }),
+  cmdItem('module.icon', { moduleId }),
   { sep: true },
-  { label: t('delete'), icon: 'delete', danger: true, onClick: () => deleteModuleNode(moduleId) },
+  cmdItem('module.delete', { moduleId }),
 ];
 
-CTX_PROVIDERS['classifier.level'] = ({ objectId, templateId, levelId }) => [
-  { label: t('clsInsertAbove'), onClick: () => insertClassifierLevel(objectId, templateId, levelId, 'before') },
-  { label: t('clsInsertBelow'), onClick: () => insertClassifierLevel(objectId, templateId, levelId, 'after') },
-  { label: t('duplicate'), icon: 'copy', onClick: () => insertClassifierLevel(objectId, templateId, levelId, 'after', levelId) },
-  { sep: true },
-  { label: t('delete'), icon: 'delete', danger: true, onClick: () => deleteClassifierLevelRow(levelId) },
-];
+CTX_PROVIDERS['classifier.level'] = ({ objectId, templateId, levelId }) => {
+  const c = { objectId, templateId, levelId };
+  return [
+    cmdItem('classifier.levelAbove', c),
+    cmdItem('classifier.levelBelow', c),
+    cmdItem('classifier.levelDuplicate', c),
+    { sep: true },
+    cmdItem('classifier.levelDelete', c),
+  ];
+};
 
 // ── Quick start (§7.4) ──────────────────────────────────────────────────
 // An empty category to "1 object, 1 field, ready to type into" in one

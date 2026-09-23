@@ -62,7 +62,7 @@ function buildFileViewerHtml() {
     body = `<div class="empty" style="margin-top:30px">
       ${c.hasProxy ? `<div class="fv-imgwrap"><img src="${src}?proxy=1" alt=""></div>` : ''}
       <p>${t('assetMissing')}</p>
-      <button class="btn btn-p" style="margin-top:10px" onclick="relinkImportFile(${f.id})">${t('assetRelink')}</button></div>`;
+      <button class="btn btn-p" style="margin-top:10px" data-cmd="asset.relink" onclick="runCommand('asset.relink',{fileId:${f.id}})">${t('assetRelink')}</button></div>`;
   } else if (c.kind === 'md') {
     body = `<div class="md-preview au-reading">${mdRender(c.text || '', { resolveLink: typeof resolveWikiNameCached === 'function' ? resolveWikiNameCached : null })}</div>`;
   } else if (c.kind === 'txt') {

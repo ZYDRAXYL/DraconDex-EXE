@@ -40,7 +40,7 @@ function buildLocatorMainHtml(m) {
     </div>
   </div>
   <div class="rel-underboard">
-    <div class="ph"><h4>${t('locatorAreas')}</h4><div class="acts"><button class="btn btn-g" onclick="openMapAreaModal()">${I.plus} ${t('locatorAddArea')}</button></div></div>
+    <div class="ph"><h4>${t('locatorAreas')}</h4><div class="acts">${cmdBtn('locator.addArea', { moduleId: m.id }, { cls: 'btn-g' })}</div></div>
     <div class="map-area-list" id="locator-area-list">${renderAreaList(S.locatorAreas || [])}</div>
   </div>`;
 }

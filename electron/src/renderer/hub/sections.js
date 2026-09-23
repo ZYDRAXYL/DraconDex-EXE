@@ -63,7 +63,7 @@ function buildHubHtml() {
         // needed — quickCreateModule already auto-names + enters inline
         // rename mode for every kind when called with no cat_type decision.
         `<button class="btn btn-g btn-i" onclick="event.stopPropagation();quickCreateModule('collector',null)" title="${kindLabel('collector')}">${I[KIND_ICON.collector]}</button>
-         <button class="btn btn-g btn-i" onclick="event.stopPropagation();openMainModuleModal(this)" title="${t('createMajorModule')}">${I.plus}</button>
+         <button class="btn btn-g btn-i" data-cmd="app.newModule" onclick="event.stopPropagation();runCommand('app.newModule',{},this)" title="${t('createMajorModule')}">${I.plus}</button>
          <button class="btn btn-g btn-i" onclick="event.stopPropagation();openNestOptionsPopup(this)" title="${t('nestOptionsTitle')}">${I.options}</button>`, h('nest')) },
     // Plan process2 part1 #2: moved into the Hub panel as its own accordion
     // section (was a standalone Builder-pane page) — see goToKindBrowserHub()

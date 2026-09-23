@@ -187,10 +187,10 @@ function renderModuleRail() {
   // rail's home button and stays out of that toggle list.
   const hqt = S.settings.hubQuickToggles || {};
   const hqtHidden = (key) => hqt[key] === false ? ' tool-toggle-hidden' : '';
-  let html = `<button class="nav-btn module-rail-tool${atHubHome ? ' active' : ''}" title="${t('nexusNest')}" onclick="goToNexusNestHub()">${I.home}<span class="nav-label">${t('nexusNest')}</span></button>
-    <button class="nav-btn module-rail-tool${hqtHidden('kinds')}" title="${t('kindBrowser')}" onclick="goToKindBrowserHub()" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.layer}<span class="nav-label">${t('kindBrowser')}</span></button>
-    <button class="nav-btn module-rail-tool${hqtHidden('sage')}" title="${t('sageHut')}" onclick="openSageTab('dataSize')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.sage}<span class="nav-label">${t('sageHut')}</span></button>
-    <button class="nav-btn module-rail-tool${hqtHidden('dock')}" title="${t('importDock')}" onclick="goToImportDockPage()" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.import}<span class="nav-label">${t('importDock')}</span></button>`;
+  let html = `<button class="nav-btn module-rail-tool${atHubHome ? ' active' : ''}" title="${t('nexusNest')}" data-cmd="app.nest" onclick="runCommand('app.nest')">${I.home}<span class="nav-label">${t('nexusNest')}</span></button>
+    <button class="nav-btn module-rail-tool${hqtHidden('kinds')}" title="${t('kindBrowser')}" data-cmd="app.kindBrowser" onclick="runCommand('app.kindBrowser')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.layer}<span class="nav-label">${t('kindBrowser')}</span></button>
+    <button class="nav-btn module-rail-tool${hqtHidden('sage')}" title="${t('sageHut')}" data-cmd="app.sageHut" onclick="runCommand('app.sageHut')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.sage}<span class="nav-label">${t('sageHut')}</span></button>
+    <button class="nav-btn module-rail-tool${hqtHidden('dock')}" title="${t('importDock')}" data-cmd="app.importDock" onclick="runCommand('app.importDock')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.import}<span class="nav-label">${t('importDock')}</span></button>`;
   if (pinned.length) html += `<div class="rail-sep module-rail-tool"></div>`;
   for (const m of pinned) {
     const active = S.activeModuleNode?.id === m.id ? ' active' : '';

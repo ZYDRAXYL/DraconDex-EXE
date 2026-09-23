@@ -42,7 +42,7 @@ function bindGlobalShortcuts() {
     // native undo (mdeditor.js) is never hijacked.
     if (key === 'z' && S.nexus) {
       e.preventDefault();
-      await handleHistoryShortcut(e.shiftKey ? 'redo' : 'undo');
+      await runCommand(e.shiftKey ? 'history.redo' : 'history.undo');
       return;
     }
     if (key === 'n' && S.activeModule === 'scribe' && S.nexus) { // new note

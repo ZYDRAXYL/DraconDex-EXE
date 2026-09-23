@@ -170,9 +170,9 @@ function buildImportFileRow(f, depth) {
 function buildImportDockRows() {
   ensureImportDock();
   const files = S.importFiles;
-  const actions = `<div class="li au-add" onclick="importDockPickFolder(null)">${I.plus}<span class="name">${t('importFolder')}</span></div>
-    <div class="li au-add" onclick="openAddAssetUrlModal(null)">${I.plus}<span class="name">${t('addAssetLink')}</span></div>
-    ${(files || []).some(f => f.missing) ? `<div class="li au-add" onclick="relinkMissingFromFolder()">${I.folder || ''}<span class="name">${t('assetRelinkFolder')}</span></div>` : ''}`;
+  const actions = `<div class="li au-add" data-cmd="dock.importFolder" onclick="runCommand('dock.importFolder')">${I.plus}<span class="name">${t('importFolder')}</span></div>
+    <div class="li au-add" data-cmd="dock.addLink" onclick="runCommand('dock.addLink')">${I.plus}<span class="name">${t('addAssetLink')}</span></div>
+    ${(files || []).some(f => f.missing) ? `<div class="li au-add" data-cmd="dock.relinkFolder" onclick="runCommand('dock.relinkFolder')">${I.folder || ''}<span class="name">${t('assetRelinkFolder')}</span></div>` : ''}`;
   const unfiled = (files || []).filter(f => f.module_ref == null);
   if (!files || !unfiled.length) {
     return `${files === null || files === undefined ? '' : `<div class="empty" style="padding:14px 10px"><p>${t('nestEmpty')}</p></div>`}${actions}`;
@@ -193,35 +193,27 @@ function toggleImportFolder(folder) {
 // ── Context menu (Dock rows and Nest leaves alike) ──────────────────────
 // Plan process3 part2: "delete import" only unlinks this file's metadata row
 // from the Nexus — the file on disk is never touched.
+// v5 Part 6: built from COMMANDS, so each row is also a palette command
+// while that file is open in the viewer.
 function openImportFileContextMenu(ev, id) {
-  ev.preventDefault();
-  ev.stopPropagation();
-  closeAllPopups();
-  const f = (S.importFiles || []).find(v => v.id === id);
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup context-menu-popup';
-  pop.innerHTML = `
-    <div class="kind-list-item kli-submenu-parent" onmouseenter="openAssetMoveSubmenu(event,${id})" onmouseleave="scheduleCtxSubmenuClose()">
-      <span class="kli-name">${x(t('assetMoveToModule'))}</span><span class="kli-arrow">${I.chevronRight}</span>
-    </div>
-    ${f && f.module_ref != null ? `<div class="kind-list-item" onclick="moveAssetToModule(${id},null)"><span class="kli-name">${x(t('assetMoveToTray'))}</span></div>` : ''}
-    ${f && f.missing ? `<div class="kind-list-item" onclick="closeAllPopups();relinkImportFile(${id})"><span class="kli-name">${x(t('assetRelink'))}</span></div>` : ''}
-    <div class="ctx-sep"></div>
-    <div class="kind-list-item kli-danger" onclick="closeAllPopups();deleteImportFileRow(${id})"><span class="kli-name">${x(t('delete'))}</span></div>`;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  positionPopupNear(pop, ctxAnchor(ev).getBoundingClientRect());
+  openCtx('asset.file', ev, { fileId: id });
 }
 
-// Same flyout shape as the module menu's "Move to" (hub/popups.js
-// openMoveToSubmenu), listing every module node as a filing target.
-function openAssetMoveSubmenu(ev, id) {
+CTX_PROVIDERS['asset.file'] = (c) => [
+  cmdItem('asset.moveTo', c),
+  cmdItem('asset.toTray', c),
+  cmdItem('asset.relink', c),
+  { sep: true },
+  cmdItem('asset.delete', c),
+];
+
+// Filing targets for "Move to module" — every module node except the one the
+// file is already in (same list shape as the module menu's "Move to").
+function assetMoveTargets(id) {
   const cur = (S.importFiles || []).find(v => v.id === id)?.module_ref ?? null;
-  const rows = flattenModuleTree(S.moduleTree, 0)
+  return flattenModuleTree(S.moduleTree, 0)
     .filter(({ m }) => m.id !== cur)
-    .map(({ m, depth }) => `<div class="kind-list-item" style="padding-left:${10 + depth * 14}px" onclick="moveAssetToModule(${id},${m.id})"><span class="kli-name">${x(m.name)}</span></div>`)
-    .join('');
-  openCtxSubmenu(ev, rows || `<div class="kind-list-item" style="opacity:.6;pointer-events:none"><span class="kli-name">${x(t('moveToNoTargets'))}</span></div>`);
+    .map(({ m, depth }) => ({ label: `${'  '.repeat(depth)}${m.name}`, onClick: () => moveAssetToModule(id, m.id) }));
 }
 
 // ── Import ──────────────────────────────────────────────────────────────
@@ -324,7 +316,7 @@ function buildModuleAssetsStripHtml(m) {
   return `<div class="module-assets">
     <span class="pk">${t('assetsHeader')}</span>
     ${chips}
-    <button class="btn btn-g btn-i" onclick="importDockPickFolder(${m.id})" title="${x(t('importFolderHere'))}">${I.folder || I.plus}</button>
-    <button class="btn btn-g btn-i" onclick="openAddAssetUrlModal(${m.id})" title="${x(t('addAssetLink'))}">${I.plus}</button>
+    ${cmdBtn('module.importFolder', { moduleId: m.id }, { iconOnly: true })}
+    ${cmdBtn('module.addLink', { moduleId: m.id }, { iconOnly: true })}
   </div>`;
 }

@@ -550,40 +550,12 @@ function builderPaneHeadHtml(i, pane, focused) {
 }
 
 // ═══ Pane right-click context menu (Plan procress1 part2 #2) ══════════
-// Same shape as the Nest tree's own module context menu (openModuleContextMenu
-// / buildModuleContextMenuHtml, hub/menus.js) and its "open in a new pane"
-// hover flyout (openPaneDirectionSubmenu / buildPaneDirectionListHtml,
-// hub/menus.js) — reuses those files' shared popup plumbing (hub/popups.js:
-// closeAllPopups/positionPopupNear/positionSubmenuNear/cancelCtxSubmenuClose/
-// scheduleCtxSubmenuClose/ctxAnchor) rather than inventing a second one.
+// The pane's right-click, built from COMMANDS (core/commands.js) like the
+// Nest's module menu — so split / close are palette commands too. The
+// provider sits in hub/menus.js: this file loads before hub/ctxmenu.js.
 function openBuilderPaneContextMenu(ev, paneIdx) {
   if (S.settings.workspaceStyle !== 'drake') return; // Wyvern/Dragon never split — no menu to offer
-  ev.preventDefault();
-  ev.stopPropagation();
-  closeAllPopups();
-  S.ctxMenuPos = { x: ev.clientX, y: ev.clientY };
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup context-menu-popup';
-  pop.innerHTML = buildBuilderPaneContextMenuHtml(paneIdx);
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  positionPopupNear(pop, ctxAnchor(ev).getBoundingClientRect());
-}
-function buildBuilderPaneContextMenuHtml(paneIdx) {
-  const isSplit = builderState().layoutTree.type === 'split';
-  return `
-    <div class="kind-list-item kli-submenu-parent" onmouseenter="openBuilderSeparateSubmenu(event,${paneIdx})" onmouseleave="scheduleCtxSubmenuClose()">
-      <span class="kli-name">${x(t('separatePane'))}</span><span class="kli-arrow">${I.chevronRight}</span>
-    </div>
-    ${isSplit ? `<div class="ctx-sep"></div><div class="kind-list-item" onclick="closeAllPopups();builderClosePane(${paneIdx})"><span class="kli-name">${x(t('closePane'))}</span></div>` : ''}`;
-}
-function buildBuilderSeparateListHtml(paneIdx) {
-  return [['h', '◫'], ['v', '⬓']].map(([dir, icon]) =>
-    `<div class="kind-list-item" onclick="closeAllPopups();builderSplitPane(${paneIdx},'${dir}')"><span class="kli-name">${icon} ${x(t('splitPane'))}</span></div>`
-  ).join('');
-}
-function openBuilderSeparateSubmenu(ev, paneIdx) {
-  openCtxSubmenu(ev, buildBuilderSeparateListHtml(paneIdx));
+  openCtx('builder.pane', ev, { paneIdx });
 }
 
 // ═══ Tab drag-reorder / cross-pane move (Plan part3 #1, reworked part1 #3)

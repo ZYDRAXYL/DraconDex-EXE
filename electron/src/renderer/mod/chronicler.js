@@ -104,15 +104,15 @@ function buildChroniclerMainHtml(m) {
   const lineSelect = timelines.length > 1 ? `<select id="chr-line-select" onchange="selectChroniclerTimeline(${m.id},this.value)">
     ${timelines.map(t => `<option value="${t.id}" ${t.id === activeId ? 'selected' : ''}>${x(t.line_name || '—')}</option>`).join('')}
   </select>` : '';
+  const c = { moduleId: m.id };
   const toolbar = `<div class="classifier-toolbar">
     ${lineSelect}
-    ${!timelines.length ? `<button class="btn btn-g btn-i" onclick="openChroniclerTimelineModal(${m.id})" title="${t('addTimelineLine')}">${I.plus}</button>` : ''}
-    ${activeId ? `<button class="btn btn-g btn-i" onclick="openChroniclerTimelineModal(${m.id},${activeId})" title="${t('edit')}">${I.edit}</button>` : ''}
-    ${activeId ? `<button class="btn btn-p" onclick="openChroniclerEventModal(${activeId})">${I.plus} ${t('addEvent')}</button>` : ''}
+    ${cmdBtn('chronicler.addLine', c, { iconOnly: true })}
+    ${cmdBtn('chronicler.editLine', c, { iconOnly: true })}
+    ${cmdBtn('chronicler.addEvent', c, { cls: 'btn-p' })}
     ${viewBar}
-    ${view === 'oneline' || view === 'downline'
-      ? `<button class="btn btn-g btn-i" onclick="event.stopPropagation();openChroniclerGraphOptions(this)" title="${t('chrGraphOptions')}">${I.options}</button>` : ''}
-    ${view === 'downline' ? `<button class="btn btn-g btn-i" onclick="resetChroniclerDownlineView()" title="${t('chrResetView')}">${I.return}</button>` : ''}
+    ${cmdBtn('chronicler.graphOptions', c, { iconOnly: true })}
+    ${cmdBtn('chronicler.resetView', c, { iconOnly: true })}
   </div>`;
 
   if (!timelines.length) {

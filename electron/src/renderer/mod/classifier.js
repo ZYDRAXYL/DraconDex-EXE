@@ -63,8 +63,8 @@ function buildClassifierMainHtml(m) {
   const viewBar = viewBarHtml(CLASSIFIER_VIEWS, view, v => `setClassifierView(${m.id},'${v}')`, v => t(CLASSIFIER_VIEW_KEY[v]));
   // §7.1: one primary action on the toolbar; fields are the advanced tier.
   const toolbar = `<div class="classifier-toolbar" oncontextmenu="openCtx('classifier.category',event,{moduleId:${m.id}})">
-    <button class="btn btn-p" onclick="openClassifierObjectModal(${m.id})">${I.plus} ${t('addObject')}</button>
-    <button class="btn btn-s" onclick="openClassifierFieldsModal(${m.id})">${I.edit} ${t('clsFieldsOfCategory')}</button>
+    ${cmdBtn('classifier.addObject', { moduleId: m.id }, { cls: 'btn-p' })}
+    ${cmdBtn('classifier.fields', { moduleId: m.id })}
     ${viewBar}
   </div>`;
   let body;

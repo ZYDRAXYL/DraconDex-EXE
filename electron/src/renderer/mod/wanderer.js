@@ -156,7 +156,7 @@ function buildWandererMainHtml(m) {
   const toolbar = `<div class="classifier-toolbar">
     <select onchange="setWandererRef(${m.id},'mapModule',this.value)" title="${t('pickLocatorRef')}">${opt(d.locators, d.mapModuleId, '')}</select>
     <select onchange="setWandererRef(${m.id},'timelineModule',this.value)" title="${t('pickChroniclerRef')}">${opt(d.chroniclers, d.timelineModuleId, '')}</select>
-    ${d.map && d.timeline ? `<button id="wnd-place-btn" class="btn ${d.placing ? 'btn-p' : 'btn-s'}" onclick="toggleWandererPlacing()">${I.pin} ${t('addMapEvent')}</button>` : ''}
+    ${cmdBtn('wanderer.place', { moduleId: m.id }, { cls: d.placing ? 'btn-p' : 'btn-s', id: 'wnd-place-btn' })}
     ${viewBar}
   </div>`;
   if (!d.map || !d.timeline) {

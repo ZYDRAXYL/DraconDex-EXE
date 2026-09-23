@@ -77,8 +77,8 @@ function buildManagerMainHtml(m) {
   const viewBar = viewBarHtml(MANAGER_VIEWS, view, v => `setManagerView(${m.id},'${v}')`, v => MANAGER_VIEW_LABEL[v]);
   const toolbar = `<div class="classifier-toolbar">
     <span class="vw-filterlabel">${t('exhibitorFilter')}</span>${d ? filterChipsHtml(d.def) : ''}
-    <button class="btn btn-g btn-i" onclick="openSavedFilterPopup(this,${m.id},S.managerData.def)" title="${t('editFilter')}">${I.edit}</button>
-    <button class="btn btn-s btn-sm" onclick="openManagerPickModal(${m.id})">${I.plus} ${t('managerPick')}${d?.picks.size ? ` <span class="cnt" data-no-i18n>${d.picks.size}</span>` : ''}</button>
+    ${cmdBtn('manager.editFilter', { moduleId: m.id }, { iconOnly: true })}
+    ${cmdBtn('manager.pick', { moduleId: m.id }, { cls: 'btn-s btn-sm', extra: d?.picks.size ? ` <span class="cnt" data-no-i18n>${d.picks.size}</span>` : '' })}
     ${viewBar}
   </div>`;
   if (!rows.length) {
@@ -171,14 +171,8 @@ function toggleManagerListRow(id) {
 
 // ── Right-click ─────────────────────────────────────────────────────────
 function openManagerRowMenu(ev, id) {
-  openModuleContextMenu(ev, id);
-  const d = S.managerData;
-  if (!d?.picks.has(id)) return;
-  // Hand-picked rows get one more row at the top of the Nest menu.
-  const pop = document.querySelector('.context-menu-popup, .kind-popup');
-  pop?.insertAdjacentHTML('afterbegin', `<div class="kind-list-item" onclick="closeAllPopups();setManagerPick(${d.moduleId},${id},false)">
-    <span class="kli-name">${x(t('managerUnpick'))}</span></div><div class="ctx-sep"></div>`);
-  if (pop) positionPopupNear(pop, ctxAnchor(ev).getBoundingClientRect());
+  if (!findModuleNode(id)) { ev?.preventDefault?.(); return; }
+  openCtx('manager.row', ev, { moduleId: id, managerId: S.managerData?.moduleId });
 }
 
 // ── Hand-pick ───────────────────────────────────────────────────────────
