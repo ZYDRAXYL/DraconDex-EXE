@@ -32,7 +32,7 @@ require.cache[core] = { id: core, filename: core, loaded: true, exports: { getDB
 // The v4 shape: the old kind CHECK and the old 3-column entity_relation.
 const V4_DDL = VAULT_DDL_SQL
   .replace(`'exhibitor','sketcher','designer','diviner'`, `'viewer','connector','sketcher','designer'`)
-  .replace(/(label TEXT,\s*color INTEGER REFERENCES use_color\(id\),\s*create_at TEXT NOT NULL DEFAULT \(datetime\('now'\)\)),\s*module_ref INTEGER REFERENCES module\(id\) ON DELETE SET NULL,\s*rel_type TEXT,\s*directed INTEGER NOT NULL DEFAULT 1,\s*UNIQUE\(from_key, to_key, label, rel_type\)/,
+  .replace(/(label TEXT,\s*color INTEGER REFERENCES use_color\(id\),\s*create_at TEXT NOT NULL DEFAULT \(datetime\('now'\)\)),\s*module_ref INTEGER REFERENCES module\(id\) ON DELETE SET NULL,\s*rel_type TEXT,\s*directed INTEGER NOT NULL DEFAULT 1,[\s\S]*?UNIQUE\(from_key, to_key, label, rel_type\)/,
     '$1,\n      UNIQUE(from_key, to_key, label)');
 
 function openVault(ddl) {

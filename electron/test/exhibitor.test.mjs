@@ -130,7 +130,7 @@ test('snapshot round trip carries the scene and the v5 relation fields', () => {
   v.createEntityRelation(1, 'cobj_10', 'cobj_11', 'sister', null, { relType: 'family', directed: false, moduleRef: scene });
   const snap = sync.serializeVault(1);
   assert.equal(snap.exhibitor.nodes.length, 3);
-  assert.deepEqual({ ...snap.relations[0], moduleId: undefined }, { fromKey: 'cobj_10', toKey: 'cobj_11', label: 'sister', relType: 'family', directed: 0, moduleId: undefined });
+  assert.deepEqual({ ...snap.relations[0], moduleId: undefined }, { fromKey: 'cobj_10', toKey: 'cobj_11', label: 'sister', relType: 'family', directed: 0, moduleId: undefined, validFrom: null, validTo: null });
 
   freshVault(); // a different vault: every id is remapped on the way in
   db.prepare(`INSERT INTO classifier_object (id, module_ref, name) SELECT 1, id, 'pad' FROM (SELECT ${mkModule('Pad', 'classifier')} AS id)`).run();
