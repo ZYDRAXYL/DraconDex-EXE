@@ -747,8 +747,8 @@ h('classifier:duplicateObject',   (id,n)                => db.duplicateObject(id
 h('classifier:moveObject',        (id,mref)             => db.moveObject(id,mref));
 h('classifier:getTemplates',      (mref)                => db.getTemplates(mref));
 h('classifier:getObjectTemplates',(mref,oref)           => db.getObjectTemplates(mref,oref));
-h('classifier:createTemplate',    (mref,d,t,lv,c,oref)  => db.createTemplate(mref,d,t,lv,c,oref));
-h('classifier:updateTemplate',    (id,d,t,lv,c)         => db.updateTemplate(id,d,t,lv,c));
+h('classifier:createTemplate',    (mref,d,t,lv,c,oref,op) => db.createTemplate(mref,d,t,lv,c,oref,op));
+h('classifier:updateTemplate',    (id,d,t,lv,c,op)      => db.updateTemplate(id,d,t,lv,c,op));
 h('classifier:deleteTemplate',    (id)                  => db.deleteTemplate(id));
 h('classifier:getAttrs',          (oid)                 => db.getAttrs(oid));
 h('classifier:upsertAttr',        (oid,tid,v)           => db.upsertAttr(oid,tid,v));
@@ -1001,6 +1001,16 @@ h('importdock:addUrl', (nx, url, name, moduleRef) => {
 h('importdock:openUrl', async (id) => {
   const f = db.getImportFile(id);
   const u = f && f.source_kind === 'url' ? normalizeAssetUrl(f.file_path) : null;
+  if (!u) return false;
+  await shell.openExternal(u);
+  return true;
+});
+// A Classifier url field (v5 Part 7, §11.3) — same rule as a URL asset:
+// main opens what the STORED value says, re-validated, never a string the
+// renderer hands over.
+h('classifier:openUrl', async (objectId, templateId) => {
+  const v = db.getAttrValue(objectId, templateId);
+  const u = v != null ? normalizeAssetUrl(v) : null;
   if (!u) return false;
   await shell.openExternal(u);
   return true;

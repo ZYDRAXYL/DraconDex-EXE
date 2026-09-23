@@ -68,7 +68,7 @@ function buildExhibitorEdgesHtml(d) {
     <tr>
       <td>${x(exhNameOf(e2.from))}</td>
       <td>${e2.wiki ? `<span class="htag" data-no-i18n>[[wiki]]</span>` : x(e2.label || '—')}</td>
-      <td>${x(e2.relType || '')}</td>
+      <td>${x(e2.relType || '')}${e2.span ? `<div class="drafter-hint" data-no-i18n>${x(e2.span)}</div>` : ''}</td>
       <td data-no-i18n>${e2.wiki ? '┄' : e2.directed ? '→' : '—'}</td>
       <td>${x(exhNameOf(e2.to))}</td>
       <td>${e2.id ? `<span class="acts">

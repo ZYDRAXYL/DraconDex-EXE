@@ -34,7 +34,7 @@ function buildExhibitorInspectorHtml(d, n) {
     return `<div class="cls-link-row">
       <span data-no-i18n>${arrow}</span>
       <span class="cls-link-name" onclick="openExhibitorRelationModal(${r.id})">${x(exhNameOf(other))}</span>
-      ${r.label || r.rel_type ? `<span class="cls-link-lbl">${x([r.label, r.rel_type && `(${r.rel_type})`].filter(Boolean).join(' '))}</span>` : ''}
+      ${r.label || r.rel_type ? `<span class="cls-link-lbl">${x([r.label, r.rel_type && `(${exhRelTypeText(r.rel_type)})`, exhSpanText(r)].filter(Boolean).join(' '))}</span>` : ''}
     </div>`;
   }).join('');
   return `<aside class="exh-insp">

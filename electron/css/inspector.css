@@ -318,3 +318,19 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .mgr-picked{color:var(--accent);display:inline-flex;vertical-align:-2px}
 .mgr-picked .icon{width:12px;height:12px}
 .mgr-pick{flex-shrink:0}
+/* v5 Part 7 §11.3: Classifier field types (mod/cls-field-types.js). */
+.cls-multi{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.cls-multi-opt{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:calc(12.5px * var(--fsc,1))}
+.cls-multi-opt input{width:auto;margin:0}
+.cls-url{display:flex;gap:4px;align-items:center}
+.cls-url .pv-input{flex:1;min-width:0}
+.cls-rel{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.cls-rel-chip{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.cls-rel-x{opacity:.6;cursor:pointer}
+.cls-rel-x:hover{opacity:1;color:var(--danger)}
+.cls-formula{font-variant-numeric:tabular-nums;color:var(--t2)}
+.cls-opt[hidden]{display:none}
+.cls-num{text-align:right;font-variant-numeric:tabular-nums}
+/* v5 Part 7 §11.6: relations in story time (mod/exhibitor-time.js). */
+.exh-asof{width:6.5em}
+.exh-span{display:flex;gap:6px;flex-wrap:wrap}

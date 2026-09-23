@@ -12,7 +12,8 @@
 //   - an empty name toasts instead of silently doing nothing (§7.5 bug #8)
 //   - delete names the thing being deleted (§7.5 bug #4)
 
-const CLASSIFIER_DISPTYPE_KEY = { text: 'dispTypeText', textarea: 'dispTypeTextarea', date: 'dispTypeDate' };
+// The ten field types and their per-type settings live in
+// mod/cls-field-types.js (v5 Part 7, §11.3).
 
 // `editing` is a template id when the form is prefilled for an edit.
 async function openClassifierFieldsModal(moduleId, editing = null) {
@@ -32,12 +33,11 @@ async function openClassifierFieldsModal(moduleId, editing = null) {
     </div>
     <div class="fg" style="margin-top:10px"><label>${cur ? t('editAttribute') : t('addAttribute')}</label><input id="ct-name" placeholder="${t('name')}" value="${x(cur?.description || '')}"></div>
     <div class="fg"><label>${t('displayType')}</label>
-      <select id="ct-disptype">
-        <option value="text" ${cur?.attribute_type === 'text' || !cur ? 'selected' : ''}>${t('dispTypeText')}</option>
-        <option value="textarea" ${cur?.attribute_type === 'textarea' ? 'selected' : ''}>${t('dispTypeTextarea')}</option>
-        <option value="date" ${cur?.attribute_type === 'date' ? 'selected' : ''}>${t('dispTypeDate')}</option>
+      <select id="ct-disptype" onchange="onClsTypeChange(this)">
+        ${CLS_FIELD_TYPES.map(ty => `<option value="${ty}" ${clsType(cur) === ty ? 'selected' : ''}>${t(CLASSIFIER_DISPTYPE_KEY[ty])}</option>`).join('')}
       </select>
     </div>
+    ${clsFieldOptionsHtml(cur)}
     <details class="cls-adv"${advancedOpen ? ' open' : ''}>
       <summary>${t('clsLevelAndCondition')}</summary>
       <p class="drafter-hint">${t('clsLevelAndConditionHint')}</p>
@@ -65,8 +65,9 @@ async function submitClassifierTemplateForm(moduleId, editing = null) {
   const dispType = q('#ct-disptype')?.value || 'text';
   const levelable = q('#ct-lv')?.value === '1';
   const hasCondition = q('#ct-cond')?.value === '1';
-  if (editing) await api.classifier.updateTemplate(editing, name, dispType, levelable, hasCondition);
-  else await api.classifier.createTemplate(moduleId, name, dispType, levelable, hasCondition, null);
+  const options = readClsFieldOptions(dispType);
+  if (editing) await api.classifier.updateTemplate(editing, name, dispType, levelable, hasCondition, options);
+  else await api.classifier.createTemplate(moduleId, name, dispType, levelable, hasCondition, null, options);
   closeModal();
   await refreshClassifier();
   toast(t(editing ? 'saved' : 'created'), 'ok');

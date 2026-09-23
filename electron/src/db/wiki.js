@@ -429,6 +429,11 @@ function getEntityPath(key) {
         const r = d.prepare(`SELECT module_ref FROM story_dialogue WHERE id=?`).get(id);
         return r && { kind: 'sdlg', moduleId: r.module_ref, dialogueId: id };
       }
+      // v5 Part 7: a Sketcher page opens its module on that page.
+      case 'skpg': {
+        const r = d.prepare(`SELECT module_ref FROM sketch_page WHERE id=?`).get(id);
+        return r && { kind: 'skpg', moduleId: r.module_ref, pageId: id };
+      }
       // v5 Part 4: a link written in an Exhibitor note leads back to that
       // note, selected, in its own Exhibitor.
       case 'exn': {

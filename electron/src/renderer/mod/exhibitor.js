@@ -17,7 +17,7 @@
 const EXH_VIEWS = ['scene', 'graph', 'table', 'cards', 'board', 'edges'];
 const EXH_VIEW_LABEL = { scene: 'Scene', graph: 'Graph', table: 'Table', cards: 'Cards', board: 'Board', edges: 'Edges' };
 // Locale-invariant item badges, like KIND_LABEL (A.3 #7).
-const VIEWER_KIND_LABEL = { object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset' };
+const VIEWER_KIND_LABEL = { object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset', page: 'Page' };
 
 const viewerTimeText = (it) => it.time && it.time.years != null
   ? fmtDate(it.time.day, it.time.month, it.time.years, it.time.hour, it.time.minute) : '';
@@ -61,13 +61,15 @@ async function loadExhibitorData(m) {
   }
   if (ui.seedScene === '1') await api.module.setUi(m.id, 'seedScene', '0');
   const cls = await loadExhibitorClassifierValues(nodes, byKey);
+  const fieldNames = await loadExhibitorFieldNames(relations); // mod/exhibitor-time.js
   const prev = S.exhibitorData?.moduleId === m.id ? S.exhibitorData : null;
   const focusNode = focus ? nodes.find(n => n.linker_key === focus)
     : nodes.find(n => n.id === S.pendingExhibitNode) || null;
   S.exhibitorFocusKey = null;
   S.pendingExhibitNode = null;
   S.exhibitorData = {
-    moduleId: m.id, def, items, index: byKey, relations, wikiPairs, relTypes, cls,
+    moduleId: m.id, def, items, index: byKey, relations, wikiPairs, relTypes, cls, fieldNames,
+    asOf: ui.relAsOf ? ui.relAsOf : null,
     view: EXH_VIEWS.includes(ui.activeView) ? ui.activeView : 'scene',
     groupBy: ui.boardGroupBy || 'module',
     nodes, camera: scene.view,
@@ -129,8 +131,10 @@ const exhNameOf = (key) => S.exhibitorData?.index.get(key)?.name || key;
 // a real relation already covers (in either direction).
 function exhibitorEdgesAmong(keys) {
   const d = S.exhibitorData;
-  const rels = d.relations.filter(r => keys.has(r.from_key) && keys.has(r.to_key))
-    .map(r => ({ id: r.id, from: r.from_key, to: r.to_key, label: r.label || '', relType: r.rel_type || '',
+  // v5 Part 7 (§11.6): "as of" a story year hides relations that do not
+  // hold then (mod/exhibitor-time.js).
+  const rels = d.relations.filter(r => keys.has(r.from_key) && keys.has(r.to_key) && exhRelHoldsAt(r, d.asOf))
+    .map(r => ({ id: r.id, from: r.from_key, to: r.to_key, label: r.label || '', relType: exhRelTypeText(r.rel_type), span: exhSpanText(r),
       directed: r.directed !== 0, color: r.color_code || null, wiki: false }));
   const seen = new Set(rels.flatMap(e => [`${e.from}→${e.to}`, `${e.to}→${e.from}`]));
   const wiki = d.wikiPairs.filter(p => keys.has(p.from) && keys.has(p.to) && !seen.has(`${p.from}→${p.to}`))
@@ -145,6 +149,7 @@ function buildExhibitorMainHtml(m) {
   const toolbar = `<div class="classifier-toolbar">
     ${cmdBtn('exhibitor.addRelation', { moduleId: d.moduleId }, { cls: 'btn-p' })}
     <span class="vw-filterlabel">${t('exhibitorFilter')}</span>${filterChipsHtml(d.def)}
+    ${exhAsOfInputHtml(d)}
     ${cmdBtn('exhibitor.editFilter', { moduleId: d.moduleId }, { iconOnly: true })}
     ${viewBar}
   </div>`;
@@ -226,9 +231,13 @@ function openExhibitorRelationModal(relId = null, fromKey = null, toKey = null) 
       <div><label>${t('relTo')}</label><select id="xr-to" ${rel ? 'disabled' : ''}>${opts(to)}</select></div>
     </div>
     <div class="fg"><label>${t('relationLabel')}</label><input id="xr-label" value="${x(rel?.label || '')}" autocomplete="off"></div>
-    <div class="fg"><label>${t('relationType')}</label><input id="xr-type" list="xr-types" value="${x(rel?.rel_type || '')}" autocomplete="off">
-      <datalist id="xr-types">${d.relTypes.map(v => `<option value="${x(v)}">`).join('')}</datalist></div>
+    ${exhIsFieldRel(rel?.rel_type)
+      // A field's row keeps its type (mod/exhibitor-time.js) — shown, not editable.
+      ? `<div class="fg"><label>${t('relationType')}</label><input value="${x(exhRelTypeText(rel.rel_type))}" disabled data-no-i18n></div>`
+      : `<div class="fg"><label>${t('relationType')}</label><input id="xr-type" list="xr-types" value="${x(rel?.rel_type || '')}" autocomplete="off">
+      <datalist id="xr-types">${d.relTypes.filter(v => !exhIsFieldRel(v)).map(v => `<option value="${x(v)}">`).join('')}</datalist></div>`}
     <label class="fv-useimg"><input type="checkbox" id="xr-dir" ${!rel || rel.directed !== 0 ? 'checked' : ''}> ${t('relationDirected')}</label>
+    ${exhSpanFieldsHtml(rel)}
     <div class="mfoot">
       ${rel ? `<button class="btn btn-d" onclick="deleteExhibitorRelation(${rel.id})">${t('delete')}</button>` : ''}
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
@@ -240,7 +249,8 @@ function openExhibitorRelationModal(relId = null, fromKey = null, toKey = null) 
 async function submitExhibitorRelation(relId) {
   const d = S.exhibitorData;
   const label = q('#xr-label').value.trim();
-  const opts = { relType: q('#xr-type').value.trim() || null, directed: q('#xr-dir').checked };
+  const opts = { directed: q('#xr-dir').checked, validFrom: readExhSpan('xr-vf'), validTo: readExhSpan('xr-vt') };
+  if (q('#xr-type')) opts.relType = q('#xr-type').value.trim() || null; // a field's row keeps its type
   if (relId) {
     await api.viewer.updateRelation(relId, label, undefined, opts);
   } else {

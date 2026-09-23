@@ -34,13 +34,14 @@ function column(table, col, rebuild) {
 }
 
 // A Classifier element's indexed text is its note plus the value of every
-// free-text field it has — shared or private, text or textarea (not date).
+// free-text field it has — shared or private, text or textarea. Not date,
+// number, select, checkbox or url (§11.3): those values are not prose.
 // One source key (cobj_<id>) for all of them, so the element is the link
 // source a backlink names, whichever of its fields holds the [[link]].
 const CLS_TEXT_ATTRS = `
   SELECT ca.id, ca.attribute_value AS v FROM classifier_attribute ca
   JOIN classifier_template ct ON ct.id=ca.template_ref
-  WHERE ca.object_ref=? AND COALESCE(ct.attribute_type,'text') <> 'date'
+  WHERE ca.object_ref=? AND COALESCE(ct.attribute_type,'text') IN ('text','textarea')
   ORDER BY ct.display_order, ct.id`;
 
 function classifierObjectContent(d, id) {

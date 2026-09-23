@@ -94,7 +94,7 @@ function classifierTableCellHtml(m, o, c) {
     const text = rows.length ? `${last.level_label || last.condition_value || last.info_value || '—'} · ${rows.length}` : '—';
     return `<td class="cls-cell cls-cell-ro" title="${x(t('clsLevelCellHint'))}" onclick="openItemNode('classifier',${m.id},${o.id})" data-no-i18n>${x(text)}</td>`;
   }
-  return `<td class="cls-cell" contenteditable="true"${c.attribute_type === 'date' ? '' : ' data-wiki'} data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${x(o.attrMap[c.id] || '')}</td>`;
+  return clsFieldCellHtml(m, o, c); // v5 Part 7 (§11.3), mod/cls-field-types.js
 }
 
 function renderClassifierTable(m, d) {

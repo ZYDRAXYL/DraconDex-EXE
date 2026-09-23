@@ -58,11 +58,32 @@ function _viewerIndex(nexusId) {
 // Vault-wide on purpose: Classifier, Chronicler, Narrator, Manager and the
 // Exhibitor all read it. v5 (APP docs/V5.md §3.5): an Exhibitor is where
 // relations are authored; module_ref records which one (provenance only).
+// v5 Part 7 (§11.6): a relation may hold only for a span of story time,
+// on Chronicler's own date rows — returned as {day, month, years} or null.
+const spanDate = (r, p) => (r[`${p}_years`] == null ? null : { day: r[`${p}_day`], month: r[`${p}_month`], years: r[`${p}_years`] });
 const getEntityRelations = (nexusId) => getDB().prepare(`
-  SELECT er.*, uc.color_code FROM entity_relation er
+  SELECT er.*, uc.color_code,
+         f.day vf_day, f.month vf_month, f.years vf_years, u.day vt_day, u.month vt_month, u.years vt_years
+  FROM entity_relation er
   LEFT JOIN use_color uc ON uc.id = er.color
+  LEFT JOIN timeline_date f ON f.id = er.valid_from LEFT JOIN timeline_date u ON u.id = er.valid_to
   WHERE er.nexus_ref=? ORDER BY er.id
-`).all(nexusId);
+`).all(nexusId).map(({ vf_day, vf_month, vf_years, vt_day, vt_month, vt_years, ...r }) => ({
+  ...r,
+  validFrom: spanDate({ vf_day, vf_month, vf_years }, 'vf'),
+  validTo: spanDate({ vt_day, vt_month, vt_years }, 'vt'),
+}));
+
+// A span end as a timeline_date id: {years[, month, day]} → the shared row.
+function spanDateId(v) {
+  if (!v || v.years == null || v.years === '' || !Number.isFinite(Number(v.years))) return null;
+  return require('./timeline').getOrCreateDate(Number(v.day) || 1, Number(v.month) || 1, Number(v.years), 0, 0);
+}
+function setRelationSpan(id, opts) {
+  if (!opts) return;
+  if ('validFrom' in opts) getDB().prepare(`UPDATE entity_relation SET valid_from=? WHERE id=?`).run(spanDateId(opts.validFrom), id);
+  if ('validTo' in opts) getDB().prepare(`UPDATE entity_relation SET valid_to=? WHERE id=?`).run(spanDateId(opts.validTo), id);
+}
 
 // INSERT OR IGNORE rather than ON CONFLICT(...): the v5 duplicate guard is
 // the expression index idx_entity_relation_v5 (NULL-safe on label/rel_type),
@@ -76,7 +97,7 @@ function createEntityRelation(nexusId, fromKey, toKey, label, colorId, opts = {}
     VALUES (?,?,?,?,?,?,?,?)
   `).run(nexusId, fromKey, toKey, label || null, colorId || null, relType,
          opts.directed === false || opts.directed === 0 ? 0 : 1, opts.moduleRef ?? null);
-  if (r.changes) return r.lastInsertRowid;
+  if (r.changes) { setRelationSpan(r.lastInsertRowid, opts); return r.lastInsertRowid; }
   return d.prepare(`
     SELECT id FROM entity_relation WHERE from_key=? AND to_key=?
       AND COALESCE(label,'')=COALESCE(?,'') AND COALESCE(rel_type,'')=COALESCE(?,'')
@@ -96,6 +117,7 @@ function updateEntityRelation(id, label, colorId, opts) {
   if (opts && 'directed' in opts) {
     d.prepare(`UPDATE entity_relation SET directed=? WHERE id=?`).run(opts.directed ? 1 : 0, id);
   }
+  setRelationSpan(id, opts);
 }
 
 const deleteEntityRelation = (id) =>

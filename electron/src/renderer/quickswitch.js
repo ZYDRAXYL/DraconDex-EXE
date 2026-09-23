@@ -48,8 +48,8 @@ function fuzzyScore(query, name) {
   return score - Math.floor(nn.length / 4);
 }
 
-const QS_BADGE = { object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset', command: 'Command' };
-const QS_ICON_BY_KIND = { object: 'person', event: 'timeline', dialogue: 'narrator', chapter: 'book', chat: 'story', module: 'layer', file: 'import', command: 'func' };
+const QS_BADGE = { object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset', page: 'Page', command: 'Command' };
+const QS_ICON_BY_KIND = { object: 'person', event: 'timeline', dialogue: 'narrator', chapter: 'book', chat: 'story', module: 'layer', file: 'import', page: 'sketcher', command: 'func' };
 
 function qsCommandItems() {
   return paletteCommands(_qsFocusEl).map(c => ({

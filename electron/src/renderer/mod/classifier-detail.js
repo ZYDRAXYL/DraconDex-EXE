@@ -252,7 +252,9 @@ function classifierRelationRowsHtml(keys) {
     // meaningless without knowing which module it lives in.
     const from = e ? `${e.moduleName || '—'}${e.moduleKind ? ` · ${kindLabel(e.moduleKind)}` : ''}` : '—';
     const arrow = l.directed === 0 ? '—' : mine === l.from_key ? '→' : '←';
-    const lbl = [l.label, l.rel_type && `(${l.rel_type})`].filter(Boolean).join(' ');
+    // A relation field's row (§11.3) is labelled with the field, not its id.
+    const rt = /^ctpl_\d+$/.test(l.rel_type || '') ? clsFieldNameOf(Number(l.rel_type.slice(5))) : l.rel_type;
+    const lbl = [l.label, rt && `(${rt})`].filter(Boolean).join(' ');
     return `<div class="cls-link-row">
       ${own ? `<span class="cls-link-name" onclick="openEntityByKey('${x(mine)}')">${x(own.name)}</span>` : ''}
       <span data-no-i18n>${arrow}</span>
@@ -278,16 +280,8 @@ function renderClassifierLinksHtml(o) {
 // classifier_level rather than in the single attribute_value cell.
 function renderClassifierAttrRowHtml(o, c) {
   if (c.levelable || c.has_condition) return renderClassifierLevelTableHtml(o, c);
-  const val = x(o.attrMap[c.id] || '');
-  let valueHtml;
-  if (c.attribute_type === 'textarea') {
-    valueHtml = `<textarea class="pv-textarea" data-wiki data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrInput(this)">${val}</textarea>`;
-  } else if (c.attribute_type === 'date') {
-    valueHtml = clsDateInputsHtml(o, c);
-  } else {
-    valueHtml = `<span class="pv" contenteditable="true" data-wiki data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${val}</span>`;
-  }
-  return `<div class="prop"><span class="pk">${x(c.description)}</span>${valueHtml}</div>`;
+  // v5 Part 7 (§11.3): one renderer per field type, mod/cls-field-types.js.
+  return `<div class="prop"><span class="pk">${x(c.description)}</span>${clsFieldValueHtml(o, c)}</div>`;
 }
 
 // `templates` defaults to the ambient module-view cache — the item page
