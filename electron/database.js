@@ -7,6 +7,8 @@ const trash     = require('./src/db/trash');
 const search    = require('./src/db/search');
 const mdExport  = require('./src/db/md-export');
 const diviner   = require('./src/db/diviner');
+const bundle    = require('./src/db/bundle');
+const guide     = require('./src/db/guide');
 const scribe    = require('./src/db/scribe');
 const wiki      = require('./src/db/wiki');
 const color     = require('./src/db/color');
@@ -51,6 +53,8 @@ module.exports = {
   ...search,
   ...mdExport,
   ...diviner,
+  ...bundle,
+  ...guide,
   ...scribe,
   ...wiki,
   ...color,

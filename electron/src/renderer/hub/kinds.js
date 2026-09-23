@@ -87,11 +87,10 @@ const KIND_DESC_KEY = {
   diviner:'kindDescDiviner',
 };
 
-// The 4 legacy-fixed-module-shaped structure templates Artisan's create
-// wizard (src/renderer/artisan.js, lazy-loaded) can build in one step —
-// moved here (Plan part2 #1) so both the Nest "+" popup's "Start from
-// template" row (buildKindListHtml) and the Hub's Legacy Import section
-// (ensureLegacyImport) can read it synchronously without a lazy-load.
+// The 4 legacy fixed modules, now only for the Hub's Legacy Import section
+// (ensureLegacyImport, MIGRATE_TARGETS below). New projects start from a
+// genre bundle instead (hub/bundles.js, v5 Part 7 §11.7) — this list is kept
+// under its old name because the migrate path is built from it.
 const ARTISAN_TARGETS = [
   { id: 'director',  icon: 'director',  labelKey: 'director' },
   { id: 'navigator', icon: 'navigator', labelKey: 'navigator' },

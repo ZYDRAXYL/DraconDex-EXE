@@ -83,6 +83,8 @@ const COMMANDS = {
   'app.sageHut': { label: 'sageHut', icon: 'sage', scope: 'app', run: () => openSageTab('dataSize'), surfaces: ['rail'] },
   'app.importDock': { label: 'importDock', icon: 'import', scope: 'app', run: () => goToImportDockPage(), surfaces: ['rail'] },
   'app.exportMarkdown': { label: 'exportMarkdown', icon: 'export', scope: 'app', when: (c) => !!(c?.nexusId || S.nexus), run: (c) => nexusExportMarkdown(c?.nexusId || S.nexus.id), surfaces: ['nexus.options'] },
+  'app.createGuide': { label: 'guideCreate', icon: 'info', scope: 'app', when: () => !!S.nexus, run: () => createGuideBundle(), surfaces: ['bundle.picker'] },
+  'app.newProject': { label: 'bundleTitle', icon: 'artisan', scope: 'app', when: () => !!S.nexus, run: (c) => openBundlePicker(c?.parentId ?? null), surfaces: ['kind.picker'] },
   'app.trash': { label: 'trashTitle', icon: 'delete', scope: 'app', when: () => !!S.nexus, run: () => openTrashPanel(), surfaces: ['rail'] },
   'app.newModule': { label: 'createMajorModule', icon: 'plus', scope: 'app', run: (c, el) => openKindPopup(null, el || paletteAnchor()), surfaces: ['nest.head'] },
   'app.settings': { label: 'settingOpenWindow', icon: 'settings', scope: 'app', run: () => openSettingWindow(), surfaces: ['settings.menu'] },

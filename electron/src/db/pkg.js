@@ -34,7 +34,9 @@ const RELEASE_BASE = (!require('electron').app.isPackaged && process.env.DRACOND
 const CATALOG_TIMEOUT_MS = 15000;
 const PAYLOAD_TIMEOUT_MS = 30000;
 const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
-const KINDS = new Set(['theme', 'lang', 'view', 'uistyle']);
+// v5 Part 7 (§11.8): 'guide' — the in-app guide in one more language; read
+// by db/guide.js when a guide is made, never applied to the UI here.
+const KINDS = new Set(['theme', 'lang', 'view', 'uistyle', 'guide']);
 
 // Must match DraconDex-PKG's tools/build-packages.mjs. Duplicated rather than
 // shared because the app cannot read that repo at runtime — but the app is the
@@ -131,6 +133,8 @@ function validatePayload(kind, payload) {
       if (typeof v !== 'string' || !CSS_VALUE.test(v)) return `unsafe value for "${k}"`;
     }
     for (const req of UISTYLE_REQUIRED) if (!vars[req]) return `missing required token ${req}`;
+  } else if (kind === 'guide') {
+    return require('./guide').validateGuide(payload);
   }
   return null;
 }

@@ -311,13 +311,13 @@ function buildKindListHtml(parentId, excludeCollector = false, withSearch = fals
     html += `<input class="kind-search" placeholder="${x(t('kindSearch'))}" oninput="filterKindList(this)"
       onkeydown="if(event.key==='Enter'){event.preventDefault();this.closest('.kind-popup').querySelector('[data-kind-row]:not([hidden])')?.click()}">`;
   }
-  // Plan part2 #1: Artisan's create-wizard ("start from template") only
-  // ever builds a top-level module — only offer it where a brand-new
-  // top-level module is being created.
-  if (parentId == null) {
-    html += `<div class="kind-list-item kind-artisan-row" onclick="openArtisanTemplateList(this)">
+  // v5 Part 7 (§11.7): "start from template" is a genre bundle — a whole
+  // project in one click (hub/bundles.js). A bundle is a folder, so it can
+  // start anywhere a folder can: at the top, or inside another folder.
+  if (parentId == null || findModuleNode(parentId)?.kind === 'collector') {
+    html += `<div class="kind-list-item kind-artisan-row" data-cmd="app.newProject" onclick="closeAllPopups();runCommand('app.newProject',{parentId:${parentId ?? 'null'}})">
       <span class="kicon" style="color:${x(KIND_COLOR.manager)}">${I.artisan}</span>
-      <span class="kli-text"><span class="kli-name">${t('artStartTemplate')}</span><span class="kli-desc">${t('artV3CardD')}</span></span>
+      <span class="kli-text"><span class="kli-name">${t('artStartTemplate')}</span><span class="kli-desc">${t('bundleRowD')}</span></span>
     </div>`;
   }
   const allowed = (k) => !(excludeCollector && k === 'collector');
@@ -351,24 +351,6 @@ function filterKindList(inp) {
   const pop = inp.closest('.kind-popup');
   pop.querySelectorAll('[data-kind-row]').forEach(r => { r.hidden = !!needle && !r.dataset.search.includes(needle); });
   pop.querySelectorAll('[data-kind-head], .kind-artisan-row').forEach(h => { h.hidden = !!needle; });
-}
-
-// Swaps the same popup's content to the 4 template targets (same swap-
-// innerHTML idiom as buildCatTypeListHtml below) — artisan.js isn't in
-// index.html's eager <script> list, so it needs a lazy-load before its
-// startArtisanWizard/ARTISAN_TARGETS-consuming markup can run.
-async function openArtisanTemplateList(anchor) {
-  const pop = document.querySelector('.kind-popup');
-  if (!pop) return;
-  await loadModule('src/renderer/artisan.js');
-  pop.innerHTML = buildArtisanTemplateListHtml();
-}
-function buildArtisanTemplateListHtml() {
-  return ARTISAN_TARGETS.map(tg => `
-    <div class="kind-list-item" onclick="closeAllPopups();startArtisanWizard('${tg.id}')">
-      <span class="kicon">${I[tg.icon]}</span>
-      <span class="kli-text"><span class="kli-name">${t(tg.labelKey)}</span></span>
-    </div>`).join('');
 }
 
 // v5 Part 3 (V5.md §7.4, decided): Classifier no longer stops for a cat_type

@@ -369,3 +369,18 @@
 .trash-list{max-height:min(420px,60vh);overflow-y:auto}
 .trash-list .li{gap:8px}
 .trash-list .acts{margin-left:auto;display:flex;gap:4px}
+
+/* ── Genre bundles + guide picker (v5 Part 7, V5.md §11.7–§11.8) ── */
+.bundle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.bundle-card{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
+.bundle-card.bundle-guide{border-style:dashed}
+.bundle-head{display:flex;align-items:center;gap:8px}
+.bundle-head .kicon .icon{width:18px;height:18px}
+.bundle-mods{display:flex;flex-wrap:wrap;gap:4px}
+.bundle-mod{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:999px;background:var(--raised);font-size:calc(11px * var(--fsc,1));color:var(--t2)}
+.bundle-mod .icon{width:11px;height:11px}
+.bundle-acts{display:flex;gap:6px;justify-content:flex-end;margin-top:auto}
+.bundle-adj-row{display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:center;margin-bottom:6px}
+.bundle-adj-mod{display:inline-flex;align-items:center;gap:4px}
+.bundle-adj-fields{grid-column:2;font-size:calc(12px * var(--fsc,1))}
+.bundle-adj-fields input{display:block;width:100%;margin-top:4px}

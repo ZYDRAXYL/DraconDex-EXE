@@ -163,9 +163,11 @@ async function init() {
   // it must fire exactly once even if the tour script fails to load.
   if (!isPopup && S.nexus && localStorage.getItem(NEXUS_PENDING_GUIDE_KEY) === String(S.nexus.id)) {
     localStorage.removeItem(NEXUS_PENDING_GUIDE_KEY);
-    loadModule('src/renderer/guide.js').then(() => {
-      if (typeof startNexusGuide === 'function') startNexusGuide();
-    }).catch(() => {});
+    // v5 Part 7 (§11.8): the example folder, then the tour over it.
+    Promise.resolve(createGuideBundle({ quiet: true })).catch(() => {})
+      .then(() => loadModule('src/renderer/guide.js'))
+      .then(() => { if (typeof startNexusGuide === 'function') startNexusGuide(); })
+      .catch(() => {});
   }
   bindNav();
   bindWikilinkClicks();

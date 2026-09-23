@@ -38,6 +38,10 @@ contextBridge.exposeInMainWorld('api', {
     rebuild: (nx)          => inv('search:rebuild', nx),
     query:   (nx,qy)       => inv('search:query', nx, qy),
   },
+  bundle: {
+    create:        (nx,parent,spec) => inv('bundle:create', nx, parent, spec),
+    guide:         (locale)         => inv('bundle:guide', locale),
+  },
   diviner: {
     getTables:     (mref)          => inv('diviner:getTables', mref),
     tablesInNexus: (nx)            => inv('diviner:tablesInNexus', nx),

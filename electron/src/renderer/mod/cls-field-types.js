@@ -169,9 +169,12 @@ async function openClsRelationPicker(moduleId, oid, tid) {
     .find(tp => tp.id === tid) || { options: null };
   const kinds = clsFieldOpts(c).targetKinds;
   const allow = Array.isArray(kinds) && kinds.length ? new Set(kinds) : null;
+  // A bundle's field can point into one category ("Weapon" → the Weapons
+  // Classifier it was made with, §11.7).
+  const inModule = clsFieldOpts(c).targetModuleId || null;
   const have = new Set(clsFieldRels(oid, tid).map(r => r.to_key));
   const pool = (await api.viewer.index(S.nexus.id))
-    .filter(it => (!allow || allow.has(it.kind)) && it.key !== `cobj_${oid}` && !have.has(it.key));
+    .filter(it => (!allow || allow.has(it.kind)) && (!inModule || it.moduleId === inModule) && it.key !== `cobj_${oid}` && !have.has(it.key));
   window._clsRelPick = { moduleId, oid, tid, pool };
   openModal(t('clsRelationAdd'), `
     <input id="cls-rel-q" placeholder="${x(t('kindSearch'))}" oninput="paintClsRelationPicker()" autocomplete="off">

@@ -66,11 +66,13 @@ async function submitClassifierTemplateForm(moduleId, editing = null) {
   const levelable = q('#ct-lv')?.value === '1';
   const hasCondition = q('#ct-cond')?.value === '1';
   let options = readClsFieldOptions(dispType);
-  // A field's role (a story variable's type / default, §11.6) is not in the
-  // form — keep it through an edit, or Narrator would stop seeing the field.
+  // Two settings are not in the form — a field's role (a story variable's
+  // type / default, §11.6) and a bundle's target category (§11.7). Keep
+  // them through an edit, or Narrator / the picker would stop seeing them.
   const cur = editing ? S.classifierData?.templates?.find(tp => tp.id === editing) : null;
-  const role = cur ? clsFieldOpts(cur).role : null;
+  const { role, targetModuleId } = cur ? clsFieldOpts(cur) : {};
   if (role) options = { ...(options || {}), role };
+  if (targetModuleId && dispType === 'relation') options = { ...(options || {}), targetModuleId };
   if (editing) await api.classifier.updateTemplate(editing, name, dispType, levelable, hasCondition, options);
   else await api.classifier.createTemplate(moduleId, name, dispType, levelable, hasCondition, null, options);
   closeModal();

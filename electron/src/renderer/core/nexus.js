@@ -270,6 +270,7 @@ async function createNexusSubmit() {
     // Users who opted in get the coach-marks tour once the vault home is rendered.
     if (S._guideAfterCreate) {
       S._guideAfterCreate = false;
+      await createGuideBundle({ quiet: true }); // v5 Part 7 (§11.8): the example folder first
       await loadModule('src/renderer/guide.js');
       if (typeof startNexusGuide === 'function') startNexusGuide();
     }
