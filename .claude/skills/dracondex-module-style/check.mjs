@@ -187,6 +187,53 @@ console.log('=== i18n parity (COMMON_UI_TEXT fallback dict) ===');
   }
 }
 
+// ═══ Global check 2c: every module kind is fully registered ═══
+// V5.md §9.4. MODULE_KINDS is a flat array and each kind's metadata sits in
+// separate flat maps beside it (hub/kinds.js). A 16th kind added to the
+// array but forgotten in KIND_CATEGORY would not throw anywhere — it would
+// fall through as "not data", drop out of the Manager's pool and out of the
+// kind picker's groups, silently. The APK gets this for free from Dart's
+// exhaustive switch; here the checker does it.
+console.log('=== module kind registry (hub/kinds.js) ===');
+{
+  let kindsSrc = '';
+  try { kindsSrc = read(app('src/renderer/hub/kinds.js')); } catch (_) {}
+  const arrayOf = (name) => {
+    const m = kindsSrc.match(new RegExp(`const ${name}\\s*=\\s*\\[([\\s\\S]*?)\\];`));
+    return m ? [...m[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]) : null;
+  };
+  const mapOf = (name) => {
+    const m = kindsSrc.match(new RegExp(`const ${name}\\s*=\\s*\\{([\\s\\S]*?)\\n\\};`));
+    return m ? new Map([...m[1].replace(/\/\/[^\n]*/g, '').matchAll(/([a-z_]+)\s*:\s*'([^']*)'/g)].map((x) => [x[1], x[2]])) : null;
+  };
+  const kinds = arrayOf('MODULE_KINDS');
+  if (!kinds) warn('could not locate `const MODULE_KINDS` in hub/kinds.js');
+  else {
+    const CATEGORIES = new Set(['structure', 'view', 'data']);
+    let bad = 0;
+    for (const name of ['KIND_CATEGORY', 'KIND_ICON', 'KIND_LABEL', 'KIND_COLOR', 'KIND_DESC_KEY']) {
+      const map = mapOf(name);
+      if (!map) { bad++; err(`hub/kinds.js: \`const ${name}\` not found`); continue; }
+      const missing = kinds.filter((k) => !map.has(k));
+      if (missing.length) { bad++; err(`${name} has no entry for kind(s): ${missing.join(', ')}`); }
+      const stray = [...map.keys()].filter((k) => !kinds.includes(k));
+      if (stray.length) { bad++; err(`${name} lists kind(s) not in MODULE_KINDS: ${stray.join(', ')}`); }
+      if (name === 'KIND_CATEGORY') {
+        const wrong = [...map].filter(([, v]) => !CATEGORIES.has(v)).map(([k, v]) => `${k}=${v}`);
+        if (wrong.length) { bad++; err(`KIND_CATEGORY values must be structure/view/data: ${wrong.join(', ')}`); }
+      }
+    }
+    // The picker's groups (§9.5) must place every kind exactly once.
+    const groupsSrc = kindsSrc.match(/const KIND_GROUPS\s*=\s*\[([\s\S]*?)\n\];/)?.[1] || '';
+    const grouped = [...groupsSrc.matchAll(/kinds:\s*\[([^\]]*)\]/g)].flatMap((g) => [...g[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]));
+    const ungrouped = kinds.filter((k) => !grouped.includes(k));
+    const twice = grouped.filter((k, i) => grouped.indexOf(k) !== i);
+    if (ungrouped.length) { bad++; err(`KIND_GROUPS never lists kind(s): ${ungrouped.join(', ')} — they vanish from the create picker`); }
+    if (twice.length) { bad++; err(`KIND_GROUPS lists kind(s) twice: ${[...new Set(twice)].join(', ')}`); }
+    if (!bad) ok(`${kinds.length} kinds, each with a category, icon, label, colour, description and picker group`);
+  }
+}
+
 // ═══ Per-file lint ═══
 // Recursive: renderer code lives in src/renderer/{,mod/,core/,hub/,navigator/,
 // hero/}. A flat readdir here used to skip mod/ entirely and would now skip

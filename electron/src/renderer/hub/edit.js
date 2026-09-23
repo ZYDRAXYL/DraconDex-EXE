@@ -111,8 +111,24 @@ async function saveModuleHandle(id, value) {
   toast(t('saved'), 'ok');
 }
 
+// The confirm says what is really lost, by the kind's category (V5.md §9.4,
+// §7.5 — a confirm has to be specific to be worth reading): a data module
+// takes its content with it; a view loses only its layout and selection; a
+// folder takes every module inside it (module.parent_id cascades).
+function moduleDeleteMessage(m) {
+  const cat = KIND_CATEGORY[m?.kind];
+  if (cat === 'view') return t('moduleDeleteView');
+  if (cat === 'structure') {
+    let n = 0;
+    const walk = (list) => { for (const c of list || []) { n++; walk(c.children); } };
+    walk(m.children);
+    return n ? t('moduleDeleteFolder').replace('{n}', n) : t('moduleDeleteFolderEmpty');
+  }
+  return t('moduleDeleteData');
+}
+
 async function deleteModuleNode(id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(moduleDeleteMessage(findModuleNode(id)))) return;
   await api.module.delete(id);
   if (S.activeModuleNode?.id === id) S.activeModuleNode = null;
   await reloadModuleTree();
