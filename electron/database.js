@@ -4,6 +4,7 @@ const nexus     = require('./src/db/nexus');
 const teach     = require('./src/db/teach');
 const preset    = require('./src/db/preset');
 const trash     = require('./src/db/trash');
+const search    = require('./src/db/search');
 const scribe    = require('./src/db/scribe');
 const wiki      = require('./src/db/wiki');
 const color     = require('./src/db/color');
@@ -45,6 +46,7 @@ module.exports = {
   ...teach,
   ...preset,
   ...trash,
+  ...search,
   ...scribe,
   ...wiki,
   ...color,

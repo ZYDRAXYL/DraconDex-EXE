@@ -723,6 +723,9 @@ h('trash:list',    (nx)      => db.listTrash(nx));
 h('trash:restore', (nx, id)  => db.restoreTrash(nx, id));
 h('trash:delete',  (nx, id)  => db.deleteTrash(nx, id));
 h('trash:empty',   (nx)      => db.emptyTrash(nx));
+// v5 Part 7 (§11.4): content search (FTS5 trigram, LIKE fallback).
+h('search:rebuild', (nx)     => db.rebuildSearch(nx, true));
+h('search:query',   (nx, qy) => db.searchContent(nx, qy));
 h('module:duplicate',   (id)          => db.duplicateModule(id));
 h('module:move',        (nx,id,parentId,ids) => db.moveModule(nx,id,parentId,ids));
 h('module:normalizeReport', ()        => db.takeParentNormalizeReport());

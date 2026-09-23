@@ -33,6 +33,10 @@ contextBridge.exposeInMainWorld('api', {
     taught:       (nx)     => inv('nexus:taught', nx),
     markTaught:   (nx,tip,st) => inv('nexus:markTaught', nx, tip, st),
   },
+  search: {
+    rebuild: (nx)          => inv('search:rebuild', nx),
+    query:   (nx,qy)       => inv('search:query', nx, qy),
+  },
   trash: {
     module:  (nx,id)       => inv('trash:module', nx, id),
     list:    (nx)          => inv('trash:list', nx),

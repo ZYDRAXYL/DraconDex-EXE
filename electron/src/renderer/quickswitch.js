@@ -19,6 +19,11 @@
 // not a second shortcut: one Ctrl+P. Commands rank with things; a leading
 // `>` shows commands only. A command matches its translated name AND its
 // English one, so an English word still finds it under a Thai UI.
+//
+// v5 Part 7 (§11.4): it also searches CONTENT — the text inside notes,
+// fields, chapters, chats (db/search.js, FTS5 trigram). Content hits come
+// after the name matches, badged "Text", with the matching passage as the
+// crumb. The index is rebuilt as the palette opens.
 
 let _qsItems = [];    // merged, annotated result pool
 let _qsShown = [];
@@ -48,7 +53,9 @@ function fuzzyScore(query, name) {
   return score - Math.floor(nn.length / 4);
 }
 
-const QS_BADGE = { object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset', page: 'Page', command: 'Command' };
+let _qsContentTimer = null;
+let _qsContentSeq = 0;
+const QS_BADGE = { text: 'Text', object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset', page: 'Page', command: 'Command' };
 const QS_ICON_BY_KIND = { object: 'person', event: 'timeline', dialogue: 'narrator', chapter: 'book', chat: 'story', module: 'layer', file: 'import', page: 'sketcher', command: 'func' };
 
 function qsCommandItems() {
@@ -175,6 +182,7 @@ async function openQuickSwitcher(seed = '') {
   _qsFocusEl = ae && /^(TEXTAREA|INPUT)$/.test(ae.tagName) ? ae : null;
 
   _qsItems = await qsBuildPool();
+  if (typeof api.search?.rebuild === 'function') api.search.rebuild(S.nexus.id).catch(() => {});
   const byKey = new Map(_qsItems.map(e => [e.key, e]));
   const badges = [...new Set(_qsItems.map(e => e.badge))].sort();
   const canPin = ['sketcher', 'designer'].includes(S.activeModuleNode?.kind);
@@ -272,6 +280,26 @@ async function openQuickSwitcher(seed = '') {
     }
     _qsIdx = 0;
     paint();
+    // Content hits (§11.4) arrive a moment later, below the name matches —
+    // never from '>' (commands only) and never for a single character.
+    clearTimeout(_qsContentTimer);
+    if (!cmdOnly && [...qv].length >= 2 && typeof api.search?.query === 'function') {
+      const seq = ++_qsContentSeq;
+      _qsContentTimer = setTimeout(async () => {
+        const hits = await api.search.query(S.nexus.id, qv).catch(() => []);
+        if (seq !== _qsContentSeq || !document.contains(list)) return;
+        const shown = new Set(_qsShown.map(e => e.key));
+        const byKey = new Map(_qsItems.map(e => [e.key, e]));
+        const extra = hits.filter(h => !shown.has(h.key)).map(h => {
+          const base = byKey.get(h.key);
+          return { key: h.key, name: h.title || base?.name || h.key, color: base?.color, badge: QS_BADGE.text,
+            icon: base?.icon || I.search, moduleId: base?.moduleId ?? null, crumb: h.snippet || '', count: base?.count || 0, content: true };
+        });
+        if (!extra.length) return;
+        _qsShown = _qsShown.concat(extra).slice(0, 80);
+        paint();
+      }, 180);
+    }
   };
 
   const accept = async (mode) => {
