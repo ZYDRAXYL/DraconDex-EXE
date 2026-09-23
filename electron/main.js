@@ -726,6 +726,19 @@ h('trash:empty',   (nx)      => db.emptyTrash(nx));
 // v5 Part 7 (§11.4): content search (FTS5 trigram, LIKE fallback).
 h('search:rebuild', (nx)     => db.rebuildSearch(nx, true));
 h('search:query',   (nx, qy) => db.searchContent(nx, qy));
+
+// v5 Part 7 (§11.4): the whole Nexus as .md files in a .zip — export only.
+h('nexus:exportMarkdown', async (id) => {
+  const n = db.getNexus(id);
+  if (!n) return { ok: false, code: 'not_found' };
+  const safe = String(n.name || 'nexus').replace(/[\\/:*?"<>|]/g, '_');
+  const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'Export Markdown', defaultPath: path.join(app.getPath('documents'), `${safe}-markdown.zip`),
+    filters: [{ name: 'Markdown (.zip)', extensions: ['zip'] }],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  return db.exportNexusMarkdown(id, result.filePath);
+});
 h('module:duplicate',   (id)          => db.duplicateModule(id));
 h('module:move',        (nx,id,parentId,ids) => db.moveModule(nx,id,parentId,ids));
 h('module:normalizeReport', ()        => db.takeParentNormalizeReport());

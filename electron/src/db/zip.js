@@ -51,8 +51,9 @@ function scanFile(p) {
   return { crc, size };
 }
 
-// entries: [{ name, path, deflate? }] — name is the path inside the archive
-// ('/' separated). Returns { ok, entries, bytes } or { ok:false, code }.
+// entries: [{ name, path, deflate? }] or [{ name, data }] — name is the path
+// inside the archive ('/' separated); `data` (a string or Buffer) is an entry
+// made in memory, always a deflate candidate. Returns { ok, entries, bytes } or { ok:false, code }.
 function writeZip(outPath, entries) {
   if (entries.length > 0xfffe) return { ok: false, code: 'too_many' };
   const out = fs.openSync(outPath, 'w');
@@ -64,8 +65,8 @@ function writeZip(outPath, entries) {
       const name = Buffer.from(String(e.name).replace(/\\/g, '/'), 'utf8');
       const { time, date } = dosTime(e.mtime || new Date());
       let method = 0, crc, size, csize, data = null;
-      if (e.deflate) {
-        const raw = fs.readFileSync(e.path);
+      if (e.deflate || e.data != null) {
+        const raw = e.data != null ? Buffer.from(e.data) : fs.readFileSync(e.path);
         crc = crc32(raw); size = raw.length;
         data = zlib.deflateRawSync(raw, { level: 6 });
         if (data.length < raw.length) { method = 8; csize = data.length; } else { data = raw; csize = size; }

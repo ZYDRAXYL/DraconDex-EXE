@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('api', {
     relink:       (id)     => inv('nexus:relink', id),
     duplicate:    (id)     => inv('nexus:duplicate', id),
     exportFile:   (id)     => inv('nexus:exportFile', id),
+    exportMarkdown: (id)   => inv('nexus:exportMarkdown', id),
     shareFile:    (id)     => inv('nexus:shareFile', id),
     revealFile:   (id)     => inv('nexus:revealFile', id),
     taught:       (nx)     => inv('nexus:taught', nx),

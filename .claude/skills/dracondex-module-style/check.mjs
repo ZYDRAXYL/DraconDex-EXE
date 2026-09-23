@@ -256,7 +256,7 @@ console.log('=== command registry (core/commands.js) ===');
     'canvas.ctx': ['mod/canvas-ctx.js'], 'classifier.ctx': ['mod/classifier-ctx.js'], 'exhibitor.ctx': ['mod/exhibitor-cards.js'],
     'locator.page': ['mod/locator.js'], 'sketcher.board': ['mod/sketcher.js'], 'scribe.toolbar': ['mod/chatscribe.js'],
     'empty.state': ['hub/kind-page.js'],
-    'kind.picker': ['hub/menus.js'],
+    'kind.picker': ['hub/menus.js'], 'nexus.options': ['core/nexus-options.js'],
   };
   const surfaceFiles = (sf) => SURFACE_FILES[sf] || (sf.endsWith('.toolbar') ? [`mod/${sf.slice(0, -8)}.js`] : null);
   const srcOf = (f) => { try { return read(app(R + f)); } catch (_) { return null; } };
