@@ -84,7 +84,7 @@ function buildNarratorDialogueListHtml(d) {
         <svg class="icon tree-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="${open ? '6 9 12 15 18 9' : '9 18 15 12 9 6'}"/></svg>
       </div>
       ${open ? `<div class="chr-insp-body">
-        <div class="fg"><label>${t('description')}</label><textarea onchange="saveNarratorDialogueDescription(${dl.id},this)">${x(dl.description || '')}</textarea></div>
+        <div class="fg"><label>${t('description')}</label><textarea data-wiki onchange="saveNarratorDialogueDescription(${dl.id},this)">${x(dl.description || '')}</textarea></div>
       </div>` : ''}
     </div>`;
   }

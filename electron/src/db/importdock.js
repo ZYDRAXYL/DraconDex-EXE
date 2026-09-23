@@ -8,6 +8,7 @@
 // and the Import Dock is now just the tray for those. folder stays as
 // provenance only.
 const { getDB } = require('./core');
+const { collectorNameOfDir } = require('./mirror');
 const { PROXY_VAULT_BUDGET } = require('./asset-media');
 
 // Every column except the proxy BLOB — a folder of images would otherwise
@@ -107,7 +108,9 @@ function importFolderTree(nexusId, parentId, dirs, files) {
       const key = segs.join('/');
       if (idOf.has(key)) return idOf.get(key);
       const parent = segs.length > 1 ? ensure(segs.slice(0, -1)) : root;
-      const name = segs[segs.length - 1];
+      // The folder's name IS the collector's name — the same pair db/mirror.js
+      // uses the other way round, so import and mirror meet (§8.11.4).
+      const name = collectorNameOfDir(segs[segs.length - 1]);
       let id = find.get(nexusId, parent, name)?.id;
       if (!id) {
         // Only the top folder is a user-visible "create" in nexus history;

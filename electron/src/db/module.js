@@ -1,5 +1,6 @@
 'use strict';
 const { getDB } = require('./core');
+const { assertCollectorParent, takeParentNormalizeReport } = require('./module-parents');
 const wiki = require('./wiki');
 const versions = require('./versions');
 
@@ -54,9 +55,12 @@ function assertHandleFree(handle, nexusRef, exceptId = null) {
   if (clash) throw new Error('handle already in use');
 }
 
-function createModule(data, { logHistory = true } = {}) {
+// anyParent: only db/migrate_v3.js, which builds the v3 tree (children under
+// a Manager "project") and normalizes it into collectors when it finishes.
+function createModule(data, { logHistory = true, anyParent = false } = {}) {
   const d = getDB();
   const { nexus_ref, parent_id = null, name, kind, icon = null, icon_color = null, color = null, cat_type = null } = data;
+  if (!anyParent) assertCollectorParent(d, parent_id); // V5.md §8.8
   const handle = normalizeHandle(data.handle);
   assertHandleFree(handle, nexus_ref);
   const maxOrder = d.prepare(`SELECT COALESCE(MAX(display_order),-1) AS m FROM module WHERE nexus_ref=? AND parent_id IS ?`)
@@ -174,6 +178,7 @@ function deleteModule(id) {
 // renderer before this is ever called — see hub.js's onNestDrop.
 function moveModule(nexusRef, moduleId, newParentId, orderedSiblingIds) {
   const d = getDB();
+  assertCollectorParent(d, newParentId); // V5.md §8.8 — only a collector holds modules
   const prev = d.prepare(`SELECT parent_id, name FROM module WHERE id=?`).get(moduleId);
   const tx = d.transaction(() => {
     d.prepare(`UPDATE module SET parent_id=? WHERE id=? AND nexus_ref=?`).run(newParentId, moduleId, nexusRef);
@@ -338,71 +343,12 @@ const getModuleInspector = (moduleId) => getDB().readTx(() => ({
   ui: getModuleUi(moduleId),
 }))();
 
-// Process 8 part 2: Manager's Table/Cards used to show each child's
-// module_attribute count — a field almost nobody fills in, so the column read
-// as "0" everywhere and said nothing about the tree. It is replaced by two
-// counts that describe the tree itself, per direct child:
-//   majors — every module BELOW that child, at any depth (itself excluded)
-//   minors — that child's OWN minor elements
-// Returns {childModuleId: {majors, minors}}, both defaulting to 0.
-//
-// The element tables are the wider 9-table set from db/sage.js, not
-// getNestItems' 5: a Narrator or Locator child reporting 0 elements when it
-// plainly holds some would read as a bug, not as "that kind has no items".
-const CHILD_ELEMENT_COUNT_SQL = [
-  `SELECT o.module_ref AS mid, COUNT(*) AS c FROM classifier_object o
-     JOIN module m ON o.module_ref=m.id WHERE m.parent_id=? GROUP BY o.module_ref`,
-  `SELECT tl.module_ref AS mid, COUNT(*) AS c FROM timeline_event te
-     JOIN timeline tl ON te.timeline_id=tl.id JOIN module m ON tl.module_ref=m.id
-     WHERE m.parent_id=? GROUP BY tl.module_ref`,
-  `SELECT sd.module_ref AS mid, COUNT(*) AS c FROM story_dialogue sd
-     JOIN module m ON sd.module_ref=m.id WHERE m.parent_id=? GROUP BY sd.module_ref`,
-  `SELECT ch.module_ref AS mid, COUNT(*) AS c FROM book_chapter ch
-     JOIN module m ON ch.module_ref=m.id WHERE m.parent_id=? GROUP BY ch.module_ref`,
-  `SELECT s.module_ref AS mid, COUNT(*) AS c FROM chat_session s
-     JOIN module m ON s.module_ref=m.id WHERE m.parent_id=? GROUP BY s.module_ref`,
-  `SELECT sp.module_ref AS mid, COUNT(*) AS c FROM sketch_page sp
-     JOIN module m ON sp.module_ref=m.id WHERE m.parent_id=? GROUP BY sp.module_ref`,
-  `SELECT dn.module_ref AS mid, COUNT(*) AS c FROM design_node dn
-     JOIN module m ON dn.module_ref=m.id WHERE m.parent_id=? GROUP BY dn.module_ref`,
-  `SELECT me.module_ref AS mid, COUNT(*) AS c FROM map_event me
-     JOIN module m ON me.module_ref=m.id WHERE m.parent_id=? GROUP BY me.module_ref`,
-  `SELECT mp.module_ref AS mid, COUNT(*) AS c FROM map_point mp
-     JOIN module m ON mp.module_ref=m.id WHERE m.parent_id=? GROUP BY mp.module_ref`,
-];
-
-function getChildModuleStats(parentId) {
-  const d = getDB();
-  return d.readTx(() => {
-    const out = {};
-    const row = (id) => (out[id] || (out[id] = { majors: 0, minors: 0 }));
-    for (const c of d.prepare(`SELECT id FROM module WHERE parent_id=?`).all(parentId)) row(c.id);
-    // One walk down from each direct child; the child seeds its own group, so
-    // COUNT(*)-1 is "everything below it".
-    for (const r of d.prepare(`
-      WITH RECURSIVE sub(id, root) AS (
-        SELECT id, id FROM module WHERE parent_id=?
-        UNION ALL
-        SELECT m.id, s.root FROM module m JOIN sub s ON m.parent_id=s.id
-      )
-      SELECT root, COUNT(*) - 1 AS majors FROM sub GROUP BY root
-    `).all(parentId)) row(r.root).majors = r.majors;
-    for (const sql of CHILD_ELEMENT_COUNT_SQL) {
-      // A vault whose schema predates one of these tables must not take the
-      // whole panel down over it — same tolerance db/sage.js's roll-up has.
-      try {
-        for (const r of d.prepare(sql).all(parentId)) row(r.mid).minors += r.c;
-      } catch (_) {}
-    }
-    return out;
-  })();
-}
-
 module.exports = {
   getTree, getModule, createModule, updateModule, updateModuleDescription, deleteModule,
   duplicateModule, moveModule, countModules, nexusOfModule, getNestItems,
   getModuleAttrs, upsertModuleAttr, deleteModuleAttr,
   getModuleUi, setModuleUi,
   getModuleTags, setModuleTags,
-  getModuleLinks, getModuleInspector, getChildModuleStats,
+  getModuleLinks, getModuleInspector,
+  takeParentNormalizeReport,
 };

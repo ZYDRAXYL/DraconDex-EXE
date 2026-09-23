@@ -216,7 +216,7 @@ async function buildChroniclerEventInspectorHtml(ev, tlid) {
       <div class="fg"><label>${t('startDate')} *</label>${dateInputsHTML('chr-insp-s', ev, 's_day', 's_month', 's_years', 's_hour', 's_minute', `saveChroniclerInspectorField(${ev.id},${tlid})`)}</div>
       <div class="fg"><label>${t('endDate')}</label>${dateInputsHTML('chr-insp-e', ev, 'e_day', 'e_month', 'e_years', 'e_hour', 'e_minute', `saveChroniclerInspectorField(${ev.id},${tlid})`)}</div>
     </div>
-    <div class="fg"><label>${t('story')}</label><textarea id="chr-insp-story" onchange="saveChroniclerInspectorField(${ev.id},${tlid})">${x(ev.story || '')}</textarea></div>
+    <div class="fg"><label>${t('story')}</label><textarea id="chr-insp-story" data-wiki onchange="saveChroniclerInspectorField(${ev.id},${tlid})">${x(ev.story || '')}</textarea></div>
     ${renderChroniclerEventLinksHtml(ev)}`;
 }
 
@@ -403,7 +403,7 @@ async function openChroniclerEventModal(tlid, evId = null) {
     <div class="fg"><label>${t('name')} *</label><input id="chr-ev-n" value="${x(ev?.event_name || '')}"></div>
     <div class="fg"><label>${t('startDate')} *</label>${dateInputsHTML('chr-ev-s', ev, 's_day', 's_month', 's_years', 's_hour', 's_minute')}</div>
     <div class="fg"><label>${t('endDate')}</label>${dateInputsHTML('chr-ev-e', ev, 'e_day', 'e_month', 'e_years', 'e_hour', 'e_minute')}</div>
-    <div class="fg"><label>${t('story')}</label><textarea id="chr-ev-story">${x(ev?.story || '')}</textarea></div>
+    <div class="fg"><label>${t('story')}</label><textarea id="chr-ev-story" data-wiki>${x(ev?.story || '')}</textarea></div>
     <div class="mfoot">${ev ? `<button class="btn btn-d" onclick="deleteChroniclerEvent(${evId},${tlid})">${t('delete')}</button>` : ''}
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" onclick="${ev ? `saveChroniclerEvent(${evId},${tlid})` : `createChroniclerEvent(${tlid})`}">${ev ? t('save') : t('create')}</button></div>`);

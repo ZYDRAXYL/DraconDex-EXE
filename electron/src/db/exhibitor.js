@@ -6,6 +6,7 @@
 // Exhibitor module. Relations are NOT here: they stay vault-wide in
 // entity_relation (db/viewer.js), which seven other readers depend on.
 const { getDB } = require('./core');
+const wiki = require('./wiki');
 
 // Columns a renderer patch may touch. Everything else (module_ref, ids,
 // timestamps) is fixed by the row's own history.
@@ -52,6 +53,11 @@ function updateExhibitNode(id, patch) {
   const vals = keys.map((k) => (k === 'locked' || k === 'hidden' ? (patch[k] ? 1 : 0) : patch[k] ?? null));
   getDB().prepare(`UPDATE exhibit_node SET ${keys.map((k) => `${k}=?`).join(', ')}, update_at=datetime('now') WHERE id=?`)
     .run(...vals, id);
+  // A note node's label is free text that may hold [[links]] (v5 Part 4,
+  // db/wiki-sources.js 'exn'); other nodes' labels are display names.
+  if (keys.includes('label') && getDB().prepare(`SELECT node_type FROM exhibit_node WHERE id=?`).get(id)?.node_type === 'note') {
+    wiki.reindexSource('exn', id);
+  }
 }
 
 // Drag-end writes every moved node at once (a multi-select drag is one save).
@@ -64,7 +70,10 @@ function moveExhibitNodes(moves) {
 }
 
 // Children go with their group (parent_id ON DELETE CASCADE).
-const deleteExhibitNode = (id) => getDB().prepare(`DELETE FROM exhibit_node WHERE id=?`).run(id);
+const deleteExhibitNode = (id) => {
+  getDB().prepare(`DELETE FROM wiki_link WHERE src_key=?`).run(`exn_${id}`);
+  return getDB().prepare(`DELETE FROM exhibit_node WHERE id=?`).run(id);
+};
 
 function setExhibitView(moduleId, patch) {
   const keys = Object.keys(patch || {}).filter((k) => VIEW_FIELDS.includes(k));

@@ -495,9 +495,9 @@ h('db:pickImportFile', async () => {
   // to a .ddx vault export; the renderer branches on extension afterward,
   // see importDatabaseFile() in core/views.js).
   const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
-    title: 'Import Database (.ddx / .mdx / .db)',
+    title: 'Import Database (.ddx / .mddx / .db)',
     properties: ['openFile'],
-    filters: [{ name: 'DraconDex File', extensions: ['ddx', 'mdx', 'db'] }],
+    filters: [{ name: 'DraconDex File', extensions: ['ddx', 'mddx', 'mdx', 'db'] }],
   });
   if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
   pickedImportDbPaths.add(path.resolve(result.filePaths[0]));
@@ -537,24 +537,26 @@ h('db:importNexusFile', async (nexusId) => {
   if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true };
   return db.importNexusFile(nexusId, result.filePaths[0]);
 });
-// .mdx, not .json (Plan process5 part2) — disambiguates a module-scoped
-// export from the Nexus snapshot export right above (both used to write a
-// bare .json, indistinguishable in a file picker/Downloads folder).
+// .mddx (v5 Part 4, V5.md §8.7) — the same snapshot this always wrote, under
+// the extension the folder mirror (db/mirror.js) uses for a module's file,
+// so an exported module and a mirrored one are the same kind of file.
+// (Plan process5 part2 had moved it from bare .json to .mdx to tell it apart
+// from the Nexus snapshot export above.)
 h('db:exportModuleFile', async (nexusId, moduleId, moduleName) => {
-  const defaultName = `${String(moduleName || 'module').replace(/[\\/:*?"<>|]/g, '_')}.mdx`;
+  const defaultName = `${String(moduleName || 'module').replace(/[\\/:*?"<>|]/g, '_')}.mddx`;
   const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
     title: 'Export Module', defaultPath: path.join(app.getPath('documents'), defaultName),
-    filters: [{ name: 'DraconDex Module File', extensions: ['mdx'] }],
+    filters: [{ name: 'DraconDex Module File', extensions: ['mddx'] }],
   });
   if (result.canceled || !result.filePath) return { ok: false, canceled: true };
   return db.exportModuleFile(nexusId, moduleId, result.filePath);
 });
-// Accepts .json too — a module exported before this switched to .mdx is
+// Accepts .mdx and .json too — a module exported before either switch is
 // still a valid snapshot in the same shape, only the extension changed.
 h('db:importModuleFile', async (nexusId, parentModuleId) => {
   const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
     title: 'Import Module', properties: ['openFile'],
-    filters: [{ name: 'DraconDex Module File', extensions: ['mdx', 'json'] }],
+    filters: [{ name: 'DraconDex Module File', extensions: ['mddx', 'mdx', 'json'] }],
   });
   if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true };
   return db.importModuleFile(nexusId, parentModuleId, result.filePaths[0]);
@@ -609,11 +611,17 @@ h('nexus:exportFile', async (id) => {
   const n = db.getNexus(id);
   if (!n) return { ok: false, code: 'not_found' };
   const safe = String(n.name || 'nexus').replace(/[\\/:*?"<>|]/g, '_');
+  // v5 Part 4 (§8.7): .ddx (data; media stay paths on this machine) or
+  // .zip (the .ddx plus the real media files — db-transfer exportNexusZip).
   const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
     title: 'Export Nexus', defaultPath: path.join(app.getPath('documents'), `${safe}.ddx`),
-    filters: [{ name: 'DraconDex Nexus', extensions: ['ddx'] }],
+    filters: [
+      { name: 'DraconDex Nexus', extensions: ['ddx'] },
+      { name: 'DraconDex Nexus + media (.zip)', extensions: ['zip'] },
+    ],
   });
   if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  if (/\.zip$/i.test(result.filePath)) return db.exportNexusZip(id, result.filePath);
   return db.exportNexusVaultFile(id, result.filePath);
 });
 
@@ -703,6 +711,7 @@ h('module:updateDescription', (id,d)  => db.updateModuleDescription(id,d));
 h('module:delete',      (id)          => db.deleteModule(id));
 h('module:duplicate',   (id)          => db.duplicateModule(id));
 h('module:move',        (nx,id,parentId,ids) => db.moveModule(nx,id,parentId,ids));
+h('module:normalizeReport', ()        => db.takeParentNormalizeReport());
 h('module:count',       (nx)          => db.countModules(nx));
 h('module:getAttrs',    (id)          => db.getModuleAttrs(id));
 h('module:upsertAttr',  (id,aid,n,v)  => db.upsertModuleAttr(id,aid,n,v));
@@ -713,7 +722,6 @@ h('module:getTags',     (id)          => db.getModuleTags(id));
 h('module:setTags',     (id,tags)     => db.setModuleTags(id,tags));
 h('module:getLinks',    (id)          => db.getModuleLinks(id));
 h('module:getInspector',(id)          => db.getModuleInspector(id));
-h('module:getChildStats', (pid)      => db.getChildModuleStats(pid));
 
 // Process 7 part 2 — app-wide session undo/redo (Ctrl+Z/Ctrl+Shift+Z),
 // scoped to the active vault the same way every handler above is.
@@ -937,6 +945,41 @@ h('importdock:importFolder', async (nx, parentModuleId) => {
   const { dirs, files } = walkImportFolder(root);
   return db.importFolderTree(nx, parentModuleId ?? null, dirs, files);
 });
+// ─── Locate Nexus (v5 Part 4, APP docs/V5.md §8.5–§8.6) ──────────────────
+// One sync, both directions (§8.11.4): folders the user made on disk come in
+// as collectors — and their files as assets — through the same
+// importFolderTree the Dock's folder import uses, then the vault is written
+// back out as folders + .mddx files (db/mirror.js). The locate root joins
+// pickedImportRoots, the same guard every other picked folder goes through.
+function syncLocate(nx) {
+  const v = db.getNexus(nx);
+  if (!v?.locate_dir) return { ok: false, code: 'no_dir' };
+  if (v.locate_missing) return { ok: false, code: 'missing' };
+  const root = path.resolve(v.locate_dir);
+  pickedImportRoots.add(root);
+  // walkImportFolder names its first segment after the root; the root IS
+  // the Nexus top level here, so that segment is dropped.
+  const { dirs, files } = walkImportFolder(root);
+  const sub = dirs.map((segs) => segs.slice(1)).filter((segs) => segs.length);
+  const inFolders = files.map((f) => ({ ...f, dir: f.dir.slice(1) }));
+  const imported = sub.length || inFolders.length ? db.importFolderTree(nx, null, sub, inFolders) : null;
+  return { ...db.syncNexusMirror(nx), imported };
+}
+h('nexus:locatePick', async (nx) => {
+  const root = await pickDirectory();
+  if (!root) return { canceled: true };
+  db.setVaultLocateDir(nx, path.resolve(root));
+  return syncLocate(nx);
+});
+h('nexus:locateSync',   (nx) => syncLocate(nx));
+h('nexus:locateForget', (nx) => { db.setVaultLocateDir(nx, null); return true; });
+// Opens only the folder the registry holds, never a path from the renderer.
+h('nexus:locateOpen', async (nx) => {
+  const v = db.getNexus(nx);
+  if (!v?.locate_dir || v.locate_missing) return false;
+  return (await shell.openPath(v.locate_dir)) === '';
+});
+
 // URL assets (§2.6): metadata + shell.openExternal only. connect-src 'none'
 // and frame-src 'none' stay exactly as they are — no preview, no embed.
 h('importdock:addUrl', (nx, url, name, moduleRef) => {

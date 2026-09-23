@@ -76,12 +76,15 @@ function buildModuleContextMenuHtml(id, pinned) {
   // Plan part1 #5: auto-parent to the right-clicked module — this used to
   // hardcode parentId=null regardless of which module's menu was open,
   // always creating a new top-level sibling instead of a child of `id`.
-  html += `<div class="kind-list-item kli-submenu-parent" onmouseenter="openCreateSubmenu(event,${id})" onmouseleave="scheduleCtxSubmenuClose()">
+  // v5 Part 4 (§8.8): only a collector holds modules, so "create inside",
+  // "import a module here" and "import a folder here" are folder actions.
+  const isFolder = findModuleNode(id)?.kind === 'collector';
+  html += `${isFolder ? `<div class="kind-list-item kli-submenu-parent" onmouseenter="openCreateSubmenu(event,${id})" onmouseleave="scheduleCtxSubmenuClose()">
       <span class="kli-name">${x(t('create'))}</span><span class="kli-arrow">${I.chevronRight}</span>
     </div>
-    ${ctxRow(`ctxImportModule(${id})`, x(t('settingDbImportModule')))}
+    ${ctxRow(`ctxImportModule(${id})`, x(t('settingDbImportModule')))}` : ''}
     ${ctxRow(`ctxExportModule(${id})`, x(t('settingDbExportModule')))}
-    ${ctxRow(`importDockPickFolder(${id})`, x(t('importFolderHere')))}
+    ${isFolder ? ctxRow(`importDockPickFolder(${id})`, x(t('importFolderHere'))) : ''}
     ${ctxRow(`openAddAssetUrlModal(${id})`, x(t('addAssetLink')))}
     <div class="ctx-sep"></div>`;
   // Plan part1 #3: modules with their own Builder page (any kind except the
@@ -101,8 +104,9 @@ function buildModuleContextMenuHtml(id, pinned) {
     <div class="ctx-sep"></div>`;
   }
   html += `
-    ${ctxRow(`openModuleEditModal(${id})`, x(t('moduleEdit')))}
     ${ctxRow(`startRenameModule(${id})`, x(t('rename')))}
+    ${ctxRow(`startEditModuleHandle(${id})`, x(t('moduleHandle')))}
+    ${ctxRow(`openModuleIconPopup(${id},ctxAnchor())`, x(t('clsColorIcon')))}
     ${ctxRow(`duplicateModuleNode(${id})`, x(t('duplicate')))}
     <div class="kind-list-item kli-submenu-parent" onmouseenter="openMoveToSubmenu(event,${id})" onmouseleave="scheduleCtxSubmenuClose()">
       <span class="kli-name">${x(t('moveTo'))}</span><span class="kli-arrow">${I.chevronRight}</span>
@@ -147,6 +151,7 @@ function buildMoveToListHtml(id) {
   const all = flattenModuleTree(S.moduleTree, 0);
   for (const { m: target, depth } of all) {
     if (target.id === id || isSelfOrDescendant(node, target.id)) continue;
+    if (target.kind !== 'collector') continue; // §8.8 — only a folder holds modules
     html += `<div class="kind-list-item" style="padding-left:${10 + depth * 14}px" onclick="moveModuleTo(${id},${target.id})"><span class="kli-name">${x(target.name)}</span></div>`;
   }
   return html || `<div class="kind-list-item" style="opacity:.6;pointer-events:none"><span class="kli-name">${x(t('moveToNoTargets'))}</span></div>`;
@@ -157,7 +162,12 @@ async function moveModuleTo(id, newParentId) {
   const siblings = (newParentId == null ? S.moduleTree : findModuleNode(newParentId)?.children || [])
     .map(m => m.id).filter(mid => mid !== id);
   siblings.push(id);
-  await api.module.move(S.nexus.id, id, newParentId, siblings);
+  try {
+    await api.module.move(S.nexus.id, id, newParentId, siblings);
+  } catch (_) {
+    toast(t('moduleParentMustBeFolder'), 'err');
+    return;
+  }
   await reloadModuleTree();
 }
 async function duplicateModuleNode(id) {
@@ -377,11 +387,18 @@ function buildArtisanTemplateListHtml() {
 async function quickCreateModule(kind, parentId) {
   rememberRecentKind(kind);
   const name = t('newModuleName').replace('{kind}', kindLabel(kind));
-  const moduleId = await api.module.create({
-    nexus_ref: S.nexus.id, parent_id: parentId, name, kind,
-    color: null, icon_color: null, icon: null,
-    cat_type: kind === 'classifier' ? 'object' : null,
-  });
+  let moduleId;
+  try {
+    moduleId = await api.module.create({
+      nexus_ref: S.nexus.id, parent_id: parentId, name, kind,
+      color: null, icon_color: null, icon: null,
+      cat_type: kind === 'classifier' ? 'object' : null,
+    });
+  } catch (_) {
+    closeAllPopups();
+    toast(t('moduleParentMustBeFolder'), 'err'); // §8.8 — the only way a create is refused
+    return;
+  }
   closeAllPopups();
   if (parentId != null) S.moduleCollapsed.delete(parentId);
   await reloadModuleTree();

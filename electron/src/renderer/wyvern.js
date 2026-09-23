@@ -102,9 +102,7 @@ function buildWyvernBrowseHtml(){
   const body = list.length
     ? `<div class="typegrid">${list.map(m => wyvernBrowseCardHtml(m, totalModules)).join('')}</div>`
     : `<div class="empty"><div class="ei">${I.layer}</div><h3>${t('nestEmpty')}</h3></div>`;
-  return `<div class="detail-head module-head" style="border-left:4px solid var(--accent);padding-left:12px">
-      <div class="wyvern-breadcrumb">${wyvernBrowseBreadcrumbHtml()}</div>
-    </div>
+  return `${pageHeadHtml({ bare: true, titleText: S.nexus?.name || '', sub: `<div class="wyvern-breadcrumb">${wyvernBrowseBreadcrumbHtml()}</div>` })}
     ${body}`;
 }
 function wyvernDrillInto(id){

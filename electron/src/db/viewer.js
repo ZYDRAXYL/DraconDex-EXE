@@ -50,7 +50,10 @@ function _viewerIndex(nexusId) {
     FROM module m LEFT JOIN module pm ON m.parent_id=pm.id
     LEFT JOIN use_color uc ON uc.id=m.color WHERE (? IS NULL OR m.nexus_ref=?)`,
     'module', r => ({ key: `module_${r.id}`, name: r.name, handle: r.handle, color: r.color_code,
-      moduleId: r.mid ?? r.id, moduleName: r.mname ?? r.name, moduleKind: r.mkind ?? r.kind }));
+      // moduleKind is the PARENT's kind (the "module the row belongs to",
+      // like every other row); ownKind is the module's own — what a Manager
+      // selects on (v5 Part 4, §8.10).
+      moduleId: r.mid ?? r.id, moduleName: r.mname ?? r.name, moduleKind: r.mkind ?? r.kind, ownKind: r.kind, id: r.id }));
 
   // v5 Asset Nest (APP docs/V5.md §2.7) — assets as file_<id>, alongside the
   // six above. This one line is what makes an asset filterable, linkable,

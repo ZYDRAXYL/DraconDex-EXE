@@ -130,7 +130,9 @@ function isSelfOrDescendant(node, targetId) {
 // lazily, one IPC (and one full re-render) per expanded content module.
 // module:getNestItems returns them all at once, so the count is just
 // .length and the tree paints in a single render.
-async function reloadModuleTree() {
+// opts.skipMirror: the caller IS a mirror sync (core/nexus-locate.js) that
+// brought folders in — do not schedule another one off the back of it.
+async function reloadModuleTree(opts = {}) {
   const [tree, nestItems] = S.nexus
     ? await Promise.all([api.module.getTree(S.nexus.id), api.module.getNestItems(S.nexus.id)])
     : [[], {}];
@@ -148,6 +150,8 @@ async function reloadModuleTree() {
   renderModuleRail();
   renderProjectTabs();
   if (S.view === 'nexus' && !S.activeModule) renderNexusHome();
+  // v5 Part 4 (§8.5): a located Nexus re-mirrors after any tree change.
+  if (!opts?.skipMirror && typeof scheduleMirrorSync === 'function') scheduleMirrorSync();
 }
 
 // ═══ NAV RAIL — dynamic Major-module icon strip (any depth, Phase 1) ══

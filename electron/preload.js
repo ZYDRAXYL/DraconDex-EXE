@@ -14,6 +14,10 @@ contextBridge.exposeInMainWorld('api', {
     importModuleFileAt: (nexusId,parentId,filePath) => inv('db:importModuleFileAt', nexusId,parentId,filePath),
   },
   nexus: {
+    locatePick:   (nx) => inv('nexus:locatePick', nx),
+    locateSync:   (nx) => inv('nexus:locateSync', nx),
+    locateForget: (nx) => inv('nexus:locateForget', nx),
+    locateOpen:   (nx) => inv('nexus:locateOpen', nx),
     getAll:  ()            => inv('nexus:getAll'),
     get:     (id)          => inv('nexus:get', id),
     create:  (n,m,c,fp)    => inv('nexus:create', n,m,c,fp),
@@ -53,6 +57,7 @@ contextBridge.exposeInMainWorld('api', {
     delete:  (id)          => inv('module:delete', id),
     duplicate: (id)        => inv('module:duplicate', id),
     move:    (nx,id,parentId,ids) => inv('module:move', nx,id,parentId,ids),
+    normalizeReport: ()          => inv('module:normalizeReport'),
     count:   (nx)          => inv('module:count', nx),
     getAttrs:   (id)          => inv('module:getAttrs', id),
     upsertAttr: (id,aid,n,v)  => inv('module:upsertAttr', id,aid,n,v),
@@ -63,7 +68,6 @@ contextBridge.exposeInMainWorld('api', {
     setTags: (id,tags)     => inv('module:setTags', id,tags),
     getLinks: (id)         => inv('module:getLinks', id),
     getInspector: (id)     => inv('module:getInspector', id),
-    getChildStats:   (pid)   => inv('module:getChildStats', pid),
   },
   history: {
     undo: ()               => inv('history:undo'),

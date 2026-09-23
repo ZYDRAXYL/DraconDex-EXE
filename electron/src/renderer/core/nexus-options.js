@@ -57,8 +57,11 @@ async function nexusDuplicate(id) {
 async function nexusExportFile(id) {
   const r = await api.nexus.exportFile(id);
   if (r?.canceled) return;
-  if (!r?.ok) return toast(t(r?.code === 'file_missing' ? 'nexusFileMissing' : 'driveErrServer'), 'error');
-  toast(t('nexusExported'), 'ok');
+  if (!r?.ok) return toast(t(r?.code === 'file_missing' ? 'nexusFileMissing' : r?.code === 'too_large' ? 'nexusZipTooLarge' : 'driveErrServer'), 'error');
+  // A .zip reports how many media files it carried, and how many it could
+  // not (missing on disk — those still need a relink at the other end).
+  if (r.media != null) toast(`${t('nexusExported')} · ${t('nexusZipMedia')} ${r.media}${r.skipped ? ` · ${t('assetMissing')} ${r.skipped}` : ''}`, 'ok');
+  else toast(t('nexusExported'), 'ok');
 }
 
 async function nexusRevealFile(id) {

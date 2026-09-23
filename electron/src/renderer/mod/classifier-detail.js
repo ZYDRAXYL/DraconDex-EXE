@@ -281,11 +281,11 @@ function renderClassifierAttrRowHtml(o, c) {
   const val = x(o.attrMap[c.id] || '');
   let valueHtml;
   if (c.attribute_type === 'textarea') {
-    valueHtml = `<textarea class="pv-textarea" data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrInput(this)">${val}</textarea>`;
+    valueHtml = `<textarea class="pv-textarea" data-wiki data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrInput(this)">${val}</textarea>`;
   } else if (c.attribute_type === 'date') {
     valueHtml = clsDateInputsHtml(o, c);
   } else {
-    valueHtml = `<span class="pv" contenteditable="true" data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${val}</span>`;
+    valueHtml = `<span class="pv" contenteditable="true" data-wiki data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${val}</span>`;
   }
   return `<div class="prop"><span class="pk">${x(c.description)}</span>${valueHtml}</div>`;
 }
@@ -309,7 +309,7 @@ function renderClassifierObjectDetail(m, o, templates = S.classifierData?.templa
   const priv = o.privateTemplates || [];
   const privRows = priv.map(pt => `<div class="prop">
       <span class="pk">${x(pt.description)}</span>
-      <span class="pv" contenteditable="true" data-oid="${o.id}" data-tid="${pt.id}" onblur="saveClassifierAttrCell(this)">${x(pt.value || '')}</span>
+      <span class="pv" contenteditable="true" data-wiki data-oid="${o.id}" data-tid="${pt.id}" onblur="saveClassifierAttrCell(this)">${x(pt.value || '')}</span>
       <button class="btn btn-g btn-i" onclick="deleteClassifierPrivateField(${pt.id})" title="${t('delete')}">${I.delete}</button>
     </div>`).join('');
   html += `<details class="cls-priv"${priv.length ? '' : ' open'}>

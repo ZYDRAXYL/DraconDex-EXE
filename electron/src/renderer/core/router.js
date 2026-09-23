@@ -39,7 +39,7 @@ async function openEntityByKey(key) {
     toast(t('legacyEntityUnconverted'), 'error');
     if (typeof openLegacyMigratePreviewModal === 'function') openLegacyMigratePreviewModal();
   } else if (p.kind === 'module' || p.kind === 'bchp' || p.kind === 'chss' || p.kind === 'cobj'
-             || p.kind === 'tlev' || p.kind === 'sdlg') {
+             || p.kind === 'tlev' || p.kind === 'sdlg' || p.kind === 'exn') {
     S.activeModule = null; S.view = 'nexus';
     document.querySelectorAll('.nav-btn[data-panel]').forEach(b => b.classList.remove('active'));
     updateTopNavButton();
@@ -50,6 +50,7 @@ async function openEntityByKey(key) {
     if (p.kind === 'cobj') S.classifierSelectedObject = p.objectId;
     if (p.kind === 'tlev') S.pendingChroniclerEvent = p.eventId;
     if (p.kind === 'sdlg') S.pendingNarratorDialogue = p.dialogueId;
+    if (p.kind === 'exn') S.pendingExhibitNode = p.nodeId; // v5 Part 4: a note's [[link]] leads back to it
     await openModuleNode(p.moduleId);
   } else if (p.kind === 'file') {
     // v5 Asset Nest — assets open in the file viewer wherever they're filed.

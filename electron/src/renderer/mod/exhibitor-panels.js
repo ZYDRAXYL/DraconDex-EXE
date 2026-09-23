@@ -43,7 +43,11 @@ function buildExhibitorInspectorHtml(d, n) {
     ${it ? `<div class="drafter-hint" data-no-i18n>${VIEWER_KIND_LABEL[it.kind] || it.kind}${it.moduleName ? ` · ${x(it.moduleName)}` : ''}</div>
       <button class="btn btn-s btn-sm" onclick="openExhibitorNodeTarget(${n.id})">${t('exhibitorOpenItem')}</button>` : ''}
     <div class="fg"><label>${t('exhibitorLabel')}</label>
-      <input value="${x(n.label || '')}" placeholder="${x(it ? it.name : '')}" onchange="patchExhibitorNode(${n.id},{label:this.value.trim()||null})"></div>
+      ${n.node_type === 'note'
+        // A note's label is its text, so it is a wiki field (V5.md §8.4);
+        // every other node's label is a display name and stays plain.
+        ? `<textarea data-wiki rows="4" onchange="patchExhibitorNode(${n.id},{label:this.value.trim()||null})">${x(n.label || '')}</textarea>`
+        : `<input value="${x(n.label || '')}" placeholder="${x(it ? it.name : '')}" onchange="patchExhibitorNode(${n.id},{label:this.value.trim()||null})">`}</div>
     <div class="fg"><label>${t('color')}</label>
       <input type="color" value="${x(n.color || (exhCss('--accent') || '#6366f1'))}" onchange="patchExhibitorNode(${n.id},{color:this.value})"></div>
     ${n.node_type !== 'group' ? `<div class="fg"><label>${t('exhibitorGroup')}</label>

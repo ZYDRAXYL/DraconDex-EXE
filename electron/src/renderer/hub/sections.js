@@ -219,10 +219,10 @@ function goToImportDockPage() {
 }
 
 function buildImportDockPageHtml() {
-  return wrapPageView(`<div class="detail-head module-head" style="border-left:4px solid var(--accent);padding-left:12px">
-      <h2 style="margin:0;font-size:1.15em">${x(t('importDock'))}</h2>
-      <div class="drafter-hint">${x(S.nexus.name)}</div>
-    </div>
+  return wrapPageView(`${pageHeadHtml({
+      title: x(t('importDock')), titleText: t('importDock'),
+      sub: `<span data-no-i18n>${x(S.nexus.name)}</span>`,
+    })}
     <div class="acc-body" style="display:block">${typeof buildImportDockRows === 'function' ? buildImportDockRows() : ''}</div>`);
 }
 

@@ -1,7 +1,7 @@
 // Popup plumbing shared by every hub menu: close-all, position-near-anchor,
 // submenu positioning and the hover-close timers. The create/edit modal entry
 // points sit here too because they are what the popups open.
-// ═══ Create (instant, via kind-popup) / edit (still the full form) / delete
+// ═══ Create (instant, via kind-popup) / delete — editing is inline (§8.3)
 // Plan process3 part1: renamed from openMajorModuleModal — "Major module"
 // used to mean top-level-only; the new top-level-only concept is "Main
 // module" (Major now means any module, at any depth — see CLAUDE.md/
@@ -13,11 +13,6 @@ async function openMainModuleModal(anchor) {
 async function openMinorModuleModal(parentId, anchor) {
   if (!S.nexus) return;
   openKindPopup(parentId, anchor);
-}
-async function openModuleEditModal(id) {
-  const m = findModuleNode(id);
-  if (!m) return;
-  await moduleFormModal(m);
 }
 
 // ═══ Popup plumbing shared by the kind-picker and the icon/color popup ═

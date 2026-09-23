@@ -141,10 +141,12 @@ async function openItemNode(itemKind, moduleId, id) {
 function buildItemPageHtml(node) {
   const reg = ITEM_KIND[node.itemKind];
   const col = node.m?.color_code || 'var(--accent)';
-  return `<div class="detail-head module-head" style="border-left:4px solid ${x(col)};padding-left:12px">
-      <h2 style="margin:0;font-size:1.15em">${x(reg.nameOf(node.item))} <span class="kind-chip" data-no-i18n>${x(t(reg.badgeKey))}</span></h2>
-      <div class="drafter-hint">${x(node.m?.name || '')}</div>
-    </div>
+  const name = reg.nameOf(node.item);
+  return `${pageHeadHtml({
+      color: col, title: `<span data-no-i18n>${x(name)}</span>`, titleText: name,
+      after: `<span class="kind-chip" data-no-i18n>${x(t(reg.badgeKey))}</span>`,
+      sub: `<span data-no-i18n>${x(node.m?.name || '')}</span>`,
+    })}
     <div class="item-page-body">${node.bodyHtml}</div>`;
 }
 

@@ -103,7 +103,13 @@ async function submitArtisanWizardStep() {
   const icon = getIconPickerValue() || null;
   const color = q('#sel-color')?.value || null;
   if (w.idx === -1) {
-    w.managerId = await api.module.create({ nexus_ref: S.nexus.id, parent_id: null, name, kind: 'manager', color, icon_color: color, icon });
+    // v5 Part 4 (V5.md §8.8–§8.10): a Manager holds no children. The
+    // template's modules go in a folder named after the project, and the
+    // Manager sits in it, selecting that folder — the same shape the v5
+    // migration gives a v3 project (db/module-parents.js).
+    w.folderId = await api.module.create({ nexus_ref: S.nexus.id, parent_id: null, name, kind: 'collector', color, icon_color: color });
+    w.managerId = await api.module.create({ nexus_ref: S.nexus.id, parent_id: w.folderId, name, kind: 'manager', color, icon_color: color, icon });
+    await api.module.setUi(w.managerId, 'filterDef', JSON.stringify({ groups: [{ rules: [{ field: 'childOf', moduleId: w.folderId }] }] }));
     if (!w.spec.minors.length) { await finishArtisanWizard(); return; }
     w.idx = 0;
     await renderArtisanWizardStep();
@@ -111,7 +117,7 @@ async function submitArtisanWizardStep() {
     const i = w.idx;
     const mn = w.spec.minors[i];
     const minorId = await api.module.create({
-      nexus_ref: S.nexus.id, parent_id: w.managerId, name, kind: mn.kind,
+      nexus_ref: S.nexus.id, parent_id: w.folderId, name, kind: mn.kind,
       color, icon_color: color, icon,
       cat_type: mn.kind === 'classifier' ? (mn.catType || 'object') : null,
     });

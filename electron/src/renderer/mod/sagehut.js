@@ -68,16 +68,11 @@ function buildSageHutHtml() {
       <div class="czoom" data-no-i18n><span class="cn-count">${d.graph.nodes.length} nodes · ${d.graph.edges.length} links</span></div>
     </div>`;
   else body = buildSageHutBarsHtml(d, d.tab === 'dataSize');
-  return wrapPageView(`<div class="detail-head module-head" style="border-left:4px solid var(--accent);padding-left:12px">
-      <h2 style="margin:0;font-size:1.15em;display:flex;align-items:center;gap:8px">
-        <span class="kicon" style="color:var(--accent)" data-no-i18n>${I.sage}</span>
-        Sage Hut <span class="kind-chip" data-no-i18n>Analytics</span>
-      </h2>
-      <div class="mtags">
-        <span class="drafter-hint" style="margin:0">${t('sageHutSubtitle')} ${x(S.nexus.name)}</span>
-        <span class="btn-i" style="visibility:hidden" aria-hidden="true"></span>
-      </div>
-    </div>
+  return wrapPageView(`${pageHeadHtml({
+      icon: I.sage, title: '<span data-no-i18n>Sage Hut</span>', titleText: 'Sage Hut',
+      after: '<span class="kind-chip" data-no-i18n>Analytics</span>',
+      sub: `${t('sageHutSubtitle')} ${x(S.nexus.name)}`,
+    })}
     <div class="classifier-toolbar">${viewBar}</div>
     ${tiles}${body}`);
 }

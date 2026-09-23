@@ -52,7 +52,7 @@ const updateObject = (id, name, colorId, icon) => {
 // migrate_v3 carrying a legacy object's note across, and version restore.
 const updateObjectNote = (id, note) => {
   const r = getDB().prepare(`UPDATE classifier_object SET note=?, update_at=datetime('now') WHERE id=?`).run(note, id);
-  wiki.reindexWikiLinks(`cobj_${id}`, note, nexusOfObjectRow(id));
+  wiki.reindexSource('cobj', id); // note + text field values, db/wiki-sources.js
   return r;
 };
 
@@ -93,6 +93,7 @@ function duplicateObject(id, copyName) {
     }
     wiki.resolveDanglingLinks(name, nexusOfObjectRow(nid));
     versions.recordVersion(o.module_ref, 'object', `+ ${name}`, { op: 'classifierObjectDelete', args: { objectId: nid } });
+    wiki.reindexSource('cobj', nid); // the copied values carry their [[links]] too
     return nid;
   })();
 }
@@ -129,6 +130,7 @@ function moveObject(id, targetModuleRef) {
     const top = d.prepare(`SELECT COALESCE(MAX(display_order),-1) AS m FROM classifier_object WHERE module_ref=?`).get(targetModuleRef).m;
     d.prepare(`UPDATE classifier_object SET module_ref=?, display_order=?, update_at=datetime('now') WHERE id=?`).run(targetModuleRef, top + 1, id);
   })();
+  wiki.reindexSource('cobj', id); // a value dropped by a same-name merge takes its links with it
   return true;
 }
 
@@ -161,12 +163,28 @@ const updateTemplate = (id, description, attributeType, levelable, hasCondition)
   const r = getDB().prepare(`
     UPDATE classifier_template SET description=?, attribute_type=?, levelable=?, has_condition=?, update_at=datetime('now') WHERE id=?
   `).run(description, attributeType || 'text', levelable ? 1 : 0, hasCondition ? 1 : 0, id);
+  // A date field is not free text, so switching the type moves its values
+  // in or out of the object's indexed text.
+  if (prev && (prev.attribute_type || 'text') !== (attributeType || 'text')) {
+    for (const oid of objectsWithValuesOf(id)) wiki.reindexSource('cobj', oid);
+  }
   if (prev) versions.recordVersion(prev.module_ref, 'template', `${prev.description} → ${description}`,
     { op: 'classifierTemplate', args: { templateId: id, description: prev.description, attributeType: prev.attribute_type, levelable: prev.levelable, hasCondition: prev.has_condition } });
   return r;
 };
 
-const deleteTemplate = (id) => getDB().prepare(`DELETE FROM classifier_template WHERE id=?`).run(id);
+// A field's values leave every object's indexed text with it (v5 Part 4 —
+// field values hold [[links]], db/wiki-sources.js 'cobj').
+const objectsWithValuesOf = (templateId) => getDB()
+  .prepare(`SELECT DISTINCT object_ref AS id FROM classifier_attribute WHERE template_ref=? AND attribute_value LIKE '%[[%'`)
+  .all(templateId).map((r) => r.id);
+
+const deleteTemplate = (id) => {
+  const touched = objectsWithValuesOf(id);
+  const r = getDB().prepare(`DELETE FROM classifier_template WHERE id=?`).run(id);
+  for (const oid of touched) wiki.reindexSource('cobj', oid);
+  return r;
+};
 
 // ── Attribute values ───────────────────────────────────────────────────
 const getAttrs = (objectId) => getDB().prepare(`
@@ -248,6 +266,9 @@ const upsertAttr = (objectId, templateId, value) => {
       `${obj.name} · ${tpl?.description ?? ''}: ${prev?.attribute_value ?? '—'} → ${value ?? ''}`,
       { op: 'classifierAttr', args: { objectId, templateId, value: prev?.attribute_value ?? '' } });
   }
+  // Field values hold [[links]] (v5 Part 4) — reindex when a link could
+  // have appeared or disappeared, not on every keystroke-save of plain text.
+  if (/\[\[/.test(prev?.attribute_value ?? '') || /\[\[/.test(value ?? '')) wiki.reindexSource('cobj', objectId);
   return r;
 };
 

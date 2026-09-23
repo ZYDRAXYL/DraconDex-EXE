@@ -74,10 +74,11 @@ function buildFileViewerHtml() {
   const linkerChip = f.entity
     ? `<span class="htag lk" data-no-i18n onclick="openEntityByKey(${xj(f.linker_key)})">[[${x(f.entity.name)}]]</span>`
     : `<span class="pv ghost">${t('notLinked')}</span>`;
-  return wrapPageView(`<div class="detail-head module-head" style="border-left:4px solid var(--accent);padding-left:12px">
-      <h2 style="margin:0;font-size:1.15em" data-no-i18n>${x(f.file_name)} <span class="kind-chip" data-no-i18n>File</span></h2>
-      <div class="drafter-hint" data-no-i18n>${f.source_kind === 'url' ? x(f.file_path) : fvBytes(f.file_size)}</div>
-    </div>
+  return wrapPageView(`${pageHeadHtml({
+      title: `<span data-no-i18n>${x(f.file_name)}</span>`, titleText: f.file_name,
+      after: '<span class="kind-chip" data-no-i18n>File</span>',
+      sub: `<span data-no-i18n>${f.source_kind === 'url' ? x(f.file_path) : fvBytes(f.file_size)}</span>`,
+    })}
     <div class="cn-wrap fv-wrap">${body}</div>
     <div class="fv-foot">
       <span class="pk">${t('linkedTo')}</span> ${linkerChip}

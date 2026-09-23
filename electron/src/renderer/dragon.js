@@ -185,9 +185,7 @@ function dragonBodyHtml() {
   return dragonView() === 'table' ? dragonTableHtml(list) : dragonTilesHtml(list);
 }
 function buildDragonConsoleHtml() {
-  return `<div class="detail-head module-head erp-head" style="border-left:4px solid var(--accent);padding-left:12px">
-      <div class="wyvern-breadcrumb">${dragonBreadcrumbHtml()}</div>
-    </div>
+  return `${pageHeadHtml({ bare: true, cls: 'erp-head', titleText: S.nexus?.name || '', sub: `<div class="wyvern-breadcrumb">${dragonBreadcrumbHtml()}</div>` })}
     ${dragonToolbarHtml()}
     ${dragonKpiHtml()}
     <div id="dragon-body">${dragonBodyHtml()}</div>`;

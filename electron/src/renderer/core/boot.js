@@ -106,6 +106,8 @@ async function init() {
   S.moduleTree = moduleTree;
   seedNestItems(nestItems);
   if (S.nexus && typeof reportRelationDedupe === 'function') reportRelationDedupe();
+  if (S.nexus) reportParentNormalize();
+  if (S.nexus) scheduleMirrorSync(3000);
   window.__splash?.set(88);
   // Set before the first render below — builderPaneHeadHtml (builder.js)
   // reads S.isPopup to decide whether to show the "move to main window" tab

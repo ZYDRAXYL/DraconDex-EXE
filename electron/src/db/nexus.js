@@ -97,6 +97,7 @@ const getNexuses = () => {
     project_count: v.project_count,
     file_path: v.file_path,
     missing: v.missing,
+    locate_dir: v.locate_dir, locate_missing: v.locate_missing, // v5 Part 4, §8.5
   }));
 };
 
@@ -110,6 +111,7 @@ const getNexus = (id) => {
     id: v.id, name: v.name, memo: v.memo, color: null, color_code: v.color_code,
     update_at: v.update_at, project_count: v.project_count,
     file_path: v.file_path, missing: v.missing,
+    locate_dir: v.locate_dir, locate_missing: v.locate_missing,
   };
   try {
     const inFile = getVaultDB(id).prepare(`

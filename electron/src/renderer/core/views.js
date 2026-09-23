@@ -54,7 +54,7 @@ async function importDatabaseFile(){
     const picked = await api.db.pickImportFile();
     if(picked?.canceled) return;
     const ext = (picked.filePath.split('.').pop() || '').toLowerCase();
-    openImportTargetChoiceModal(picked.filePath, ext === 'mdx' ? 'module' : 'nexus');
+    openImportTargetChoiceModal(picked.filePath, ext === 'mddx' || ext === 'mdx' ? 'module' : 'nexus');
   }catch(e){
     toastImportError(e);
   }
@@ -94,7 +94,7 @@ async function importIntoCurrentNexus(filePath, kind){
   }
 }
 async function importAsNewNexus(filePath, kind){
-  const fileBase = filePath.split(/[\\/]/).pop().replace(/\.(ddx|mdx|db)$/i, '') || 'Imported Nexus';
+  const fileBase = filePath.split(/[\\/]/).pop().replace(/\.(ddx|mddx|mdx|db)$/i, '') || 'Imported Nexus';
   try{
     const newId = await api.nexus.create(fileBase, '', null, null);
     await reloadNexuses();

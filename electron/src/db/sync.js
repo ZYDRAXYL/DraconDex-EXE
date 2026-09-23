@@ -1041,6 +1041,11 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     };
   })();
 
+  // A snapshot from an older app (or the APK, which has not adopted the
+  // rule yet) can carry modules under a non-collector — wrap them the same
+  // way the v5 migration does (db/module-parents.js, V5.md §8.8).
+  require('./module-parents').normalizeModuleParents(db);
+
   // Regenerate the wiki-link index (global — fine at prototype scale).
   try { require('./wiki').rebuildWikiIndex(); } catch (e) {
     console.error('sync: wiki rebuild after pull failed:', e);

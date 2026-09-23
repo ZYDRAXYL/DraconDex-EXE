@@ -80,8 +80,14 @@ test('module rebuild: viewer/connector become exhibitor, ids and children surviv
   seedV4();
   mig.migrateInlineColumns(db);
   db.exec(INDEX_SQL);
-  assert.deepEqual(kinds(), { 1: 'collector', 2: 'classifier', 3: 'exhibitor', 4: 'exhibitor', 5: 'drafter' });
-  assert.equal(db.prepare(`SELECT parent_id FROM module WHERE id=5`).get().parent_id, 4);
+  // Module 5 sat under the Connector (4). The rebuild keeps it; then the v5
+  // Part 4 rule (a parent must be a collector, §8.8) wraps it into a new
+  // collector named after 4, beside 4 — moved, not dropped.
+  assert.deepEqual(kinds(), { 1: 'collector', 2: 'classifier', 3: 'exhibitor', 4: 'exhibitor', 5: 'drafter', 6: 'collector' });
+  const wrap = db.prepare(`SELECT id, parent_id, name FROM module WHERE id=6`).get();
+  const conn = db.prepare(`SELECT parent_id, name FROM module WHERE id=4`).get();
+  assert.equal(db.prepare(`SELECT parent_id FROM module WHERE id=5`).get().parent_id, 6);
+  assert.deepEqual([wrap.parent_id, wrap.name], [conn.parent_id, conn.name]);
   assert.deepEqual(db.prepare(`PRAGMA foreign_key_check`).all(), []);
   // The saved view carries over; a former Connector is flagged for seeding.
   assert.equal(ui(3, 'activeView'), 'cards');

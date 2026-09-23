@@ -10,6 +10,7 @@
 // so a choice can sit anywhere between two lines; every aggregate that means
 // "spoken lines" therefore has to say row_type='talk' out loud.
 const { getDB } = require('./core');
+const wiki = require('./wiki');
 
 const ROW_TYPES = ['talk', 'choice'];
 const rowType = (v) => (ROW_TYPES.includes(v) ? v : 'talk');
@@ -37,16 +38,22 @@ const updateDialogue = (id, name, colorId) =>
   getDB().prepare(`UPDATE story_dialogue SET name=?, color=?, update_at=datetime('now') WHERE id=?`)
     .run(name, colorId || null, id);
 
-const updateDialogueDescription = (id, description) =>
-  getDB().prepare(`UPDATE story_dialogue SET description=?, update_at=datetime('now') WHERE id=?`)
+// The description holds [[links]] (v5 Part 4, db/wiki-sources.js 'sdlg').
+const updateDialogueDescription = (id, description) => {
+  const r = getDB().prepare(`UPDATE story_dialogue SET description=?, update_at=datetime('now') WHERE id=?`)
     .run(description || null, id);
+  wiki.reindexSource('sdlg', id);
+  return r;
+};
 
 const updateDialoguePos = (id, xPos, yPos) =>
   getDB().prepare(`UPDATE story_dialogue SET pos_x=?, pos_y=?, update_at=datetime('now') WHERE id=?`)
     .run(Number(xPos) || 0, Number(yPos) || 0, id);
 
-const deleteDialogue = (id) =>
-  getDB().prepare(`DELETE FROM story_dialogue WHERE id=?`).run(id);
+const deleteDialogue = (id) => {
+  getDB().prepare(`DELETE FROM wiki_link WHERE src_key=?`).run(`sdlg_${id}`);
+  return getDB().prepare(`DELETE FROM story_dialogue WHERE id=?`).run(id);
+};
 
 const getEdges = (moduleRef) => getDB().prepare(`
   SELECT * FROM story_edge WHERE module_ref = ? ORDER BY id

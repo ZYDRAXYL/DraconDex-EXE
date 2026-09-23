@@ -311,3 +311,10 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 		linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
 	background-size:120px 120px,120px 120px,24px 24px,24px 24px}
 
+/* v5 Part 4 (V5.md §8.9): Manager hand-pick */
+.mgr-pick-list{max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.mgr-pick-row{display:flex;align-items:center;gap:8px}
+.mgr-pick-row .ghost{margin-left:auto;font-size:calc(11px * var(--fsc,1))}
+.mgr-picked{color:var(--accent);display:inline-flex;vertical-align:-2px}
+.mgr-picked .icon{width:12px;height:12px}
+.mgr-pick{flex-shrink:0}

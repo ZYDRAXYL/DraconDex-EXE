@@ -90,30 +90,32 @@ function buildModuleDetailHtml(m) {
   const d = (S.inspectorData && S.inspectorData.moduleId === m.id) ? S.inspectorData : null;
   const tagChips = (d?.tags || []).map(tg =>
     `<span class="htag" style="border-color:${x(tg.color_code || '#6366f1')};color:${x(tg.color_code || '#6366f1')}">#${x(tg.tag_name)}</span>`).join('');
-  const linkCount = d ? (d.links.outgoing.length + d.links.backlinks.length) : 0;
-  // v5 (§3.6): the count still comes from wiki_link, but a click now opens
-  // this module's Exhibitor, where links are seen and relations drawn.
-  const linkChip = `<span class="htag lk" data-no-i18n title="${t('openInExhibitor')}" style="cursor:pointer"
-    onclick="openExhibitorFor(${m.id},'module_${m.id}')">🔗 ${linkCount} links</span>`;
+  const linkChip = moduleLinkChipHtml(m.id, d);
   const renamingHead = S.renamingModuleId === m.id;
   const nameHtml = renamingHead
     ? `<input id="rename-head-${m.id}" class="rename-input" style="font-size:1.15em" value="${x(m.name)}" onclick="event.stopPropagation()" onblur="saveModuleRename(${m.id},this.value)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=${x(JSON.stringify(m.name))};this.blur();}">`
     : `<span ondblclick="startRenameModule(${m.id})">${x(m.name)}</span>`;
   return `<div class="module-builder">
     <div class="module-main">
-      <div class="detail-head module-head" style="border-left:4px solid ${x(col)};padding-left:12px">
-        <h2 style="margin:0;font-size:1.15em;display:flex;align-items:center;gap:8px">
-          <span class="kicon" style="color:${x(col)};cursor:pointer" onclick="event.stopPropagation();openModuleIconPopup(${m.id},this)">${moduleIconHtml(m)}</span>
-          ${nameHtml}
-          ${m.handle ? `<span class="module-handle" data-no-i18n title="${t('moduleHandle')}">@${x(m.handle)}</span>` : ''}
-          <span class="kind-chip" data-no-i18n>${x(kindLabel(m.kind))}${m.kind === 'classifier' && m.cat_type ? ` · ${m.cat_type.charAt(0).toUpperCase()}${m.cat_type.slice(1)}` : ''}</span>
-        </h2>
-        <div class="mtags">${tagChips}${linkChip}<button class="btn btn-g btn-i" onclick="openModuleTagPopup(${m.id}, this)" title="${t('tagLink')}">${I.plus}</button></div>
-      </div>
+      ${pageHeadHtml({
+        color: col, icon: moduleIconHtml(m), iconOnclick: `openModuleIconPopup(${m.id},this)`,
+        title: nameHtml, titleText: m.name, forceOpen: renamingHead || S.editingHandleId === m.id,
+        after: `${moduleHandleHtml(m)}<span class="kind-chip" data-no-i18n>${x(kindLabel(m.kind))}</span>`,
+        tags: `${tagChips}${linkChip}<button class="btn btn-g btn-i" onclick="openModuleTagPopup(${m.id}, this)" title="${t('tagLink')}">${I.plus}</button>`,
+      })}
       ${buildModuleAssetsStripHtml(m)}
       ${mainHtml}
     </div>
     <div id="inspector-resize" class="panel-resize-handle" onmousedown="startInspectorResize(event)" title="${t('resizePanel')}"></div>
     ${buildInspectorHtml(m)}
   </div>`;
+}
+
+// v5 (§3.6): the count still comes from wiki_link, but a click opens this
+// module's Exhibitor, where links are seen and relations drawn. Shared with
+// inspector.js's refreshInspectorTagChips, which re-renders the same row.
+function moduleLinkChipHtml(moduleId, d) {
+  const n = d ? (d.links.outgoing.length + d.links.backlinks.length) : 0;
+  return `<span class="htag lk" data-no-i18n title="${t('openInExhibitor')}" style="cursor:pointer"
+    onclick="openExhibitorFor(${moduleId},'module_${moduleId}')">🔗 ${n} links</span>`;
 }

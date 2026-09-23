@@ -56,6 +56,7 @@ function vaultSchemaStamp() {
       String(migrateMapV3), String(migrateTimelineV3), String(migrateWriterV27),
       String(migrateHeroV26), String(migrateDesignNodeShapes), String(ensureIndexes),
       String(migrateModuleKindV5), String(migrateEntityRelationV5),
+      String(require('../module-parents').normalizeModuleParents),
     ]);
   }
   return _vaultStamp;
@@ -94,6 +95,10 @@ function initAppDB(db) {
   const tDDL = _now();
   db.exec(APP_DDL_SQL);
   _t('app DDL exec', tDDL);
+  // v5 Part 4: an app.ddx made before the locate folder existed.
+  if (!db.prepare(`PRAGMA table_info(nexus_file)`).all().some((c) => c.name === 'locate_dir')) {
+    db.exec(`ALTER TABLE nexus_file ADD COLUMN locate_dir TEXT`);
+  }
 
   db.exec(`PRAGMA user_version = ${appSchemaStamp() | 0}`);
 }

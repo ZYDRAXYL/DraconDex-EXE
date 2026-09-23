@@ -1,6 +1,7 @@
 'use strict';
 const { getDB } = require('./core');
 const { scopedAll, scopedGet } = require('./sqlscope');
+const { CONTENT_SOURCES, NEXUS_OF } = require('./wiki-sources');
 
 // Wiki-link index (v2.8). [[Name]] references typed inside markdown content
 // (Scribe notes, Director object notes, Writer chapters) are parsed on save,
@@ -136,36 +137,26 @@ function rebuildWikiIndex() {
 function _rebuildWikiIndex() {
   const d = getDB();
   d.prepare(`DELETE FROM wiki_link`).run();
-  for (const r of d.prepare(`SELECT id, content, nexus_ref FROM note WHERE content LIKE '%[[%'`).all()) {
-    reindexWikiLinks(`note_${r.id}`, r.content, r.nexus_ref);
+  // One loop over the registry (db/wiki-sources.js) — the list of indexed
+  // fields and the list that is rebuilt can no longer drift apart.
+  for (const [prefix, src] of Object.entries(CONTENT_SOURCES)) {
+    for (const r of d.prepare(src.rebuild).all()) {
+      const content = src.rebuildContent ? src.rebuildContent(d, r.id) : r.c;
+      reindexWikiLinks(`${prefix}_${r.id}`, content, r.nexus_ref);
+    }
   }
-  for (const r of d.prepare(`SELECT o.id, o.note, p.nexus_ref FROM object o JOIN project p ON o.project_id=p.id WHERE o.note LIKE '%[[%'`).all()) {
-    reindexWikiLinks(`obj_${r.id}`, r.note, r.nexus_ref);
-  }
-  for (const r of d.prepare(`
-    SELECT ch.id, ch.chapter_content, p.nexus_ref FROM write_chapter ch
-    JOIN write_book b ON ch.book_id=b.id JOIN write_series s ON b.series_id=s.id
-    JOIN write_project p ON s.project_id=p.id WHERE ch.chapter_content LIKE '%[[%'
-  `).all()) {
-    reindexWikiLinks(`wchp_${r.id}`, r.chapter_content, r.nexus_ref);
-  }
-  for (const r of d.prepare(`SELECT id, description, nexus_ref FROM module WHERE description LIKE '%[[%'`).all()) {
-    reindexWikiLinks(`module_${r.id}`, r.description, r.nexus_ref);
-  }
-  for (const r of d.prepare(`SELECT ch.id, ch.chapter_content, m.nexus_ref FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE ch.chapter_content LIKE '%[[%'`).all()) {
-    reindexWikiLinks(`bchp_${r.id}`, r.chapter_content, r.nexus_ref);
-  }
-  for (const r of d.prepare(`
-    SELECT s.id, m.nexus_ref, COALESCE(GROUP_CONCAT(g.message, char(10)), '') AS content
-    FROM chat_session s JOIN module m ON s.module_ref=m.id
-    JOIN chat_message g ON g.session_ref=s.id
-    GROUP BY s.id HAVING content LIKE '%[[%'
-  `).all()) {
-    reindexWikiLinks(`chss_${r.id}`, r.content, r.nexus_ref);
-  }
-  for (const r of d.prepare(`SELECT o.id, o.note, m.nexus_ref FROM classifier_object o JOIN module m ON o.module_ref=m.id WHERE o.note LIKE '%[[%'`).all()) {
-    reindexWikiLinks(`cobj_${r.id}`, r.note, r.nexus_ref);
-  }
+}
+
+// Save-time hook for a field registered in db/wiki-sources.js: re-read the
+// field's whole indexed text and reindex it. The callers are the db writes
+// of those fields (classifier values, event stories, dialogue descriptions,
+// Exhibitor notes).
+function reindexSource(prefix, id) {
+  const d = getDB();
+  const src = CONTENT_SOURCES[prefix];
+  if (!src || !NEXUS_OF[prefix]) throw new Error(`reindexSource: no source '${prefix}'`);
+  const nexusRef = d.prepare(NEXUS_OF[prefix]).get(id)?.n ?? null;
+  reindexWikiLinks(`${prefix}_${id}`, src.content(d, id), nexusRef);
 }
 
 // ── Key hydration ───────────────────────────────────────────────────────────
@@ -190,6 +181,9 @@ const KEY_LOOKUPS = {
   tlev:  { sql: `SELECT id, event_name AS name FROM timeline_event WHERE id=?`, type: 'event',   module: 'chronicler' },
   sdlg:  { sql: `SELECT id, name FROM story_dialogue WHERE id=?`,            type: 'dialogue',  module: 'narrator' },
   file:  { sql: `SELECT id, file_name AS name FROM import_file WHERE id=?`,   type: 'file',      module: 'dock' },
+  // v5 Part 4: an Exhibitor note node can hold [[links]] (db/wiki-sources.js),
+  // so it can be a backlink's source — named by its (truncated) text.
+  exn:   { sql: `SELECT id, substr(COALESCE(label,''),1,40) AS name FROM exhibit_node WHERE id=?`, type: 'note', module: 'exhibitor' },
 };
 
 // Plan part2 #2.4: one .get() per key became one IN-query per key PREFIX.
@@ -442,6 +436,12 @@ function getEntityPath(key) {
         const r = d.prepare(`SELECT module_ref FROM story_dialogue WHERE id=?`).get(id);
         return r && { kind: 'sdlg', moduleId: r.module_ref, dialogueId: id };
       }
+      // v5 Part 4: a link written in an Exhibitor note leads back to that
+      // note, selected, in its own Exhibitor.
+      case 'exn': {
+        const r = d.prepare(`SELECT module_ref FROM exhibit_node WHERE id=?`).get(id);
+        return r && { kind: 'exn', moduleId: r.module_ref, nodeId: id };
+      }
       // v5 Asset Nest: an asset opens in the file viewer; moduleId (null when
       // unfiled) lets the renderer reveal its node in the Nest.
       case 'file': {
@@ -480,32 +480,8 @@ function resolveDanglingLinks(name, nexusId) {
 // ── Rename safety ───────────────────────────────────────────────────────────
 // [[links]] live in plain text, so renaming a target breaks them. This
 // rewrites [[Old]] / [[Old|alias]] / [[ns:Old]] inside every source that
-// references targetKey, then reindexes those sources.
-const CONTENT_SOURCES = {
-  note: { get: `SELECT content AS c FROM note WHERE id=?`, set: `UPDATE note SET content=?, update_at=datetime('now') WHERE id=?` },
-  obj:  { get: `SELECT note AS c FROM object WHERE id=?`,  set: `UPDATE object SET note=?, update_at=datetime('now') WHERE id=?` },
-  wchp: { get: `SELECT chapter_content AS c FROM write_chapter WHERE id=?`, set: `UPDATE write_chapter SET chapter_content=?, update_at=datetime('now') WHERE id=?` },
-  module: { get: `SELECT description AS c FROM module WHERE id=?`, set: `UPDATE module SET description=?, update_at=datetime('now') WHERE id=?` },
-  bchp: { get: `SELECT chapter_content AS c FROM book_chapter WHERE id=?`, set: `UPDATE book_chapter SET chapter_content=?, update_at=datetime('now') WHERE id=?` },
-  cobj: { get: `SELECT note AS c FROM classifier_object WHERE id=?`, set: `UPDATE classifier_object SET note=?, update_at=datetime('now') WHERE id=?` },
-  // Chat "Scribe" sessions: the indexed content is the concatenation of the
-  // session's chat_message rows, so the rename rewrite runs per message row
-  // (rewrite: below) instead of through a single get/set column pair.
-  chss: {
-    rewrite: (d, sessionId, apply) => {
-      let any = false;
-      for (const g of d.prepare(`SELECT id, message FROM chat_message WHERE session_ref=?`).all(sessionId)) {
-        const next = apply(g.message);
-        if (next === g.message) continue;
-        d.prepare(`UPDATE chat_message SET message=? WHERE id=?`).run(next, g.id);
-        any = true;
-      }
-      if (!any) return null;
-      return d.prepare(`SELECT COALESCE(GROUP_CONCAT(message, char(10)), '') AS c FROM chat_message WHERE session_ref=?`).get(sessionId)?.c ?? '';
-    },
-  },
-};
-
+// references targetKey, then reindexes those sources. The sources are the
+// registry in db/wiki-sources.js — one entry per field that can hold links.
 function renameWikiTarget(targetKey, oldName, newName) {
   const d = getDB();
   if (!oldName || !newName || oldName === newName) return 0;
@@ -517,17 +493,8 @@ function renameWikiTarget(targetKey, oldName, newName) {
     const m = String(r.src_key).match(/^([a-z]+)_(\d+)$/);
     const src = m && CONTENT_SOURCES[m[1]];
     if (!src) continue;
-    const id = Number(m[2]);
-    if (src.rewrite) {
-      const next = src.rewrite(d, id, (c) => String(c || '').replace(re, (_, ns, tail) => `[[${ns}${newName}${tail}`));
-      if (next !== null) { reindexWikiLinks(r.src_key, next, r.nexus_ref); changed++; }
-      continue;
-    }
-    const row = d.prepare(src.get).get(id);
-    if (!row || !row.c) continue;
-    const next = row.c.replace(re, (_, ns, tail) => `[[${ns}${newName}${tail}`);
-    if (next === row.c) continue;
-    d.prepare(src.set).run(next, id);
+    const next = src.rewrite(d, Number(m[2]), (c) => String(c || '').replace(re, (_, ns, tail) => `[[${ns}${newName}${tail}`));
+    if (next === null) continue;
     reindexWikiLinks(r.src_key, next, r.nexus_ref);
     changed++;
   }
@@ -536,7 +503,7 @@ function renameWikiTarget(targetKey, oldName, newName) {
 
 module.exports = {
   renameWikiTarget, resolveDanglingLinks,
-  resolveWikiName, reindexWikiLinks, rebuildWikiIndex,
+  resolveWikiName, reindexWikiLinks, reindexSource, rebuildWikiIndex,
   nexusOfNote, nexusOfObject, nexusOfChapter,
   getBacklinks, getOutgoingLinks, resolveEntityKeys,
   quickIndex, getEntityPath, getGraph, getLinkCounts,

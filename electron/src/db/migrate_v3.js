@@ -57,7 +57,9 @@ function migrateLegacy(nexusId, target, legacyId, batchCtx) {
     ).get(nexusId, parentId, kind, name);
     if (existing) return existing.id;
     counts.modules++;
-    return module_.createModule({ nexus_ref: nexusId, parent_id: parentId, name, kind, cat_type: catType || null, color: color || null });
+    // anyParent: v3 content lands under its Manager "project" here and is
+    // wrapped into collectors by normalizeModuleParents when the tx ends.
+    return module_.createModule({ nexus_ref: nexusId, parent_id: parentId, name, kind, cat_type: catType || null, color: color || null }, { anyParent: true });
   };
   // findOrCreateChild is now just mkModule under its old, narrower name —
   // kept as an alias so the wrapper/series/folder call sites below don't
@@ -441,6 +443,10 @@ function migrateLegacy(nexusId, target, legacyId, batchCtx) {
   });
 
   const id = tx();
+  // v5 (§8.8): the v3 shape put a project's content under its Manager; a
+  // Manager holds no children now, so fold them into a collector beside it
+  // and point the Manager's selection at that collector.
+  require('./module-parents').normalizeModuleParents(d);
   // batchCtx is mutated in place (director connectors recorded, navigator
   // folds into them) — handed back so the IPC caller can pass the updated
   // copy into the next migrateLegacy call in the same import batch, since

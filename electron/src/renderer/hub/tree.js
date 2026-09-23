@@ -255,6 +255,10 @@ function onNestDragStart(ev, id, parentId) {
 function nestDropZone(ev, row, id) {
   const r = row.getBoundingClientRect();
   const frac = (ev.clientY - r.top) / r.height;
+  // v5 Part 4 (§8.8): only a collector takes a module inside it; any other
+  // row splits at the middle into before/after, so a drop never offers "in".
+  const target = id != null ? findModuleNode(id) : null;
+  if (S.dragNest && target && target.kind !== 'collector') return frac < 0.5 ? 'before' : 'after';
   if (frac < 0.25) return 'before';
   if (frac > 0.75) {
     const node = id != null ? findModuleNode(id) : null;
@@ -307,7 +311,12 @@ async function onNestDrop(ev, targetId, targetParentId, row) {
   if (zone === 'before') siblings.splice(siblings.indexOf(targetId), 0, drag.id);
   else if (zone === 'after') siblings.splice(siblings.indexOf(targetId) + 1, 0, drag.id);
   else siblings.push(drag.id);
-  await api.module.move(S.nexus.id, drag.id, newParentId, siblings);
+  try {
+    await api.module.move(S.nexus.id, drag.id, newParentId, siblings);
+  } catch (_) {
+    toast(t('moduleParentMustBeFolder'), 'err');
+    return;
+  }
   await reloadModuleTree();
 }
 

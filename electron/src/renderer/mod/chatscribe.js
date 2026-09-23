@@ -126,7 +126,7 @@ function buildChatBubblesHtml(session, messages, opts = {}) {
   return `<div id="${streamId}" class="chs-stream">${html}</div>
     <div class="chs-inputrow">
       <button class="btn btn-s btn-i" onclick="openChatLinkPicker('${inputId}')" title="${t('moduleLink')}">${I.relation}</button>
-      <input id="${inputId}" placeholder="${t('chatTypeNote')}" onkeydown="if(event.key==='Enter')${onSend}">
+      <input id="${inputId}" data-wiki placeholder="${t('chatTypeNote')}" onkeydown="if(event.key==='Enter')${onSend}">
       <button class="btn btn-p" onclick="${onSend}">${t('chatSend')}</button>
     </div>`;
 }
@@ -353,7 +353,7 @@ async function openChatMessageModal(id) {
   const g = messages.find(v => v.id === id);
   if (!g) return;
   openModal(t('moduleEdit'), `
-    <div class="fg"><label>${t('content')}</label><textarea id="cm-text" rows="3">${x(g.message)}</textarea></div>
+    <div class="fg"><label>${t('content')}</label><textarea id="cm-text" data-wiki rows="3">${x(g.message)}</textarea></div>
     <div class="mfoot">
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" onclick="submitChatMessage(${id})">${t('save')}</button>

@@ -522,3 +522,22 @@ select.fp-input[multiple]{padding:2px}
 
 .exh-fld-list{max-height:50vh;overflow:auto;display:flex;flex-direction:column;gap:2px}
 .exh-fld{margin-right:4px}
+
+/* v5 Part 4 (V5.md §8.2): the page navbar — hub/page-head.js. The app's
+   first position:sticky: .bpane-body / #main-inner scroll, the head pins.
+   The two solid shadows paint over the scroller's top padding and the
+   head's own bottom margin, so content scrolling past never shows through
+   a gap above or below the pinned bar. */
+.page-navbar{position:sticky;top:0;z-index:6;background:var(--bg);padding-left:12px;padding-top:6px;
+	box-shadow:0 -24px 0 0 var(--bg),0 12px 0 0 var(--bg)}
+.page-navbar .navbar-row{display:flex;align-items:center;gap:8px}
+.page-navbar .navbar-h{margin:0;font-size:1.15em;display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap}
+.page-navbar .navbar-grow{flex:1;min-width:0}
+.page-navbar .navbar-sub{margin-top:2px}
+.page-navbar .navbar-fold{margin-left:auto;flex-shrink:0;opacity:.6}
+.page-navbar .navbar-fold:hover{opacity:1}
+.page-navbar.is-folded{padding-bottom:6px;margin-bottom:10px}
+.page-navbar .navbar-title{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.module-handle-inp{width:160px;font-size:calc(12px * var(--fsc,1))}
+.module-handle-add{padding:1px 7px;opacity:.55;font-size:calc(11px * var(--fsc,1))}
+.module-handle-add:hover{opacity:1}

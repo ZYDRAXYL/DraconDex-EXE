@@ -1,4 +1,5 @@
 'use strict';
+const { normalizeModuleParents } = require('../module-parents');
 // Additive column migrations and one-time data fixes, plus ensureIndexes().
 // Every one takes the open connection as an argument, is idempotent, and is
 // order-dependent — and each is hashed by schemaStamp() (schema/init.js), so
@@ -151,9 +152,12 @@ function migrateInlineColumns(db) {
   migrateHeroV26(db);
   migrateWriterV27(db);
   migrateNexusV28(db);
-  // Last: needs entity_relation.color (added above) to already exist so the
+  // Needs entity_relation.color (added above) to already exist so the
   // rebuild can carry it.
   migrateEntityRelationV5(db);
+  // v5 Part 4 (§8.8): a module's parent must be a collector. Wrap the
+  // children an old vault keeps under any other kind — move, never delete.
+  normalizeModuleParents(db);
 }
 
 // ── v5 table rebuilds (APP docs/V5.md §4.2) ────────────────────────────────

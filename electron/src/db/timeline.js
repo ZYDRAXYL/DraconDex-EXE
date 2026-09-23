@@ -1,5 +1,6 @@
 'use strict';
 const { getDB } = require('./core');
+const wiki = require('./wiki');
 
 const getTimelines = (pid) =>
   getDB().prepare(`SELECT t.*, uc.color_code FROM timeline t LEFT JOIN use_color uc ON t.color=uc.id WHERE t.project_id=? ORDER BY t.line_name`).all(pid);
@@ -38,16 +39,28 @@ const getEvents = (tlid) =>
     WHERE te.timeline_id=?
     ORDER BY s.years,s.month,s.day,s.hour,s.minute
   `).all(tlid);
-const createEvent = (tlid, n, sid, eid, c, story) =>
-  getDB().prepare(`INSERT INTO timeline_event (timeline_id,event_name,start_at,end_at,color,story) VALUES (?,?,?,?,?,?)`).run(tlid, n, sid, eid || null, c || null, story || null);
-const updateEvent = (id, n, sid, eid, c, story) =>
-  getDB().prepare(`UPDATE timeline_event SET event_name=?,start_at=?,end_at=?,color=?,story=?,update_at=datetime('now') WHERE id=?`).run(n, sid, eid || null, c || null, story || null, id);
-const updateEventStory = (id, story) =>
-  getDB().prepare(`UPDATE timeline_event SET story=?, update_at=datetime('now') WHERE id=?`).run(story || null, id);
+const createEvent = (tlid, n, sid, eid, c, story) => {
+  const r = getDB().prepare(`INSERT INTO timeline_event (timeline_id,event_name,start_at,end_at,color,story) VALUES (?,?,?,?,?,?)`).run(tlid, n, sid, eid || null, c || null, story || null);
+  if (story) wiki.reindexSource('tlev', r.lastInsertRowid);
+  return r;
+};
+// The event's story holds [[links]] (v5 Part 4, db/wiki-sources.js 'tlev').
+const updateEvent = (id, n, sid, eid, c, story) => {
+  const r = getDB().prepare(`UPDATE timeline_event SET event_name=?,start_at=?,end_at=?,color=?,story=?,update_at=datetime('now') WHERE id=?`).run(n, sid, eid || null, c || null, story || null, id);
+  wiki.reindexSource('tlev', id);
+  return r;
+};
+const updateEventStory = (id, story) => {
+  const r = getDB().prepare(`UPDATE timeline_event SET story=?, update_at=datetime('now') WHERE id=?`).run(story || null, id);
+  wiki.reindexSource('tlev', id);
+  return r;
+};
 const updateEventIcon = (id, icon, color) =>
   getDB().prepare(`UPDATE timeline_event SET icon=?, color=?, update_at=datetime('now') WHERE id=?`).run(icon || null, color || null, id);
-const deleteEvent = (id) =>
-  getDB().prepare(`DELETE FROM timeline_event WHERE id=?`).run(id);
+const deleteEvent = (id) => {
+  getDB().prepare(`DELETE FROM wiki_link WHERE src_key=?`).run(`tlev_${id}`);
+  return getDB().prepare(`DELETE FROM timeline_event WHERE id=?`).run(id);
+};
 
 // ── Hashtag junctions for events ────────────────────
 const getEventTags = (eventId) =>

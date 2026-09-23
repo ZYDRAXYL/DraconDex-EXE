@@ -1,13 +1,10 @@
 'use strict';
 // ═══ Manager — the Graph view ═════════════════════════════════════════
 // Process 8 part 2 replaced Manager's Recent view (the List view re-sorted
-// by update_at) with this one. Nodes are every module in the Manager's
-// subtree; edges are of two kinds:
-//   · nest    — parent → child, so a Manager whose modules are not related
-//               to each other still shows its own structure
-//   · relation — an entity_relation row joining two `module_<id>` keys, the
-//               link a user draws in Connector. These are the lines the
-//               feature is actually about; the nest lines are the backdrop.
+// by update_at) with this one. Nodes are the modules the Manager selects
+// (v5 Part 4 — a selection, not a subtree, §8.9); edges are entity_relation
+// rows joining two `module_<id>` keys — the links a user draws in the
+// Exhibitor. The old parent → child "nest" lines are gone with children.
 //
 // Built on the pre-v5 Connector's board idiom (now mod/exhibitor-graph.js) (absolutely-positioned nodes over
 // one SVG edge layer, right-drag pan, wheel zoom) rather than sage.js's
@@ -19,23 +16,16 @@ const managerZoom = {}; // moduleId -> scale, session-sticky like connectorZoom
 
 const MGR_W = 1600, MGR_H = 1100;
 
-// Flattens the Manager's subtree into nodes + nest edges. `depth` drives the
-// seeded layout: each level is a ring, so the shape reads as a tree before
-// anything is dragged.
-function managerGraphModel(m) {
-  const nodes = [];
-  const edges = [];
-  const walk = (list, depth, parentId) => {
-    for (const c of list) {
-      nodes.push({ id: c.id, name: c.name, kind: c.kind, color: c.icon_color_code || c.color_code, depth });
-      if (parentId != null) edges.push({ from: parentId, to: c.id, nest: true });
-      if (c.children?.length) walk(c.children, depth + 1, c.id);
-    }
-  };
-  walk(m.children || [], 0, null);
+// The Manager's selection as nodes (v5 Part 4 — no subtree any more, §8.9),
+// laid out in rows of MGR_ROW so the seeded layout reads as a grid before
+// anything is dragged; edges are the relations whose BOTH ends are selected
+// (a line to a module not on this board would be a line to nowhere).
+const MGR_ROW = 6;
+function managerGraphModel() {
+  const rows = S.managerData?.rows || [];
+  const nodes = rows.map((r, i) => ({ id: r.id, name: r.name, kind: r.ownKind, color: r.color, depth: Math.floor(i / MGR_ROW) }));
   const ids = new Set(nodes.map(n => n.id));
-  // Only relations whose BOTH ends are in this subtree — a line to a module
-  // the user cannot see on this board would be a line to nowhere.
+  const edges = [];
   for (const r of (S.managerData?.relations || [])) {
     const from = String(r.from_key || ''), to = String(r.to_key || '');
     if (!from.startsWith('module_') || !to.startsWith('module_')) continue;
@@ -47,7 +37,7 @@ function managerGraphModel(m) {
 }
 
 function renderManagerGraphHtml(m) {
-  const model = managerGraphModel(m);
+  const model = managerGraphModel();
   const rel = model.edges.filter(e => !e.nest).length;
   return `<div class="cn-wrap">
     <div id="mgr-board" class="nar-board cn-board">
@@ -70,7 +60,7 @@ function mountManagerGraph() {
   const board = q('#mgr-board'), graphEl = q('#mgr-graph'), svg = q('#mgr-edges');
   if (!board || !graphEl || !svg) return;
 
-  const { nodes, edges } = managerGraphModel(m);
+  const { nodes, edges } = managerGraphModel();
   graphEl.style.width = `${MGR_W}px`;
   graphEl.style.height = `${MGR_H}px`;
   const cx = MGR_W / 2, cy = MGR_H / 2;

@@ -214,9 +214,6 @@ async function refreshInspectorTagChips(moduleId) {
   if (dockChips) dockChips.innerHTML = `${chipsHtml}<button class="btn btn-g btn-i" onclick="openModuleTagPopup(${moduleId}, this)" title="${t('tagLink')}">${I.plus}</button>`;
   const headTags = q('.module-head .mtags');
   if (headTags) {
-    const d = S.inspectorData;
-    const linkCount = d ? (d.links.outgoing.length + d.links.backlinks.length) : 0;
-    const linkChip = `<span class="htag lk" data-no-i18n title="${t('moduleLink')}">🔗 ${linkCount} links</span>`;
-    headTags.innerHTML = `${chipsHtml}${linkChip}<button class="btn btn-g btn-i" onclick="openModuleTagPopup(${moduleId}, this)" title="${t('tagLink')}">${I.plus}</button>`;
+    headTags.innerHTML = `${chipsHtml}${moduleLinkChipHtml(moduleId, S.inspectorData)}<button class="btn btn-g btn-i" onclick="openModuleTagPopup(${moduleId}, this)" title="${t('tagLink')}">${I.plus}</button>`;
   }
 }
