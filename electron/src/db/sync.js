@@ -537,6 +537,9 @@ function serializeVault(nexusId, moduleIds = null) {
   // export — a single module can't carry the whole vault's templates).
   const calendarTemplates = allGlobal(`
     SELECT name, spec, builtin FROM calendar_template WHERE nexus_ref=? ORDER BY id`);
+  // v5 Part 6 (§10.8): the user's module presets — nexus-scoped the same way.
+  const modulePresets = allGlobal(`
+    SELECT kind, name, spec FROM module_preset WHERE nexus_ref=? ORDER BY id`);
 
   const notes = {
     folders: allGlobal(`
@@ -591,7 +594,7 @@ function serializeVault(nexusId, moduleIds = null) {
     modules, moduleAttrs, moduleUi, moduleTags,
     classifier, locator, chronicler, wanderer, narrator, author,
     chatscribe, sketcher, designer, relations, notes, calendarTemplates,
-    exhibitor,
+    exhibitor, modulePresets,
   };
 }
 
@@ -671,6 +674,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       db.prepare(`DELETE FROM note_folder WHERE nexus_ref=?`).run(nexusId);
       db.prepare(`DELETE FROM wiki_link WHERE nexus_ref=?`).run(nexusId);
       db.prepare(`DELETE FROM calendar_template WHERE nexus_ref=?`).run(nexusId);
+      db.prepare(`DELETE FROM module_preset WHERE nexus_ref=?`).run(nexusId);
     }
 
     // 2. Lookups by natural key (same pattern as importDatabaseMerge).
@@ -1004,6 +1008,14 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       if (!ct || !ct.name || !ct.spec) continue;
       db.prepare(`INSERT OR IGNORE INTO calendar_template (nexus_ref, name, spec, builtin) VALUES (?,?,?,?)`)
         .run(nexusId, ct.name, ct.spec, ct.builtin ? 1 : 0);
+    }
+
+    // Presets are self-contained too (spec holds colour CODES, never ids);
+    // a name the target already has for that kind keeps the target's copy.
+    for (const p of arr(payload.modulePresets)) {
+      if (!p || !p.kind || !p.name || typeof p.spec !== 'string') continue;
+      db.prepare(`INSERT OR IGNORE INTO module_preset (nexus_ref, kind, name, spec) VALUES (?,?,?,?)`)
+        .run(nexusId, p.kind, p.name, p.spec);
     }
 
     // module_ui last: Wanderer's mapModule/timelineModule values are module

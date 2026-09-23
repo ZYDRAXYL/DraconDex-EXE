@@ -20,6 +20,8 @@
 .kind-empty .ei .icon{opacity:.9;color:inherit}
 .kind-empty > .btn{margin-top:12px}
 .kind-empty .drafter-hint{margin-top:8px}
+.preset-chips{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;margin-top:14px}
+.preset-chips .drafter-hint{width:100%;margin:0}
 /* v5 Part 6 §10.4: a just-in-time tip under a module page's navbar (core/teach.js). */
 .teach-tip{display:flex;align-items:center;gap:10px;margin:8px 0 4px;padding:8px 10px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;background:var(--surface)}
 .teach-tip-icon{color:var(--accent);display:flex}

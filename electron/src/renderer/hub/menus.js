@@ -31,6 +31,7 @@ CTX_PROVIDERS['nest.module'] = (c) => [
   cmdItem('module.icon', c),
   cmdItem('module.duplicate', c),
   cmdItem('module.moveTo', c),
+  cmdItem('module.savePreset', c),
   { sep: true },
   cmdItem('module.delete', c),
   { sep: true },
@@ -281,11 +282,21 @@ function rememberRecentKind(kind) {
   catch (_) { /* private window / blocked storage: the list just stays empty */ }
 }
 
-function kindListRowHtml(k, parentId) {
-  return `<div class="kind-list-item" data-kind-row data-search="${x(`${kindSearchText(k)} ${t(KIND_DESC_KEY[k])}`.toLowerCase())}"
-      onclick="quickCreateModule('${k}',${parentId ?? 'null'})">
+// v5 Part 6 (§10.8): a kind with presets (hub/presets.js) opens a flyout of
+// them on hover; clicking the row itself still creates an empty module. Only
+// in the top-level picker — inside the module menu's "Create" flyout a second
+// flyout would replace the first (there is one .ctx-submenu at a time).
+function kindListRowHtml(k, parentId, withPresets = false) {
+  const pid = parentId ?? 'null';
+  const hasPresets = withPresets && presetsFor(k).length > 0;
+  const hover = hasPresets
+    ? `onmouseenter="openPresetSubmenu(event,'${k}',${pid})" onmouseleave="scheduleCtxSubmenuClose()"`
+    : `onmouseenter="scheduleCtxSubmenuClose()"`;
+  return `<div class="kind-list-item${hasPresets ? ' kli-submenu-parent' : ''}" data-kind-row data-search="${x(`${kindSearchText(k)} ${t(KIND_DESC_KEY[k])}`.toLowerCase())}"
+      onclick="quickCreateModule('${k}',${pid})" ${hover}>
       <span class="kicon" style="color:${x(KIND_COLOR[k])}">${I[KIND_ICON[k]]}</span>
       <span class="kli-text"><span class="kli-name">${x(kindLabelBoth(k))}</span><span class="kli-desc">${t(KIND_DESC_KEY[k])}</span></span>
+      ${hasPresets ? `<span class="kli-arrow">${I.chevronRight}</span>` : ''}
     </div>`;
 }
 
@@ -311,7 +322,7 @@ function buildKindListHtml(parentId, excludeCollector = false, withSearch = fals
   const allowed = (k) => !(excludeCollector && k === 'collector');
   const recent = recentKinds().filter(allowed);
   if (recent.length) {
-    html += `<div class="kind-list-head" data-kind-head>${t('kindRecent')}</div>` + recent.map(k => kindListRowHtml(k, parentId)).join('');
+    html += `<div class="kind-list-head" data-kind-head>${t('kindRecent')}</div>` + recent.map(k => kindListRowHtml(k, parentId, withSearch)).join('');
   }
   let lastCat = null;
   for (const g of KIND_GROUPS) {
@@ -322,7 +333,12 @@ function buildKindListHtml(parentId, excludeCollector = false, withSearch = fals
       lastCat = g.cat;
     }
     if (g.key) html += `<div class="kind-list-head kind-list-sub" data-kind-head>${t(g.key)}</div>`;
-    html += kinds.map(k => kindListRowHtml(k, parentId)).join('');
+    html += kinds.map(k => kindListRowHtml(k, parentId, withSearch)).join('');
+  }
+  if (withSearch && userPresetCount()) {
+    html += `<div class="ctx-sep" data-kind-head></div>
+      <div class="kind-list-item" data-kind-head data-cmd="app.managePresets" onclick="closeAllPopups();runCommand('app.managePresets')">
+        <span class="kicon">${I.options}</span><span class="kli-name">${x(t('managePresets'))}</span></div>`;
   }
   return html;
 }
@@ -357,7 +373,10 @@ function buildArtisanTemplateListHtml() {
 // v5 Part 3 (V5.md §7.4, decided): Classifier no longer stops for a cat_type
 // popup — every new one is 'object'. Old 'element' / 'character' modules keep
 // theirs and still work; the choice lives in the module's edit form.
-async function quickCreateModule(kind, parentId) {
+//
+// presetRef (v5 Part 6, hub/presets.js): shape the new module from a preset
+// before it opens, so its first render is already the preset's.
+async function quickCreateModule(kind, parentId, presetRef = null) {
   rememberRecentKind(kind);
   const name = t('newModuleName').replace('{kind}', kindLabel(kind));
   let moduleId;
@@ -373,6 +392,7 @@ async function quickCreateModule(kind, parentId) {
     return;
   }
   closeAllPopups();
+  if (presetRef) await applyPresetToModule(moduleId, kind, presetRef);
   if (parentId != null) S.moduleCollapsed.delete(parentId);
   await reloadModuleTree();
   S.renamingModuleId = moduleId;

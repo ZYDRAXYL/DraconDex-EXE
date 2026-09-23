@@ -2,6 +2,7 @@
 const core      = require('./src/db/core');
 const nexus     = require('./src/db/nexus');
 const teach     = require('./src/db/teach');
+const preset    = require('./src/db/preset');
 const scribe    = require('./src/db/scribe');
 const wiki      = require('./src/db/wiki');
 const color     = require('./src/db/color');
@@ -41,6 +42,7 @@ module.exports = {
   ...core,
   ...nexus,
   ...teach,
+  ...preset,
   ...scribe,
   ...wiki,
   ...color,

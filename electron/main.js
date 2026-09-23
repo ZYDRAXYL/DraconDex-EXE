@@ -690,6 +690,12 @@ h('nexus:update', (id,n,m,c)     => db.updateNexus(id,n,m,c));
 h('nexus:delete', (id)           => db.deleteNexus(id));
 h('nexus:taught',     (nx)         => db.getTaught(nx));
 h('nexus:markTaught', (nx, tip, st) => db.markTaught(nx, tip, st));
+// v5 Part 6 (§10.8): the user's own module presets. Built-ins live in the
+// renderer (hub/presets.js) and are applied through preset:apply too.
+h('preset:list',   (nx, kind)        => db.listPresets(nx, kind));
+h('preset:save',   (nx, mid, name)   => db.savePreset(nx, mid, name));
+h('preset:delete', (id)              => db.deletePreset(id));
+h('preset:apply',  (mid, spec)       => db.applyPreset(mid, spec));
 
 // Scribe (markdown notes)
 h('note:getFolders',   (nx)            => db.getNoteFolders(nx));

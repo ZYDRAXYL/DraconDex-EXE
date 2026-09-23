@@ -155,6 +155,7 @@ async function reloadModuleTree(opts = {}) {
     : [[], {}];
   S.moduleTree = tree;
   seedNestItems(nestItems);
+  refreshPresetCache(); // hub/presets.js — the kind picker reads it synchronously
   // Vault content changed under it, so the memoised analytics payloads
   // (Plan part2 #2.3) can't be reused.
   S.sageHutCache = null;

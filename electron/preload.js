@@ -33,6 +33,12 @@ contextBridge.exposeInMainWorld('api', {
     taught:       (nx)     => inv('nexus:taught', nx),
     markTaught:   (nx,tip,st) => inv('nexus:markTaught', nx, tip, st),
   },
+  preset: {
+    list:   (nx,kind)      => inv('preset:list', nx, kind),
+    save:   (nx,mid,name)  => inv('preset:save', nx, mid, name),
+    delete: (id)           => inv('preset:delete', id),
+    apply:  (mid,spec)     => inv('preset:apply', mid, spec),
+  },
   shell: {
     revealPath:  (p)       => inv('shell:revealPath', p),
     composeMail: (s2,b)    => inv('shell:composeMail', s2,b),

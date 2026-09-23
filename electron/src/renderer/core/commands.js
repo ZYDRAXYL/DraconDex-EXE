@@ -135,6 +135,8 @@ const COMMANDS = {
     palette: (c) => openHtmlPopup(buildMoveToListHtml(c.moduleId)),
     surfaces: ['nest.ctx'],
   },
+  'module.savePreset': { label: 'savePreset', icon: 'star', scope: 'module', when: (c) => cmdModule(c) && !isFolderCtx(c), run: (c) => openSavePresetModal(c.moduleId), surfaces: ['nest.ctx'] },
+  'app.managePresets': { label: 'managePresets', icon: 'options', scope: 'app', when: () => !!S.nexus, run: () => openManagePresetsModal(), surfaces: ['kind.picker'] },
   'module.delete': { label: 'delete', icon: 'delete', danger: true, scope: 'module', run: (c) => deleteModuleNode(c.moduleId), surfaces: ['nest.ctx', 'classifier.ctx'] },
   'module.pin': {
     label: (c) => (cmdModule(c)?.pinned ? 'unpin' : 'pin'), icon: 'pin', scope: 'module',
