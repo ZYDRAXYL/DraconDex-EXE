@@ -64,9 +64,7 @@ const dgNodeName = (n) => n.entity ? n.entity.name : (n.node_text || '—');
 function buildDesignerMainHtml(m) {
   const d = (S.designerData && S.designerData.moduleId === m.id) ? S.designerData : null;
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
-  const viewBar = `<div class="viewbar">
-    ${DESIGNER_VIEWS.map(v => `<span class="vitem${v === d.view ? ' act' : ''}" onclick="setDesignerView('${v}')" data-no-i18n>${DESIGNER_VIEW_LABEL[v]}</span>`).join('')}
-  </div>`;
+  const viewBar = viewBarHtml(DESIGNER_VIEWS, d.view, v => `setDesignerView('${v}')`, v => DESIGNER_VIEW_LABEL[v], { noI18n: true });
   const toolbar = `<div class="classifier-toolbar">${viewBar}</div>`;
   if (d.view === 'outline') return toolbar + buildDesignerOutlineHtml(d);
   if (d.view === 'matrix') return toolbar + buildDesignerMatrixHtml(d);
@@ -232,7 +230,7 @@ function mountDesignerBoard() {
     }
   }
 
-  board.addEventListener('contextmenu', (e2) => e2.preventDefault());
+  bindCanvasCtx(board, 'designer.canvas');
   board.addEventListener('pointerdown', (e2) => {
     if (e2.button !== 2) return;
     board.classList.add('is-panning');
@@ -388,7 +386,7 @@ async function submitDesignNode(id) {
 }
 
 async function deleteDesignNodeRow(id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   const moduleId = S.designerData.moduleId;
   await api.designer.deleteNode(id);
   closeModal();

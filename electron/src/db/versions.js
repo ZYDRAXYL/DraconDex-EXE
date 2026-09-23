@@ -130,7 +130,7 @@ const RESTORE_OPS = {
     if (a.note) cls.updateObjectNote(id, a.note);
   },
   classifierObjectDelete: (a) => require('./classifier').deleteObject(a.objectId),
-  classifierTemplate: (a) => require('./classifier').updateTemplate(a.templateId, a.description, a.attributeType, a.levelable, a.hasCondition, a.levelSteps),
+  classifierTemplate: (a) => require('./classifier').updateTemplate(a.templateId, a.description, a.attributeType, a.levelable, a.hasCondition),
   authorChapterContent: (a) => require('./author').updateBookChapterContent(a.chapterId, a.content),
   authorChapterName: (a) => require('./author').renameBookChapter(a.chapterId, a.name),
 };

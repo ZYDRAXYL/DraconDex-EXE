@@ -52,7 +52,7 @@ async function renderScribeSidebar() {
   S.scribeNotes = notes;
 
   const noteRow = (n) => `
-    <div class="li scribe-note ${S.scribeNote?.id === n.id ? 'active' : ''}" onclick="selectNote(${n.id})" oncontextmenu="openNoteModal(${n.id})">
+    <div class="li scribe-note ${S.scribeNote?.id === n.id ? 'active' : ''}" onclick="selectNote(${n.id})" oncontextmenu="event.preventDefault();openNoteModal(${n.id})">
       <span class="dot" style="background:${n.color_code || 'var(--accent)'}"></span>
       <span class="name">${n.pinned ? '📌 ' : ''}${x(n.title)}</span>
       <button class="btn-icon scribe-row-edit" onclick="event.stopPropagation();openNoteModal(${n.id})" title="${t('edit')}">
@@ -67,7 +67,7 @@ async function renderScribeSidebar() {
       const kids = notes.filter(n => n.folder_ref === f.id);
       html += `
         <div class="scribe-folder">
-          <div class="li scribe-folder-head" onclick="tglScribeFolder(${f.id})" oncontextmenu="openNoteFolderModal(${f.id})">
+          <div class="li scribe-folder-head" onclick="tglScribeFolder(${f.id})" oncontextmenu="event.preventDefault();openNoteFolderModal(${f.id})">
             <svg style="width:8px;height:8px;flex-shrink:0;transform:rotate(${open ? 90 : 0}deg);transition:transform .15s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             <span style="color:${f.color_code || 'var(--accent)'};line-height:1;display:flex;align-items:center">${I.folder}</span>
             <span class="name">${x(f.name)}</span>

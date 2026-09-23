@@ -172,7 +172,7 @@ async function submitAttrForm(moduleId, attrId) {
 }
 
 async function deleteModuleAttrRow(moduleId, attrId) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.module.deleteAttr(attrId);
   await loadInspectorData(moduleId);
   renderNexusHome();

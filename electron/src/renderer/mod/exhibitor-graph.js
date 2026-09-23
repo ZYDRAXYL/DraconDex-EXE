@@ -118,7 +118,7 @@ function mountExhibitorGraph() {
     if (lbl) lbl.textContent = `${Math.round(z * 100)}%`;
   };
   applyZoom();
-  board.addEventListener('contextmenu', (e2) => e2.preventDefault());
+  bindCanvasCtx(board, 'exhibitor.graph');
   board.addEventListener('pointerdown', (e2) => {
     if (e2.button !== 2) return;
     board.classList.add('is-panning');

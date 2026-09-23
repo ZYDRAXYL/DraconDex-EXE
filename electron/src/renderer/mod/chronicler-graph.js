@@ -163,7 +163,7 @@ function bindChroniclerDownlineInteractions() {
   window.addEventListener('mouseup', () => {
     panning = false; board.classList.remove('is-panning');
   }, { signal: ac.signal });
-  board.addEventListener('contextmenu', (e) => e.preventDefault(), { signal: ac.signal });
+  bindCanvasCtx(board, 'chronicler.graph', { resettable: true }, { signal: ac.signal });
 }
 
 function resetChroniclerDownlineView() {

@@ -345,3 +345,18 @@
 .modal-data .li{cursor:default;background:var(--bg);border:1px solid var(--border);margin-bottom:4px}
 .modal-data .li:hover{background:var(--bg);color:var(--t2)}
 
+
+/* toast() (core/ui.js). V5.md §7.5 bug #1: #toast had no rule in any
+   stylesheet — it rendered as an unstyled block in the body flow, so every
+   "tell the user why" message in the app was effectively invisible. Bottom
+   right, above modals (100/150) and the confirm dialog (1000) so the result
+   of a confirmed action shows, below the 2000 full-window layer. */
+#toast{position:fixed;right:18px;bottom:18px;z-index:1100;max-width:min(420px,calc(100vw - 36px));
+	padding:10px 16px;border-radius:var(--r);border:1px solid var(--border);border-left:4px solid var(--accent);
+	background:var(--raised);color:var(--t1);font-size:calc(13px * var(--fsc,1));box-shadow:var(--shadow-float);
+	transform:translateY(24px);opacity:0;pointer-events:none;transition:transform .2s ease,opacity .2s ease}
+#toast:empty{display:none}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.ok{border-left-color:var(--success)}
+#toast.err{border-left-color:var(--danger)}
+#toast.warn{border-left-color:var(--warn, var(--accent))}

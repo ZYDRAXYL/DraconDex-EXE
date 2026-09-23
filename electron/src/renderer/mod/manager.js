@@ -54,9 +54,7 @@ function buildManagerMainHtml(m) {
   const children = m.children || [];
   const d = (S.managerData && S.managerData.moduleId === m.id) ? S.managerData : null;
   const view = d?.view || 'cards';
-  const viewBar = `<div class="viewbar">
-    ${MANAGER_VIEWS.map(v => `<span class="vitem${v === view ? ' act' : ''}" onclick="setManagerView(${m.id},'${v}')">${MANAGER_VIEW_LABEL[v]}</span>`).join('')}
-  </div>`;
+  const viewBar = viewBarHtml(MANAGER_VIEWS, view, v => `setManagerView(${m.id},'${v}')`, v => MANAGER_VIEW_LABEL[v]);
   const toolbar = `<div class="classifier-toolbar">
     <button class="btn btn-p" onclick="event.stopPropagation();openMinorModuleModal(${m.id},this)">${I.plus} ${t('addMinorModule')}</button>
     ${viewBar}

@@ -84,7 +84,7 @@ function wyvernBrowseBreadcrumbHtml(){
 // A module with children drills deeper by default (matches Drake's own
 // tree — a folder expands, it doesn't immediately open); a childless
 // module opens its detail page directly since there's nowhere to drill.
-// Collector is folder-only (no detail page at all, per KIND_MAIN_BUILDER)
+// Collector is folder-only (no detail page at all, per KIND_PAGE)
 // so it always drills, never offers the separate "open" button.
 function wyvernBrowseCardHtml(m, totalModules){
   const hasChildren = !!(m.children && m.children.length);

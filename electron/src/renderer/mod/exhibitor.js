@@ -143,17 +143,36 @@ async function loadExhibitorData(m) {
     nodes = (await api.exhibitor.scene(m.id)).nodes;
   }
   if (ui.seedScene === '1') await api.module.setUi(m.id, 'seedScene', '0');
+  const cls = await loadExhibitorClassifierValues(nodes, byKey);
   const prev = S.exhibitorData?.moduleId === m.id ? S.exhibitorData : null;
   const focusNode = focus ? nodes.find(n => n.linker_key === focus) : null;
   S.exhibitorFocusKey = null;
   S.exhibitorData = {
-    moduleId: m.id, def, items, index: byKey, relations, wikiPairs, relTypes,
+    moduleId: m.id, def, items, index: byKey, relations, wikiPairs, relTypes, cls,
     view: EXH_VIEWS.includes(ui.activeView) ? ui.activeView : 'scene',
     groupBy: ui.boardGroupBy || 'module',
     nodes, camera: scene.view,
     sel: focusNode ? focusNode.id : (prev?.sel ?? null),
     linkFrom: null,
   };
+}
+
+// §7.9 cards and tables read live values: one getObjectsFull per category
+// that has an object placed in this scene, on every load — never a copy.
+async function loadExhibitorClassifierValues(nodes, byKey) {
+  const mods = new Set();
+  for (const n of nodes) {
+    if (!n.linker_key?.startsWith('cobj_')) continue;
+    const mid = byKey.get(n.linker_key)?.moduleId;
+    if (mid != null) mods.add(mid);
+  }
+  const cls = { objects: new Map(), templates: new Map() };
+  const full = await Promise.all([...mods].map(mid => api.classifier.getObjectsFull(mid)));
+  [...mods].forEach((mid, i) => {
+    cls.templates.set(mid, full[i].templates.filter(tp => tp.object_ref == null));
+    for (const o of full[i].objects) cls.objects.set(o.id, o);
+  });
+  return cls;
 }
 
 async function setExhibitorView(view) {
@@ -203,9 +222,7 @@ function exhibitorEdgesAmong(keys) {
 function buildExhibitorMainHtml(m) {
   const d = (S.exhibitorData && S.exhibitorData.moduleId === m.id) ? S.exhibitorData : null;
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
-  const viewBar = `<div class="viewbar">
-    ${EXH_VIEWS.map(v => `<span class="vitem${v === d.view ? ' act' : ''}" onclick="setExhibitorView('${v}')" data-no-i18n>${EXH_VIEW_LABEL[v]}</span>`).join('')}
-  </div>`;
+  const viewBar = viewBarHtml(EXH_VIEWS, d.view, v => `setExhibitorView('${v}')`, v => EXH_VIEW_LABEL[v], { noI18n: true });
   const toolbar = `<div class="classifier-toolbar">
     <button class="btn btn-p" onclick="openExhibitorRelationModal()">${I.plus} ${t('addRelation')}</button>
     <span class="vw-filterlabel">${t('exhibitorFilter')}</span>${filterChipsHtml(d.def)}
@@ -310,7 +327,8 @@ async function submitExhibitorRelation(relId) {
     await api.viewer.updateRelation(relId, label, undefined, opts);
   } else {
     const from = q('#xr-from').value, to = q('#xr-to').value;
-    if (!from || !to || from === to) return;
+    // §7.5 bug #8 applies here too: same-endpoint used to be a silent no-op.
+    if (!from || !to || from === to) { toast(t('relationSameEnds'), 'err'); return; }
     await api.viewer.createRelation(S.nexus.id, from, to, label, null, { ...opts, moduleRef: d.moduleId });
   }
   closeModal();

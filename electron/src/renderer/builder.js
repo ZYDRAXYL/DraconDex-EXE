@@ -573,7 +573,7 @@ function buildBuilderPaneContextMenuHtml(paneIdx) {
   const isSplit = builderState().layoutTree.type === 'split';
   return `
     <div class="kind-list-item kli-submenu-parent" onmouseenter="openBuilderSeparateSubmenu(event,${paneIdx})" onmouseleave="scheduleCtxSubmenuClose()">
-      <span class="kli-name">${x(t('separatePane'))}</span><span class="kli-arrow">›</span>
+      <span class="kli-name">${x(t('separatePane'))}</span><span class="kli-arrow">${I.chevronRight}</span>
     </div>
     ${isSplit ? `<div class="ctx-sep"></div><div class="kind-list-item" onclick="closeAllPopups();builderClosePane(${paneIdx})"><span class="kli-name">${x(t('closePane'))}</span></div>` : ''}`;
 }
@@ -583,16 +583,7 @@ function buildBuilderSeparateListHtml(paneIdx) {
   ).join('');
 }
 function openBuilderSeparateSubmenu(ev, paneIdx) {
-  cancelCtxSubmenuClose();
-  if (document.querySelector('.ctx-submenu')) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup kind-list-popup ctx-submenu';
-  pop.innerHTML = buildBuilderSeparateListHtml(paneIdx);
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  pop.addEventListener('mouseenter', cancelCtxSubmenuClose);
-  pop.addEventListener('mouseleave', scheduleCtxSubmenuClose);
-  positionSubmenuNear(pop, ev.currentTarget.getBoundingClientRect());
+  openCtxSubmenu(ev, buildBuilderSeparateListHtml(paneIdx));
 }
 
 // ═══ Tab drag-reorder / cross-pane move (Plan part3 #1, reworked part1 #3)

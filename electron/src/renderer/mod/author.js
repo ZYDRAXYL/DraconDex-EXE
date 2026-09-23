@@ -78,9 +78,7 @@ async function onAuthorChapterDrop(ev, moduleId, targetId) {
 function buildAuthorMainHtml(m) {
   const d = (S.authorData && S.authorData.moduleId === m.id) ? S.authorData : null;
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
-  const viewBar = `<div class="viewbar">
-    ${AUTHOR_VIEWS.map(v => `<span class="vitem${v === d.view ? ' act' : ''}" onclick="setAuthorView('${v}')">${AUTHOR_VIEW_LABEL[v]}</span>`).join('')}
-  </div>`;
+  const viewBar = viewBarHtml(AUTHOR_VIEWS, d.view, v => `setAuthorView('${v}')`, v => AUTHOR_VIEW_LABEL[v]);
   const toolbar = `<div class="classifier-toolbar">
     <button class="btn btn-p" onclick="openAuthorChapterModal(${m.id})">${I.plus} ${t('writeChapterNew')}</button>
     ${viewBar}
@@ -352,7 +350,7 @@ async function submitAuthorChapter(moduleId, id) {
 }
 
 async function deleteAuthorChapter(id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.author.deleteChapter(id);
   closeModal();
   const d = S.authorData;

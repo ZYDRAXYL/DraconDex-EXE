@@ -8,7 +8,7 @@
 // as either grouped app tiles or a record table.
 // Like Drake and Wyvern, Dragon only owns how the tree gets BROWSED —
 // opening a module still renders through buildBuilderPageHtml()/
-// KIND_MAIN_BUILDER unchanged.
+// KIND_PAGE unchanged.
 
 // ═══ Drill-down state — identical shape/semantics to S.wyvernBrowsePath.
 // Needed because collector-kind modules have no standalone detail page
@@ -45,7 +45,7 @@ function dragonDrillUp(index) {
 }
 // A module with children drills deeper (a folder expands before it opens,
 // same as Drake's tree and Wyvern's cards); a childless one opens its
-// detail page. Collector has no detail page at all (KIND_MAIN_BUILDER), so
+// detail page. Collector has no detail page at all (KIND_PAGE), so
 // it always drills.
 function dragonActivate(id) {
   const m = findModuleNode(id);

@@ -42,7 +42,7 @@ function workspaceStyleCellHtml(style) {
     ${workspaceStylePreviewHtml(style)}
     <div class="prefs-theme-name" data-no-i18n>${label}</div>
     <div class="settings-hint">${t(WORKSPACE_STYLE_DESC_KEY[style])}</div>
-    ${active ? '<span class="prefs-theme-check">✓</span>' : ''}
+    ${active ? `<span class="prefs-theme-check">${I.check}</span>` : ''}
   </div>`;
 }
 function settingWorkspaceStylePageHtml() {

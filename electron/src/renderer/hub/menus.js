@@ -77,7 +77,7 @@ function buildModuleContextMenuHtml(id, pinned) {
   // hardcode parentId=null regardless of which module's menu was open,
   // always creating a new top-level sibling instead of a child of `id`.
   html += `<div class="kind-list-item kli-submenu-parent" onmouseenter="openCreateSubmenu(event,${id})" onmouseleave="scheduleCtxSubmenuClose()">
-      <span class="kli-name">${x(t('create'))}</span><span class="kli-arrow">›</span>
+      <span class="kli-name">${x(t('create'))}</span><span class="kli-arrow">${I.chevronRight}</span>
     </div>
     ${ctxRow(`ctxImportModule(${id})`, x(t('settingDbImportModule')))}
     ${ctxRow(`ctxExportModule(${id})`, x(t('settingDbExportModule')))}
@@ -85,7 +85,7 @@ function buildModuleContextMenuHtml(id, pinned) {
     ${ctxRow(`openAddAssetUrlModal(${id})`, x(t('addAssetLink')))}
     <div class="ctx-sep"></div>`;
   // Plan part1 #3: modules with their own Builder page (any kind except the
-  // pure-folder Collector, see KIND_MAIN_BUILDER) get "open in a new window"
+  // pure-folder Collector, see KIND_PAGE) get "open in a new window"
   // and a hover "open in a new pane" direction submenu. The pane submenu is
   // meaningless in Wyvern (Plan part2 #New Workspace — no split panes at
   // all there), so it's hidden rather than offering an action that would
@@ -96,7 +96,7 @@ function buildModuleContextMenuHtml(id, pinned) {
     <div class="kind-list-item" onclick="closeAllPopups();openModuleInNewTab(${id})"><span class="kli-name">${x(t('openInNewTab'))}</span></div>
     <div class="kind-list-item" onclick="closeAllPopups();openModuleInNewWindow(${id})"><span class="kli-name">${x(t('openInNewWindow'))}</span></div>
     ${S.settings.workspaceStyle !== 'drake' ? '' : `<div class="kind-list-item kli-submenu-parent" onmouseenter="openPaneDirectionSubmenu(event,${id})" onmouseleave="scheduleCtxSubmenuClose()">
-      <span class="kli-name">${x(t('openInNewPane'))}</span><span class="kli-arrow">›</span>
+      <span class="kli-name">${x(t('openInNewPane'))}</span><span class="kli-arrow">${I.chevronRight}</span>
     </div>`}
     <div class="ctx-sep"></div>`;
   }
@@ -105,7 +105,7 @@ function buildModuleContextMenuHtml(id, pinned) {
     ${ctxRow(`startRenameModule(${id})`, x(t('rename')))}
     ${ctxRow(`duplicateModuleNode(${id})`, x(t('duplicate')))}
     <div class="kind-list-item kli-submenu-parent" onmouseenter="openMoveToSubmenu(event,${id})" onmouseleave="scheduleCtxSubmenuClose()">
-      <span class="kli-name">${x(t('moveTo'))}</span><span class="kli-arrow">›</span>
+      <span class="kli-name">${x(t('moveTo'))}</span><span class="kli-arrow">${I.chevronRight}</span>
     </div>
     <div class="ctx-sep"></div>
     ${ctxRow(`deleteModuleNode(${id})`, x(t('delete')), 'kli-danger')}
@@ -186,7 +186,7 @@ function buildNavPinListHtml() {
     <div class="kind-list-item" style="padding-left:${10 + depth * 14}px" onclick="toggleNavPinAndRefresh(${m.id})">
       <span class="kicon" style="color:${x(m.icon_color_code || m.color_code || '#6366f1')}">${moduleIconHtml(m)}</span>
       <span class="kli-name">${x(m.name)}</span>
-      <span class="ctx-check">${m.pinned ? '✓' : ''}</span>
+      <span class="ctx-check">${m.pinned ? I.check : ''}</span>
     </div>`).join('');
 }
 async function toggleNavPinAndRefresh(id) {
@@ -227,7 +227,7 @@ function buildHubQuickMenuToggleHtml() {
     <div class="kind-list-item" onclick="toggleHubQuickMenuAndRefresh('${key}')">
       <span class="kicon">${I[icon]}</span>
       <span class="kli-name">${x(t(labelKey))}</span>
-      <span class="ctx-check">${hqt[key] !== false ? '✓' : ''}</span>
+      <span class="ctx-check">${hqt[key] !== false ? I.check : ''}</span>
     </div>`).join('');
 }
 function toggleHubQuickMenuAndRefresh(key) {
@@ -277,31 +277,80 @@ function openKindPopup(parentId, anchor) {
   if (!anchor) return;
   const pop = document.createElement('div');
   pop.className = 'kind-popup kind-list-popup';
-  pop.innerHTML = buildKindListHtml(parentId);
+  pop.innerHTML = buildKindListHtml(parentId, false, true);
   document.body.appendChild(pop);
   pop.addEventListener('click', e => e.stopPropagation());
   positionPopupNear(pop, anchor.getBoundingClientRect());
+  // §9.5: 3 headings + 5 sub-headings + 14 rows will scroll in 360px, so
+  // the search box matters more, not less — it takes focus on open.
+  setTimeout(() => pop.querySelector('.kind-search')?.focus(), 0);
 }
 
-function buildKindListHtml(parentId, excludeCollector = false) {
-  // Plan part2 #1: Artisan's create-wizard ("start from template") only
-  // ever builds a top-level Manager (parent_id always null) — only offer it
-  // where a brand-new top-level module is being created, never on a Minor-
-  // create popup or the module context-menu's "Create" submenu (both
-  // always pass a real parentId).
-  let html = '';
-  if (parentId == null) {
-    html += `<div class="kind-list-item" onclick="openArtisanTemplateList(this)">
-      <span class="kicon" style="color:${x(KIND_COLOR.manager)}">${I.artisan}</span>
-      <span class="kli-text"><span class="kli-name">${t('artStartTemplate')}</span><span class="kli-desc">${t('artV3CardD')}</span></span>
-    </div><div class="ctx-sep"></div>`;
-  }
-  html += MODULE_KINDS.filter(k => !(excludeCollector && k === 'collector')).map(k => `
-    <div class="kind-list-item" onclick="quickCreateModule('${k}',${parentId ?? 'null'})">
+// Last three kinds created, most recent first (§7.7) — a per-viewer
+// convenience, so localStorage, and harmless when unavailable.
+const KIND_RECENT_KEY = 'ddx.recentKinds';
+function recentKinds() {
+  try { return (JSON.parse(localStorage.getItem(KIND_RECENT_KEY) || '[]') || []).filter(k => MODULE_KINDS.includes(k)).slice(0, 3); }
+  catch (_) { return []; }
+}
+function rememberRecentKind(kind) {
+  try { localStorage.setItem(KIND_RECENT_KEY, JSON.stringify([kind, ...recentKinds().filter(k => k !== kind)].slice(0, 3))); }
+  catch (_) { /* private window / blocked storage: the list just stays empty */ }
+}
+
+function kindListRowHtml(k, parentId) {
+  return `<div class="kind-list-item" data-kind-row data-search="${x(`${kindLabel(k)} ${KIND_LABEL[k] || ''} ${t(KIND_DESC_KEY[k])}`.toLowerCase())}"
+      onclick="quickCreateModule('${k}',${parentId ?? 'null'})">
       <span class="kicon" style="color:${x(KIND_COLOR[k])}">${I[KIND_ICON[k]]}</span>
       <span class="kli-text"><span class="kli-name">${x(kindLabel(k))}</span><span class="kli-desc">${t(KIND_DESC_KEY[k])}</span></span>
-    </div>`).join('');
+    </div>`;
+}
+
+// v5 Part 3 (V5.md §7.7) with Part 5's grouping (§9.5): Artisan first as its
+// own row, then the 3 most recent kinds, then structure / view / data with
+// data's five sub-headings. withSearch adds the filter box (the top-level
+// "+" popups); the hover flyout from a module's "Create" row stays compact.
+function buildKindListHtml(parentId, excludeCollector = false, withSearch = false) {
+  let html = '';
+  if (withSearch) {
+    html += `<input class="kind-search" placeholder="${x(t('kindSearch'))}" oninput="filterKindList(this)"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();this.closest('.kind-popup').querySelector('[data-kind-row]:not([hidden])')?.click()}">`;
+  }
+  // Plan part2 #1: Artisan's create-wizard ("start from template") only
+  // ever builds a top-level module — only offer it where a brand-new
+  // top-level module is being created.
+  if (parentId == null) {
+    html += `<div class="kind-list-item kind-artisan-row" onclick="openArtisanTemplateList(this)">
+      <span class="kicon" style="color:${x(KIND_COLOR.manager)}">${I.artisan}</span>
+      <span class="kli-text"><span class="kli-name">${t('artStartTemplate')}</span><span class="kli-desc">${t('artV3CardD')}</span></span>
+    </div>`;
+  }
+  const allowed = (k) => !(excludeCollector && k === 'collector');
+  const recent = recentKinds().filter(allowed);
+  if (recent.length) {
+    html += `<div class="kind-list-head" data-kind-head>${t('kindRecent')}</div>` + recent.map(k => kindListRowHtml(k, parentId)).join('');
+  }
+  let lastCat = null;
+  for (const g of KIND_GROUPS) {
+    const kinds = g.kinds.filter(allowed);
+    if (!kinds.length) continue;
+    if (g.cat !== lastCat) {
+      html += `<div class="kind-list-head kind-list-cat" data-kind-head>${t(KIND_CATEGORY_KEY[g.cat])}</div>`;
+      lastCat = g.cat;
+    }
+    if (g.key) html += `<div class="kind-list-head kind-list-sub" data-kind-head>${t(g.key)}</div>`;
+    html += kinds.map(k => kindListRowHtml(k, parentId)).join('');
+  }
   return html;
+}
+
+// Filters rows by kind name (both names), description; headings hide while
+// a query is active so the result reads as one flat list.
+function filterKindList(inp) {
+  const needle = inp.value.trim().toLowerCase();
+  const pop = inp.closest('.kind-popup');
+  pop.querySelectorAll('[data-kind-row]').forEach(r => { r.hidden = !!needle && !r.dataset.search.includes(needle); });
+  pop.querySelectorAll('[data-kind-head], .kind-artisan-row').forEach(h => { h.hidden = !!needle; });
 }
 
 // Swaps the same popup's content to the 4 template targets (same swap-
@@ -322,33 +371,16 @@ function buildArtisanTemplateListHtml() {
     </div>`).join('');
 }
 
-// Classifier needs one more decision (cat_type) before it can be created —
-// swap the popup's content to those 3 cards instead of a second popup, so
-// there's still only ever one `.kind-popup` open at a time.
-function buildCatTypeListHtml(parentId) {
-  const types = [
-    ['object', I.layer, 'catTypeObject', 'catTypeObjectDesc'],
-    ['element', I.relation, 'catTypeElement', 'catTypeElementDesc'],
-    ['character', I.person, 'catTypeCharacter', 'catTypeCharacterDesc'],
-  ];
-  return types.map(([ct, icon, labelKey, descKey]) => `
-    <div class="kind-list-item" onclick="quickCreateModule('classifier',${parentId ?? 'null'},'${ct}')">
-      <span class="kicon">${icon}</span>
-      <span class="kli-text"><span class="kli-name">${t(labelKey)}</span><span class="kli-desc">${t(descKey)}</span></span>
-    </div>`).join('');
-}
-
-async function quickCreateModule(kind, parentId, catType) {
-  const pop = document.querySelector('.kind-popup');
-  if (kind === 'classifier' && !catType) {
-    if (pop) pop.innerHTML = buildCatTypeListHtml(parentId);
-    return;
-  }
+// v5 Part 3 (V5.md §7.4, decided): Classifier no longer stops for a cat_type
+// popup — every new one is 'object'. Old 'element' / 'character' modules keep
+// theirs and still work; the choice lives in the module's edit form.
+async function quickCreateModule(kind, parentId) {
+  rememberRecentKind(kind);
   const name = t('newModuleName').replace('{kind}', kindLabel(kind));
   const moduleId = await api.module.create({
     nexus_ref: S.nexus.id, parent_id: parentId, name, kind,
     color: null, icon_color: null, icon: null,
-    cat_type: kind === 'classifier' ? catType : null,
+    cat_type: kind === 'classifier' ? 'object' : null,
   });
   closeAllPopups();
   if (parentId != null) S.moduleCollapsed.delete(parentId);

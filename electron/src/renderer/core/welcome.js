@@ -157,7 +157,7 @@ function welcomeSetUi(key, value) {
 function welcomeStepLangHtml() {
   const rows = UI_LANGUAGE_OPTIONS.map(lang => `
     <div class="lang-item${S.settings.language === lang ? ' active' : ''}" onmouseenter="settingPreviewLang('${lang}')" onclick="welcomeSetUi('language','${lang}')">
-      <span data-no-i18n>${x(LANGUAGE_LABELS[lang] || lang)}</span>${S.settings.language === lang ? '<span class="theme-check">✓</span>' : ''}
+      <span data-no-i18n>${x(LANGUAGE_LABELS[lang] || lang)}</span>${S.settings.language === lang ? `<span class="theme-check">${I.check}</span>` : ''}
     </div>`).join('');
   return `<div class="prefs-lang-shell">
     <div class="lang-list">${rows}</div>
@@ -192,7 +192,7 @@ function welcomeStepLayoutHtml() {
       ${workspaceStylePreviewHtml(style)}
       <div class="prefs-theme-name" data-no-i18n>${label}</div>
       <div class="settings-hint">${t(WORKSPACE_STYLE_DESC_KEY[style])}</div>
-      ${active ? '<span class="prefs-theme-check">✓</span>' : ''}
+      ${active ? `<span class="prefs-theme-check">${I.check}</span>` : ''}
     </div>`;
   }).join('');
   return `<div class="prefs-theme-grid">${cells}</div>`;

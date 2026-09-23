@@ -447,7 +447,7 @@ async function submitChroniclerCalAddUnit() {
 
 async function removeChroniclerCalUnit(unitKey) {
   if (chroniclerCalIsBuiltinUnit(unitKey)) return;
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   const spec = JSON.parse(JSON.stringify(chroniclerCalSpec()));
   spec.units = spec.units.filter(u => u.key !== unitKey);
   // Anything that referenced it would dangle, so drop those references too.

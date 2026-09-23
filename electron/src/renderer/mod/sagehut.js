@@ -53,9 +53,7 @@ async function openSageTab(tab) {
 function buildSageHutHtml() {
   const d = S.sageHut;
   const st = d.stats;
-  const viewBar = `<div class="viewbar">
-    ${SAGEHUT_VIEWS.map(v => `<span class="vitem${v === d.tab ? ' act' : ''}" onclick="openSageTab('${v}')" data-no-i18n>${SAGEHUT_VIEW_LABEL[v]}</span>`).join('')}
-  </div>`;
+  const viewBar = viewBarHtml(SAGEHUT_VIEWS, d.tab, v => `openSageTab('${v}')`, v => SAGEHUT_VIEW_LABEL[v], { noI18n: true });
   const tiles = `<div class="sh-tiles">
     <div class="sh-tile" style="border-top-color:#2dd4bf"><span class="sh-k" data-no-i18n>Objects</span><span class="sh-v" data-no-i18n>${st.objects}</span></div>
     <div class="sh-tile" style="border-top-color:#6366f1"><span class="sh-k" data-no-i18n>Modules</span><span class="sh-v" data-no-i18n>${st.modules}</span></div>
@@ -149,7 +147,7 @@ function mountSageHutGraph() {
     el.addEventListener('click', () => openEntityByKey(n.key));
     graphEl.appendChild(el);
   });
-  board.addEventListener('contextmenu', (e2) => e2.preventDefault());
+  bindCanvasCtx(board, 'sagehut.graph');
   board.addEventListener('pointerdown', (e2) => {
     if (e2.button !== 2) return;
     const sx = e2.clientX + board.scrollLeft, sy = e2.clientY + board.scrollTop;

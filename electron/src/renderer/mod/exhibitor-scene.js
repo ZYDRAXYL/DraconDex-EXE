@@ -9,6 +9,8 @@
 //                     zoom (the map.js idiom); the camera is exhibit_view
 //   Inspector (right) the selected node: label, colour, group, lock/hide,
 //                     its relations, "Link to…" and remove
+// (the Hierarchy and Inspector HTML live in mod/exhibitor-panels.js;
+// §7.9 object cards and tables in mod/exhibitor-cards.js)
 // Relations drawn here are entity_relation rows (solid, arrowed when
 // directed); wiki links are dashed and read-only (§3.7). Nest asset rows
 // (mod/importdock.js) can be dropped straight onto the canvas too.
@@ -33,6 +35,8 @@ function exhNodeTitle(n) {
 }
 
 function exhNodeSize(n) {
+  if (exhIsTable(n)) return exhTableSize(n);
+  if (exhIsCard(n)) return exhCardSize(n);
   if (n.node_type === 'group') return { w: n.w || EXH_GROUP.w, h: n.h || EXH_GROUP.h };
   if (n.node_type === 'note') return { w: n.w || EXH_NOTE.w, h: n.h || EXH_NOTE.h };
   if (exhIsImageAsset(n)) return { w: n.w || 150, h: n.h || 118 };
@@ -68,7 +72,7 @@ function buildExhibitorSceneHtml(d) {
         </div>`).join('')}</div>
     </aside>
     <div class="exh-stage-wrap${d.linkFrom ? ' exh-linking' : ''}" id="exh-stage-wrap"
-        ondragover="if(S.dragExhKey||S.dragAsset){event.preventDefault()}" ondrop="dropOnExhibitorScene(event)">
+        ondragover="exhDragOverScene(event)" ondragleave="exhHighlightDrop(null)" ondrop="dropOnExhibitorScene(event)">
       <div id="exh-konva"></div>
       ${d.linkFrom ? `<div class="exh-linkbar">${t('exhibitorLinkPick')}
         <button class="btn btn-s btn-sm" onclick="cancelExhibitorLink()">${t('cancel')}</button></div>` : ''}
@@ -82,67 +86,6 @@ function buildExhibitorSceneHtml(d) {
     </div>
     ${sel ? buildExhibitorInspectorHtml(d, sel) : ''}
   </div>`;
-}
-
-function buildExhibitorHierarchyRows(d, parentId, depth) {
-  return d.nodes.filter(n => (n.parent_id ?? null) === parentId).map(n => {
-    const kids = n.node_type === 'group' ? buildExhibitorHierarchyRows(d, n.id, depth + 1) : '';
-    const missing = n.linker_key && !d.index.has(n.linker_key);
-    const cls = ['li', depth ? `indent${Math.min(depth, 5)}` : '', d.sel === n.id ? 'sel' : '',
-      n.hidden ? 'exh-hidden' : '', missing ? 'asset-missing' : ''].filter(Boolean).join(' ');
-    return `<div class="${cls}"
-        onclick="selectExhibitorNode(${n.id})" ondblclick="openExhibitorNodeTarget(${n.id})">
-      <span class="name" data-no-i18n>${x(exhNodeTitle(n))}</span>
-      <span class="acts">
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();patchExhibitorNode(${n.id},{hidden:${n.hidden ? 0 : 1}})" title="${x(t('exhibitorHidden'))}" data-no-i18n>${n.hidden ? '◌' : '●'}</button>
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();patchExhibitorNode(${n.id},{locked:${n.locked ? 0 : 1}})" title="${x(t('exhibitorLocked'))}" data-no-i18n>${n.locked ? '⊠' : '□'}</button>
-      </span>
-    </div>${kids}`;
-  }).join('');
-}
-
-function buildExhibitorInspectorHtml(d, n) {
-  const it = n.linker_key ? d.index.get(n.linker_key) : null;
-  const groups = d.nodes.filter(g => g.node_type === 'group' && g.id !== n.id);
-  const rels = n.linker_key ? d.relations.filter(r => r.from_key === n.linker_key || r.to_key === n.linker_key) : [];
-  const relRows = rels.map(r => {
-    const out = r.from_key === n.linker_key;
-    const other = out ? r.to_key : r.from_key;
-    const arrow = r.directed === 0 ? '—' : out ? '→' : '←';
-    return `<div class="cls-link-row">
-      <span data-no-i18n>${arrow}</span>
-      <span class="cls-link-name" onclick="openExhibitorRelationModal(${r.id})">${x(exhNameOf(other))}</span>
-      ${r.label || r.rel_type ? `<span class="cls-link-lbl">${x([r.label, r.rel_type && `(${r.rel_type})`].filter(Boolean).join(' '))}</span>` : ''}
-    </div>`;
-  }).join('');
-  return `<aside class="exh-insp">
-    <div class="exh-hier-head"><span data-no-i18n>${x(exhNodeTitle(n))}</span>
-      <button class="btn btn-g btn-i" onclick="selectExhibitorNode(null)" title="${x(t('cancel'))}" data-no-i18n>✕</button></div>
-    ${it ? `<div class="drafter-hint" data-no-i18n>${VIEWER_KIND_LABEL[it.kind] || it.kind}${it.moduleName ? ` · ${x(it.moduleName)}` : ''}</div>
-      <button class="btn btn-s btn-sm" onclick="openExhibitorNodeTarget(${n.id})">${t('exhibitorOpenItem')}</button>` : ''}
-    <div class="fg"><label>${t('exhibitorLabel')}</label>
-      <input value="${x(n.label || '')}" placeholder="${x(it ? it.name : '')}" onchange="patchExhibitorNode(${n.id},{label:this.value.trim()||null})"></div>
-    <div class="fg"><label>${t('color')}</label>
-      <input type="color" value="${x(n.color || (exhCss('--accent') || '#6366f1'))}" onchange="patchExhibitorNode(${n.id},{color:this.value})"></div>
-    ${n.node_type !== 'group' ? `<div class="fg"><label>${t('exhibitorGroup')}</label>
-      <select onchange="patchExhibitorNode(${n.id},{parent_id:this.value?Number(this.value):null})">
-        <option value="">—</option>
-        ${groups.map(g => `<option value="${g.id}" ${n.parent_id === g.id ? 'selected' : ''}>${x(exhNodeTitle(g))}</option>`).join('')}
-      </select></div>` : ''}
-    <label class="fv-useimg"><input type="checkbox" ${n.locked ? 'checked' : ''} onchange="patchExhibitorNode(${n.id},{locked:this.checked?1:0})"> ${t('exhibitorLocked')}</label>
-    <label class="fv-useimg"><input type="checkbox" ${n.hidden ? 'checked' : ''} onchange="patchExhibitorNode(${n.id},{hidden:this.checked?1:0})"> ${t('exhibitorHidden')}</label>
-    ${n.linker_key ? `<div class="insp-label cls-link-label">${t('linkedElements')}</div>
-      <div class="cls-link-list">${relRows || `<div class="cls-lv-empty">${t('noLinkedElements')}</div>`}</div>
-      <button class="btn btn-p btn-sm" onclick="startExhibitorLink(${n.id})">${I.relation} ${t('exhibitorLinkTo')}</button>` : ''}
-    <button class="btn btn-d btn-sm" onclick="removeExhibitorNode(${n.id})">${t('exhibitorRemoveNode')}</button>
-  </aside>`;
-}
-
-function filterExhibitorPalette(v) {
-  const needle = String(v || '').trim().toLowerCase();
-  document.querySelectorAll('#exh-palette .exh-pal-row').forEach(row => {
-    row.style.display = !needle || row.dataset.name.includes(needle) ? '' : 'none';
-  });
 }
 
 // ── Canvas ──────────────────────────────────────────────────────────────
@@ -173,8 +116,9 @@ async function mountExhibitorScene() {
   const byKey = new Map();    // linker_key -> node
   const visible = d.nodes.filter(n => !n.hidden);
   for (const n of visible) if (n.linker_key) byKey.set(n.linker_key, n);
-  // Groups first so they sit underneath their members.
-  const ordered = [...visible].sort((a, b) => (a.node_type === 'group' ? 0 : 1) - (b.node_type === 'group' ? 0 : 1) || a.z - b.z);
+  // Groups first so they sit underneath their members. A table's rows are
+  // drawn by the table itself (mod/exhibitor-cards.js), not as nodes.
+  const ordered = visible.filter(n => !exhInTable(n)).sort((a, b) => (a.node_type === 'group' ? 0 : 1) - (b.node_type === 'group' ? 0 : 1) || a.z - b.z);
   for (const n of ordered) {
     const g = exhDrawNode(n, col, d);
     shapes.set(n.id, g);
@@ -182,7 +126,7 @@ async function mountExhibitorScene() {
     exhWireNode(g, n, d, shapes, () => drawEdges());
   }
 
-  const center = (n) => { const s = exhNodeSize(n); return { x: n.x + s.w / 2, y: n.y + s.h / 2, hw: s.w / 2, hh: s.h / 2 }; };
+  const center = (n) => { if (exhInTable(n)) return exhTableRowBox(n); const s = exhNodeSize(n); return { x: n.x + s.w / 2, y: n.y + s.h / 2, hw: s.w / 2, hh: s.h / 2 }; };
   function drawEdges() {
     edgeLayer.destroyChildren();
     for (const e2 of exhibitorEdgesAmong(new Set(byKey.keys()))) {
@@ -221,7 +165,13 @@ async function mountExhibitorScene() {
   });
   // Right-drag pan + wheel zoom toward the pointer — the map.js idiom.
   const box = stage.container();
-  box.addEventListener('contextmenu', (e) => e.preventDefault());
+  // Right-click (without a pan) opens the node's menu, a table row's, or the
+  // canvas's — §7.9 puts "customize fields/columns" here, not on the node.
+  bindCanvasCtx(box, 'exhibitor.scene', (e) => {
+    stage.setPointersPositions(e);
+    const hit = stage.getIntersection(stage.getPointerPosition());
+    return { nodeId: hit ? exhNodeIdFromShape(hit) : null };
+  });
   box.addEventListener('mousedown', (e) => {
     if (e.button !== 2) return;
     const sx = e.clientX, sy = e.clientY, ox = stage.x(), oy = stage.y();
@@ -258,6 +208,8 @@ function exhDrawNode(n, col, d) {
   const selected = d.sel === n.id || d.linkFrom === n.id;
   const g = new Konva.Group({ x: n.x, y: n.y, draggable: !n.locked, id: `exh-${n.id}` });
   const title = exhNodeTitle(n);
+  if (exhIsTable(n)) return exhDrawTable(g, n, col, selected);
+  if (exhIsCard(n)) return exhDrawCard(g, n, col, selected);
   if (n.node_type === 'group') {
     g.add(new Konva.Rect({ width: size.w, height: size.h, stroke, strokeWidth: selected ? 3 : 1.5, dash: [8, 5], cornerRadius: 10, fill: col.surface, opacity: 0.55 }));
     g.add(new Konva.Text({ x: 10, y: 8, text: title, fontSize: 13, fontStyle: 'bold', fill: col.text }));
@@ -313,8 +265,19 @@ function exhWireNode(g, n, d, shapes, redrawEdges) {
       shapes.get(m.id).position({ x: m.x, y: m.y });
     }
     redrawEdges();
+    if (exhIsCobjKey(n.linker_key) && n.node_type === 'entity') {
+      const intent = exhDropIntent(n.linker_key, exhPointerWorld(), n.id);
+      exhHighlightDrop(intent.kind === 'merge' ? intent.target.id : null);
+    }
   });
   g.on('dragend', () => {
+    // §7.9: an object card dropped onto another card or a table merges.
+    if (exhIsCobjKey(n.linker_key) && n.node_type === 'entity') {
+      const stage = g.getStage();
+      const intent = exhDropIntent(n.linker_key, exhPointerWorld(), n.id);
+      exhHighlightDrop(null);
+      if (intent.kind === 'merge' && stage) { exhMergeObject(intent.target, n.linker_key, n); return; }
+    }
     const moves = [{ id: n.id, x: n.x, y: n.y }, ...members.filter(({ m }) => !m.locked).map(({ m }) => ({ id: m.id, x: m.x, y: m.y }))];
     api.exhibitor.moveNodes(moves);
   });
@@ -324,7 +287,7 @@ function exhWireNode(g, n, d, shapes, redrawEdges) {
     if (d.linkFrom != null) { finishExhibitorLink(n.id); return; }
     selectExhibitorNode(n.id);
   });
-  g.on('dblclick', () => openExhibitorNodeTarget(n.id));
+  g.on('dblclick', (ev) => openExhibitorNodeTarget(exhNodeIdFromShape(ev.target) ?? n.id));
   g.on('mouseenter', () => { g.getStage().container().style.cursor = n.locked ? 'pointer' : 'move'; });
   g.on('mouseleave', () => { g.getStage().container().style.cursor = ''; });
 }
@@ -394,9 +357,12 @@ function exhTypeForKey(key) {
   return S.exhibitorData?.index.get(key)?.kind === 'file' ? 'asset' : 'entity';
 }
 
+// A classifier object arrives as a card (§7.9); anything else as a box.
+const exhNewNodeProps = (key) => (exhIsCobjKey(key) ? JSON.stringify({ display: 'card' }) : null);
+
 function addExhibitorItemAtCenter(key) {
   const c = exhViewCenter();
-  addExhibitorNodesAndRefresh([{ linker_key: key, node_type: exhTypeForKey(key), x: c.x - EXH_BOX.w / 2, y: c.y - EXH_BOX.h / 2 }]);
+  addExhibitorNodesAndRefresh([{ linker_key: key, node_type: exhTypeForKey(key), props: exhNewNodeProps(key), x: c.x - EXH_BOX.w / 2, y: c.y - EXH_BOX.h / 2 }]);
 }
 
 function addExhibitorFreeNode(type) {
@@ -412,13 +378,19 @@ function dropOnExhibitorScene(ev) {
   const key = S.dragExhKey || (S.dragAsset != null ? `file_${S.dragAsset}` : null);
   S.dragExhKey = null;
   S.dragAsset = null;
+  exhHighlightDrop(null);
   if (!key || !exhStage) return;
   exhStage.setPointersPositions(ev);
-  const p = exhStage.getPointerPosition() || { x: exhStage.width() / 2, y: exhStage.height() / 2 };
-  const s = exhStage.scaleX();
+  const w = exhPointerWorld();
+  const intent = exhDropIntent(key, w);
+  if (intent.kind === 'none') return;
+  if (intent.kind === 'merge') {
+    exhMergeObject(intent.target, key, S.exhibitorData.nodes.find(n => n.linker_key === key) || null);
+    return;
+  }
   addExhibitorNodesAndRefresh([{
-    linker_key: key, node_type: key.startsWith('file_') ? 'asset' : exhTypeForKey(key),
-    x: (p.x - exhStage.x()) / s - EXH_BOX.w / 2, y: (p.y - exhStage.y()) / s - EXH_BOX.h / 2,
+    linker_key: key, node_type: key.startsWith('file_') ? 'asset' : exhTypeForKey(key), props: exhNewNodeProps(key),
+    x: w.x - EXH_BOX.w / 2, y: w.y - EXH_BOX.h / 2,
   }]);
 }
 

@@ -36,6 +36,29 @@ const KIND_COLOR = {
   author:'#eab308', scribe:'#38bdf8', drafter:'#a78bfa', exhibitor:'#f43f5e',
   sketcher:'#fb923c', designer:'#a3e635',
 };
+// v5 (APP docs/V5.md §9.2 / §9.4): what a kind IS, by where its content
+// comes from — the 5th metadata map beside the four above, the grouping §7.7
+// found missing. structure = holds modules, not content; view = shows other
+// modules' content (deleting one loses only a layout); data = owns content.
+const KIND_CATEGORY = {
+  collector: 'structure',
+  manager: 'view', exhibitor: 'view',
+  inspector: 'data', drafter: 'data', classifier: 'data', locator: 'data', chronicler: 'data',
+  wanderer: 'data', narrator: 'data', author: 'data', scribe: 'data', sketcher: 'data', designer: 'data',
+};
+// §9.5: the five function groups of §7.7 survive as sub-headings under data
+// only (the sixth, "organise", straddled all three categories).
+const KIND_GROUPS = [
+  { cat: 'structure', kinds: ['collector'] },
+  { cat: 'view', kinds: ['manager', 'exhibitor'] },
+  { cat: 'data', key: 'kindGroupNotes', kinds: ['inspector', 'drafter'] },
+  { cat: 'data', key: 'kindGroupData', kinds: ['classifier'] },
+  { cat: 'data', key: 'kindGroupMapTime', kinds: ['locator', 'chronicler', 'wanderer'] },
+  { cat: 'data', key: 'kindGroupStory', kinds: ['narrator', 'author', 'scribe'] },
+  { cat: 'data', key: 'kindGroupDraw', kinds: ['sketcher', 'designer'] },
+];
+const KIND_CATEGORY_KEY = { structure: 'kindCatStructure', view: 'kindCatView', data: 'kindCatData' };
+
 // i18n key per kind's one-line description on the same cards.
 const KIND_DESC_KEY = {
   collector:'kindDescCollector', manager:'kindDescManager', inspector:'kindDescInspector',

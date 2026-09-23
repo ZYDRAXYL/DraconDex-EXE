@@ -52,9 +52,7 @@ async function selectSketchPage(id) {
 function buildSketcherMainHtml(m) {
   const d = (S.sketcherData && S.sketcherData.moduleId === m.id) ? S.sketcherData : null;
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
-  const viewBar = `<div class="viewbar">
-    ${SKETCHER_VIEWS.map(v => `<span class="vitem${v === d.view ? ' act' : ''}" onclick="setSketcherView('${v}')" data-no-i18n>${SKETCHER_VIEW_LABEL[v]}</span>`).join('')}
-  </div>`;
+  const viewBar = viewBarHtml(SKETCHER_VIEWS, d.view, v => `setSketcherView('${v}')`, v => SKETCHER_VIEW_LABEL[v], { noI18n: true });
   const toolbar = `<div class="classifier-toolbar">
     <button class="btn btn-p" onclick="openSketchPageModal(${m.id})">${I.plus} ${t('newPage')}</button>
     ${viewBar}
@@ -267,7 +265,7 @@ function mountSketcherBoard() {
   }
 
   // right-drag pan + Ctrl-wheel zoom
-  board.addEventListener('contextmenu', (e2) => e2.preventDefault());
+  bindCanvasCtx(board, 'sketcher.canvas');
   board.addEventListener('pointerdown', (e2) => {
     if (e2.button !== 2) return;
     board.classList.add('is-panning');
@@ -410,7 +408,7 @@ async function submitSketchPage(moduleId, id) {
 }
 
 async function deleteSketchPageRow(id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.sketcher.deletePage(id);
   closeModal();
   const d = S.sketcherData;

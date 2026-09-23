@@ -1,5 +1,5 @@
-// Opening a module node: KIND_MAIN_BUILDER (kind → renderer builder) and the
-// module detail page shell that hosts it alongside the Inspector.
+// Opening a module node and the detail page shell that hosts a kind's page
+// (KIND_PAGE, hub/kind-page.js) alongside the Inspector.
 
 // ═══ Open a module — minimal placeholder content + the Module Inspector
 // dock (Phase 4); the real per-kind renderers (Table/Canvas/Editor/...)
@@ -23,17 +23,8 @@ async function openModuleNode(id) {
   renderModuleRail();
   renderNexusHome();
   const loaders = [loadInspectorData(id)];
-  if (m.kind === 'classifier' && typeof loadClassifierData === 'function') loaders.push(loadClassifierData(m));
-  if (m.kind === 'manager' && typeof loadManagerData === 'function') loaders.push(loadManagerData(m));
-  if (m.kind === 'locator' && typeof loadLocatorData === 'function') loaders.push(loadLocatorData(m));
-  if (m.kind === 'chronicler' && typeof loadChroniclerData === 'function') loaders.push(loadChroniclerData(m));
-  if (m.kind === 'wanderer' && typeof loadWandererData === 'function') loaders.push(loadWandererData(m));
-  if (m.kind === 'narrator' && typeof loadNarratorData === 'function') loaders.push(loadNarratorData(m));
-  if (m.kind === 'author' && typeof loadAuthorData === 'function') loaders.push(loadAuthorData(m));
-  if (m.kind === 'scribe' && typeof loadChatScribeData === 'function') loaders.push(loadChatScribeData(m));
-  if (m.kind === 'exhibitor' && typeof loadExhibitorData === 'function') loaders.push(loadExhibitorData(m));
-  if (m.kind === 'sketcher' && typeof loadSketcherData === 'function') loaders.push(loadSketcherData(m));
-  if (m.kind === 'designer' && typeof loadDesignerData === 'function') loaders.push(loadDesignerData(m));
+  const load = kindPagePart(m.kind, 'load'); // hub/kind-page.js
+  if (load) loaders.push(load(m));
   // renderNexusHome() above has already painted the shell, so the pane sits
   // there empty until these IPC loads resolve — on a large module that reads as
   // a click that did nothing.
@@ -85,27 +76,9 @@ async function openPinnedRailModule(id) {
   await openModuleNode(id);
 }
 
-// Kind -> its main-content builder, defined in src/renderer/mod/<kind>.js.
-// Falls back to the generic placeholder for kinds without a real renderer yet.
-const KIND_MAIN_BUILDER = {
-  classifier: () => typeof buildClassifierMainHtml === 'function' && buildClassifierMainHtml,
-  manager: () => typeof buildManagerMainHtml === 'function' && buildManagerMainHtml,
-  inspector: () => typeof buildDetailMainHtml === 'function' && buildDetailMainHtml,
-  locator: () => typeof buildLocatorMainHtml === 'function' && buildLocatorMainHtml,
-  chronicler: () => typeof buildChroniclerMainHtml === 'function' && buildChroniclerMainHtml,
-  wanderer: () => typeof buildWandererMainHtml === 'function' && buildWandererMainHtml,
-  narrator: () => typeof buildNarratorMainHtml === 'function' && buildNarratorMainHtml,
-  author: () => typeof buildAuthorMainHtml === 'function' && buildAuthorMainHtml,
-  scribe: () => typeof buildChatScribeMainHtml === 'function' && buildChatScribeMainHtml,
-  drafter: () => typeof buildDrafterMainHtml === 'function' && buildDrafterMainHtml,
-  exhibitor: () => typeof buildExhibitorMainHtml === 'function' && buildExhibitorMainHtml,
-  sketcher: () => typeof buildSketcherMainHtml === 'function' && buildSketcherMainHtml,
-  designer: () => typeof buildDesignerMainHtml === 'function' && buildDesignerMainHtml,
-};
-
 function buildModuleDetailHtml(m) {
   const col = m.icon_color_code || m.color_code || 'var(--accent)';
-  const builder = KIND_MAIN_BUILDER[m.kind]?.();
+  const builder = kindPagePart(m.kind, 'main'); // hub/kind-page.js
   const mainHtml = builder ? builder(m) : `<div class="empty" style="margin-top:40px">
         <div class="ei" style="color:${x(col)}">${moduleIconHtml(m)}</div>
         <h3>${x(m.name)}</h3>

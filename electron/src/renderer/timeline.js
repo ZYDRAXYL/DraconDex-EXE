@@ -187,7 +187,9 @@ function bindTimelineGraphInteractions(tlid){
     });
   };
 
-  board.oncontextmenu = (e) => e.preventDefault();
+  // Bound once per board element: this function re-runs on every re-render
+  // of the same board, and an addEventListener pair would stack.
+  if (!board._ctxBound) { board._ctxBound = true; bindCanvasCtx(board, 'chronicler.graph'); }
   board.onwheel = (e) => {
     e.preventDefault();
     const mx = svgX(e.clientX);

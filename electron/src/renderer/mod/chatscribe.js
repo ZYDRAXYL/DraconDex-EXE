@@ -63,9 +63,7 @@ function chsDayLabel(createAt) {
 function buildChatScribeMainHtml(m) {
   const d = (S.chatScribeData && S.chatScribeData.moduleId === m.id) ? S.chatScribeData : null;
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
-  const viewBar = `<div class="viewbar">
-    ${CHATSCRIBE_VIEWS.map(v => `<span class="vitem${v === d.view ? ' act' : ''}" onclick="setChatScribeView('${v}')" data-no-i18n>${CHATSCRIBE_VIEW_LABEL[v]}</span>`).join('')}
-  </div>`;
+  const viewBar = viewBarHtml(CHATSCRIBE_VIEWS, d.view, v => `setChatScribeView('${v}')`, v => CHATSCRIBE_VIEW_LABEL[v], { noI18n: true });
   const toolbar = `<div class="classifier-toolbar">
     <button class="btn btn-p" onclick="openChatSessionModal(${m.id})">${I.plus} ${t('chatNewSession')}</button>
     ${viewBar}
@@ -317,7 +315,7 @@ async function submitChatSession(moduleId, id) {
 }
 
 async function deleteChatSessionRow(id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.chatscribe.deleteSession(id);
   closeModal();
   const d = S.chatScribeData;
@@ -373,7 +371,7 @@ async function submitChatMessage(id) {
 }
 
 async function deleteChatMessageRow(id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.chatscribe.deleteMessage(id);
   await refreshChatScribeMessages();
   toast(t('deleted'), 'ok');

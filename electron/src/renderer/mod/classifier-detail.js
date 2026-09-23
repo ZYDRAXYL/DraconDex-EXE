@@ -1,10 +1,9 @@
 'use strict';
-// ═══ Classifier element detail (Process 8 part 1) ══════════════════════
-// Split out of mod/classifier.js, which was at the ~500-line band before this
-// round added three features to the detail view alone (the level table, the
-// 5-box date input and the cross-classifier link section). The list/table/grid
-// views, object CRUD and template CRUD stay in classifier.js; everything that
-// renders the body of ONE element lives here.
+// ═══ Classifier element detail (Process 8 part 1, v5 Part 3) ═══════════
+// Everything that renders the body of ONE element: its field rows (text,
+// textarea, the 5-box date), the level / condition tables, its own private
+// fields, and its linked elements. The view shell is classifier.js, field
+// definitions classifier-fields.js, menus and object CRUD classifier-ctx.js.
 //
 // Both callers of renderClassifierObjectDetail pick these up for free: the
 // module's own List+Detail view (renderClassifierListDetail) and the element's
@@ -42,7 +41,10 @@ function clsDateInputsHtml(o, c) {
 async function saveClassifierAttrDate(oid, tid) {
   const p = CLS_DATE_PREFIX(oid, tid);
   const num = (sfx) => parseInt(q(`#${p}-${sfx}`)?.value, 10) || 0;
-  const d = num('d'), mo = num('mo'), y = num('y');
+  // V5.md §7.5 bug #2: dateInputsHTML (timeline.js) names the month input
+  // `${prefix}-m`; this read `-mo`, which never exists, so every date field
+  // saved as ''. The 'mo' passed to dateInputsHTML above is a VALUE key only.
+  const d = num('d'), mo = num('m'), y = num('y');
   const value = (d && mo && y) ? fmtDate(d, mo, y, num('h'), num('min')) : '';
   await api.classifier.upsertAttr(oid, tid, value);
   const obj = S.classifierData?.objects.find(v => v.id === oid);
@@ -87,6 +89,7 @@ function renderClassifierLevelTableHtml(o, c) {
     <col style="width:${w.actPct}%"></colgroup>`;
   const head = cols.map(([, k]) => `<th>${t(k)}</th>`).join('');
   const body = rows.map(r => `<tr data-lid="${r.id}"
+      oncontextmenu="openCtx('classifier.level',event,{objectId:${o.id},templateId:${c.id},levelId:${r.id}})"
       ondragover="onClassifierLevelRowDragOver(event,this)"
       ondragleave="this.classList.remove('drop-before','drop-after')"
       ondrop="onClassifierLevelRowDrop(event,${o.id},${c.id},${r.id})">
@@ -96,12 +99,25 @@ function renderClassifierLevelTableHtml(o, c) {
       data-lid="${r.id}" data-field="${field}" onblur="saveClassifierLevelField(this)"></td>`).join('')}
     <td class="cls-lv-act"><button class="btn btn-g btn-i" onclick="deleteClassifierLevelRow(${r.id})" title="${t('delete')}">${I.delete}</button></td>
   </tr>`).join('');
-  return `<div class="cls-lv-wrap">
-    <div class="cls-lv-head"><span class="pk">${x(c.description)}</span>
-      <button class="btn btn-g cls-lv-add" onclick="addClassifierLevel(${o.id},${c.id})">${I.plus} ${t('levelAddRow')}</button></div>
+  // §7.4 / §7.10 (HIG Disclosure controls): a table that already has rows
+  // starts folded, so a detail page of several levelable fields reads as a
+  // list of fields rather than a wall of tables. Open state is remembered
+  // per (object, field) for the session.
+  const key = `${o.id}:${c.id}`;
+  const open = !rows.length || S.clsLevelOpen?.has(key);
+  const summary = rows.length ? `${x(rows[rows.length - 1].level_label || rows[rows.length - 1].condition_value || '')} · ${rows.length}` : '';
+  return `<details class="cls-lv-wrap"${open ? ' open' : ''} ontoggle="toggleClassifierLevelOpen('${key}',this.open)">
+    <summary class="cls-lv-head"><span class="pk">${x(c.description)}</span>
+      <span class="cls-lv-sum" data-no-i18n>${summary}</span>
+      <button class="btn btn-g cls-lv-add" onclick="event.preventDefault();addClassifierLevel(${o.id},${c.id})">${I.plus} ${t('levelAddRow')}</button></summary>
     ${rows.length ? `<table class="cls-lv-table">${colgroup}<thead><tr><th></th>${head}<th></th></tr></thead><tbody>${body}</tbody></table>`
       : `<div class="cls-lv-empty">${t('levelNoRows')}</div>`}
-  </div>`;
+  </details>`;
+}
+
+function toggleClassifierLevelOpen(key, open) {
+  S.clsLevelOpen = S.clsLevelOpen || new Set();
+  if (open) S.clsLevelOpen.add(key); else S.clsLevelOpen.delete(key);
 }
 
 // Drag-reorder for level rows, mirroring narrator-dialogue.js's
@@ -150,6 +166,30 @@ async function onClassifierLevelRowDrop(ev, objectId, templateId, targetId) {
 
 async function addClassifierLevel(oid, tid) {
   await api.classifier.createLevel(oid, tid);
+  S.clsLevelOpen = S.clsLevelOpen || new Set();
+  S.clsLevelOpen.add(`${oid}:${tid}`);
+  await reloadClassifierDetail();
+}
+
+// Insert above / below / duplicate (§7.4 level-row menu). createLevel always
+// appends; the new id is then moved into place with the same moveLevels the
+// drag handler uses, reading the current order off the table (see
+// onClassifierLevelRowDrop for why the DOM, not a cache).
+async function insertClassifierLevel(oid, tid, refId, where, copyFrom = null) {
+  const newId = await api.classifier.createLevel(oid, tid);
+  if (copyFrom) {
+    const src = document.querySelector(`tr[data-lid="${copyFrom}"]`);
+    for (const inp of src ? src.querySelectorAll('input[data-field]') : []) {
+      if (inp.value) await api.classifier.updateLevelField(newId, inp.dataset.field, inp.value);
+    }
+  }
+  const tbody = document.querySelector(`tr[data-lid="${refId}"]`)?.closest('tbody');
+  if (tbody) {
+    const ids = [...tbody.querySelectorAll('tr[data-lid]')].map(tr => Number(tr.dataset.lid));
+    const idx = ids.indexOf(refId);
+    ids.splice(where === 'before' ? idx : idx + 1, 0, newId);
+    await api.classifier.moveLevels(oid, tid, ids);
+  }
   await reloadClassifierDetail();
 }
 
@@ -164,7 +204,9 @@ async function saveClassifierLevelField(el) {
   if (row) row[el.dataset.field] = el.value.trim();
 }
 
+// §7.5 bug #5: this deleted on one click with no confirm and no undo.
 async function deleteClassifierLevelRow(id) {
+  if (!await uiConfirm(t('confirmDeleteLevelRow'))) return;
   await api.classifier.deleteLevel(id);
   await reloadClassifierDetail();
 }
@@ -173,12 +215,7 @@ async function deleteClassifierLevelRow(id) {
 // S.classifierData loaded — refresh whichever is live, same split as
 // Chronicler's saveChroniclerInspectorField.
 async function reloadClassifierDetail() {
-  if (S.activeItemNode?.itemKind === 'classifier') {
-    await openItemNode('classifier', S.activeItemNode.moduleId, S.activeItemNode.id);
-    return;
-  }
-  await loadClassifierData(S.activeModuleNode);
-  renderNexusHome();
+  await refreshClassifier(); // mod/classifier.js — module view or element page, whichever is live
 }
 
 // ── Linked elements from other Major modules ────────────────────────────
@@ -199,21 +236,35 @@ function setClassifierLinkData(relations, index) {
   for (const e of (index || [])) _clsLinkIndex[e.key] = e;
 }
 
-function renderClassifierLinksHtml(o) {
-  const links = _clsLinks.filter(l => l.from_key === `cobj_${o.id}` || l.to_key === `cobj_${o.id}`);
-  const rows = links.map(l => {
-    const otherKey = l.from_key === `cobj_${o.id}` ? l.to_key : l.from_key;
+// The one read-only relation renderer (§7.4 "one relation surface") — the
+// Relation view calls it for every object in the category, the detail page
+// for one. A relation between two keys of the set shows once.
+function classifierRelationRowsHtml(keys) {
+  const seen = new Set();
+  return _clsLinks.filter(l => keys.has(l.from_key) || keys.has(l.to_key)).map(l => {
+    if (seen.has(l.id)) return '';
+    seen.add(l.id);
+    const mine = keys.has(l.from_key) ? l.from_key : l.to_key;
+    const otherKey = mine === l.from_key ? l.to_key : l.from_key;
     const e = _clsLinkIndex[otherKey];
-    const name = e ? e.name : otherKey;
-    // The module name is the point of this section, not decoration: a linked
-    // element is meaningless without knowing which Major module it lives in.
+    const own = keys.size > 1 ? _clsLinkIndex[mine] : null;
+    // The module name is the point, not decoration: a linked element is
+    // meaningless without knowing which module it lives in.
     const from = e ? `${e.moduleName || '—'}${e.moduleKind ? ` · ${kindLabel(e.moduleKind)}` : ''}` : '—';
+    const arrow = l.directed === 0 ? '—' : mine === l.from_key ? '→' : '←';
+    const lbl = [l.label, l.rel_type && `(${l.rel_type})`].filter(Boolean).join(' ');
     return `<div class="cls-link-row">
-      <span class="cls-link-name" onclick="openEntityByKey('${x(otherKey)}')">${x(name)}</span>
+      ${own ? `<span class="cls-link-name" onclick="openEntityByKey('${x(mine)}')">${x(own.name)}</span>` : ''}
+      <span data-no-i18n>${arrow}</span>
+      <span class="cls-link-name" onclick="openEntityByKey('${x(otherKey)}')">${x(e ? e.name : otherKey)}</span>
       <span class="cls-link-mod">${x(from)}</span>
-      ${l.label ? `<span class="cls-link-lbl">${x(l.label)}</span>` : ''}
+      ${lbl ? `<span class="cls-link-lbl">${x(lbl)}</span>` : ''}
     </div>`;
   }).join('');
+}
+
+function renderClassifierLinksHtml(o) {
+  const rows = classifierRelationRowsHtml(new Set([`cobj_${o.id}`]));
   return `<div class="insp-label cls-link-label">${t('linkedElements')}</div>
     <div class="cls-link-list">${rows || `<div class="cls-lv-empty">${t('noLinkedElements')}</div>`}</div>
     <button class="btn btn-g" style="margin:4px 14px" onclick="openExhibitorFor(${o.module_ref ?? S.activeItemNode?.moduleId ?? S.activeModuleNode?.id ?? 'null'},'cobj_${o.id}')">${I.relation} ${t('openInExhibitor')}</button>`;
@@ -244,18 +295,28 @@ function renderClassifierAttrRowHtml(o, c) {
 // since it can be opened without the module's own view ever having loaded
 // S.classifierData.
 function renderClassifierObjectDetail(m, o, templates = S.classifierData?.templates || []) {
-  let html = `<h3 style="margin-bottom:8px">${x(o.name)}</h3>`;
+  let html = `<h3 style="margin-bottom:8px" oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})">${x(o.name)}</h3>`;
   for (const c of templates) html += renderClassifierAttrRowHtml(o, c);
-  if (m.cat_type === 'character') {
-    html += `<div class="insp-label">${t('customAttribute')}</div>`;
-    if (o.privateTemplates.length) {
-      const pt = o.privateTemplates[0];
-      html += `<div class="prop"><span class="pk">${x(pt.description)}</span>
-        <span class="pv" contenteditable="true" data-oid="${o.id}" data-tid="${pt.id}" onblur="saveClassifierAttrCell(this)">${x(pt.value || '')}</span></div>`;
-    } else {
-      html += `<button class="btn btn-g" style="margin:4px 14px" onclick="openClassifierCustomAttrModal(${m.id},${o.id})">${I.plus} ${t('customAttribute')}</button>`;
-    }
-  }
+  // §7.4: a field is reachable where it is missing — no trip to the fields
+  // modal to add one more.
+  html += `<div class="cls-addfield">
+    <input class="cls-addfield-inp" id="cls-addfield-${o.id}" placeholder="${x(t('clsAddFieldPlaceholder'))}"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();addClassifierFieldInline(${m.id},${o.id},false)}">
+    <button class="btn btn-g btn-sm" onclick="addClassifierFieldInline(${m.id},${o.id},false)" title="${x(t('clsAddFieldShared'))}">${I.plus} ${t('clsAddField')}</button>
+  </div>`;
+  // Private fields: any number, on every object (§7.4 — this used to be one
+  // field, and only when the category's cat_type was 'character').
+  const priv = o.privateTemplates || [];
+  const privRows = priv.map(pt => `<div class="prop">
+      <span class="pk">${x(pt.description)}</span>
+      <span class="pv" contenteditable="true" data-oid="${o.id}" data-tid="${pt.id}" onblur="saveClassifierAttrCell(this)">${x(pt.value || '')}</span>
+      <button class="btn btn-g btn-i" onclick="deleteClassifierPrivateField(${pt.id})" title="${t('delete')}">${I.delete}</button>
+    </div>`).join('');
+  html += `<details class="cls-priv"${priv.length ? '' : ' open'}>
+    <summary class="insp-label">${t('customAttribute')}${priv.length ? ` <span class="cnt" data-no-i18n>${priv.length}</span>` : ''}</summary>
+    ${privRows}
+    <button class="btn btn-g" style="margin:4px 14px" onclick="openClassifierCustomAttrModal(${m.id},${o.id})">${I.plus} ${t('customAttribute')}</button>
+  </details>`;
   html += renderClassifierLinksHtml(o);
   return html;
 }

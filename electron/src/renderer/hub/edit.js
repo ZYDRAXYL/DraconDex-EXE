@@ -66,8 +66,6 @@ function buildCatTypePicker(selected) {
       </div>
       <div class="typecard${sel === 'element' ? ' sel' : ''}" onclick="pickCatType('element')">
         <h5>${I.relation} ${t('catTypeElement')}</h5><p>${t('catTypeElementDesc')}</p>
-        <div class="togglerow"><span class="tg on"></span>${t('levelable')}</div>
-        <div class="togglerow"><span class="tg"></span>${t('condition')}</div>
       </div>
       <div class="typecard${sel === 'character' ? ' sel' : ''}" onclick="pickCatType('character')">
         <h5>${I.person} ${t('catTypeCharacter')}</h5><p>${t('catTypeCharacterDesc')}</p>

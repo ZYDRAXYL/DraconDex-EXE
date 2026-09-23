@@ -35,13 +35,13 @@ const ITEM_KIND = {
         api.viewer.getRelations(S.nexus.id),
         api.viewer.index(S.nexus.id),
       ]);
-      const attrMap = {}, conditionMap = {}, levelMap = {};
-      for (const a of attrs) { attrMap[a.template_ref] = a.attribute_value; conditionMap[a.template_ref] = a.condition_value; }
+      const attrMap = {}, levelMap = {};
+      for (const a of attrs) attrMap[a.template_ref] = a.attribute_value;
       for (const l of levels) (levelMap[l.template_ref] ||= []).push(l);
       setClassifierLinkData(relations, index);
       const templates = objTemplates.filter(tp => tp.object_ref == null);
       const hydrated = {
-        ...o, attrMap, conditionMap, levelMap,
+        ...o, attrMap, levelMap,
         privateTemplates: objTemplates.filter(tp => tp.object_ref === o.id)
           .map(tp => ({ id: tp.id, description: tp.description, value: attrMap[tp.id] || '' })),
       };

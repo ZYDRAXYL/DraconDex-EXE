@@ -29,6 +29,21 @@ const SNAPSHOT_VERSION = 1;
 // .mddx) can still carry. Mapped on apply; the v5 module CHECK rejects them.
 const V5_KIND_MAP = { viewer: 'exhibitor', connector: 'exhibitor' };
 
+// A §7.9 card/table keeps the classifier_template ids it shows in props
+// (fields / columns). Those ids are renumbered on apply like every other
+// row, so they go through the same map; a field that did not come across
+// drops out of the list instead of pointing at someone else's template.
+function remapExhibitProps(props, tplMap) {
+  if (props == null) return null;
+  let p;
+  try { p = JSON.parse(props); } catch (_) { return props; }
+  if (!p || typeof p !== 'object') return props;
+  for (const k of ['fields', 'columns']) {
+    if (Array.isArray(p[k])) p[k] = p[k].filter(id => tplMap.has(id)).map(id => tplMap.get(id));
+  }
+  return JSON.stringify(p);
+}
+
 // Build-mode gate: packaged builds (portable + installer) talk to the real
 // Supabase backend configured by the user; an unpackaged run (`npm start`,
 // drivers) is pinned to the in-process dev prototype server instead
@@ -966,7 +981,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
         .run(mod(n.moduleId), n.nodeType ?? 'entity', k, n.label ?? null, n.x ?? 0, n.y ?? 0,
              n.w ?? null, n.h ?? null, n.z ?? 0, n.rotation ?? 0, n.scale ?? 1,
-             n.locked ? 1 : 0, n.hidden ? 1 : 0, n.color ?? null, n.props ?? null);
+             n.locked ? 1 : 0, n.hidden ? 1 : 0, n.color ?? null, remapExhibitProps(n.props, ctplMap));
       enodeMap.set(n.id, r.lastInsertRowid);
       if (n.parentId != null) enodeParents.push([n.id, n.parentId]);
     }

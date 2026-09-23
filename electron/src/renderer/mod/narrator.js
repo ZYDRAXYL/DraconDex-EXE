@@ -52,9 +52,7 @@ async function setNarratorView(view) {
 function buildNarratorMainHtml(m) {
   const d = (S.narratorData && S.narratorData.moduleId === m.id) ? S.narratorData : null;
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
-  const viewBar = `<div class="viewbar">
-    ${NARRATOR_VIEWS.map(v => `<span class="vitem${v === d.view ? ' act' : ''}" onclick="setNarratorView('${v}')">${NARRATOR_VIEW_LABEL[v]}</span>`).join('')}
-  </div>`;
+  const viewBar = viewBarHtml(NARRATOR_VIEWS, d.view, v => `setNarratorView('${v}')`, v => NARRATOR_VIEW_LABEL[v]);
   const toolbar = `<div class="classifier-toolbar">
     <button class="btn btn-p" onclick="openNarratorDialogueModal(${m.id})">${I.plus} ${t('addDialogue')}</button>
     ${viewBar}
@@ -209,7 +207,7 @@ function initNarratorPan() {
   const graph = q('#nar-graph');
   const d = S.narratorData;
   if (!wrap || !graph || !d) return;
-  wrap.addEventListener('contextmenu', (e) => e.preventDefault());
+  bindCanvasCtx(wrap, 'narrator.canvas');
   let panning = false, sx = 0, sy = 0, s0 = { x: 0, y: 0 };
   wrap.addEventListener('mousedown', (e) => {
     if (e.button !== 2) return;
@@ -349,7 +347,7 @@ async function submitNarratorDialogue(moduleId, id) {
 }
 
 async function deleteNarratorDialogue(id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.narrator.deleteDialogue(id);
   closeModal();
   const d = S.narratorData;
@@ -382,7 +380,7 @@ async function saveNarratorEdgeLabel(id) {
 }
 
 async function deleteNarratorEdge(id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.narrator.deleteEdge(id);
   closeModal();
   await openModuleNode(S.narratorData.moduleId);

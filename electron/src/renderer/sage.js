@@ -11,6 +11,7 @@
 //                 that the old default module→color map was removed with
 //                 the legacy Sage page — Scribe's own caller always does)
 //   onNodeClick — fn(node) fired on a click that wasn't a drag
+//   onNodeContext — fn(node, event) on right-click (v5 Part 3 context menus)
 // Edges flagged {wiki:true} render dashed in the accent color. A node may
 // set its own {fill} to override its module's group color (Classifier's
 // relation view does this for per-object coloring).
@@ -131,6 +132,7 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
     g.addEventListener('mouseenter', () => highlightNode(n.id));
     g.addEventListener('mouseleave', () => highlightNode(null));
     if (opts.onNodeClick) g.addEventListener('click', () => { if (!moved) opts.onNodeClick(n); });
+    if (opts.onNodeContext) g.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); opts.onNodeContext(n, e); });
     return { el:g, circle:c, text:txt, node:n };
   });
 

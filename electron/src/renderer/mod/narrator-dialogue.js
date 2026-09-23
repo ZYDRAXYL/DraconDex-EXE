@@ -159,7 +159,7 @@ async function addNarratorChoice() {
 }
 
 async function deleteNarratorTalk(id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   const d = S.narratorData;
   // Deleting a choice drops the edges its jump options owned, unless another
   // option still points the same way.

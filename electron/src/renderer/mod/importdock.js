@@ -202,7 +202,7 @@ function openImportFileContextMenu(ev, id) {
   pop.className = 'kind-popup context-menu-popup';
   pop.innerHTML = `
     <div class="kind-list-item kli-submenu-parent" onmouseenter="openAssetMoveSubmenu(event,${id})" onmouseleave="scheduleCtxSubmenuClose()">
-      <span class="kli-name">${x(t('assetMoveToModule'))}</span><span class="kli-arrow">›</span>
+      <span class="kli-name">${x(t('assetMoveToModule'))}</span><span class="kli-arrow">${I.chevronRight}</span>
     </div>
     ${f && f.module_ref != null ? `<div class="kind-list-item" onclick="moveAssetToModule(${id},null)"><span class="kli-name">${x(t('assetMoveToTray'))}</span></div>` : ''}
     ${f && f.missing ? `<div class="kind-list-item" onclick="closeAllPopups();relinkImportFile(${id})"><span class="kli-name">${x(t('assetRelink'))}</span></div>` : ''}
@@ -216,21 +216,12 @@ function openImportFileContextMenu(ev, id) {
 // Same flyout shape as the module menu's "Move to" (hub/popups.js
 // openMoveToSubmenu), listing every module node as a filing target.
 function openAssetMoveSubmenu(ev, id) {
-  cancelCtxSubmenuClose();
-  if (document.querySelector('.ctx-submenu')) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup kind-list-popup ctx-submenu';
   const cur = (S.importFiles || []).find(v => v.id === id)?.module_ref ?? null;
   const rows = flattenModuleTree(S.moduleTree, 0)
     .filter(({ m }) => m.id !== cur)
     .map(({ m, depth }) => `<div class="kind-list-item" style="padding-left:${10 + depth * 14}px" onclick="moveAssetToModule(${id},${m.id})"><span class="kli-name">${x(m.name)}</span></div>`)
     .join('');
-  pop.innerHTML = rows || `<div class="kind-list-item" style="opacity:.6;pointer-events:none"><span class="kli-name">${x(t('moveToNoTargets'))}</span></div>`;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  pop.addEventListener('mouseenter', cancelCtxSubmenuClose);
-  pop.addEventListener('mouseleave', scheduleCtxSubmenuClose);
-  positionSubmenuNear(pop, ev.currentTarget.getBoundingClientRect());
+  openCtxSubmenu(ev, rows || `<div class="kind-list-item" style="opacity:.6;pointer-events:none"><span class="kli-name">${x(t('moveToNoTargets'))}</span></div>`);
 }
 
 // ── Import ──────────────────────────────────────────────────────────────
@@ -309,7 +300,7 @@ async function afterRelink(openId) {
 
 // ── Delete ──────────────────────────────────────────────────────────────
 async function deleteImportFileRow(id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteAsset'))) return;
   await api.importdock.delete(id);
   S.importFiles = undefined;
   // Only close the open preview if the deleted file IS the one being

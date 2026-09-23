@@ -263,30 +263,9 @@ function runBuilderMounts() {
   if (S.activeItemNode && typeof ITEM_KIND !== 'undefined') ITEM_KIND[S.activeItemNode.itemKind]?.mount?.(S.activeItemNode);
   if (!S.activeModuleNode && !S.filePreview && S.sageHut && typeof mountSageHutGraph === 'function') mountSageHutGraph();
   if (typeof hydrateDisplayImages === 'function') hydrateDisplayImages();
-  if (S.activeModuleNode?.kind === 'inspector' && typeof mountDetailEditor === 'function') mountDetailEditor(S.activeModuleNode);
   if (S.activeModuleNode && typeof mountInspectorDescEditor === 'function') mountInspectorDescEditor(S.activeModuleNode);
   if (S.pluginPanel && typeof mountPluginPanel === 'function') mountPluginPanel();
-  if (S.activeModuleNode?.kind === 'locator' && typeof mountLocatorBoard === 'function') mountLocatorBoard();
-  if (S.activeModuleNode?.kind === 'chronicler' && typeof mountChroniclerGraph === 'function') mountChroniclerGraph();
-  if (S.activeModuleNode?.kind === 'wanderer' && typeof mountWandererBoard === 'function') mountWandererBoard();
-  if (S.activeModuleNode?.kind === 'narrator' && typeof mountNarratorBoard === 'function') {
-    mountNarratorBoard();
-    if (S.narratorData?.view === 'reader') mountNarratorReader();
-  }
-  if (S.activeModuleNode?.kind === 'author' && typeof mountAuthorEditor === 'function') {
-    mountAuthorEditor();
-    if (S.authorData?.view === 'book' && typeof mountAuthorBook === 'function') mountAuthorBook();
-  }
-  if (S.activeModuleNode?.kind === 'scribe' && typeof mountChatScribe === 'function') mountChatScribe();
-  if (S.activeModuleNode?.kind === 'drafter' && typeof mountDrafterEditor === 'function') mountDrafterEditor(S.activeModuleNode);
-  if (S.activeModuleNode?.kind === 'exhibitor' && typeof mountExhibitor === 'function') mountExhibitor();
-  if (S.activeModuleNode?.kind === 'classifier' && S.classifierView === 'relationCat' && typeof mountClassifierRelationGraph === 'function') mountClassifierRelationGraph();
-  if (S.activeModuleNode?.kind === 'sketcher' && typeof mountSketcherBoard === 'function') {
-    mountSketcherBoard();
-    mountSketcherExtras();
-  }
-  if (S.activeModuleNode?.kind === 'manager' && S.managerData?.view === 'graph'
-      && typeof mountManagerGraph === 'function') mountManagerGraph();
-  if (S.activeModuleNode?.kind === 'designer' && typeof mountDesignerBoard === 'function') mountDesignerBoard();
+  // Per-kind page mounts: one registry (hub/kind-page.js KIND_PAGE).
+  if (S.activeModuleNode) kindPagePart(S.activeModuleNode.kind, 'mount')?.(S.activeModuleNode);
 }
 

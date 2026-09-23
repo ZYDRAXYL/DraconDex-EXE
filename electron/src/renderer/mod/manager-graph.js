@@ -155,7 +155,7 @@ function mountManagerGraph() {
   }
 
   applyManagerZoom();
-  board.addEventListener('contextmenu', (e2) => e2.preventDefault());
+  bindCanvasCtx(board, 'manager.graph');
   board.addEventListener('pointerdown', (e2) => {
     if (e2.button !== 2) return;
     board.classList.add('is-panning');

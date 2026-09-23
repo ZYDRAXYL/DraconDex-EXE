@@ -21,7 +21,7 @@ async function loadLocatorData(m) {
 }
 
 function buildLocatorMainHtml(m) {
-  if (!S.map) return `<div class="empty" style="margin-top:40px"><p>${t('nestEmpty')}</p></div>`;
+  if (!S.map) return `<div class="empty" style="margin-top:40px"><p>${t('locatorEmpty')}</p></div>`;
   return `
   <div id="map-board" class="map-whiteboard locator-board">
     <div id="map-konva-container" style="width:100%;height:100%"></div>

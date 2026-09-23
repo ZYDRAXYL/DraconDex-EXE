@@ -152,9 +152,7 @@ function buildWandererMainHtml(m) {
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
   const opt = (list, sel, none) => `<option value="">${none}</option>` +
     list.map(l => `<option value="${l.id}" ${l.id === sel ? 'selected' : ''}>${x(l.name)}</option>`).join('');
-  const viewBar = `<div class="viewbar">
-    ${WANDERER_VIEWS.map(v => `<span class="vitem${v === d.view ? ' act' : ''}" onclick="setWandererView('${v}')">${WANDERER_VIEW_LABEL[v]}</span>`).join('')}
-  </div>`;
+  const viewBar = viewBarHtml(WANDERER_VIEWS, d.view, v => `setWandererView('${v}')`, v => WANDERER_VIEW_LABEL[v]);
   const toolbar = `<div class="classifier-toolbar">
     <select onchange="setWandererRef(${m.id},'mapModule',this.value)" title="${t('pickLocatorRef')}">${opt(d.locators, d.mapModuleId, '')}</select>
     <select onchange="setWandererRef(${m.id},'timelineModule',this.value)" title="${t('pickChroniclerRef')}">${opt(d.chroniclers, d.timelineModuleId, '')}</select>
@@ -335,7 +333,7 @@ async function submitMapEventForm(id, px, py, areaId) {
 }
 
 async function deleteMapEventRow(id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.wanderer.delete(id);
   closeModal();
   const d = S.wandererData;

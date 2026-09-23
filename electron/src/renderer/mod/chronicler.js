@@ -98,9 +98,7 @@ function buildChroniclerMainHtml(m) {
   const data = (S.chroniclerData && S.chroniclerData.moduleId === m.id) ? S.chroniclerData : null;
   if (!data) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
   const { timelines, activeId, compareId, view } = data;
-  const viewBar = `<div class="viewbar">
-    ${CHRONICLER_VIEWS.map(v => `<span class="vitem${v === view ? ' act' : ''}" onclick="setChroniclerView('${v}')">${CHRONICLER_VIEW_LABEL[v]}</span>`).join('')}
-  </div>`;
+  const viewBar = viewBarHtml(CHRONICLER_VIEWS, view, v => `setChroniclerView('${v}')`, v => CHRONICLER_VIEW_LABEL[v]);
   // Only ever 1 line per chronicler module — no line-picker needed once one
   // exists, and the "add line" button hides itself the same way.
   const lineSelect = timelines.length > 1 ? `<select id="chr-line-select" onchange="selectChroniclerTimeline(${m.id},this.value)">
@@ -385,7 +383,7 @@ async function submitChroniclerTimelineForm(moduleId, id) {
 }
 
 async function deleteChroniclerTimeline(moduleId, id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.timeline.delete(id);
   closeModal();
   const m = findModuleNode(moduleId);
@@ -446,7 +444,7 @@ async function saveChroniclerEvent(evId, tlid) {
 }
 
 async function deleteChroniclerEvent(evId, tlid) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.timeline.deleteEvent(evId);
   if (S.chroniclerData?.inspectorEventId === evId) S.chroniclerData.inspectorEventId = null;
   closeModal();

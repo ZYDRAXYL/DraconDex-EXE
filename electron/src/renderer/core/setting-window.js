@@ -138,7 +138,7 @@ function settingThemeGridCellHtml(key, name, vars, {active, isCustom, onclick, t
       ${isCustom ? `<span onclick="event.stopPropagation();openCustomThemeModal(${xj(rawId)})" title="${t('edit')}">✎</span>
                     <span onclick="event.stopPropagation();deleteCustomTheme(${xj(rawId)})" title="${t('delete')}">×</span>` : ''}
     </div>` : ''}
-    ${active ? '<span class="prefs-theme-check">✓</span>' : ''}
+    ${active ? `<span class="prefs-theme-check">${I.check}</span>` : ''}
   </div>`;
 }
 // Procress 10 part 1: "Theme" (Workspace group) renamed to "Appearance" and
@@ -235,7 +235,7 @@ function settingUiStyleSectionHtml(){
       : pkgDisplayName(INSTALLED_PACKAGES.uistyles.find(u => `pkg:${u.id}` === key)) || key;
     return `<button type="button" class="theme-item${active ? ' active' : ''}" onclick="setUiSetting('uiStyle','${key}')">
       <span class="theme-name"${UI_STYLE_LABEL_KEY[key] ? '' : ' data-no-i18n'}>${x(label)}</span>
-      ${active ? '<span class="theme-check">✓</span>' : ''}
+      ${active ? `<span class="theme-check">${I.check}</span>` : ''}
     </button>`;
   }).join('');
   const notDownloaded = expanded
@@ -325,7 +325,7 @@ function settingLangCatalogItemHtml(p){
 function settingTextSizePageHtml(){
   const rows = UI_LANGUAGE_OPTIONS.map(lang => `
     <div class="lang-item${S.settings.language===lang?' active':''}" onmouseenter="settingPreviewLang('${lang}')" onclick="setUiSetting('language','${lang}')">
-      <span>${LANGUAGE_LABELS[lang]}</span>${S.settings.language===lang?'<span class="theme-check">✓</span>':''}
+      <span>${LANGUAGE_LABELS[lang]}</span>${S.settings.language===lang?`<span class="theme-check">${I.check}</span>`:''}
     </div>`).join('') + pkgCatalogGap('lang', UI_LANGUAGE_OPTIONS_BUILTIN).map(settingLangCatalogItemHtml).join('');
   const areaRows = Object.keys(SETTING_AREA_CONTAINERS).map(key =>
     sliderNumberRowHtml(`${t('settingArea_'+key)} (%)`, { min: 50, max: 150, value: (S.settings.areaScale||{})[key] ?? 100, commit: `setAreaScale('${key}', this.value)` })).join('');

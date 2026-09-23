@@ -520,3 +520,5 @@ select.fp-input[multiple]{padding:2px}
 .disp-thumb:has(img:not([src])){display:none}
 .disp-thumb.disp-empty{display:none}
 
+.exh-fld-list{max-height:50vh;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.exh-fld{margin-right:4px}
