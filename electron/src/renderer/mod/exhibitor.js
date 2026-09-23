@@ -150,8 +150,7 @@ function buildExhibitorMainHtml(m) {
   </div>`;
   if (d.view === 'scene') return toolbar + buildExhibitorSceneHtml(d);
   if (!d.items.length) {
-    return `${toolbar}<div class="empty" style="margin-top:30px"><div class="ei">${moduleIconHtml(m)}</div>
-      <h3>${x(m.name)}</h3><p>${t('noFilterResults')}</p></div>`;
+    return toolbar + kindEmptyStateHtml(m, { note: t('noFilterResults') });
   }
   if (d.view === 'graph') return toolbar + buildExhibitorGraphHtml(d);
   if (d.view === 'edges') return toolbar + buildExhibitorEdgesHtml(d);

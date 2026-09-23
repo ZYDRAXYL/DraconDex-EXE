@@ -84,8 +84,7 @@ function buildAuthorMainHtml(m) {
     ${viewBar}
   </div>`;
   if (!d.chapters.length) {
-    return `${toolbar}<div class="empty" style="margin-top:30px"><div class="ei">${moduleIconHtml(m)}</div>
-      <h3>${x(m.name)}</h3><p>${t('nestEmpty')}</p></div>`;
+    return toolbar + kindEmptyStateHtml(m);
   }
   // Chapter column (mockup 12) frames every view; the right side swaps.
   // Native HTML5 drag-and-drop (Plan part5 Author #3) — a 2-zone

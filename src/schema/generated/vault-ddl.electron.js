@@ -49,11 +49,17 @@ const VAULT_DDL_SQL = `
     );
 
     -- Nexus (v2.8): vault grouping projects from every module --
+    -- taught (v5, APP docs/V5.md §10.4): which just-in-time tips this Nexus has
+    -- already shown — a JSON object of tip id -> 'shown' | 'done' | 'dismissed'.
+    -- In the vault rather than localStorage so a backup / restore / transfer
+    -- carries it and clearing a cache does not teach everything again. Rides
+    -- the vaultSchemaVersion 4 -> 5 bump v5 already makes.
     CREATE TABLE IF NOT EXISTS nexus (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
       memo TEXT,
       color INTEGER REFERENCES use_color(id),
+      taught TEXT NOT NULL DEFAULT '{}',
       update_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -1184,6 +1190,22 @@ const VAULT_DDL_SQL = `
       update_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- Module presets (v5, APP docs/V5.md §10.8) — a starting point for ONE
+    -- module of one kind, saved by the user ("my character sheet"). The
+    -- built-in presets (Classifier: character / item / place) live in app
+    -- code; this table holds only the user's own. spec is JSON the app reads
+    -- per kind (icon, colour, description, view settings; a Classifier's
+    -- fields). A new table, so no vaultSchemaVersion bump: both apps run
+    -- CREATE TABLE IF NOT EXISTS on every open.
+    CREATE TABLE IF NOT EXISTS module_preset (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nexus_ref INTEGER NOT NULL REFERENCES nexus(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL,
+      name TEXT NOT NULL,
+      spec TEXT NOT NULL DEFAULT '{}',
+      update_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(nexus_ref, kind, name)
+    );
 
 `;
 module.exports = { VAULT_SCHEMA_VERSION, VAULT_DDL_SQL };

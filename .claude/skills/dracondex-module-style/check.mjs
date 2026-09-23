@@ -255,6 +255,7 @@ console.log('=== command registry (core/commands.js) ===');
     'asset.viewer': ['mod/fileviewer.js'], 'text.ctx': ['core/wiki-field.js'],
     'canvas.ctx': ['mod/canvas-ctx.js'], 'classifier.ctx': ['mod/classifier-ctx.js'], 'exhibitor.ctx': ['mod/exhibitor-cards.js'],
     'locator.page': ['mod/locator.js'], 'sketcher.board': ['mod/sketcher.js'], 'scribe.toolbar': ['mod/chatscribe.js'],
+    'empty.state': ['hub/kind-page.js'],
   };
   const surfaceFiles = (sf) => SURFACE_FILES[sf] || (sf.endsWith('.toolbar') ? [`mod/${sf.slice(0, -8)}.js`] : null);
   const srcOf = (f) => { try { return read(app(R + f)); } catch (_) { return null; } };
@@ -298,12 +299,26 @@ console.log('=== command registry (core/commands.js) ===');
       const src = read(f);
       const rel = f.slice(app(R).length);
       if (/label:\s*t\(/.test(src)) { bad++; err(`${rel}: a menu item built with \`label: t(...)\` — build it with cmdItem() so it is also a palette command (§10.2)`); }
-      for (const m of src.matchAll(/(?:cmdItem|cmdBtn|runCommand)\(\s*'([^']+)'|data-cmd="([^"$]+)"/g)) {
+      // KIND_PAGE's `start:` names a command too — only there; `start:` is a
+      // common key elsewhere (theme gradients, ranges).
+      const startRe = rel === 'hub/kind-page.js' ? /\bstart:\s*'([^']+)'/g : null;
+      const refs = [...src.matchAll(/(?:cmdItem|cmdBtn|runCommand)\(\s*'([^']+)'|data-cmd="([^"$]+)"/g), ...(startRe ? src.matchAll(startRe) : [])];
+      for (const m of refs) {
         const id = m[1] || m[2];
         if (!ids.has(id)) { bad++; err(`${rel}: command '${id}' is not in COMMANDS`); }
       }
     }
-    if (!bad) ok(`${ids.size} commands, each in the palette and on at least one other surface`);
+    // §10.4: every kind with a page of its own content has an empty state,
+    // and its one button is the KIND_PAGE `start` command. Inspector and
+    // Drafter are always an editor, so they are the exceptions.
+    const kindPage = srcOf('hub/kind-page.js') || '';
+    const pageBlock = kindPage.match(/const KIND_PAGE = \{([\s\S]*?)\n\};/)?.[1] || '';
+    const pageKinds = [...pageBlock.matchAll(/^  ([a-z]+):/gm)].map((x) => [x[1], pageBlock.slice(x.index).split(/\n  [a-z]+:/)[0]]);
+    for (const [k, body] of pageKinds) {
+      if (['inspector', 'drafter'].includes(k)) continue;
+      if (!/\bstart:\s*'/.test(body)) { bad++; err(`KIND_PAGE.${k} has no \`start\` command — its empty page would offer no way to begin (§10.4)`); }
+    }
+    if (!bad) ok(`${ids.size} commands, each in the palette and on at least one other surface; every kind page has a start command`);
   }
 }
 

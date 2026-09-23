@@ -71,11 +71,10 @@ function buildClassifierMainHtml(m) {
   if (!d.objects.length) {
     // §7.5 bug #3: this said "create your first Main module". §7.4: one click
     // to a usable category instead of ~10.
-    body = `<div class="empty" style="margin-top:30px" oncontextmenu="openCtx('classifier.category',event,{moduleId:${m.id}})">
-      <div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3><p>${t('clsEmpty')}</p>
-      <button class="btn btn-p" style="margin-top:12px" onclick="classifierQuickStart(${m.id})">${I.plus} ${t('clsQuickStart')}</button>
-      <p class="drafter-hint" style="margin-top:8px">${t('clsQuickStartHint')}</p>
-    </div>`;
+    body = kindEmptyStateHtml(m, {
+      attrs: `oncontextmenu="openCtx('classifier.category',event,{moduleId:${m.id}})"`,
+      extra: `<p class="drafter-hint">${t('clsQuickStartHint')}</p>`,
+    });
   } else if (view === 'listDetail') body = renderClassifierListDetail(m, d);
   else if (view === 'grid') body = renderClassifierGrid(m, d);
   else if (view === 'relationCat') body = renderClassifierRelation(m, d);

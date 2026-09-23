@@ -13,39 +13,45 @@
 //
 // Also here: viewBarHtml(), the one builder for the view-chip bar that was
 // copy-pasted into eleven kinds' toolbars.
+//
+// v5 Part 6 (APP docs/V5.md §10.4): `start` is the command (core/commands.js)
+// a kind's empty page offers as its ONE primary button — kindEmptyStateHtml()
+// below draws "what this kind is for + one way to begin" from it, in place
+// of the bare `<div class="empty">` that only repeated the module's name.
+// Inspector and Drafter are always an editor, so they have no empty page.
 
 const kpFn = (name) => (typeof window[name] === 'function' ? window[name] : null);
 const kpCall = (name, ...args) => kpFn(name)?.(...args);
 
 const KIND_PAGE = {
   classifier: {
-    load: 'loadClassifierData', main: 'buildClassifierMainHtml',
+    load: 'loadClassifierData', main: 'buildClassifierMainHtml', start: 'classifier.quickStart',
     mount: () => { if (S.classifierView === 'relationCat') kpCall('mountClassifierRelationGraph'); },
   },
   manager: {
-    load: 'loadManagerData', main: 'buildManagerMainHtml',
+    load: 'loadManagerData', main: 'buildManagerMainHtml', start: 'manager.pick',
     mount: () => { if (S.managerData?.view === 'graph') kpCall('mountManagerGraph'); },
   },
   inspector: { main: 'buildDetailMainHtml', mount: (m) => kpCall('mountDetailEditor', m) },
-  locator: { load: 'loadLocatorData', main: 'buildLocatorMainHtml', mount: 'mountLocatorBoard' },
-  chronicler: { load: 'loadChroniclerData', main: 'buildChroniclerMainHtml', mount: 'mountChroniclerGraph' },
-  wanderer: { load: 'loadWandererData', main: 'buildWandererMainHtml', mount: 'mountWandererBoard' },
+  locator: { load: 'loadLocatorData', main: 'buildLocatorMainHtml', mount: 'mountLocatorBoard', start: 'locator.addArea' },
+  chronicler: { load: 'loadChroniclerData', main: 'buildChroniclerMainHtml', mount: 'mountChroniclerGraph', start: 'chronicler.addLine' },
+  wanderer: { load: 'loadWandererData', main: 'buildWandererMainHtml', mount: 'mountWandererBoard', start: 'wanderer.place' },
   narrator: {
-    load: 'loadNarratorData', main: 'buildNarratorMainHtml',
+    load: 'loadNarratorData', main: 'buildNarratorMainHtml', start: 'narrator.addDialogue',
     mount: () => { if (!kpFn('mountNarratorBoard')) return; kpCall('mountNarratorBoard'); if (S.narratorData?.view === 'reader') kpCall('mountNarratorReader'); },
   },
   author: {
-    load: 'loadAuthorData', main: 'buildAuthorMainHtml',
+    load: 'loadAuthorData', main: 'buildAuthorMainHtml', start: 'author.newChapter',
     mount: () => { if (!kpFn('mountAuthorEditor')) return; kpCall('mountAuthorEditor'); if (S.authorData?.view === 'book') kpCall('mountAuthorBook'); },
   },
-  scribe: { load: 'loadChatScribeData', main: 'buildChatScribeMainHtml', mount: 'mountChatScribe' },
+  scribe: { load: 'loadChatScribeData', main: 'buildChatScribeMainHtml', mount: 'mountChatScribe', start: 'scribe.newSession' },
   drafter: { main: 'buildDrafterMainHtml', mount: (m) => kpCall('mountDrafterEditor', m) },
-  exhibitor: { load: 'loadExhibitorData', main: 'buildExhibitorMainHtml', mount: 'mountExhibitor' },
+  exhibitor: { load: 'loadExhibitorData', main: 'buildExhibitorMainHtml', mount: 'mountExhibitor', start: 'exhibitor.editFilter' },
   sketcher: {
-    load: 'loadSketcherData', main: 'buildSketcherMainHtml',
+    load: 'loadSketcherData', main: 'buildSketcherMainHtml', start: 'sketcher.newPage',
     mount: () => { if (!kpFn('mountSketcherBoard')) return; kpCall('mountSketcherBoard'); kpCall('mountSketcherExtras'); },
   },
-  designer: { load: 'loadDesignerData', main: 'buildDesignerMainHtml', mount: 'mountDesignerBoard' },
+  designer: { load: 'loadDesignerData', main: 'buildDesignerMainHtml', mount: 'mountDesignerBoard', start: 'designer.addShape' },
 };
 
 // One part of a kind's page as a callable, or null. A string part names a
@@ -67,3 +73,26 @@ function viewBarHtml(views, active, onclick, label, opts = {}) {
     ${views.map(v => `<span class="vitem${v === active ? ' act' : ''}" onclick="${onclick(v)}"${opts.noI18n ? ' data-no-i18n' : ''}>${label(v)}</span>`).join('')}
   </div>`;
 }
+
+// A kind's empty page (§10.4): icon, what the kind is for (its KIND_DESC_KEY
+// sentence — the same line the kind picker shows), then ONE primary button,
+// the kind's `start` command. Presets for the kind (hub/presets.js) follow as
+// chips — "start from a shape" beside "start empty".
+//   o.note   a line about THIS page's state (a filter that matched nothing)
+//   o.extra  HTML after the button
+//   o.attrs  attributes for the wrapper (a right-click menu)
+function kindEmptyStateHtml(m, o = {}) {
+  const col = m.icon_color_code || m.color_code || KIND_COLOR[m.kind] || 'var(--accent)';
+  const start = KIND_PAGE[m.kind]?.start;
+  const presets = typeof presetChipsHtml === 'function' ? presetChipsHtml(m) : '';
+  return `<div class="empty kind-empty"${o.attrs ? ` ${o.attrs}` : ''}>
+    <div class="ei" style="color:${x(col)}">${moduleIconHtml(m)}</div>
+    <h3>${x(m.name)}</h3>
+    <p>${t(KIND_DESC_KEY[m.kind])}</p>
+    ${o.note ? `<p class="drafter-hint">${o.note}</p>` : ''}
+    ${start ? cmdBtn(start, { moduleId: m.id }, { cls: 'btn-p' }) : ''}
+    ${o.extra || ''}
+    ${presets}
+  </div>`;
+}
+

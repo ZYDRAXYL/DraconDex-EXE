@@ -82,8 +82,7 @@ function buildManagerMainHtml(m) {
     ${viewBar}
   </div>`;
   if (!rows.length) {
-    return `${toolbar}<div class="empty" style="margin-top:30px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3>
-      <p>${t('managerEmpty')}</p></div>`;
+    return toolbar + kindEmptyStateHtml(m, { note: t('managerEmpty') });
   }
   let body;
   if (view === 'list') body = rows.map(r => buildManagerListRow(r)).join('');

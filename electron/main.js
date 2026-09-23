@@ -688,6 +688,8 @@ h('nexus:relink', async (id) => {
 });
 h('nexus:update', (id,n,m,c)     => db.updateNexus(id,n,m,c));
 h('nexus:delete', (id)           => db.deleteNexus(id));
+h('nexus:taught',     (nx)         => db.getTaught(nx));
+h('nexus:markTaught', (nx, tip, st) => db.markTaught(nx, tip, st));
 
 // Scribe (markdown notes)
 h('note:getFolders',   (nx)            => db.getNoteFolders(nx));

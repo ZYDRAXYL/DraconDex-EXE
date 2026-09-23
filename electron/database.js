@@ -1,6 +1,7 @@
 'use strict';
 const core      = require('./src/db/core');
 const nexus     = require('./src/db/nexus');
+const teach     = require('./src/db/teach');
 const scribe    = require('./src/db/scribe');
 const wiki      = require('./src/db/wiki');
 const color     = require('./src/db/color');
@@ -39,6 +40,7 @@ const cloud     = require('./src/db/cloud');
 module.exports = {
   ...core,
   ...nexus,
+  ...teach,
   ...scribe,
   ...wiki,
   ...color,

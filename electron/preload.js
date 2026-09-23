@@ -30,6 +30,8 @@ contextBridge.exposeInMainWorld('api', {
     exportFile:   (id)     => inv('nexus:exportFile', id),
     shareFile:    (id)     => inv('nexus:shareFile', id),
     revealFile:   (id)     => inv('nexus:revealFile', id),
+    taught:       (nx)     => inv('nexus:taught', nx),
+    markTaught:   (nx,tip,st) => inv('nexus:markTaught', nx, tip, st),
   },
   shell: {
     revealPath:  (p)       => inv('shell:revealPath', p),

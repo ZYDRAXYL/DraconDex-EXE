@@ -103,6 +103,7 @@ function buildModuleDetailHtml(m) {
         after: `${moduleHandleHtml(m)}<span class="kind-chip" data-no-i18n>${x(kindLabelBoth(m.kind))}</span>`,
         tags: `${tagChips}${linkChip}<button class="btn btn-g btn-i" onclick="openModuleTagPopup(${m.id}, this)" title="${t('tagLink')}">${I.plus}</button>`,
       })}
+      ${teachTipHtml(m)}
       ${buildModuleAssetsStripHtml(m)}
       ${mainHtml}
     </div>

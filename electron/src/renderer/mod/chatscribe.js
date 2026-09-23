@@ -69,8 +69,7 @@ function buildChatScribeMainHtml(m) {
     ${viewBar}
   </div>`;
   if (!d.sessions.length) {
-    return `${toolbar}<div class="empty" style="margin-top:30px"><div class="ei">${moduleIconHtml(m)}</div>
-      <h3>${x(m.name)}</h3><p>${t('nestEmpty')}</p></div>`;
+    return toolbar + kindEmptyStateHtml(m);
   }
   const rows = d.sessions.map(s => `
     <div class="li${s.id === d.selectedId ? ' sel' : ''}" onclick="selectChatSession(${s.id})">

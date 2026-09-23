@@ -108,6 +108,11 @@ function migrateInlineColumns(db) {
       try { db.prepare(`ALTER TABLE import_file ADD COLUMN ${col} ${ddl}`).run(); } catch (_) {}
     }
   }
+  // v5 Part 6 (APP docs/V5.md §10.4): which just-in-time tips this Nexus has
+  // shown. NOT NULL with a DEFAULT, so existing rows backfill to '{}'.
+  if (hasTable(db, 'nexus') && !hasColumn(db, 'nexus', 'taught')) {
+    try { db.prepare(`ALTER TABLE nexus ADD COLUMN taught TEXT NOT NULL DEFAULT '{}'`).run(); } catch (_) {}
+  }
   if (hasTable(db, 'world_project') && !hasColumn(db, 'world_project', 'color')) {
     try {
       db.prepare(`ALTER TABLE world_project ADD COLUMN color INTEGER REFERENCES use_color(id)`).run();

@@ -58,8 +58,7 @@ function buildSketcherMainHtml(m) {
     ${viewBar}
   </div>`;
   if (!d.pages.length) {
-    return `${toolbar}<div class="empty" style="margin-top:30px"><div class="ei">${moduleIconHtml(m)}</div>
-      <h3>${x(m.name)}</h3><p>${t('nestEmpty')}</p></div>`;
+    return toolbar + kindEmptyStateHtml(m);
   }
   if (d.view === 'pages') return toolbar + buildSketchPagesHtml(d);
   if (d.view === 'gallery') return toolbar + buildSketchGalleryHtml(d);

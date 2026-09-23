@@ -116,8 +116,7 @@ function buildChroniclerMainHtml(m) {
   </div>`;
 
   if (!timelines.length) {
-    return `${toolbar}<div class="empty" style="margin-top:30px"><div class="ei">${I.timeline}</div><h3>${t('noTimelineYet')}</h3>
-      <button class="btn btn-p" onclick="openChroniclerTimelineModal(${m.id})">${I.plus} ${t('createTimelineLine')}</button></div>`;
+    return toolbar + kindEmptyStateHtml(m, { note: t('noTimelineYet') });
   }
 
   let compareBar = '';
