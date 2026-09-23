@@ -64,6 +64,7 @@ CTX_PROVIDERS['chronicler.graph'] = () => {
   return [
     cmdItem('chronicler.addEvent', c),
     cmdItem('chronicler.editLine', c),
+    cmdItem('chronicler.switchLine', c),
     cmdItem('chronicler.graphOptions', c),
     cmdItem('chronicler.resetView', c),
   ];

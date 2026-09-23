@@ -400,6 +400,13 @@ select.fp-input[multiple]{padding:2px}
 	box-shadow:0 4px 16px rgba(0,0,0,.35)}
 .sk-tools .btn.act{background:var(--accent);color:var(--on-accent)}
 .sk-tools .zsep{width:1px;height:16px;background:var(--border)}
+/* v5 Part 6 §10.6: Chronicler's advanced tier floats over its graph, the
+   .sk-tools pattern — the top bar keeps only Add Event and the view chips. */
+.chr-stage{position:relative}
+.chr-tools{position:absolute;right:10px;top:8px;z-index:4;display:flex;align-items:center;gap:6px;
+	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:4px 8px;
+	box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.chr-tools select{max-width:160px}
 .sk-swatch{width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent}
 .sk-swatch.act{border-color:var(--t1)}
 .sk-width{display:flex;align-items:center;width:22px;cursor:pointer;padding:6px 0;border-radius:4px}

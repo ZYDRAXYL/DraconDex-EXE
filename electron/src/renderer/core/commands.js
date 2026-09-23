@@ -205,8 +205,13 @@ const COMMANDS = {
 
   // ── Chronicler (§10.6 measures the floating strip on it) ─────────────
   'chronicler.addEvent': { label: 'addEvent', icon: 'plus', scope: 'kind:chronicler', when: () => !!S.chroniclerData?.activeId, run: () => openChroniclerEventModal(S.chroniclerData.activeId), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
-  'chronicler.addLine': { label: 'addTimelineLine', icon: 'plus', scope: 'kind:chronicler', when: () => !!S.chroniclerData && !S.chroniclerData.timelines.length, run: (c) => openChroniclerTimelineModal(c.moduleId), surfaces: ['chronicler.toolbar'] },
+  'chronicler.addLine': { label: 'addTimelineLine', icon: 'plus', scope: 'kind:chronicler', when: () => !!S.chroniclerData && !S.chroniclerData.timelines.length, run: (c) => openChroniclerTimelineModal(c.moduleId), surfaces: ['empty.state'] },
   'chronicler.editLine': { label: 'chrEditLine', icon: 'edit', scope: 'kind:chronicler', when: () => !!S.chroniclerData?.activeId, run: (c) => openChroniclerTimelineModal(c.moduleId, S.chroniclerData.activeId), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
+  'chronicler.switchLine': {
+    label: 'chrSwitchLine', icon: 'timeline', scope: 'kind:chronicler', when: () => (S.chroniclerData?.timelines.length || 0) > 1,
+    sub: (c) => S.chroniclerData.timelines.map(tl => ({ label: tl.line_name || '—', checked: tl.id === S.chroniclerData.activeId, onClick: () => selectChroniclerTimeline(c.moduleId, tl.id) })),
+    surfaces: ['chronicler.toolbar', 'canvas.ctx'],
+  },
   'chronicler.graphOptions': { label: 'chrGraphOptions', icon: 'options', scope: 'kind:chronicler', when: () => ['oneline', 'downline'].includes(S.chroniclerData?.view), run: (c, el) => openChroniclerGraphOptions(el || paletteAnchor()), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
   'chronicler.resetView': { label: 'chrResetView', icon: 'return', scope: 'kind:chronicler', when: () => S.chroniclerData?.view === 'downline', run: () => resetChroniclerDownlineView(), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
 

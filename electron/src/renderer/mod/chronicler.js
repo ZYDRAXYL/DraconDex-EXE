@@ -101,19 +101,26 @@ function buildChroniclerMainHtml(m) {
   const viewBar = viewBarHtml(CHRONICLER_VIEWS, view, v => `setChroniclerView('${v}')`, v => CHRONICLER_VIEW_LABEL[v]);
   // Only ever 1 line per chronicler module — no line-picker needed once one
   // exists, and the "add line" button hides itself the same way.
-  const lineSelect = timelines.length > 1 ? `<select id="chr-line-select" onchange="selectChroniclerTimeline(${m.id},this.value)">
+  const lineSelect = timelines.length > 1 ? `<select id="chr-line-select" data-cmd="chronicler.switchLine" onchange="selectChroniclerTimeline(${m.id},this.value)">
     ${timelines.map(t => `<option value="${t.id}" ${t.id === activeId ? 'selected' : ''}>${x(t.line_name || '—')}</option>`).join('')}
   </select>` : '';
   const c = { moduleId: m.id };
+  // v5 Part 6 (APP docs/V5.md §10.6 — Chronicler is the measure of the
+  // rule): the top bar keeps the one action the page exists for, Add Event,
+  // and the view chips. Line switching, editing the line and the graph's own
+  // options float over the graph in .chr-tools (the Sketcher .sk-tools
+  // pattern) — each is also a command, so Ctrl+P and the graph's right-click
+  // reach it too (§10.1). Add-line is the empty page's one button.
   const toolbar = `<div class="classifier-toolbar">
-    ${lineSelect}
-    ${cmdBtn('chronicler.addLine', c, { iconOnly: true })}
-    ${cmdBtn('chronicler.editLine', c, { iconOnly: true })}
     ${cmdBtn('chronicler.addEvent', c, { cls: 'btn-p' })}
     ${viewBar}
-    ${cmdBtn('chronicler.graphOptions', c, { iconOnly: true })}
-    ${cmdBtn('chronicler.resetView', c, { iconOnly: true })}
   </div>`;
+  const tools = [
+    lineSelect,
+    cmdBtn('chronicler.editLine', c, { iconOnly: true }),
+    cmdBtn('chronicler.graphOptions', c, { iconOnly: true }),
+    cmdBtn('chronicler.resetView', c, { iconOnly: true }),
+  ].filter(Boolean).join('');
 
   if (!timelines.length) {
     return toolbar + kindEmptyStateHtml(m, { note: t('noTimelineYet') });
@@ -134,7 +141,10 @@ function buildChroniclerMainHtml(m) {
   }
 
   return `${toolbar}${compareBar}
-    <div id="chronicler-graph-host"></div>`;
+    <div class="chr-stage">
+      ${tools ? `<div class="chr-tools">${tools}</div>` : ''}
+      <div id="chronicler-graph-host"></div>
+    </div>`;
 }
 
 // Post-DOM hook (parallels mountLocatorBoard/mountDetailEditor): fetches
