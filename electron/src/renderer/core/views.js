@@ -46,6 +46,19 @@ async function exportDatabaseFile(){
 function toastImportError(e){
   toast(`${tr('Import ไม่สำเร็จ')}: ${e.message}`,'err');
 }
+// v5 Part 7 (APP docs/V5.md §11.1): every import / pull / transfer that
+// goes through the snapshot importer reports what it could NOT bring across
+// — a relation, a sketch pin or a Designer link whose other end is not in
+// the snapshot (an asset, which never travels, or a row the sender no
+// longer had). It used to show the success toast regardless. The last count
+// is kept for the Problems panel (§11.10).
+function toastSnapshotResult(r, okKey){
+  const s = r?.summary || {};
+  const dropped = (s.droppedRelations || 0) + (s.droppedPins || 0);
+  S.lastImportDrops = { relations: s.droppedRelations || 0, pins: s.droppedPins || 0, at: new Date().toISOString() };
+  if (dropped > 0) toast(`${t(okKey)} — ${t('importDroppedLinks').replace('{n}', dropped)}`, 'warn');
+  else toast(t(okKey), 'ok');
+}
 async function importDatabaseFile(){
   try{
     // Pick first, then choose a target, then merge/import. db:pickImportFile
@@ -85,7 +98,7 @@ async function importIntoCurrentNexus(filePath, kind){
       const r = await api.db.importModuleFileAt(S.nexus.id, null, filePath);
       if (!r?.ok) return toast(t('driveErrServer'), 'error');
       await reloadModuleTree();
-      toast(t('settingDbImportOk'), 'ok');
+      toastSnapshotResult(r, 'settingDbImportOk');
     } else {
       await finishVaultMergeImport(filePath, null);
     }
@@ -101,7 +114,7 @@ async function importAsNewNexus(filePath, kind){
     if (kind === 'module') {
       const r = await api.db.importModuleFileAt(newId, null, filePath);
       if (!r?.ok) { toast(t('driveErrServer'), 'error'); return; }
-      toast(t('settingDbImportOk'), 'ok');
+      toastSnapshotResult(r, 'settingDbImportOk');
       if (S.isWelcome) await welcomeOpenNexus(newId); else await selectNexus(newId);
     } else {
       await finishVaultMergeImport(filePath, newId);

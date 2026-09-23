@@ -19,6 +19,7 @@ const { app } = require('electron');
 // ambient context surviving that await. applySnapshotCore in particular can
 // wipe a nexus; it must never be able to wipe the wrong one.
 const { getDB, getVaultDB } = require('./core');
+const { entityKeyMaps } = require('./entity-kinds');
 const { getAppSetting, setAppSetting } = require('./versions');
 const { getSecret, setSecret } = require('./secret-store');
 const { makePkcePair, runOAuthLoopback } = require('./oauth-loopback');
@@ -900,11 +901,40 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
         .run(pageMap.get(st.pageId), st.color ?? null, st.width ?? 3, st.points);
     }
 
+    // Notes (folder tree parents-first) — before anything that remaps a key,
+    // so a pin, a Designer link or a relation to note_<id> comes across too.
+    const nts = sect(payload.notes);
+    const nfMap = new Map();
+    let pendingF = arr(nts.folders).slice();
+    while (pendingF.length) {
+      const next = [];
+      let progressed = false;
+      for (const f of pendingF) {
+        if (f.parentId != null && !nfMap.has(f.parentId)) { next.push(f); continue; }
+        const r = db.prepare(`INSERT INTO note_folder (nexus_ref, parent_ref, name, color) VALUES (?,?,?,?)`)
+          .run(nexusId, f.parentId != null ? nfMap.get(f.parentId) : null, f.name, colorId(f.colorCode));
+        nfMap.set(f.id, r.lastInsertRowid);
+        progressed = true;
+      }
+      if (!progressed) break;
+      pendingF = next;
+    }
+    const noteMap = new Map();
+    for (const n of arr(nts.notes)) {
+      const r = db.prepare(`
+        INSERT OR IGNORE INTO note (nexus_ref, folder_ref, title, content, color, pinned)
+        VALUES (?,?,?,?,?,?)`)
+        .run(nexusId, n.folderId != null && nfMap.has(n.folderId) ? nfMap.get(n.folderId) : null,
+             n.title, n.content ?? '', colorId(n.colorCode), n.pinned ?? 0);
+      if (r.changes) noteMap.set(n.id, r.lastInsertRowid);
+    }
+    // v5 Part 7 (§11.1/§11.2): the key maps come from db/entity-kinds.js —
+    // every family that declares `sync` gets its map, by name. Registering
+    // them by hand here is what dropped tlev_/sdlg_ endpoints on every pull.
+    const keyMaps = entityKeyMaps({ modMap, cobjMap, bchpMap, chssMap, evtMap, dlgMap, noteMap });
+
     const dsg = sect(payload.designer);
     const dnodeMap = new Map();
-    // Nodes first WITHOUT linker_key remap (the target maps are complete by
-    // now, but keep one code path: remap inline since all maps exist here).
-    const keyMaps = { module: modMap, cobj: cobjMap, bchp: bchpMap, chss: chssMap };
 
     let droppedPins = 0;
     for (const pn of arr(skt.pins)) {
@@ -931,34 +961,6 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
         .run(mod(e.moduleId), dnodeMap.get(e.fromId), dnodeMap.get(e.toId), e.label ?? null);
     }
 
-    // Notes (folder tree parents-first), then relations — noteMap joins the
-    // key maps so note_<id> relation endpoints remap too.
-    const nts = sect(payload.notes);
-    const nfMap = new Map();
-    let pendingF = arr(nts.folders).slice();
-    while (pendingF.length) {
-      const next = [];
-      let progressed = false;
-      for (const f of pendingF) {
-        if (f.parentId != null && !nfMap.has(f.parentId)) { next.push(f); continue; }
-        const r = db.prepare(`INSERT INTO note_folder (nexus_ref, parent_ref, name, color) VALUES (?,?,?,?)`)
-          .run(nexusId, f.parentId != null ? nfMap.get(f.parentId) : null, f.name, colorId(f.colorCode));
-        nfMap.set(f.id, r.lastInsertRowid);
-        progressed = true;
-      }
-      if (!progressed) break;
-      pendingF = next;
-    }
-    const noteMap = new Map();
-    for (const n of arr(nts.notes)) {
-      const r = db.prepare(`
-        INSERT OR IGNORE INTO note (nexus_ref, folder_ref, title, content, color, pinned)
-        VALUES (?,?,?,?,?,?)`)
-        .run(nexusId, n.folderId != null && nfMap.has(n.folderId) ? nfMap.get(n.folderId) : null,
-             n.title, n.content ?? '', colorId(n.colorCode), n.pinned ?? 0);
-      if (r.changes) noteMap.set(n.id, r.lastInsertRowid);
-    }
-    keyMaps.note = noteMap;
 
     let droppedRelations = 0;
     for (const rel of arr(payload.relations)) {

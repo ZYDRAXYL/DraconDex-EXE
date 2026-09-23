@@ -9,6 +9,7 @@
 //  - entity_relation CRUD: labeled key->key edges, authored in an Exhibitor.
 const { getDB } = require('./core');
 const { scopedAll } = require('./sqlscope');
+const { ENTITY_KINDS } = require('./entity-kinds');
 
 // One read transaction around the 7 vault-wide scans + the hashtag roll-up —
 // outside one, each statement pays its own file-lock cycle (~2.5ms vs ~6µs).
@@ -24,46 +25,12 @@ function _viewerIndex(nexusId) {
       for (const r of scopedAll(d, sql, nx)) out.push({ kind, ...fn(r) });
     } catch (_) {}
   };
-  push(`SELECT o.id, o.name, uc.color_code, m.id mid, m.name mname, m.kind mkind
-    FROM classifier_object o JOIN module m ON o.module_ref=m.id
-    LEFT JOIN use_color uc ON uc.id=o.color WHERE (? IS NULL OR m.nexus_ref=?)`,
-    'object', r => ({ key: `cobj_${r.id}`, name: r.name, color: r.color_code, moduleId: r.mid, moduleName: r.mname, moduleKind: r.mkind }));
-  push(`SELECT te.id, te.event_name AS name, uc.color_code, m.id mid, m.name mname, m.kind mkind,
-      s.day, s.month, s.years, s.hour, s.minute
-    FROM timeline_event te JOIN timeline tl ON te.timeline_id=tl.id
-    JOIN module m ON tl.module_ref=m.id
-    LEFT JOIN use_color uc ON uc.id=te.color
-    LEFT JOIN timeline_date s ON te.start_at=s.id WHERE (? IS NULL OR m.nexus_ref=?)`,
-    'event', r => ({ key: `tlev_${r.id}`, name: r.name, color: r.color_code, moduleId: r.mid, moduleName: r.mname, moduleKind: r.mkind,
-      time: { day: r.day, month: r.month, years: r.years, hour: r.hour, minute: r.minute } }));
-  push(`SELECT sd.id, sd.name, uc.color_code, m.id mid, m.name mname, m.kind mkind
-    FROM story_dialogue sd JOIN module m ON sd.module_ref=m.id
-    LEFT JOIN use_color uc ON uc.id=sd.color WHERE (? IS NULL OR m.nexus_ref=?)`,
-    'dialogue', r => ({ key: `sdlg_${r.id}`, name: r.name, color: r.color_code, moduleId: r.mid, moduleName: r.mname, moduleKind: r.mkind }));
-  push(`SELECT ch.id, ch.name, ch.chapter_order, m.id mid, m.name mname, m.kind mkind
-    FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`,
-    'chapter', r => ({ key: `bchp_${r.id}`, name: r.name, color: null, moduleId: r.mid, moduleName: r.mname, moduleKind: r.mkind }));
-  push(`SELECT s.id, s.name, m.id mid, m.name mname, m.kind mkind
-    FROM chat_session s JOIN module m ON s.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`,
-    'chat', r => ({ key: `chss_${r.id}`, name: r.name, color: null, moduleId: r.mid, moduleName: r.mname, moduleKind: r.mkind }));
-  push(`SELECT m.id, m.name, m.kind, m.handle, uc.color_code, pm.id mid, pm.name mname, pm.kind mkind
-    FROM module m LEFT JOIN module pm ON m.parent_id=pm.id
-    LEFT JOIN use_color uc ON uc.id=m.color WHERE (? IS NULL OR m.nexus_ref=?)`,
-    'module', r => ({ key: `module_${r.id}`, name: r.name, handle: r.handle, color: r.color_code,
-      // moduleKind is the PARENT's kind (the "module the row belongs to",
-      // like every other row); ownKind is the module's own — what a Manager
-      // selects on (v5 Part 4, §8.10).
-      moduleId: r.mid ?? r.id, moduleName: r.mname ?? r.name, moduleKind: r.mkind ?? r.kind, ownKind: r.kind, id: r.id }));
-
-  // v5 Asset Nest (APP docs/V5.md §2.7) — assets as file_<id>, alongside the
-  // six above. This one line is what makes an asset filterable, linkable,
-  // quick-switchable and countable everywhere downstream. Unfiled assets
-  // (module_ref NULL) carry no module and so inherit no hashtags.
-  push(`SELECT f.id, f.file_name, f.file_type, f.source_kind, f.missing, m.id mid, m.name mname, m.kind mkind
-    FROM import_file f LEFT JOIN module m ON f.module_ref=m.id WHERE (? IS NULL OR f.nexus_ref=?)`,
-    'file', r => ({ key: `file_${r.id}`, name: r.file_name, color: null, moduleId: r.mid ?? null,
-      moduleName: r.mname ?? null, moduleKind: r.mkind ?? null,
-      fileType: r.file_type, sourceKind: r.source_kind, missing: !!r.missing }));
+  // v5 Part 7 (§11.2): one scan per family that declares an `index` in
+  // db/entity-kinds.js — a family with `index: false` (note, exn) is left
+  // out on purpose, and says why there.
+  for (const k of Object.values(ENTITY_KINDS)) {
+    if (k.index) push(k.index.sql, k.index.kind, k.index.row);
+  }
 
   // Source-module hashtags apply to every item of that module — the
   // filter's tag facet works on these.

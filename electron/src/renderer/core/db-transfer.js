@@ -111,7 +111,7 @@ async function settingDbImportNexus(nexusId){
   const r = await api.db.importNexusFile(nexusId);
   if (r.canceled) return;
   if (!r.ok) return toast(t('driveErrServer'), 'error');
-  toast(t('settingDbImportOk'), 'ok');
+  toastSnapshotResult(r, 'settingDbImportOk');
   if (S.nexus?.id === nexusId) renderNexusHome();
 }
 async function settingDbExportModule(nexusId, moduleId){
@@ -129,7 +129,7 @@ async function settingDbImportModule(nexusId, parentModuleId){
   const r = await api.db.importModuleFile(nexusId, parentModuleId);
   if (r.canceled) return;
   if (!r.ok) return toast(t('driveErrServer'), 'error');
-  toast(t('settingDbImportOk'), 'ok');
+  toastSnapshotResult(r, 'settingDbImportOk');
   settingDbLoadModules(nexusId);
   if (S.nexus?.id === nexusId) renderNexusHome();
 }

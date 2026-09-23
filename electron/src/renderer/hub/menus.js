@@ -103,7 +103,7 @@ async function ctxImportModule(id) {
   const r = await api.db.importModuleFile(S.nexus.id, id);
   if (r.canceled) return;
   if (!r.ok) return toast(t('driveErrServer'), 'error');
-  toast(t('settingDbImportOk'), 'ok');
+  toastSnapshotResult(r, 'settingDbImportOk');
   await reloadModuleTree();
 }
 

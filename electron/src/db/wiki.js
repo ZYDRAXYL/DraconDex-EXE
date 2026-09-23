@@ -2,6 +2,7 @@
 const { getDB } = require('./core');
 const { scopedAll, scopedGet } = require('./sqlscope');
 const { CONTENT_SOURCES, NEXUS_OF } = require('./wiki-sources');
+const { ENTITY_KINDS } = require('./entity-kinds');
 
 // Wiki-link index (v2.8). [[Name]] references typed inside markdown content
 // (Scribe notes, Director object notes, Writer chapters) are parsed on save,
@@ -18,8 +19,15 @@ const WIKILINK_RE = /\[\[([^\[\]|]+?)(?:\|([^\[\]]+?))?\]\]/g;
 // ── Name resolution ─────────────────────────────────────────────────────────
 // Fixed, deterministic precedence; case-insensitive (ASCII). A namespace
 // prefix ([[note:X]], [[obj:X]], …) forces one resolver.
+// v5 Part 7 (§11.2): the v3+ families come from db/entity-kinds.js — note
+// first, then the read-only legacy prefixes, then the rest in declared order
+// (file last, so an asset's file name never shadows an entity's name). A
+// family with `wiki: false` (tlev, sdlg) is left out on purpose, and says so
+// there.
+const ekResolver = (prefix) => [prefix, (d, n, nx) => scopedGet(d, ENTITY_KINDS[prefix].wiki.sql, nx, n)?.id, `${prefix}_`];
+const WIKI_FAMILIES = Object.keys(ENTITY_KINDS).filter((p) => ENTITY_KINDS[p].wiki);
 const RESOLVERS = [
-  ['note',  (d, n, nx) => d.prepare(`SELECT id FROM note WHERE nexus_ref=? AND title=? COLLATE NOCASE`).get(nx, n)?.id, 'note_'],
+  ...WIKI_FAMILIES.filter((p) => p === 'note').map(ekResolver),
   ['obj',   (d, n, nx) => scopedGet(d, `SELECT o.id FROM object o JOIN project p ON o.project_id=p.id WHERE (? IS NULL OR p.nexus_ref=?) AND o.name=? COLLATE NOCASE`, nx, n)?.id, 'obj_'],
   ['wchar', (d, n, nx) => scopedGet(d, `SELECT c.id FROM world_character c JOIN world_project w ON c.world_ref=w.id WHERE (? IS NULL OR w.nexus_ref=?) AND c.name=? COLLATE NOCASE`, nx, n)?.id, 'wchar_'],
   ['wobj',  (d, n, nx) => scopedGet(d, `SELECT o.id FROM world_orig_object o JOIN world_orig_category c ON o.category_id=c.id JOIN world_project w ON c.world_ref=w.id WHERE (? IS NULL OR w.nexus_ref=?) AND o.name=? COLLATE NOCASE`, nx, n)?.id, 'wobj_'],
@@ -31,13 +39,8 @@ const RESOLVERS = [
   ['world', (d, n, nx) => scopedGet(d, `SELECT id FROM world_project WHERE (? IS NULL OR nexus_ref=?) AND name=? COLLATE NOCASE`, nx, n)?.id, 'world_'],
   ['game',  (d, n, nx) => scopedGet(d, `SELECT id FROM game_project WHERE (? IS NULL OR nexus_ref=?) AND name=? COLLATE NOCASE`, nx, n)?.id, 'game_'],
   ['write', (d, n, nx) => scopedGet(d, `SELECT id FROM write_project WHERE (? IS NULL OR nexus_ref=?) AND project_name=? COLLATE NOCASE`, nx, n)?.id, 'write_'],
-  ['module', (d, n, nx) => scopedGet(d, `SELECT id FROM module WHERE (? IS NULL OR nexus_ref=?) AND name=? COLLATE NOCASE`, nx, n)?.id, 'module_'],
-  ['bchp',  (d, n, nx) => scopedGet(d, `SELECT ch.id FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND ch.name=? COLLATE NOCASE`, nx, n)?.id, 'bchp_'],
-  ['chss',  (d, n, nx) => scopedGet(d, `SELECT s.id FROM chat_session s JOIN module m ON s.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND s.name=? COLLATE NOCASE`, nx, n)?.id, 'chss_'],
-  ['cobj',  (d, n, nx) => scopedGet(d, `SELECT o.id FROM classifier_object o JOIN module m ON o.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND o.name=? COLLATE NOCASE`, nx, n)?.id, 'cobj_'],
-  // v5 Asset Nest (§2.7): [[cover.png]] / [[file:cover.png]] reach an asset.
-  // Last on purpose — an asset's file name never shadows an entity's name.
-  ['file',  (d, n, nx) => scopedGet(d, `SELECT id FROM import_file WHERE (? IS NULL OR nexus_ref=?) AND file_name=? COLLATE NOCASE`, nx, n)?.id, 'file_'],
+  ...WIKI_FAMILIES.filter((p) => p !== 'note' && p !== 'file').map(ekResolver),
+  ...WIKI_FAMILIES.filter((p) => p === 'file').map(ekResolver),
 ];
 
 // Optional memo for bulk passes (Plan part2 #2.4). A miss costs all 17
@@ -162,7 +165,6 @@ function reindexSource(prefix, id) {
 // ── Key hydration ───────────────────────────────────────────────────────────
 // key → {key, name, type, module}; unknown/dangling keys are omitted.
 const KEY_LOOKUPS = {
-  note:  { sql: `SELECT id, title AS name FROM note WHERE id=?`,               type: 'note',      module: 'scribe' },
   obj:   { sql: `SELECT id, name FROM object WHERE id=?`,                      type: 'object',    module: 'director' },
   wchar: { sql: `SELECT id, name FROM world_character WHERE id=?`,             type: 'character', module: 'navigator' },
   wobj:  { sql: `SELECT id, name FROM world_orig_object WHERE id=?`,           type: 'object',    module: 'navigator' },
@@ -174,18 +176,9 @@ const KEY_LOOKUPS = {
   world: { sql: `SELECT id, name FROM world_project WHERE id=?`,               type: 'project',   module: 'navigator' },
   game:  { sql: `SELECT id, name FROM game_project WHERE id=?`,                type: 'project',   module: 'hero' },
   write: { sql: `SELECT id, project_name AS name FROM write_project WHERE id=?`, type: 'project', module: 'writer' },
-  module: { sql: `SELECT id, name FROM module WHERE id=?`, type: 'module', module: 'hub' },
-  bchp:  { sql: `SELECT id, name FROM book_chapter WHERE id=?`,               type: 'chapter',   module: 'author' },
-  chss:  { sql: `SELECT id, name FROM chat_session WHERE id=?`,               type: 'chat',      module: 'scribe' },
-  cobj:  { sql: `SELECT id, name FROM classifier_object WHERE id=?`,          type: 'object',    module: 'classifier' },
-  tlev:  { sql: `SELECT id, event_name AS name FROM timeline_event WHERE id=?`, type: 'event',   module: 'chronicler' },
-  sdlg:  { sql: `SELECT id, name FROM story_dialogue WHERE id=?`,            type: 'dialogue',  module: 'narrator' },
-  file:  { sql: `SELECT id, file_name AS name FROM import_file WHERE id=?`,   type: 'file',      module: 'dock' },
-  // v5 Part 4: an Exhibitor note node can hold [[links]] (db/wiki-sources.js),
-  // so it can be a backlink's source — named by its (truncated) text.
-  exn:   { sql: `SELECT id, substr(COALESCE(label,''),1,40) AS name FROM exhibit_node WHERE id=?`, type: 'note', module: 'exhibitor' },
+  // v5 Part 7 (§11.2): every v3+ family's lookup, from db/entity-kinds.js.
+  ...Object.fromEntries(Object.entries(ENTITY_KINDS).map(([p, k]) => [p, k.lookup])),
 };
-
 // Plan part2 #2.4: one .get() per key became one IN-query per key PREFIX.
 // The chunk size is fixed and the last chunk is padded by repeating an id
 // (IN is a set — duplicates cannot add rows) so the SQL string set stays at

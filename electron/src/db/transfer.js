@@ -313,7 +313,7 @@ async function transferReceive(transferId, targetNexusId) {
   try { await call('/api/complete', { method: 'POST', token: s.receiptToken, json: { transferId } }); }
   catch (_) { /* intentionally ignored */ }
 
-  return { ok: true, name: s.manifest.name };
+  return { ok: true, name: s.manifest.name, summary: applied.summary };
 }
 
 // ---------------------------------------------------------------------------
