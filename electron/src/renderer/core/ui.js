@@ -43,6 +43,20 @@ function toast(msg,type='') {
   const el=q('#toast'); el.textContent=tr(msg); el.className=`show ${TOAST_CLS[type] || type}`;
   clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2600);
 }
+// v5 Part 7 (APP docs/V5.md §11.4): a toast that offers to take the action
+// back — "Moved to trash · Undo". NN/g: when an action is easy to reverse, a
+// confirm dialog is redundant, so deleting a module asks nothing and says
+// this instead. Stays longer than a plain toast so there is time to click.
+function toastAction(msg, actionLabel, onAction, type='ok', ms=7000) {
+  const el=q('#toast');
+  el.textContent='';
+  const span=document.createElement('span'); span.textContent=tr(msg);
+  const btn=document.createElement('button'); btn.className='btn btn-g btn-sm toast-act'; btn.textContent=actionLabel;
+  btn.onclick=()=>{ clearTimeout(_tt); el.classList.remove('show','has-action'); onAction(); };
+  el.append(span, btn);
+  el.className=`show has-action ${TOAST_CLS[type] || type}`;
+  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show','has-action'),ms);
+}
 
 // Minimal busy indicator for awaits long enough to look like a dead click.
 // Overlays the given element (or the whole window when `el` is omitted) with a

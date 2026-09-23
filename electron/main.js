@@ -717,6 +717,12 @@ h('module:create',      (data)        => db.createModule(data));
 h('module:update',      (id,data)     => db.updateModule(id,data));
 h('module:updateDescription', (id,d)  => db.updateModuleDescription(id,d));
 h('module:delete',      (id)          => db.deleteModule(id));
+// v5 Part 7 (§11.4): the trash — a deleted module is kept as a snapshot.
+h('trash:module',  (nx, id)  => db.trashModule(nx, id));
+h('trash:list',    (nx)      => db.listTrash(nx));
+h('trash:restore', (nx, id)  => db.restoreTrash(nx, id));
+h('trash:delete',  (nx, id)  => db.deleteTrash(nx, id));
+h('trash:empty',   (nx)      => db.emptyTrash(nx));
 h('module:duplicate',   (id)          => db.duplicateModule(id));
 h('module:move',        (nx,id,parentId,ids) => db.moveModule(nx,id,parentId,ids));
 h('module:normalizeReport', ()        => db.takeParentNormalizeReport());

@@ -681,7 +681,7 @@ function remapKeyList(json, maps) {
 // Everything else — lookups, the modules BFS insert, every per-kind child
 // insert, relation/note insert, module_ui remap — is identical either way.
 function applySnapshotCore(nexusId, payload, opts = {}) {
-  const { wipe = false, updateNexusMeta = false, reparentRootTo = null } = opts;
+  const { wipe = false, updateNexusMeta = false, reparentRootTo = null } = opts; // + withKeyMaps (db/trash.js)
   if (!validateSnapshot(payload)) return { ok: false, code: 'bad_snapshot' };
   const db = getVaultDB(nexusId);
   const arr = (a) => (Array.isArray(a) ? a : []);
@@ -738,12 +738,19 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     const modMap = new Map();
     const legacyKind = new Map(); // old module id -> 'viewer'|'connector' for pre-v5 payloads
     let pending = arr(payload.modules).slice();
+    // A subtree's root still names its old parent, which is not in the
+    // payload (a .mddx of a nested module, a trashed module — §11.4). That
+    // parent is outside what is being imported, so the root lands where the
+    // caller says (reparentRootTo). Before this, such a root waited for a
+    // parent that never came and the whole subtree was silently skipped.
+    const inPayload = new Set(arr(payload.modules).map((m) => m.id));
+    const isRoot = (m) => m.parentId == null || !inPayload.has(m.parentId);
     while (pending.length) {
       const next = [];
       let progressed = false;
       for (const m of pending) {
-        if (m.parentId != null && !modMap.has(m.parentId)) { next.push(m); continue; }
-        const parentId = m.parentId != null ? modMap.get(m.parentId) : reparentRootTo;
+        if (!isRoot(m) && !modMap.has(m.parentId)) { next.push(m); continue; }
+        const parentId = isRoot(m) ? reparentRootTo : modMap.get(m.parentId);
         // A handle is unique per vault, and an import lands in a vault that
         // may already use this one. Dropping the clash to NULL keeps the
         // module (and every module after it) importable — throwing here would
@@ -1096,8 +1103,11 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       relations: arr(payload.relations).length - droppedRelations,
       droppedRelations,
       droppedPins,
+      keyMaps, // taken off below — the trash (db/trash.js) asks for it
     };
   })();
+  const { keyMaps } = summary;
+  delete summary.keyMaps;
 
   // A snapshot from an older app (or the APK, which has not adopted the
   // rule yet) can carry modules under a non-collector — wrap them the same
@@ -1109,7 +1119,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     console.error('sync: wiki rebuild after pull failed:', e);
   }
 
-  return { ok: true, summary };
+  return opts.withKeyMaps ? { ok: true, summary, keyMaps } : { ok: true, summary };
 }
 
 // Whole-nexus wipe-and-rebuild — Token Sync pull's only caller, same
@@ -1121,8 +1131,8 @@ function applySnapshot(nexusId, payload) {
 // Module-subtree merge-in (Setting window → Appdata → Database "import
 // module") — additive, never wipes the target nexus, and reparents the
 // snapshot's root module(s) under parentModuleId (or to top-level if null).
-function importModuleSnapshot(nexusId, parentModuleId, payload) {
-  return applySnapshotCore(nexusId, payload, { wipe: false, updateNexusMeta: false, reparentRootTo: parentModuleId ?? null });
+function importModuleSnapshot(nexusId, parentModuleId, payload, extra = {}) {
+  return applySnapshotCore(nexusId, payload, { ...extra, wipe: false, updateNexusMeta: false, reparentRootTo: parentModuleId ?? null });
 }
 
 // ---------------------------------------------------------------------------

@@ -82,6 +82,7 @@ const COMMANDS = {
   'app.kindBrowser': { label: 'kindBrowser', icon: 'layer', scope: 'app', run: () => goToKindBrowserHub(), surfaces: ['rail'] },
   'app.sageHut': { label: 'sageHut', icon: 'sage', scope: 'app', run: () => openSageTab('dataSize'), surfaces: ['rail'] },
   'app.importDock': { label: 'importDock', icon: 'import', scope: 'app', run: () => goToImportDockPage(), surfaces: ['rail'] },
+  'app.trash': { label: 'trashTitle', icon: 'delete', scope: 'app', when: () => !!S.nexus, run: () => openTrashPanel(), surfaces: ['rail'] },
   'app.newModule': { label: 'createMajorModule', icon: 'plus', scope: 'app', run: (c, el) => openKindPopup(null, el || paletteAnchor()), surfaces: ['nest.head'] },
   'app.settings': { label: 'settingOpenWindow', icon: 'settings', scope: 'app', run: () => openSettingWindow(), surfaces: ['settings.menu'] },
   'dock.importFolder': { label: 'importFolder', icon: 'import', scope: 'app', run: () => importDockPickFolder(null), surfaces: ['dock'] },

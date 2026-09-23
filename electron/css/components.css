@@ -361,4 +361,11 @@
 #toast.show{transform:translateY(0);opacity:1}
 #toast.ok{border-left-color:var(--success)}
 #toast.err{border-left-color:var(--danger)}
+/* toastAction (§11.4): the only toast that takes a click. */
+#toast.has-action{pointer-events:auto;display:flex;align-items:center;gap:12px}
+#toast .toast-act{flex-shrink:0}
 #toast.warn{border-left-color:var(--warn, var(--accent))}
+/* v5 Part 7 §11.4: the Trash panel (hub/trash.js). */
+.trash-list{max-height:min(420px,60vh);overflow-y:auto}
+.trash-list .li{gap:8px}
+.trash-list .acts{margin-left:auto;display:flex;gap:4px}

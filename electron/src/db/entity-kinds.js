@@ -18,6 +18,9 @@
 //            this family; entityKeyMaps() looks it up and throws if missing.
 //   index    { kind, sql, row } | false   viewerIndex rows. sql takes (nx, nx).
 //   search   [columns] | false       text a search index covers (§11.4)
+//   owner    sql | false             this family's ids inside one module
+//            (sql takes the module id) — what the trash (§11.4) collects the
+//            relations of before a module is deleted
 //
 // Legacy prefixes (obj, wchar, wchp, …) stay in db/wiki.js: they are read-
 // only history, not in snapshots, and not indexed.
@@ -30,6 +33,7 @@ const modRow = (r) => ({ color: r.color_code ?? null, moduleId: r.mid, moduleNam
 const ENTITY_KINDS = {
   note: {
     table: 'note',
+    owner: false, // nexus-level, not inside any module
     lookup: { sql: `SELECT id, title AS name FROM note WHERE id=?`, type: 'note', module: 'scribe' },
     wiki: { sql: `SELECT id FROM note WHERE (? IS NULL OR nexus_ref=?) AND title=? COLLATE NOCASE` },
     sync: 'noteMap',
@@ -38,6 +42,7 @@ const ENTITY_KINDS = {
   },
   module: {
     table: 'module',
+    owner: `SELECT id FROM module WHERE id=?`,
     lookup: { sql: `SELECT id, name FROM module WHERE id=?`, type: 'module', module: 'hub' },
     wiki: { sql: `SELECT id FROM module WHERE (? IS NULL OR nexus_ref=?) AND name=? COLLATE NOCASE` },
     sync: 'modMap',
@@ -56,6 +61,7 @@ const ENTITY_KINDS = {
   },
   bchp: {
     table: 'book_chapter',
+    owner: `SELECT id FROM book_chapter WHERE module_ref=?`,
     lookup: { sql: `SELECT id, name FROM book_chapter WHERE id=?`, type: 'chapter', module: 'author' },
     wiki: { sql: `SELECT ch.id FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND ch.name=? COLLATE NOCASE` },
     sync: 'bchpMap',
@@ -69,6 +75,7 @@ const ENTITY_KINDS = {
   },
   chss: {
     table: 'chat_session',
+    owner: `SELECT id FROM chat_session WHERE module_ref=?`,
     lookup: { sql: `SELECT id, name FROM chat_session WHERE id=?`, type: 'chat', module: 'scribe' },
     wiki: { sql: `SELECT s.id FROM chat_session s JOIN module m ON s.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND s.name=? COLLATE NOCASE` },
     sync: 'chssMap',
@@ -82,6 +89,7 @@ const ENTITY_KINDS = {
   },
   cobj: {
     table: 'classifier_object',
+    owner: `SELECT id FROM classifier_object WHERE module_ref=?`,
     lookup: { sql: `SELECT id, name FROM classifier_object WHERE id=?`, type: 'object', module: 'classifier' },
     wiki: { sql: `SELECT o.id FROM classifier_object o JOIN module m ON o.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND o.name=? COLLATE NOCASE` },
     sync: 'cobjMap',
@@ -96,6 +104,7 @@ const ENTITY_KINDS = {
   },
   tlev: {
     table: 'timeline_event',
+    owner: `SELECT te.id FROM timeline_event te JOIN timeline tl ON te.timeline_id=tl.id WHERE tl.module_ref=?`,
     lookup: { sql: `SELECT id, event_name AS name FROM timeline_event WHERE id=?`, type: 'event', module: 'chronicler' },
     // Intended: [[Name]] never resolves to an event — a click opens its
     // source module instead (mod/exhibitor.js). Event names repeat freely
@@ -117,6 +126,7 @@ const ENTITY_KINDS = {
   },
   sdlg: {
     table: 'story_dialogue',
+    owner: `SELECT id FROM story_dialogue WHERE module_ref=?`,
     lookup: { sql: `SELECT id, name FROM story_dialogue WHERE id=?`, type: 'dialogue', module: 'narrator' },
     wiki: false, // intended, for the same reason as tlev
     sync: 'dlgMap',
@@ -133,6 +143,7 @@ const ENTITY_KINDS = {
   // panel shows it, a relation can point at it.
   skpg: {
     table: 'sketch_page',
+    owner: `SELECT id FROM sketch_page WHERE module_ref=?`,
     lookup: { sql: `SELECT id, name FROM sketch_page WHERE id=?`, type: 'page', module: 'sketcher' },
     wiki: { sql: `SELECT p.id FROM sketch_page p JOIN module m ON p.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND p.name=? COLLATE NOCASE` },
     sync: 'pageMap',
@@ -149,6 +160,7 @@ const ENTITY_KINDS = {
   // that owns the row, and must be remapped like any key when imported.
   ctpl: {
     table: 'classifier_template',
+    owner: `SELECT id FROM classifier_template WHERE module_ref=?`,
     lookup: { sql: `SELECT id, description AS name FROM classifier_template WHERE id=?`, type: 'field', module: 'classifier' },
     wiki: false,  // a field is not something a text links to
     sync: 'ctplMap',
@@ -157,6 +169,7 @@ const ENTITY_KINDS = {
   },
   exn: {
     table: 'exhibit_node',
+    owner: `SELECT id FROM exhibit_node WHERE module_ref=?`,
     // A note node can hold [[links]] (db/wiki-sources.js), so it can be a
     // backlink's source — named by its (truncated) text.
     lookup: { sql: `SELECT id, substr(COALESCE(label,''),1,40) AS name FROM exhibit_node WHERE id=?`, type: 'note', module: 'exhibitor' },
@@ -167,6 +180,7 @@ const ENTITY_KINDS = {
   },
   file: {
     table: 'import_file',
+    owner: false, // an asset outlives its module (module_ref ON DELETE SET NULL)
     lookup: { sql: `SELECT id, file_name AS name FROM import_file WHERE id=?`, type: 'file', module: 'dock' },
     // v5 Asset Nest (§2.7): [[cover.png]] / [[file:cover.png]] reach an
     // asset. Last in the resolver order on purpose (see db/wiki.js).
@@ -216,4 +230,15 @@ function entityKeyMaps(localMaps) {
   return out;
 }
 
-module.exports = { ENTITY_KINDS, KEY_COLUMNS, entityKeyMaps };
+// Every entity key that lives inside these modules, by the `owner` facet.
+function keysOwnedBy(db, moduleIds) {
+  const out = new Set();
+  for (const [prefix, k] of Object.entries(ENTITY_KINDS)) {
+    if (!k.owner) continue;
+    const st = db.prepare(k.owner);
+    for (const mid of moduleIds) for (const r of st.all(mid)) out.add(`${prefix}_${r.id}`);
+  }
+  return out;
+}
+
+module.exports = { ENTITY_KINDS, KEY_COLUMNS, entityKeyMaps, keysOwnedBy };

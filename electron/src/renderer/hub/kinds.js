@@ -208,7 +208,8 @@ function renderModuleRail() {
   let html = `<button class="nav-btn module-rail-tool${atHubHome ? ' active' : ''}" title="${t('nexusNest')}" data-cmd="app.nest" onclick="runCommand('app.nest')">${I.home}<span class="nav-label">${t('nexusNest')}</span></button>
     <button class="nav-btn module-rail-tool${hqtHidden('kinds')}" title="${t('kindBrowser')}" data-cmd="app.kindBrowser" onclick="runCommand('app.kindBrowser')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.layer}<span class="nav-label">${t('kindBrowser')}</span></button>
     <button class="nav-btn module-rail-tool${hqtHidden('sage')}" title="${t('sageHut')}" data-cmd="app.sageHut" onclick="runCommand('app.sageHut')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.sage}<span class="nav-label">${t('sageHut')}</span></button>
-    <button class="nav-btn module-rail-tool${hqtHidden('dock')}" title="${t('importDock')}" data-cmd="app.importDock" onclick="runCommand('app.importDock')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.import}<span class="nav-label">${t('importDock')}</span></button>`;
+    <button class="nav-btn module-rail-tool${hqtHidden('dock')}" title="${t('importDock')}" data-cmd="app.importDock" onclick="runCommand('app.importDock')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.import}<span class="nav-label">${t('importDock')}</span></button>
+    <button class="nav-btn module-rail-tool${hqtHidden('trash')}" title="${t('trashTitle')}" data-cmd="app.trash" onclick="runCommand('app.trash')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.delete}<span class="nav-label">${t('trashTitle')}</span></button>`;
   if (pinned.length) html += `<div class="rail-sep module-rail-tool"></div>`;
   for (const m of pinned) {
     const active = S.activeModuleNode?.id === m.id ? ' active' : '';

@@ -192,6 +192,7 @@ const HUB_QUICK_MENU_ITEMS = [
   ['kinds', 'kindBrowser', 'layer'],
   ['sage', 'sageHut', 'sage'],
   ['dock', 'importDock', 'import'],
+  ['trash', 'trashTitle', 'delete'], // v5 Part 7 (§11.4)
 ];
 function openHubQuickMenuContextMenu(ev) {
   ev.preventDefault();

@@ -33,6 +33,13 @@ contextBridge.exposeInMainWorld('api', {
     taught:       (nx)     => inv('nexus:taught', nx),
     markTaught:   (nx,tip,st) => inv('nexus:markTaught', nx, tip, st),
   },
+  trash: {
+    module:  (nx,id)       => inv('trash:module', nx, id),
+    list:    (nx)          => inv('trash:list', nx),
+    restore: (nx,id)       => inv('trash:restore', nx, id),
+    delete:  (nx,id)       => inv('trash:delete', nx, id),
+    empty:   (nx)          => inv('trash:empty', nx),
+  },
   preset: {
     list:   (nx,kind)      => inv('preset:list', nx, kind),
     save:   (nx,mid,name)  => inv('preset:save', nx, mid, name),
