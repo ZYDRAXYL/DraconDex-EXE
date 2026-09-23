@@ -834,6 +834,7 @@ h('author:updateContent',  (id,c)      => db.updateBookChapterContent(id,c));
 h('author:deleteChapter',  (id)        => db.deleteBookChapter(id));
 h('author:setChapterLabel', (id,lb)    => db.setBookChapterLabel(id,lb));
 h('author:moveChapter',    (mref,ids)  => db.moveBookChapter(mref,ids));
+h('author:setChapterMeta', (id,meta)   => db.setBookChapterMeta(id,meta));
 
 // Chat "Scribe" (v3 Phase 12) — sessions + bubble messages
 h('chatscribe:getSessions',   (mref)   => db.getChatSessions(mref));

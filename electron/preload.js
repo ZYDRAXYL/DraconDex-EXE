@@ -170,6 +170,7 @@ contextBridge.exposeInMainWorld('api', {
     deleteChapter: (id)      => inv('author:deleteChapter', id),
     setChapterLabel: (id,lb) => inv('author:setChapterLabel', id,lb),
     moveChapter:   (mref,ids) => inv('author:moveChapter', mref,ids),
+    setChapterMeta: (id,meta) => inv('author:setChapterMeta', id,meta),
     exportDoc:     (n,html)  => inv('author:exportDoc', n,html),
   },
   drafter: {

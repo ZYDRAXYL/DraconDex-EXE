@@ -608,3 +608,27 @@ select.fp-input[multiple]{padding:2px}
 .dg-node:hover .dg-resize{opacity:.9}
 .dg-order{position:absolute;left:-9px;top:-9px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--accent);
   color:var(--bg);font-size:calc(11px * var(--fsc,1));font-weight:700;display:flex;align-items:center;justify-content:center}
+
+/* ── Author corkboard (v5 Part 7, V5.md §11.6) ── */
+.au-board-sum{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.au-status-pill{padding:2px 9px;border-radius:999px;background:var(--raised);font-size:calc(11px * var(--fsc,1));color:var(--t2)}
+.au-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.au-card{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid var(--border);border-top:3px solid var(--border);
+  border-radius:var(--r);background:var(--surface);min-height:150px}
+.au-card.sel{box-shadow:0 0 0 1px var(--accent)}
+.au-card[data-status="idea"],.au-status-pill[data-status="idea"]{border-top-color:var(--t3)}
+.au-card[data-status="draft"],.au-status-pill[data-status="draft"]{border-top-color:var(--warn,var(--accent))}
+.au-card[data-status="revised"],.au-status-pill[data-status="revised"]{border-top-color:var(--accent)}
+.au-card[data-status="done"],.au-status-pill[data-status="done"]{border-top-color:var(--ok,var(--accent))}
+.au-status-pill[data-status]{border-top:2px solid}
+.au-card.drop-before{box-shadow:-3px 0 0 var(--accent)}
+.au-card.drop-after{box-shadow:3px 0 0 var(--accent)}
+.au-card-head{display:flex;align-items:center;gap:6px}
+.au-card-no{font-size:calc(11px * var(--fsc,1));color:var(--t3);font-variant-numeric:tabular-nums}
+.au-card-name{flex:1;min-width:0;font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.au-card-syn{flex:1;resize:vertical;font-size:calc(12px * var(--fsc,1));background:transparent;border:1px dashed var(--border)}
+.au-card-foot{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.au-card-status{font-size:calc(11px * var(--fsc,1))}
+.au-card-pov{display:inline-flex;align-items:center;gap:3px;font-size:calc(11px * var(--fsc,1));color:var(--t2);overflow:hidden}
+.au-card-pov .icon{width:12px;height:12px}
+.au-card-add{align-items:center;justify-content:center;color:var(--t3);cursor:pointer;border-style:dashed}

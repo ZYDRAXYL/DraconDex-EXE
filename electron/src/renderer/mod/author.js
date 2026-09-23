@@ -7,8 +7,8 @@
 // status bar) on the right. Chapters are wikilink-indexed under the
 // bchp_<id> key kind (src/db/author.js + src/db/wiki.js).
 
-const AUTHOR_VIEWS = ['editor', 'outline', 'reading', 'book'];
-const AUTHOR_VIEW_LABEL = { editor: 'Editor', outline: 'Outline', reading: 'Reading', book: 'Book' };
+const AUTHOR_VIEWS = ['editor', 'board', 'outline', 'reading', 'book'];
+const AUTHOR_VIEW_LABEL = { editor: 'Editor', board: 'Board', outline: 'Outline', reading: 'Reading', book: 'Book' };
 
 async function loadAuthorData(m) {
   const [chapters, ui] = await Promise.all([
@@ -22,7 +22,10 @@ async function loadAuthorData(m) {
   if (selectedId && !chapters.find(c => c.id === selectedId)) selectedId = null;
   if (!selectedId && chapters.length) selectedId = chapters[0].id;
   const view = AUTHOR_VIEWS.includes(ui.activeView) ? ui.activeView : 'editor';
-  S.authorData = { moduleId: m.id, chapters, selectedId, view };
+  // POV names for the corkboard (v5 Part 7, §11.6) — one round trip.
+  const povKeys = [...new Set(chapters.map(c => c.pov_key).filter(Boolean))];
+  const povNames = new Map(povKeys.length ? (await api.wiki.resolveKeys(povKeys)).map(r => [r.key, r.name]) : []);
+  S.authorData = { moduleId: m.id, chapters, selectedId, view, povNames };
 }
 
 async function setAuthorView(view) {
@@ -106,6 +109,7 @@ function buildAuthorMainHtml(m) {
   // 'book': its own layout (a jump-to-chapter nav, not the select/switch
   // column every other view shares) since all chapters render concatenated.
   if (d.view === 'book') return `${toolbar}${buildAuthorBookHtml(m, d)}`;
+  if (d.view === 'board') return `${toolbar}${buildAuthorBoardHtml(m, d)}`; // mod/author-board.js
   let body;
   if (d.view === 'outline') body = buildAuthorOutlineHtml(d);
   else if (d.view === 'reading') body = buildAuthorReadingHtml(d);
@@ -319,6 +323,7 @@ async function openAuthorChapterModal(moduleId, id = null) {
   openModal(ch ? t('moduleEdit') : t('writeChapterNew'), `
     <div class="fg"><label>${t('name')} *</label><input id="ac-name" value="${x(ch?.name || '')}"></div>
     ${ch ? `<div class="fg"><label>${t('chapterLabel')}</label><input id="ac-label" value="${x(ch?.chapter_label || '')}"></div>` : ''}
+    ${ch ? await authorChapterMetaFieldsHtml(ch) : ''}
     <div class="mfoot">
       ${ch ? `<button class="btn btn-d" onclick="deleteAuthorChapter(${ch.id})">${t('delete')}</button>` : ''}
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
@@ -338,6 +343,7 @@ async function submitAuthorChapter(moduleId, id) {
       await api.author.setChapterLabel(id, label);
       if (ch) ch.chapter_label = label;
     }
+    await submitAuthorChapterMeta(id);
   } else {
     const newId = await api.author.createChapter(moduleId, name);
     S.authorData.selectedId = newId;

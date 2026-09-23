@@ -56,6 +56,19 @@ const updateBookChapterContent = (id, content) => {
   return r;
 };
 
+// v5 Part 7 (§11.6): the corkboard's three facts about a chapter. Only the
+// keys present are written, so the board can save one at a time.
+const CHAPTER_STATUSES = ['idea', 'draft', 'revised', 'done'];
+function setBookChapterMeta(id, meta = {}) {
+  const set = [], args = [];
+  if ('synopsis' in meta) { set.push('synopsis=?'); args.push(String(meta.synopsis ?? '').slice(0, 4000) || null); }
+  if ('status' in meta) { set.push('status=?'); args.push(CHAPTER_STATUSES.includes(meta.status) ? meta.status : null); }
+  if ('povKey' in meta) { set.push('pov_key=?'); args.push(/^[a-z]+_\d+$/.test(meta.povKey || '') ? meta.povKey : null); }
+  if (!set.length) return { ok: true };
+  getDB().prepare(`UPDATE book_chapter SET ${set.join(', ')}, update_at=datetime('now') WHERE id=?`).run(...args, id);
+  return { ok: true };
+}
+
 const deleteBookChapter = (id) =>
   getDB().prepare(`DELETE FROM book_chapter WHERE id=?`).run(id);
 
@@ -71,6 +84,7 @@ const moveBookChapter = (moduleRef, orderedIds) => {
 };
 
 module.exports = {
+  setBookChapterMeta,
   getBookChapters, createBookChapter, renameBookChapter, setBookChapterLabel,
   updateBookChapterContent, deleteBookChapter, moveBookChapter,
 };
