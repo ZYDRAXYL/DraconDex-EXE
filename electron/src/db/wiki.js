@@ -297,6 +297,7 @@ function _quickIndex(nexusId) {
   add(`SELECT ch.id, ch.name, NULL AS color_code FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'bchp_', 'chapter', 'author');
   add(`SELECT s.id, s.name, NULL AS color_code FROM chat_session s JOIN module m ON s.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'chss_', 'chat', 'scribe');
   add(`SELECT o.id, o.name, uc.color_code FROM classifier_object o JOIN module m ON o.module_ref=m.id LEFT JOIN use_color uc ON uc.id=o.color WHERE (? IS NULL OR m.nexus_ref=?)`, 'cobj_', 'object', 'classifier');
+  add(`SELECT t.id, t.name, NULL AS color_code FROM diviner_table t JOIN module m ON t.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'divt_', 'table', 'diviner');
   return out;
 }
 
@@ -433,6 +434,10 @@ function getEntityPath(key) {
       case 'skpg': {
         const r = d.prepare(`SELECT module_ref FROM sketch_page WHERE id=?`).get(id);
         return r && { kind: 'skpg', moduleId: r.module_ref, pageId: id };
+      }
+      case 'divt': { // v5 Part 7 (§11.5): a Diviner table, selected
+        const r = d.prepare(`SELECT module_ref FROM diviner_table WHERE id=?`).get(id);
+        return r && { kind: 'divt', moduleId: r.module_ref, tableId: id };
       }
       // v5 Part 4: a link written in an Exhibitor note leads back to that
       // note, selected, in its own Exhibitor.

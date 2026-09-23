@@ -12,12 +12,12 @@
 // migrate into Artisan templates.
 
 const MODULE_KINDS = ['collector','manager','inspector','classifier','locator','chronicler',
-  'wanderer','narrator','author','scribe','drafter','exhibitor','sketcher','designer'];
+  'wanderer','narrator','author','scribe','drafter','exhibitor','sketcher','designer','diviner'];
 const KIND_ICON = {
   collector:'folder', manager:'manager', inspector:'document', classifier:'layer',
   locator:'map', chronicler:'timeline', wanderer:'wanderer', narrator:'narrator',
   author:'book', scribe:'story', drafter:'scribe', exhibitor:'relation',
-  sketcher:'sketcher', designer:'relation',
+  sketcher:'sketcher', designer:'relation', diviner:'dice',
 };
 // Unique names (progress.md Section A.3 #7) are locale-invariant by design —
 // the Classic <-> Unique name toggle is Phase 22, not needed yet.
@@ -25,7 +25,7 @@ const KIND_LABEL = {
   collector:'Collector', manager:'Manager', inspector:'Inspector', classifier:'Classifier',
   locator:'Locator', chronicler:'Chronicler', wanderer:'Wanderer', narrator:'Narrator',
   author:'Author', scribe:'Scribe', drafter:'Drafter', exhibitor:'Exhibitor',
-  sketcher:'Sketcher', designer:'Designer',
+  sketcher:'Sketcher', designer:'Designer', diviner:'Diviner',
 };
 // Distinct accent per kind for the create-modal picker cards (buildKindPicker
 // below) — drawn from the app's own seeded color palette (src/db/core.js),
@@ -34,7 +34,7 @@ const KIND_COLOR = {
   collector:'#64748b', manager:'#6366f1', inspector:'#3b82f6', classifier:'#8b5cf6',
   locator:'#22c55e', chronicler:'#f97316', wanderer:'#06b6d4', narrator:'#ec4899',
   author:'#eab308', scribe:'#38bdf8', drafter:'#a78bfa', exhibitor:'#f43f5e',
-  sketcher:'#fb923c', designer:'#a3e635',
+  sketcher:'#fb923c', designer:'#a3e635', diviner:'#14b8a6',
 };
 // v5 (APP docs/V5.md §9.2 / §9.4): what a kind IS, by where its content
 // comes from — the 5th metadata map beside the four above, the grouping §7.7
@@ -45,6 +45,7 @@ const KIND_CATEGORY = {
   manager: 'view', exhibitor: 'view',
   inspector: 'data', drafter: 'data', classifier: 'data', locator: 'data', chronicler: 'data',
   wanderer: 'data', narrator: 'data', author: 'data', scribe: 'data', sketcher: 'data', designer: 'data',
+  diviner: 'data', // v5 Part 7 (§11.5): deleting it deletes its tables
 };
 // §9.5: the five function groups of §7.7 survive as sub-headings under data
 // only (the sixth, "organise", straddled all three categories).
@@ -52,7 +53,7 @@ const KIND_GROUPS = [
   { cat: 'structure', kinds: ['collector'] },
   { cat: 'view', kinds: ['manager', 'exhibitor'] },
   { cat: 'data', key: 'kindGroupNotes', kinds: ['inspector', 'drafter'] },
-  { cat: 'data', key: 'kindGroupData', kinds: ['classifier'] },
+  { cat: 'data', key: 'kindGroupData', kinds: ['classifier', 'diviner'] },
   { cat: 'data', key: 'kindGroupMapTime', kinds: ['locator', 'chronicler', 'wanderer'] },
   { cat: 'data', key: 'kindGroupStory', kinds: ['narrator', 'author', 'scribe'] },
   { cat: 'data', key: 'kindGroupDraw', kinds: ['sketcher', 'designer'] },
@@ -83,6 +84,7 @@ const KIND_DESC_KEY = {
   wanderer:'kindDescWanderer', narrator:'kindDescNarrator', author:'kindDescAuthor',
   scribe:'kindDescScribe', drafter:'kindDescDrafter',
   exhibitor:'kindDescExhibitor', sketcher:'kindDescSketcher', designer:'kindDescDesigner',
+  diviner:'kindDescDiviner',
 };
 
 // The 4 legacy-fixed-module-shaped structure templates Artisan's create

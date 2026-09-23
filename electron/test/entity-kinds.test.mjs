@@ -63,6 +63,7 @@ const SEED = {
   sdlg: () => one(`INSERT INTO story_dialogue (module_ref, name) VALUES (?, 'Dlg')`, mkModule('Nar', 'narrator')),
   skpg: () => one(`INSERT INTO sketch_page (module_ref, name) VALUES (?, 'Page')`, mkModule('Sk2', 'sketcher')),
   ctpl: () => one(`INSERT INTO classifier_template (module_ref, description) VALUES (?, 'Field')`, mkModule('Cls2', 'classifier')),
+  divt: () => one(`INSERT INTO diviner_table (module_ref, name) VALUES (?, 'Tbl')`, mkModule('Div', 'diviner')),
 };
 const synced = Object.keys(ENTITY_KINDS).filter((p) => ENTITY_KINDS[p].sync);
 
@@ -78,7 +79,9 @@ test('every family, every pair: nothing dropped through serialize → apply', ()
   }
   const page = one(`INSERT INTO sketch_page (module_ref, name) VALUES (?, 'P')`, mkModule('Sk', 'sketcher'));
   const dm = mkModule('Dg', 'designer');
+  const dtab = one(`INSERT INTO diviner_table (module_ref, name) VALUES (?, 'Links')`, mkModule('Div2', 'diviner'));
   for (const k of keys) {
+    one(`INSERT INTO diviner_entry (table_ref, linker_key) VALUES (?,?)`, dtab, k);
     one(`INSERT INTO sketch_pin (page_ref, linker_key, x, y) VALUES (?,?,0,0)`, page, k);
     one(`INSERT INTO design_node (module_ref, shape, x, y, linker_key) VALUES (?, 'box', 0, 0, ?)`, dm, k);
   }
@@ -94,11 +97,14 @@ test('every family, every pair: nothing dropped through serialize → apply', ()
   assert.equal(db.prepare(`SELECT COUNT(*) AS c FROM entity_relation`).get().c, n * (n - 1));
   assert.equal(db.prepare(`SELECT COUNT(*) AS c FROM sketch_pin`).get().c, n);
   assert.equal(db.prepare(`SELECT COUNT(*) AS c FROM design_node WHERE linker_key IS NOT NULL`).get().c, n);
+  const dkeys = db.prepare(`SELECT linker_key FROM diviner_entry WHERE linker_key IS NOT NULL`).all().map((r) => r.linker_key);
+  assert.equal(dkeys.length, n, 'a Diviner entry keeps its link (§11.5)');
   // every stored key points at a row that exists in the NEW vault
   const exists = (k) => {
     const [, p, id] = /^([a-z]+)_(\d+)$/.exec(k);
     return !!db.prepare(`SELECT 1 FROM ${ENTITY_KINDS[p].table} WHERE id=?`).get(Number(id));
   };
+  for (const k of dkeys) assert.ok(exists(k), k);
   for (const row of db.prepare(`SELECT from_key, to_key, rel_type FROM entity_relation`).all()) {
     assert.ok(exists(row.from_key) && exists(row.to_key), `${row.from_key} -> ${row.to_key}`);
     assert.equal(row.rel_type, 't', 'rel_type survives the pull');

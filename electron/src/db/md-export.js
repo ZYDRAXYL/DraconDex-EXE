@@ -10,6 +10,7 @@
 //   Chronicler event    one file per event, its dates in the frontmatter
 //   Narrator dialogue   description, then the talk rows
 //   Scribe session      the messages
+//   Diviner table       its entries as a list, ranges or weights first
 //   legacy notes        Notes/<title>.md
 //
 // A relation is `[[Name]]` in the frontmatter, and every [[wikilink]] in the
@@ -180,6 +181,21 @@ function exportNexusMarkdown(nexusId, zipPath) {
       });
       add(folderOf.get(m.id), g.name,
         frontmatter([['related', relatedOf(`sdlg_${g.id}`)]]) + [g.description, lines.join('\n\n')].filter(Boolean).join('\n\n'));
+    }
+  }
+
+  // Diviner tables (§11.5): a list a GM can still read at the table.
+  for (const m of mods.filter((x) => x.kind === 'diviner')) {
+    for (const tb of d.prepare(`SELECT id, name, dice, mode FROM diviner_table WHERE module_ref=? ORDER BY display_order, id`).all(m.id)) {
+      const rows = d.prepare(`SELECT weight, range_lo, range_hi, entry_text, linker_key FROM diviner_entry WHERE table_ref=? ORDER BY display_order, id`).all(tb.id);
+      const lines = rows.map((e) => {
+        const nm = e.linker_key ? nameOf(e.linker_key) : null;
+        const text = [e.entry_text, nm ? link(nm) : null].filter(Boolean).join(' ');
+        const lead = tb.mode === 'join' ? '' : tb.dice && e.range_lo != null
+          ? `${e.range_lo}${e.range_hi != null && e.range_hi !== e.range_lo ? `–${e.range_hi}` : ''}: ` : !tb.dice ? `(${e.weight}) ` : '';
+        return `- ${lead}${text}`;
+      });
+      add(folderOf.get(m.id), tb.name, frontmatter([['dice', tb.dice], ['mode', tb.mode === 'join' ? 'join' : null]]) + lines.join('\n'));
     }
   }
 

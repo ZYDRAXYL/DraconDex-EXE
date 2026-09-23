@@ -14,7 +14,7 @@
 const ICON_PICKER_KEYS = [
   'globe','sword','book','scribe','sage','artisan','projects','timeline','relation','map',
   'hashtag','folder','star','pin','fields','list','table','person','layer','item','story',
-  'func','series','document','chart','manager','narrator','sketcher','wanderer','director','navigator',
+  'func','series','document','chart','manager','narrator','sketcher','dice','wanderer','director','navigator',
 ];
 
 // Upload-crop module-scope state (iconpicker.js has no shared store beyond

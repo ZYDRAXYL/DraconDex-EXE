@@ -155,6 +155,22 @@ const ENTITY_KINDS = {
     },
     search: ['name'],
   },
+  // v5 Part 7 (§11.5): a Diviner table. An entry's linker_key divt_<id> rolls
+  // it in place — the nesting that makes the name generator (§11.5).
+  divt: {
+    table: 'diviner_table',
+    owner: `SELECT id FROM diviner_table WHERE module_ref=?`,
+    lookup: { sql: `SELECT id, name FROM diviner_table WHERE id=?`, type: 'table', module: 'diviner' },
+    wiki: { sql: `SELECT t.id FROM diviner_table t JOIN module m ON t.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND t.name=? COLLATE NOCASE` },
+    sync: 'divtMap',
+    index: {
+      kind: 'table',
+      sql: `SELECT t.id, t.name, m.id mid, m.name mname, m.kind mkind
+        FROM diviner_table t JOIN module m ON t.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`,
+      row: (r) => ({ key: `divt_${r.id}`, name: r.name, ...modRow(r) }),
+    },
+    search: ['name'],
+  },
   // v5 Part 7 (§11.3): a Classifier field. Never an endpoint — it appears
   // only as entity_relation.rel_type 'ctpl_<id>', naming the relation FIELD
   // that owns the row, and must be remapped like any key when imported.

@@ -32,6 +32,21 @@ const KIND_PRESETS = {
         { nameKey: 'pfRegion' }, { nameKey: 'pfClimate' }, { nameKey: 'pfDescription', type: 'textarea' },
       ] } },
   ],
+  // v5 Part 7 (§11.5): the name / word generator is a Diviner preset, not a
+  // module of its own — a 'join' table whose entries roll the other two.
+  // The syllables are an example to replace, so they are not translated.
+  diviner: [
+    { id: 'names', nameKey: 'presetNameGen', icon: 'dice',
+      spec: { tables: [
+        { nameKey: 'presetTblPrefix', entries: ['Ar', 'Bel', 'Cor', 'Dra', 'El', 'Fen', 'Gal', 'Kor'].map(text => ({ text })) },
+        { nameKey: 'presetTblSuffix', entries: ['an', 'eth', 'ion', 'mir', 'os', 'wyn', 'dor', 'ra'].map(text => ({ text })) },
+        { nameKey: 'presetTblName', mode: 'join', entries: [{ table: 0 }, { table: 1 }] },
+      ] } },
+    { id: 'd20', nameKey: 'presetTblD20', icon: 'dice',
+      spec: { tables: [
+        { nameKey: 'presetTblD20', dice: '1d20', entries: [[1, 5], [6, 10], [11, 15], [16, 20]].map(([lo, hi]) => ({ lo, hi })) },
+      ] } },
+  ],
 };
 
 // The user's presets for the open Nexus, refreshed with the module tree
@@ -60,7 +75,11 @@ function presetSpec(kind, ref) {
   if (ref.startsWith('b:')) {
     const p = (KIND_PRESETS[kind] || []).find(x2 => x2.id === ref.slice(2));
     if (!p) return null;
-    return { ...p.spec, fields: (p.spec.fields || []).map(f => ({ name: t(f.nameKey), type: f.type || 'text' })) };
+    return {
+      ...p.spec,
+      fields: (p.spec.fields || []).map(f => ({ name: t(f.nameKey), type: f.type || 'text', options: f.options })),
+      tables: (p.spec.tables || []).map(tb => ({ ...tb, name: t(tb.nameKey) })),
+    };
   }
   return _presetCache.rows.find(r => `u:${r.id}` === ref)?.spec || null;
 }

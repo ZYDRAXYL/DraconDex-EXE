@@ -11,7 +11,11 @@
 //   description
 //   catType                  Classifier only: object | character | element
 //   ui                       view settings from PRESET_UI_KEYS
-//   fields                   Classifier only: [{ name, type, levelable, hasCondition }]
+//   fields                   Classifier only: [{ name, type, options, levelable, hasCondition }]
+//   tables                   Diviner only (v5 Part 7, §11.5): [{ name, dice, mode,
+//                            entries: [{ text, weight, lo, hi, table }] }] — an
+//                            entry's `table` is the INDEX of another table in the
+//                            same preset, rolled in its place (the name generator)
 //
 // Only settings that are about the module's shape are captured. filterDef,
 // managerPicks, exhibitorFor and seedScene name other rows by id, so they
@@ -20,8 +24,11 @@ const { getDB } = require('./core');
 
 const PRESET_UI_KEYS = ['activeView', 'view', 'boardGroupBy', 'calendarConfig'];
 const CAT_TYPES = new Set(['object', 'character', 'element']);
-const FIELD_TYPES = new Set(['text', 'textarea', 'date']);
+// Every Classifier field type (§11.3) — a preset of a Number or Relation
+// field must stay one, not come back as Text.
+const FIELD_TYPES = new Set(['text', 'textarea', 'date', 'number', 'select', 'multi', 'checkbox', 'url', 'relation', 'formula']);
 const MAX_FIELDS = 40;
+const MAX_TABLES = 20, MAX_ENTRIES = 200;
 
 const colorCode = (d, id) => (id == null ? null : d.prepare(`SELECT color_code FROM use_color WHERE id=?`).get(id)?.color_code ?? null);
 function colorId(d, code) {
@@ -50,7 +57,19 @@ function cleanSpec(raw) {
   if (Array.isArray(s.fields)) {
     out.fields = s.fields.slice(0, MAX_FIELDS).filter((f) => str(f?.name)).map((f) => ({
       name: str(f.name), type: FIELD_TYPES.has(f.type) ? f.type : 'text',
+      ...(str(f.options, 4000) ? { options: str(f.options, 4000) } : {}),
       levelable: !!f.levelable, hasCondition: !!f.hasCondition,
+    }));
+  }
+  if (Array.isArray(s.tables)) {
+    const tabs = s.tables.slice(0, MAX_TABLES);
+    const int = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Math.trunc(Number(v)));
+    out.tables = tabs.filter((tb) => str(tb?.name)).map((tb) => ({
+      name: str(tb.name), dice: str(tb.dice, 20), mode: tb.mode === 'join' ? 'join' : 'pick',
+      entries: (Array.isArray(tb.entries) ? tb.entries : []).slice(0, MAX_ENTRIES).map((e) => ({
+        text: str(e?.text, 1000) || '', weight: Math.max(0, int(e?.weight) ?? 1), lo: int(e?.lo), hi: int(e?.hi),
+        table: Number.isInteger(e?.table) && e.table >= 0 && e.table < tabs.length ? e.table : null,
+      })),
     }));
   }
   return out;
@@ -70,8 +89,19 @@ function capturePreset(moduleId) {
     // Shared fields only: a private field (object_ref set) belongs to one
     // element of THIS category, not to the shape of a new one.
     spec.fields = d.prepare(`
-      SELECT description AS name, attribute_type AS type, levelable, has_condition AS hasCondition
+      SELECT description AS name, attribute_type AS type, options, levelable, has_condition AS hasCondition
       FROM classifier_template WHERE module_ref=? AND object_ref IS NULL ORDER BY display_order, id`).all(moduleId);
+  }
+  if (m.kind === 'diviner') {
+    // Links between this module's own tables become indexes; a link to
+    // anything else would name a row the new module cannot have, so it goes.
+    const tabs = d.prepare(`SELECT id, name, dice, mode FROM diviner_table WHERE module_ref=? ORDER BY display_order, id`).all(moduleId);
+    const idx = new Map(tabs.map((tb, i) => [`divt_${tb.id}`, i]));
+    spec.tables = tabs.map((tb) => ({
+      name: tb.name, dice: tb.dice, mode: tb.mode,
+      entries: d.prepare(`SELECT entry_text, weight, range_lo, range_hi, linker_key FROM diviner_entry WHERE table_ref=? ORDER BY display_order, id`).all(tb.id)
+        .map((e) => ({ text: e.entry_text || '', weight: e.weight, lo: e.range_lo, hi: e.range_hi, table: idx.get(e.linker_key) ?? null })),
+    }));
   }
   return { kind: m.kind, spec: cleanSpec(spec) };
 }
@@ -99,15 +129,25 @@ function applyPreset(moduleId, rawSpec) {
     if (m.kind === 'classifier' && s.fields?.length) {
       const have = new Set(d.prepare(`SELECT description FROM classifier_template WHERE module_ref=? AND object_ref IS NULL`).all(moduleId).map((r) => r.description));
       let order = d.prepare(`SELECT COALESCE(MAX(display_order),-1) AS m FROM classifier_template WHERE module_ref=?`).get(moduleId).m;
-      const ins = d.prepare(`INSERT INTO classifier_template (module_ref, description, attribute_type, levelable, has_condition, display_order) VALUES (?,?,?,?,?,?)`);
+      const ins = d.prepare(`INSERT INTO classifier_template (module_ref, description, attribute_type, levelable, has_condition, display_order, options) VALUES (?,?,?,?,?,?,?)`);
       for (const f of s.fields) {
         if (have.has(f.name)) continue;
-        ins.run(moduleId, f.name, f.type, f.levelable ? 1 : 0, f.hasCondition ? 1 : 0, ++order);
+        ins.run(moduleId, f.name, f.type, f.levelable ? 1 : 0, f.hasCondition ? 1 : 0, ++order, f.options ?? null);
         have.add(f.name);
         added++;
       }
     }
-    return { fields: added };
+    let tables = 0;
+    if (m.kind === 'diviner' && s.tables?.length) {
+      let order = d.prepare(`SELECT COALESCE(MAX(display_order),-1) AS m FROM diviner_table WHERE module_ref=?`).get(moduleId).m;
+      const ids = s.tables.map((tb) => d.prepare(`INSERT INTO diviner_table (module_ref, name, dice, mode, display_order) VALUES (?,?,?,?,?)`)
+        .run(moduleId, tb.name, tb.dice, tb.mode, ++order).lastInsertRowid);
+      s.tables.forEach((tb, i) => tb.entries.forEach((e, k) => d.prepare(`
+        INSERT INTO diviner_entry (table_ref, weight, range_lo, range_hi, entry_text, linker_key, display_order) VALUES (?,?,?,?,?,?,?)`)
+        .run(ids[i], e.weight, e.lo, e.hi, e.text, e.table != null ? `divt_${ids[e.table]}` : null, k)));
+      tables = ids.length;
+    }
+    return { fields: added, tables };
   });
   return run();
 }

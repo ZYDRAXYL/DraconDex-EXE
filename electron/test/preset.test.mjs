@@ -67,7 +67,7 @@ test('capture → apply reproduces a Classifier\'s shape, not its content or its
 
   const dst = mkModule('New', 'classifier');
   cls.createTemplate(dst, 'Age', 'text', false, false, null); // already there: not duplicated
-  assert.deepEqual(preset.applyPreset(dst, spec), { fields: 1 });
+  assert.deepEqual(preset.applyPreset(dst, spec), { fields: 1, tables: 0 });
   const m = db.prepare(`SELECT icon, description, cat_type, c.color_code FROM module LEFT JOIN use_color c ON module.color=c.id WHERE module.id=?`).get(dst);
   assert.deepEqual({ ...m }, { icon: 'person', description: 'The cast', cat_type: 'character', color_code: '#ff0088' });
   assert.deepEqual(fields(dst), [{ name: 'Age', type: 'text', levelable: 0 }, { name: 'Rank', type: 'text', levelable: 1 }]);
@@ -83,6 +83,29 @@ test('a built-in style spec (as the renderer sends it) applies; junk is narrowed
   assert.deepEqual(fields(m).map((f) => [f.name, f.type]), [['Region', 'text'], ['Notes', 'textarea'], ['X', 'text']]);
   assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM module_ui WHERE module_ref=?`).get(m).n, 0);
   assert.equal(db.prepare(`SELECT color FROM module WHERE id=?`).get(m).color, null);
+});
+
+test('v5 Part 7: a typed field stays typed; a Diviner preset rebuilds its nested tables', () => {
+  freshVault();
+  const c = mkModule('Stats', 'classifier');
+  cls.createTemplate(c, 'Mood', 'select', false, false, null, JSON.stringify({ choices: ['calm', 'angry'] }));
+  const spec = preset.capturePreset(c).spec;
+  const dst = mkModule('Stats2', 'classifier');
+  preset.applyPreset(dst, spec);
+  assert.deepEqual({ ...db.prepare(`SELECT attribute_type, options FROM classifier_template WHERE module_ref=?`).get(dst) },
+    { attribute_type: 'select', options: JSON.stringify({ choices: ['calm', 'angry'] }) });
+
+  const dv = require('../src/db/diviner.js');
+  const g = mkModule('Names', 'diviner');
+  assert.deepEqual(preset.applyPreset(g, { tables: [
+    { name: 'Pre', entries: [{ text: 'Dra' }] }, { name: 'Suf', entries: [{ text: 'con' }] },
+    { name: 'Name', mode: 'join', entries: [{ table: 0 }, { table: 1 }, { table: 9 }] },
+  ] }), { fields: 0, tables: 3 });
+  const name = db.prepare(`SELECT id FROM diviner_table WHERE module_ref=? AND name='Name'`).get(g).id;
+  assert.equal(dv.rollDivinerTable(name).text, 'Dracon', 'an out-of-range index is dropped, the rest roll');
+  // capture turns this module's own table links back into indexes
+  const again = preset.capturePreset(g).spec.tables;
+  assert.deepEqual(again[2].entries.map((e) => e.table), [0, 1, null]);
 });
 
 test('save replaces by kind + name; list and delete; presets ride a whole-vault snapshot', () => {

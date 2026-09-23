@@ -55,8 +55,8 @@ function fuzzyScore(query, name) {
 
 let _qsContentTimer = null;
 let _qsContentSeq = 0;
-const QS_BADGE = { text: 'Text', object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset', page: 'Page', command: 'Command' };
-const QS_ICON_BY_KIND = { object: 'person', event: 'timeline', dialogue: 'narrator', chapter: 'book', chat: 'story', module: 'layer', file: 'import', page: 'sketcher', command: 'func' };
+const QS_BADGE = { text: 'Text', object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset', page: 'Page', table: 'Table', command: 'Command' };
+const QS_ICON_BY_KIND = { object: 'person', event: 'timeline', dialogue: 'narrator', chapter: 'book', chat: 'story', module: 'layer', file: 'import', page: 'sketcher', table: 'dice', command: 'func' };
 
 function qsCommandItems() {
   return paletteCommands(_qsFocusEl).map(c => ({

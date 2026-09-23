@@ -78,12 +78,17 @@ test('classifier objects, fields and relations become frontmatter; [[links]] sur
   const au = mkModule('เล่ม 1', 'author', world);
   db.prepare(`INSERT INTO book_chapter (module_ref, name, chapter_content, chapter_order, status, pov_key) VALUES (?,?,?,?,?,?)`).run(au, 'เปิดเรื่อง', 'ข้อความ', 0, 'draft', `cobj_${a}`);
   db.prepare(`INSERT INTO note (nexus_ref, title, content) VALUES (1, 'x/y', 'n')`).run();
+  const dvm = mkModule('Dice', 'diviner', world);
+  const dt = db.prepare(`INSERT INTO diviner_table (module_ref, name, dice) VALUES (?, 'Weather', '1d6')`).run(dvm).lastInsertRowid;
+  db.prepare(`INSERT INTO diviner_entry (table_ref, range_lo, range_hi, entry_text) VALUES (?,1,3,'Sun'), (?,4,4,'Rain')`).run(dt, dt);
+  db.prepare(`INSERT INTO diviner_entry (table_ref, range_lo, range_hi, linker_key) VALUES (?,5,6,?)`).run(dt, `cobj_${a}`);
 
   const out = join(tmp, 'md.zip');
   const r = exportNexusMarkdown(1, out);
   assert.equal(r.ok, true);
   const files = readZip(out);
-  assert.deepEqual([...files.keys()].sort(), ['N/Notes/x_y.md', 'N/โลก/ตัวละคร/บ็อบ.md', 'N/โลก/ตัวละคร/อลิซ.md', 'N/โลก/เล่ม 1/1 เปิดเรื่อง.md'].sort());
+  assert.deepEqual([...files.keys()].sort(), ['N/Notes/x_y.md', 'N/โลก/ตัวละคร/บ็อบ.md', 'N/โลก/ตัวละคร/อลิซ.md', 'N/โลก/เล่ม 1/1 เปิดเรื่อง.md', 'N/โลก/Dice/Weather.md'].sort());
+  assert.equal(files.get('N/โลก/Dice/Weather.md'), '---\ndice: "1d6"\n---\n\n- 1–3: Sun\n- 4: Rain\n- 5–6: [[อลิซ]]');
   const alice = files.get('N/โลก/ตัวละคร/อลิซ.md');
   assert.match(alice, /^---\ncategory: "\[\[ตัวละคร\]\]"\n/);
   assert.match(alice, /\nStrength: 7\n/);

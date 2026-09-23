@@ -52,6 +52,7 @@ const KIND_PAGE = {
     mount: () => { if (!kpFn('mountSketcherBoard')) return; kpCall('mountSketcherBoard'); kpCall('mountSketcherExtras'); },
   },
   designer: { load: 'loadDesignerData', main: 'buildDesignerMainHtml', mount: 'mountDesignerBoard', start: 'designer.addShape' },
+  diviner: { load: 'loadDivinerData', main: 'buildDivinerMainHtml', start: 'diviner.newTable' }, // v5 Part 7 (§11.5)
 };
 
 // One part of a kind's page as a callable, or null. A string part names a

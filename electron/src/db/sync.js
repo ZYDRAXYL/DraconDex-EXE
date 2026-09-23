@@ -512,6 +512,24 @@ function serializeVault(nexusId, moduleIds = null) {
       FROM design_edge e JOIN module m ON e.module_ref=m.id WHERE m.nexus_ref=?`),
   };
 
+  // v5 Part 7 (§11.5): Diviner tables, their entries and roll history. An
+  // entry's linker_key (divt_<id> = roll that table) is a key like any other.
+  const diviner = {
+    tables: all(`
+      SELECT t.id, t.module_ref AS moduleId, t.name, t.dice, t.mode, t.display_order AS "order"
+      FROM diviner_table t JOIN module m ON t.module_ref=m.id WHERE m.nexus_ref=? ORDER BY t.id`),
+    entries: all(`
+      SELECT e.id, e.table_ref AS tableId, e.weight, e.range_lo AS lo, e.range_hi AS hi,
+             e.entry_text AS text, e.linker_key AS linkerKey, e.display_order AS "order"
+      FROM diviner_entry e JOIN diviner_table t ON e.table_ref=t.id
+      JOIN module m ON t.module_ref=m.id WHERE m.nexus_ref=? ORDER BY e.id`),
+    rolls: all(`
+      SELECT r.table_ref AS tableId, r.dice_result AS dice, r.entry_ref AS entryId,
+             r.result_text AS text, r.create_at AS createAt
+      FROM diviner_roll r JOIN diviner_table t ON r.table_ref=t.id
+      JOIN module m ON t.module_ref=m.id WHERE m.nexus_ref=? ORDER BY r.id`),
+  };
+
   // v5 (APP docs/V5.md §3.5): rel_type / directed / moduleRef travel with
   // the relation — without them every pull would silently reset them (the
   // Plan's Part 7 warning). Readers that predate v5 (the APK today) ignore
@@ -607,7 +625,7 @@ function serializeVault(nexusId, moduleIds = null) {
     modules, moduleAttrs, moduleUi, moduleTags,
     classifier, locator, chronicler, wanderer, narrator, author,
     chatscribe, sketcher, designer, relations, notes, calendarTemplates,
-    exhibitor, modulePresets,
+    exhibitor, modulePresets, diviner,
   };
 }
 
@@ -937,6 +955,29 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
         .run(pageMap.get(st.pageId), st.color ?? null, st.width ?? 3, st.points);
     }
 
+    // Diviner (§11.5) — before the key maps, which need divtMap; an entry's
+    // linker_key is remapped with the other deferred single keys below.
+    const dvn = sect(payload.diviner);
+    const divtMap = new Map(), dveMap = new Map();
+    for (const t of arr(dvn.tables)) {
+      if (mod(t.moduleId) == null) continue;
+      const r = db.prepare(`INSERT INTO diviner_table (module_ref, name, dice, mode, display_order) VALUES (?,?,?,?,?)`)
+        .run(mod(t.moduleId), t.name, t.dice ?? null, t.mode === 'join' ? 'join' : 'pick', t.order ?? 0);
+      divtMap.set(t.id, r.lastInsertRowid);
+    }
+    for (const e of arr(dvn.entries)) {
+      if (!divtMap.has(e.tableId)) continue;
+      const r = db.prepare(`INSERT INTO diviner_entry (table_ref, weight, range_lo, range_hi, entry_text, display_order) VALUES (?,?,?,?,?,?)`)
+        .run(divtMap.get(e.tableId), e.weight ?? 1, e.lo ?? null, e.hi ?? null, e.text ?? null, e.order ?? 0);
+      dveMap.set(e.id, r.lastInsertRowid);
+      if (e.linkerKey) pendingKeys.push(['diviner_entry', 'linker_key', r.lastInsertRowid, e.linkerKey]);
+    }
+    for (const r of arr(dvn.rolls)) {
+      if (!divtMap.has(r.tableId)) continue;
+      db.prepare(`INSERT INTO diviner_roll (table_ref, dice_result, entry_ref, result_text, create_at) VALUES (?,?,?,?,COALESCE(?,datetime('now')))`)
+        .run(divtMap.get(r.tableId), r.dice ?? null, r.entryId != null ? (dveMap.get(r.entryId) ?? null) : null, r.text ?? null, r.createAt ?? null);
+    }
+
     // Notes (folder tree parents-first) — before anything that remaps a key,
     // so a pin, a Designer link or a relation to note_<id> comes across too.
     const nts = sect(payload.notes);
@@ -967,7 +1008,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     // v5 Part 7 (§11.1/§11.2): the key maps come from db/entity-kinds.js —
     // every family that declares `sync` gets its map, by name. Registering
     // them by hand here is what dropped tlev_/sdlg_ endpoints on every pull.
-    const keyMaps = entityKeyMaps({ modMap, cobjMap, ctplMap, bchpMap, chssMap, evtMap, dlgMap, noteMap, pageMap });
+    const keyMaps = entityKeyMaps({ modMap, cobjMap, ctplMap, bchpMap, chssMap, evtMap, dlgMap, noteMap, pageMap, divtMap });
     // Key columns written before the maps were complete (KEY_COLUMNS in
     // db/entity-kinds.js): a single key that cannot be mapped is cleared; an
     // entry of a JSON list that cannot be mapped is left out.

@@ -727,6 +727,23 @@ h('trash:empty',   (nx)      => db.emptyTrash(nx));
 h('search:rebuild', (nx)     => db.rebuildSearch(nx, true));
 h('search:query',   (nx, qy) => db.searchContent(nx, qy));
 
+// v5 Part 7 (§11.5): Diviner — random tables and dice.
+h('diviner:getTables',   (mref)          => db.getDivinerTables(mref));
+h('diviner:tablesInNexus', (nx)          => db.getDivinerTablesInNexus(nx));
+h('diviner:createTable', (mref,n,dc,md)  => db.createDivinerTable(mref,n,dc,md));
+h('diviner:updateTable', (id,n,dc,md)    => db.updateDivinerTable(id,n,dc,md));
+h('diviner:deleteTable', (id)            => db.deleteDivinerTable(id));
+h('diviner:getEntries',  (tref)          => db.getDivinerEntries(tref));
+h('diviner:createEntry', (tref,tx,k)     => db.createDivinerEntry(tref,tx,k));
+h('diviner:updateEntry', (id,e)          => db.updateDivinerEntry(id,e));
+h('diviner:deleteEntry', (id)            => db.deleteDivinerEntry(id));
+h('diviner:moveEntry',   (id,dir)        => db.moveDivinerEntry(id,dir));
+h('diviner:roll',        (tref)          => db.rollDivinerTable(tref));
+h('diviner:rollDice',    (expr)          => db.rollDiceOnly(expr));
+h('diviner:getRolls',    (tref)          => db.getDivinerRolls(tref));
+h('diviner:clearRolls',  (tref)          => db.clearDivinerRolls(tref));
+h('diviner:wouldCycle',  (tref,target)   => db.divinerWouldCycle(tref,target));
+
 // v5 Part 7 (§11.4): the whole Nexus as .md files in a .zip — export only.
 h('nexus:exportMarkdown', async (id) => {
   const n = db.getNexus(id);

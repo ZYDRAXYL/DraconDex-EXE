@@ -548,3 +548,30 @@ select.fp-input[multiple]{padding:2px}
 .module-handle-inp{width:160px;font-size:calc(12px * var(--fsc,1))}
 .module-handle-add{padding:1px 7px;opacity:.55;font-size:calc(11px * var(--fsc,1))}
 .module-handle-add:hover{opacity:1}
+
+/* ── Diviner (v5 Part 7, V5.md §11.5) ── */
+.div-dice{display:inline-flex;align-items:center;gap:4px;margin-left:auto}
+.div-dice input{width:7em}
+.div-dice-out{font-size:calc(12px * var(--fsc,1));color:var(--t2);font-variant-numeric:tabular-nums}
+.div-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.div-head h3{margin:0;font-size:calc(16px * var(--fsc,1))}
+.div-head .div-roll{margin-left:auto}
+.div-chip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:var(--raised);
+  color:var(--t2);font-size:calc(11px * var(--fsc,1));white-space:nowrap}
+.div-chip .icon{width:12px;height:12px}
+.div-result{border:1px solid var(--border);border-radius:var(--r);background:var(--surface);padding:14px 16px;margin-bottom:14px}
+.div-result.warn{border-color:var(--warn,var(--accent))}
+.div-result-text{font-size:calc(18px * var(--fsc,1));font-weight:600;color:var(--t1);word-break:break-word}
+.div-result-dice,.div-steps{margin-top:4px;font-size:calc(11px * var(--fsc,1));color:var(--t3);font-variant-numeric:tabular-nums}
+.div-entries{display:flex;flex-direction:column;gap:4px}
+.div-entry{display:grid;grid-template-columns:minmax(64px,auto) 1fr auto;gap:8px;align-items:center}
+.div-entry-head{font-size:calc(10px * var(--fsc,1));color:var(--t3);text-transform:uppercase;letter-spacing:.04em}
+.div-lead{display:inline-flex;align-items:center;gap:4px}
+.div-text{display:flex;align-items:center;gap:6px;min-width:0}
+.div-text input{flex:1;min-width:0}
+.div-hist{margin-top:14px}
+.div-hist-row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px solid var(--border);font-size:calc(12px * var(--fsc,1))}
+.div-hist-row small{color:var(--t3);font-variant-numeric:tabular-nums}
+.div-main{display:flex;flex-direction:column}
+.div-result.empty-result{background:transparent;border-style:dashed}
+.div-link{max-width:40%;overflow:hidden;text-overflow:ellipsis}

@@ -369,7 +369,7 @@ const KIND_CLASSIC_KEY = {
   classifier: 'kcCategory', locator: 'kcMap', chronicler: 'kcTimeline',
   wanderer: 'kcTimeMap', narrator: 'kcStory', author: 'kcBook',
   scribe: 'kcChat', drafter: 'kcDoc',
-  exhibitor: 'kcExhibitor', sketcher: 'kcDrawing', designer: 'kcGraph',
+  exhibitor: 'kcExhibitor', sketcher: 'kcDrawing', designer: 'kcGraph', diviner: 'kcRandom',
 };
 function kindLabel(kind) {
   if (S.settings?.nameMode === 'classic') {
