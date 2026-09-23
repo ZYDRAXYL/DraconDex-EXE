@@ -234,6 +234,9 @@ const COMMANDS = {
   'sketcher.pen': { label: 'penTool', scope: 'kind:sketcher', checked: () => skTool.mode === 'pen', run: () => setSketchTool('pen'), surfaces: ['sketcher.board', 'canvas.ctx'] },
   'sketcher.eraser': { label: 'eraserTool', scope: 'kind:sketcher', checked: () => skTool.mode === 'eraser', run: () => setSketchTool('eraser'), surfaces: ['sketcher.board', 'canvas.ctx'] },
   'sketcher.pinLink': { label: 'pinModuleLink', icon: 'relation', scope: 'kind:sketcher', when: () => !!S.sketcherData?.pageId, run: () => openSketchPinModal(), surfaces: ['sketcher.board', 'canvas.ctx'] },
+  // v5 Part 7 (§11.6): comic pages' reading order.
+  'designer.readOrder': { label: 'dgShowReadOrder', icon: 'list', scope: 'kind:designer', checked: () => !!S.designerData?.showOrder, run: () => toggleDesignerReadOrder(), surfaces: ['designer.toolbar', 'canvas.ctx'] },
+  'designer.renumber': { label: 'dgRenumber', icon: 'return', scope: 'kind:designer', run: () => renumberDesignerReadOrder(), surfaces: ['designer.toolbar', 'canvas.ctx'] },
   'designer.addShape': {
     label: 'ctxAddShape', icon: 'plus', scope: 'kind:designer',
     sub: () => DG_SHAPES.map(sh => ({ label: `${DG_SHAPE_GLYPH[sh] || ''}  ${sh}`, onClick: () => addDesignNode(sh) })),

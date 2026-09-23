@@ -97,19 +97,10 @@ function setSketchColor(c) { skTool.color = c; skTool.mode = 'pen'; renderNexusH
 function setSketchWidth(w) { skTool.width = w; renderNexusHome(); }
 
 // ── Canvas mounting: draw strokes, wire pen/eraser/pan/zoom/pins ────────
+// The drawing itself is mod/sketch-render.js — shared with Designer panels.
 function drawSketchStrokes(ctx, strokes) {
   ctx.clearRect(0, 0, SK_W, SK_H);
-  ctx.lineJoin = ctx.lineCap = 'round';
-  for (const s of strokes) {
-    const pts = typeof s.points === 'string' ? JSON.parse(s.points) : s.points;
-    if (!pts || pts.length < 4) continue;
-    ctx.strokeStyle = s.color || SK_COLORS[0];
-    ctx.lineWidth = s.width || 3;
-    ctx.beginPath();
-    ctx.moveTo(pts[0], pts[1]);
-    for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
-    ctx.stroke();
-  }
+  renderSketchStrokes(ctx, strokes, SK_COLORS[0]);
 }
 
 function sketchStrokeHit(stroke, px, py, slack) {

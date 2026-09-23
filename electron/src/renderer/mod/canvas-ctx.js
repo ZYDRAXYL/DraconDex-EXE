@@ -19,6 +19,8 @@ CTX_PROVIDERS['designer.canvas'] = () => {
     cmdItem('designer.addShape', c),
     cmdItem('designer.pinLink', c),
     cmdItem('designer.edgeTool', c),
+    cmdItem('designer.readOrder', c),
+    cmdItem('designer.renumber', c),
     { sep: true },
     ...ctxZoomPair(),
     { sep: true },

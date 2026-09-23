@@ -16,14 +16,15 @@ const DG_COLORS = ['#2dd4bf', '#38bdf8', '#facc15', '#f87171', '#a78bfa', '#f8fa
 // made every new shape a table rebuild for every existing vault (see
 // migrateDesignNodeShapes in db/schema/migrations.js).
 const DG_SHAPES = ['box', 'rounded', 'circle', 'ellipse', 'pill', 'diamond',
-  'hexagon', 'parallelogram', 'triangle', 'star', 'cross', 'note', 'text'];
+  'hexagon', 'parallelogram', 'triangle', 'star', 'cross', 'note', 'text',
+  'panel', 'balloon']; // v5 Part 7 (§11.6): comic pages — mod/designer-comic.js
 // The four the toolbar keeps as buttons; the rest live behind its "more"
 // button, so the palette doesn't grow into a wall of glyphs.
 const DG_TOOLBAR_SHAPES = ['box', 'circle', 'diamond', 'text'];
 const DG_SHAPE_GLYPH = {
   box: '▭', rounded: '▢', circle: '○', ellipse: '⬭', pill: '⬬', diamond: '◇',
   hexagon: '⬡', parallelogram: '▰', triangle: '△', star: '☆', cross: '✚',
-  note: '▤', text: 'T',
+  note: '▤', text: 'T', panel: '▣', balloon: '💬',
 };
 // Shapes a border cannot draw: rendered as a clipped colour plate with an
 // inset surface-coloured copy punched out of it, the generalisation of what
@@ -47,7 +48,7 @@ async function loadDesignerData(m) {
   const byKey = new Map(ents.map(e2 => [e2.key, e2]));
   for (const n of nodes) n.entity = n.linker_key ? (byKey.get(n.linker_key) || null) : null;
   const view = DESIGNER_VIEWS.includes(ui.activeView) ? ui.activeView : 'canvas';
-  S.designerData = { moduleId: m.id, nodes, edges, view };
+  S.designerData = { moduleId: m.id, nodes, edges, view, showOrder: ui.showReadOrder === '1' };
 }
 
 async function setDesignerView(view) {
@@ -82,6 +83,9 @@ function buildDesignerMainHtml(m) {
         <button class="btn btn-g btn-i${dgState.edgeFrom !== null ? ' act' : ''}" onclick="startDesignEdge()" title="${t('edgeTool')}">↦</button>
         <button class="btn btn-g btn-i" onclick="openDesignPinModal()" title="${t('pinModuleLink')}">🔗</button>
         <button class="btn btn-g btn-i" onclick="openDesignerLinkFilterModal(${m.id})" title="${t('narratorLinkFilter')}">${I.edit}</button>
+        <span class="zsep"></span>
+        ${cmdBtn('designer.readOrder', { moduleId: m.id }, { iconOnly: true, cls: `btn-g btn-i${d.showOrder ? ' act' : ''}` })}
+        ${cmdBtn('designer.renumber', { moduleId: m.id }, { iconOnly: true })}
       </div>
       <div class="chint" data-no-i18n>${t('designerHint')}</div>
       <div class="czoom" data-no-i18n>
@@ -163,7 +167,9 @@ function mountDesignerBoard() {
     el.style.left = `${n.x}px`;
     el.style.top = `${n.y}px`;
     const col = n.color || DG_COLORS[1];
-    if (n.shape === 'diamond') {
+    const comic = dgComicNodeHtml(n, col);
+    if (comic != null) el.innerHTML = comic;
+    else if (n.shape === 'diamond') {
       el.innerHTML = `<span class="dg-diamond-box" style="border-color:${x(col)}"></span><span class="dg-label" style="color:${x(col)}" data-no-i18n>${x(dgNodeName(n))}</span>`;
     } else if (DG_POLY_SHAPES.includes(n.shape)) {
       // --dg-col drives the plate; the ::after inset repaints the middle in
@@ -207,12 +213,13 @@ function mountDesignerBoard() {
         el.removeEventListener('pointerup', up);
         if (moved) await api.designer.moveNode(n.id, n.x, n.y);
         else if (dgState.edgeFrom === n.id) { /* stays armed */ }
-        else if (n.linker_key) openEntityByKey(n.linker_key);
+        else if (n.linker_key && !dgIsComic(n.shape)) openEntityByKey(n.linker_key);
       };
       el.addEventListener('pointermove', mv);
       el.addEventListener('pointerup', up);
     });
     stage.appendChild(el);
+    if (dgIsComic(n.shape)) dgComicDecorate(el, n, zoomOf, drawEdges);
   }
   drawEdges(); // after node creation — trim math reads real node DOM sizes
 
@@ -356,12 +363,14 @@ function buildDesignNodeFieldsHtml(n, opts = {}) {
       </div></div>`;
 }
 
-function openDesignNodeModal(id) {
+async function openDesignNodeModal(id) {
   const d = S.designerData;
   const n = d.nodes.find(nn => nn.id === id);
   if (!n) return;
+  const comic = await dgComicFieldsHtml(n);
   openModal(t('moduleEdit'), `
     ${buildDesignNodeFieldsHtml(n, { prefix: 'dn' })}
+    ${comic}
     <div class="mfoot">
       <button class="btn btn-d" onclick="deleteDesignNodeRow(${n.id})">${t('delete')}</button>
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
@@ -379,6 +388,7 @@ async function submitDesignNode(id) {
   const colorEl = document.querySelector('#dn-colors .sk-swatch.act');
   const color = colorEl ? colorEl.dataset.color : n.color;
   await api.designer.updateNode(id, shape, text, color);
+  if (dgIsComic(shape)) await dgComicSubmit(id);
   closeModal();
   await openModuleNode(d.moduleId);
   invalidateNestItems(d.moduleId);

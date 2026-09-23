@@ -593,3 +593,18 @@ select.fp-input[multiple]{padding:2px}
 .nar-play-var{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:calc(12px * var(--fsc,1))}
 .nar-play-var.changed b{color:var(--accent)}
 @media (max-width:720px){.nar-play{grid-template-columns:1fr}}
+
+/* ── Designer comic pages (v5 Part 7, V5.md §11.6) ── */
+.dg-node.dg-panel,.dg-node.dg-balloon{display:flex;flex-direction:column;padding:0;box-sizing:border-box;overflow:visible}
+.dg-node.dg-panel{border:2px solid var(--dg-col);border-radius:2px;background:var(--surface)}
+.dg-panel-img{flex:1;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.dg-panel-img img{max-width:100%;max-height:100%;object-fit:contain;pointer-events:none}
+.dg-panel-cap{padding:3px 6px;font-size:calc(11px * var(--fsc,1));background:var(--raised);color:var(--t1);border-top:1px solid var(--border)}
+.dg-node.dg-balloon{justify-content:center;align-items:center;text-align:center;padding:6px 10px;border:2px solid var(--dg-col);
+  border-radius:50%/40%;background:var(--surface);position:relative}
+.dg-node.dg-balloon::after{content:'';position:absolute;left:22%;bottom:-12px;border:7px solid transparent;border-top:12px solid var(--dg-col);border-bottom:0}
+.dg-balloon-who{font-size:calc(10px * var(--fsc,1));font-weight:600}
+.dg-resize{position:absolute;right:-5px;bottom:-5px;width:12px;height:12px;border-radius:3px;background:var(--dg-col);cursor:nwse-resize;opacity:0;transition:opacity .15s}
+.dg-node:hover .dg-resize{opacity:.9}
+.dg-order{position:absolute;left:-9px;top:-9px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--accent);
+  color:var(--bg);font-size:calc(11px * var(--fsc,1));font-weight:700;display:flex;align-items:center;justify-content:center}
