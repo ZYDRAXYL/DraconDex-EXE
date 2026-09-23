@@ -79,6 +79,7 @@ CTX_PROVIDERS['sagehut.graph'] = () => SAGEHUT_VIEWS.map(v => ({
 CTX_PROVIDERS['exhibitor.graph'] = () => [
   cmdItem('exhibitor.addRelation', { moduleId: S.exhibitorData?.moduleId }),
   cmdItem('exhibitor.openScene', { moduleId: S.exhibitorData?.moduleId }),
+  cmdItem('exhibitor.treeLayout', { moduleId: S.exhibitorData?.moduleId }),
   { sep: true },
   ...ctxZoomPair(),
 ];

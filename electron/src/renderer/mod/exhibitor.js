@@ -70,6 +70,7 @@ async function loadExhibitorData(m) {
   S.exhibitorData = {
     moduleId: m.id, def, items, index: byKey, relations, wikiPairs, relTypes, cls, fieldNames,
     asOf: ui.relAsOf ? ui.relAsOf : null,
+    treeRel: ui.treeRel || null, treeDir: ui.treeDir || null, // mod/exhibitor-tree.js
     view: EXH_VIEWS.includes(ui.activeView) ? ui.activeView : 'scene',
     groupBy: ui.boardGroupBy || 'module',
     nodes, camera: scene.view,
@@ -151,6 +152,7 @@ function buildExhibitorMainHtml(m) {
     <span class="vw-filterlabel">${t('exhibitorFilter')}</span>${filterChipsHtml(d.def)}
     ${exhAsOfInputHtml(d)}
     ${cmdBtn('exhibitor.editFilter', { moduleId: d.moduleId }, { iconOnly: true })}
+    ${cmdBtn('exhibitor.treeLayout', { moduleId: d.moduleId }, { iconOnly: true })}
     ${viewBar}
   </div>`;
   if (d.view === 'scene') return toolbar + buildExhibitorSceneHtml(d);

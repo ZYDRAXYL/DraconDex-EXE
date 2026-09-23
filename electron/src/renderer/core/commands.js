@@ -249,6 +249,7 @@ const COMMANDS = {
   // ── Exhibitor ────────────────────────────────────────────────────────
   'exhibitor.addRelation': { label: 'addRelation', icon: 'plus', scope: 'kind:exhibitor', run: () => openExhibitorRelationModal(), surfaces: ['exhibitor.toolbar', 'canvas.ctx'] },
   'exhibitor.editFilter': { label: 'editFilter', icon: 'edit', scope: 'kind:exhibitor', run: (c, el) => openSavedFilterPopup(el || paletteAnchor(), c.moduleId, S.exhibitorData?.def), surfaces: ['exhibitor.toolbar'] },
+  'exhibitor.treeLayout': { label: 'exhTreeLayout', icon: 'projects', scope: 'kind:exhibitor', when: () => S.exhibitorData?.view !== 'scene' && !!S.exhibitorData?.relations?.length, run: () => openExhibitorTreeModal(), surfaces: ['exhibitor.toolbar', 'canvas.ctx'] },
   'exhibitor.openScene': { label: 'exhibitorOpenScene', icon: 'relation', scope: 'kind:exhibitor', when: () => S.exhibitorData?.view !== 'scene', run: () => setExhibitorView('scene'), surfaces: ['canvas.ctx'] },
   'exhibitor.addNote': { label: 'exhibitorAddNote', icon: 'plus', scope: 'kind:exhibitor', when: () => S.exhibitorData?.view === 'scene', run: () => addExhibitorFreeNode('note'), surfaces: ['exhibitor.ctx'] },
   'exhibitor.addGroup': { label: 'exhibitorAddGroup', icon: 'plus', scope: 'kind:exhibitor', when: () => S.exhibitorData?.view === 'scene', run: () => addExhibitorFreeNode('group'), surfaces: ['exhibitor.ctx'] },
