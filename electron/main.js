@@ -823,6 +823,8 @@ h('narrator:getChoiceOptions',   (did)          => db.getChoiceOptions(did));
 h('narrator:createChoiceOption', (tid,tx)       => db.createChoiceOption(tid,tx));
 h('narrator:updateChoiceOption', (id,tx,k,ef,j) => db.updateChoiceOption(id,tx,k,ef,j));
 h('narrator:deleteChoiceOption', (id)           => db.deleteChoiceOption(id));
+h('narrator:setChoiceLogic',     (id,c,s)       => db.setChoiceOptionLogic(id,c,s));
+h('narrator:variables',          (nx)           => db.getStoryVariables(nx));
 
 // Book "Author" (v3 Phase 11) — chapters
 h('author:getChapters',    (mref)      => db.getBookChapters(mref));

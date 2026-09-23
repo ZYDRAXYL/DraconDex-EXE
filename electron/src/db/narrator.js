@@ -129,9 +129,61 @@ const updateChoiceOption = (id, text, kind, effectText, jumpRef) =>
 const deleteChoiceOption = (id) =>
   getDB().prepare(`DELETE FROM story_choice_option WHERE id=?`).run(id);
 
+// ── Story variables, conditions and set-ops (v5 Part 7, V5.md §11.6) ────
+// A variable is an ordinary Classifier object in a category made from the
+// "story variables" preset: its fields are marked by options.role
+// 'varType' (a select: number / true-false / text) and 'varDefault'. A
+// choice option then holds two JSON lists of {key: 'cobj_<id>', op, value}:
+//   condition  every entry must hold for the option to be offered (AND)
+//   set_ops    applied, in order, when the option is picked
+// Picked from dropdowns in the editor, never typed as an expression. The
+// keys remap on import like any key column (KEY_COLUMNS in entity-kinds.js).
+const COND_OPS = ['==', '!=', '>', '>=', '<', '<='];
+const SET_OPS = ['=', '+=', '-=', 'toggle'];
+const VAR_TYPES = ['number', 'bool', 'text'];
+
+function cleanLogic(list, ops) {
+  if (!Array.isArray(list)) return null;
+  const out = list
+    .filter((e) => /^cobj_\d+$/.test(e?.key || '') && ops.includes(e.op))
+    .map((e) => ({ key: e.key, op: e.op, value: e.op === 'toggle' ? '' : String(e.value ?? '').slice(0, 200) }));
+  return out.length ? JSON.stringify(out) : null;
+}
+
+const setChoiceOptionLogic = (id, condition, setOps) =>
+  getDB().prepare(`UPDATE story_choice_option SET condition=?, set_ops=?, update_at=datetime('now') WHERE id=?`)
+    .run(cleanLogic(condition, COND_OPS), cleanLogic(setOps, SET_OPS), id);
+
+// Every story variable in a Nexus: { key, name, moduleName, type, initial }.
+function getStoryVariables(nexusId) {
+  const d = getDB();
+  const roleTpl = (role) => `SELECT ct.id, ct.options FROM classifier_template ct
+    WHERE ct.module_ref=? AND ct.object_ref IS NULL AND ct.options LIKE '%"role":"${role}"%' ORDER BY ct.id LIMIT 1`;
+  const val = d.prepare(`SELECT attribute_value AS v FROM classifier_attribute WHERE object_ref=? AND template_ref=?`);
+  const mods = d.prepare(`SELECT id, name FROM module WHERE nexus_ref=? AND kind='classifier' ORDER BY display_order, id`).all(nexusId);
+  const out = [];
+  for (const m of mods) {
+    const def = d.prepare(roleTpl('varDefault')).get(m.id);
+    if (!def) continue;
+    const typ = d.prepare(roleTpl('varType')).get(m.id);
+    let choices = [];
+    try { choices = JSON.parse(typ?.options || '{}').choices || []; } catch (_) {}
+    for (const o of d.prepare(`SELECT id, name FROM classifier_object WHERE module_ref=? ORDER BY display_order, id`).all(m.id)) {
+      const initial = val.get(o.id, def.id)?.v ?? '';
+      const tv = typ ? val.get(o.id, typ.id)?.v : null;
+      // The select's position, not its (translated, renamable) text, says the type.
+      let type = VAR_TYPES[choices.indexOf(tv)] || null;
+      if (!type) type = /^(true|false)$/i.test(initial) ? 'bool' : initial !== '' && Number.isFinite(Number(initial)) ? 'number' : 'text';
+      out.push({ key: `cobj_${o.id}`, name: o.name, moduleName: m.name, type, initial });
+    }
+  }
+  return out;
+}
+
 module.exports = {
   getDialogues, createDialogue, updateDialogue, updateDialogueDescription, updateDialoguePos, deleteDialogue,
   getEdges, createEdge, updateEdgeLabel, deleteEdge,
   getTalks, createTalk, updateTalk, deleteTalk, moveTalks,
   getChoiceOptions, createChoiceOption, updateChoiceOption, deleteChoiceOption,
+  setChoiceOptionLogic, getStoryVariables,
 };

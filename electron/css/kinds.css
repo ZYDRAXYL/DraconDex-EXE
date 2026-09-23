@@ -575,3 +575,21 @@ select.fp-input[multiple]{padding:2px}
 .div-main{display:flex;flex-direction:column}
 .div-result.empty-result{background:transparent;border-style:dashed}
 .div-link{max-width:40%;overflow:hidden;text-overflow:ellipsis}
+
+/* ── Narrator conditions + play-test (v5 Part 7, V5.md §11.6) ── */
+.nar-logic-btn{position:relative;width:auto;gap:3px}
+.nar-logic-btn.on{color:var(--accent)}
+.nar-logic-badge{font-size:calc(10px * var(--fsc,1))}
+.nar-logic-row{display:grid;grid-template-columns:1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px}
+.nar-play-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.nar-play-hidden{display:inline-flex;align-items:center;gap:4px;font-size:calc(12px * var(--fsc,1));color:var(--t2)}
+.nar-play{display:grid;grid-template-columns:1fr 220px;gap:14px;align-items:start}
+.nar-play-script{min-width:0}
+.nar-play-head{margin:14px 0 6px}
+.nar-play-pick{color:var(--accent);font-weight:600}
+.nar-play-next{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:10px}
+.nar-play-opt{text-align:left}
+.nar-play-vars{border:1px solid var(--border);border-radius:var(--r);background:var(--surface);padding:8px 10px;position:sticky;top:0}
+.nar-play-var{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:calc(12px * var(--fsc,1))}
+.nar-play-var.changed b{color:var(--accent)}
+@media (max-width:720px){.nar-play{grid-template-columns:1fr}}

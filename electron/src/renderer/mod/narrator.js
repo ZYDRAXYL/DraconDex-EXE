@@ -418,6 +418,11 @@ async function mountNarratorReader() {
   const d = S.narratorData;
   const host = q('#nar-reader');
   if (!d || !host) return;
+  // v5 Part 7 (§11.6): the reader's second mode plays the story through.
+  if (S.narratorReaderMode === 'play') {
+    if (S.narratorPlay) paintNarratorPlay(); else await startNarratorPlay();
+    return;
+  }
   const inDeg = new Map();
   for (const e of d.edges) inDeg.set(e.to_ref, (inDeg.get(e.to_ref) || 0) + 1);
   const roots = d.dialogues.filter(dl => !inDeg.get(dl.id));
@@ -466,5 +471,5 @@ async function mountNarratorReader() {
       ${outs.length > 1 ? `<div class="nar-read-branch" data-no-i18n>⑂ ${outs.map(e => `${x(e.label || '')} → ${x(d.dialogues.find(dd => dd.id === e.to_ref)?.name || '')}`).join(' · ')}</div>` : ''}
     </div>`;
   }
-  host.innerHTML = html || `<div class="empty"><p>${t('nestEmpty')}</p></div>`;
+  host.innerHTML = `<div class="nar-play-bar">${narratorReaderModeBarHtml()}</div>${html || `<div class="empty"><p>${t('nestEmpty')}</p></div>`}`;
 }

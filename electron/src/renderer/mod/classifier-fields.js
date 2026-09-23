@@ -65,7 +65,12 @@ async function submitClassifierTemplateForm(moduleId, editing = null) {
   const dispType = q('#ct-disptype')?.value || 'text';
   const levelable = q('#ct-lv')?.value === '1';
   const hasCondition = q('#ct-cond')?.value === '1';
-  const options = readClsFieldOptions(dispType);
+  let options = readClsFieldOptions(dispType);
+  // A field's role (a story variable's type / default, §11.6) is not in the
+  // form — keep it through an edit, or Narrator would stop seeing the field.
+  const cur = editing ? S.classifierData?.templates?.find(tp => tp.id === editing) : null;
+  const role = cur ? clsFieldOpts(cur).role : null;
+  if (role) options = { ...(options || {}), role };
   if (editing) await api.classifier.updateTemplate(editing, name, dispType, levelable, hasCondition, options);
   else await api.classifier.createTemplate(moduleId, name, dispType, levelable, hasCondition, null, options);
   closeModal();

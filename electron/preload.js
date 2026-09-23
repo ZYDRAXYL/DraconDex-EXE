@@ -159,6 +159,8 @@ contextBridge.exposeInMainWorld('api', {
     createChoiceOption:(tid,tx)         => inv('narrator:createChoiceOption', tid,tx),
     updateChoiceOption:(id,tx,k,ef,j)   => inv('narrator:updateChoiceOption', id,tx,k,ef,j),
     deleteChoiceOption:(id)             => inv('narrator:deleteChoiceOption', id),
+    setChoiceLogic:    (id,c,s)         => inv('narrator:setChoiceLogic', id,c,s),
+    variables:         (nx)             => inv('narrator:variables', nx),
   },
   author: {
     getChapters:   (mref)    => inv('author:getChapters', mref),

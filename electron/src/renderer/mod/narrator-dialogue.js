@@ -123,6 +123,7 @@ function buildNarratorChoiceOptionHtml(d, o) {
     <input class="nco-text" value="${x(o.option_text || '')}" placeholder="${t('choiceOption')}"
       onblur="saveNarratorChoiceOption(${o.id})">
     ${kindSel}${effectField}
+    ${narratorLogicBtnHtml(o)}
     <button class="btn btn-g btn-i" onclick="deleteNarratorChoiceOption(${o.id})" title="${t('delete')}">${I.delete}</button>
   </div>`;
 }

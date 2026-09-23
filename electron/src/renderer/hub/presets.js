@@ -31,6 +31,45 @@ const KIND_PRESETS = {
       spec: { catType: 'object', fields: [
         { nameKey: 'pfRegion' }, { nameKey: 'pfClimate' }, { nameKey: 'pfDescription', type: 'textarea' },
       ] } },
+    // v5 Part 7 (§11.6) — the modules that almost were, as Classifier shapes.
+    // `role` marks a field the app itself reads (Narrator's story variables);
+    // `choiceKeys` are a select's choices, translated like the field names.
+    { id: 'variables', nameKey: 'presetVariables', icon: 'func',
+      spec: { catType: 'element', fields: [
+        { nameKey: 'pfVarType', type: 'select', role: 'varType', choiceKeys: ['varTypeNumber', 'varTypeBool', 'varTypeText'] },
+        { nameKey: 'pfVarDefault', role: 'varDefault' },
+      ] } },
+    { id: 'secrets', nameKey: 'presetSecrets', icon: 'eyeOff',
+      spec: { catType: 'element', fields: [{ nameKey: 'pfTruth', type: 'textarea' }] } },
+    { id: 'awareness', nameKey: 'presetAwareness', icon: 'person',
+      spec: { catType: 'element', fields: [
+        { nameKey: 'pfWho', type: 'relation', targetKinds: ['object'] },
+        { nameKey: 'pfWhat', type: 'relation', targetKinds: ['object'] },
+        { nameKey: 'pfKnowStatus', type: 'select', choiceKeys: ['knowKnows', 'knowSuspects', 'knowWrong'] },
+        { nameKey: 'pfLearnedAt', type: 'relation', targetKinds: ['chapter'] },
+      ] } },
+    { id: 'threads', nameKey: 'presetThreads', icon: 'relation',
+      spec: { catType: 'element', fields: [{ nameKey: 'pfDescription', type: 'textarea' }] } },
+    { id: 'beats', nameKey: 'presetBeats', icon: 'timeline',
+      spec: { catType: 'element', fields: [
+        { nameKey: 'pfOfThread', type: 'relation', targetKinds: ['object'] },
+        { nameKey: 'pfBeatType', type: 'select', choiceKeys: ['beatSetup', 'beatRemind', 'beatPayoff', 'beatRedHerring'] },
+        { nameKey: 'pfInChapter', type: 'relation', targetKinds: ['chapter'] },
+      ] } },
+    { id: 'skills', nameKey: 'presetSkills', icon: 'star',
+      spec: { catType: 'element', fields: [
+        { nameKey: 'pfDescription', type: 'textarea' },
+        { nameKey: 'pfSkillEffect', levelable: true, hasCondition: true },
+        { nameKey: 'pfUsableBy', type: 'relation', targetKinds: ['object'] },
+      ] } },
+    { id: 'quests', nameKey: 'presetQuests', icon: 'map',
+      spec: { catType: 'element', fields: [
+        { nameKey: 'pfQuestStatus', type: 'select', choiceKeys: ['questNotStarted', 'questActive', 'questDone', 'questFailed'] },
+        { nameKey: 'pfQuestGiver', type: 'relation', targetKinds: ['object'] },
+        { nameKey: 'pfObjectives', type: 'textarea' },
+        { nameKey: 'pfReward' },
+        { nameKey: 'pfInChapter', type: 'relation', targetKinds: ['chapter', 'event'] },
+      ] } },
   ],
   // v5 Part 7 (§11.5): the name / word generator is a Diviner preset, not a
   // module of its own — a 'join' table whose entries roll the other two.
@@ -70,6 +109,16 @@ function presetsFor(kind) {
   ];
 }
 
+// A built-in field's options JSON: its choices in this language, its
+// relation targets, and its role (what the app reads it as), or null.
+function presetFieldOptions(f) {
+  const o = {};
+  if (f.choiceKeys) o.choices = f.choiceKeys.map(k => t(k));
+  if (f.targetKinds) o.targetKinds = f.targetKinds;
+  if (f.role) o.role = f.role;
+  return Object.keys(o).length ? JSON.stringify(o) : null;
+}
+
 // ref -> a spec db/preset.js can apply (built-in field names translated now).
 function presetSpec(kind, ref) {
   if (ref.startsWith('b:')) {
@@ -77,7 +126,10 @@ function presetSpec(kind, ref) {
     if (!p) return null;
     return {
       ...p.spec,
-      fields: (p.spec.fields || []).map(f => ({ name: t(f.nameKey), type: f.type || 'text', options: f.options })),
+      fields: (p.spec.fields || []).map(f => ({
+        name: t(f.nameKey), type: f.type || 'text', levelable: !!f.levelable, hasCondition: !!f.hasCondition,
+        options: presetFieldOptions(f),
+      })),
       tables: (p.spec.tables || []).map(tb => ({ ...tb, name: t(tb.nameKey) })),
     };
   }
