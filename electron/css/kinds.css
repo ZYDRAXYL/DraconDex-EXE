@@ -353,6 +353,30 @@ select.fp-input[multiple]{padding:2px}
 .vw-groupby{background:var(--raised);border:1px solid var(--border);border-radius:var(--rs);color:var(--t1);padding:3px 6px}
 .cn-wrap{position:relative}
 .cn-board{height:600px}
+/* v5 Exhibitor Scene (mod/exhibitor-scene.js): Hierarchy | canvas | Inspector */
+.exh-scene{display:flex;gap:10px;height:620px;min-height:0}
+.exh-hier,.exh-insp{flex:0 0 220px;display:flex;flex-direction:column;min-height:0;overflow:auto;
+	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);font-size:calc(12px * var(--fsc,1))}
+.exh-insp{flex-basis:240px;padding-bottom:10px}
+.exh-insp .fg,.exh-insp .fv-useimg,.exh-insp .btn,.exh-insp .drafter-hint{margin:6px 10px}
+.exh-hier-head{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;
+	font-weight:600;color:var(--t2);border-bottom:1px solid var(--border)}
+.exh-hier-head .cnt{font-weight:400;color:var(--t3)}
+.exh-hier-list{flex:0 1 auto;overflow:auto;max-height:45%}
+.exh-hier .li{display:flex;align-items:center;gap:6px;cursor:pointer}
+.exh-hier .li .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exh-hier .li .kind{color:var(--t3);font-size:calc(10px * var(--fsc,1))}
+.exh-hidden .name{opacity:.45}
+.exh-empty{padding:10px}
+.exh-search{margin:6px 10px;width:calc(100% - 20px)}
+.exh-palette{flex:1 1 auto;overflow:auto}
+.exh-pal-row{cursor:grab}
+.exh-stage-wrap{position:relative;flex:1;min-width:0;border:1px solid var(--border);border-radius:var(--r);
+	overflow:hidden;background:var(--bg)}
+.exh-stage-wrap .is-panning{cursor:grabbing}
+.exh-linking{outline:2px dashed var(--accent);outline-offset:-2px}
+.exh-linkbar{position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
+	padding:6px 10px;background:var(--raised);border:1px solid var(--accent);border-radius:var(--r);z-index:2}
 #cn-graph{position:relative;width:1600px;height:1100px;transform-origin:0 0}
 #cn-edges{position:absolute;inset:0;pointer-events:none}
 .cn-node{position:absolute;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:grab;user-select:none;width:52px}

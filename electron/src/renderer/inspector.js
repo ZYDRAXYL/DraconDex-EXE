@@ -58,14 +58,17 @@ function buildInspectorHtml(m) {
     <button class="btn btn-g" style="margin:4px 14px" onclick="openAttrModal(${m.id})">${I.plus} ${t('addAttribute')}</button>
 
     <div class="insp-label">${t('moduleLink')}</div>
+    <!-- v5 (APP docs/V5.md §3.6): a link chip opens this module's Exhibitor
+         with that item placed and selected, instead of jumping straight to it. -->
     <div class="prop"><span class="pk">${t('outgoingLinks')}</span></div>
     <div class="insp-chips">${d.links.outgoing.length ? d.links.outgoing.map(l =>
-      l.key ? `<span class="htag lk" onclick="openEntityByKey(${xj(l.key)})">[[${x(l.name)}]]</span>` : `<span class="htag" style="opacity:.5">[[${x(l.name)}]]</span>`
+      l.key ? `<span class="htag lk" onclick="openExhibitorFor(${m.id},${xj(l.key)})">[[${x(l.name)}]]</span>` : `<span class="htag" style="opacity:.5">[[${x(l.name)}]]</span>`
     ).join('') : `<span class="pv ghost">—</span>`}</div>
     <div class="prop"><span class="pk">${t('backlinks')}</span></div>
     <div class="insp-chips">${d.links.backlinks.length ? d.links.backlinks.map(l =>
-      `<span class="htag lk" onclick="openEntityByKey(${xj(l.key)})">${x(l.name)}</span>`
+      `<span class="htag lk" onclick="openExhibitorFor(${m.id},${xj(l.key)})">${x(l.name)}</span>`
     ).join('') : `<span class="pv ghost">${t('noBacklinks')}</span>`}</div>
+    <button class="btn btn-g" style="margin:4px 14px" onclick="openExhibitorFor(${m.id},'module_${m.id}')">${I.relation} ${t('openInExhibitor')}</button>
 
     <div class="insp-label">${t('moduleUiSpec')}</div>
     <div class="prop"><span class="pk" data-no-i18n>View</span><span class="pv" data-no-i18n>${x(inspectorViewLabel(m, d.ui))}</span></div>
@@ -117,8 +120,7 @@ function inspectorViewLabel(m, ui) {
   if (m.kind === 'author') return (typeof AUTHOR_VIEW_LABEL !== 'undefined' && AUTHOR_VIEW_LABEL[v]) || 'Editor';
   if (m.kind === 'scribe') return (typeof CHATSCRIBE_VIEW_LABEL !== 'undefined' && CHATSCRIBE_VIEW_LABEL[v]) || 'Chat';
   if (m.kind === 'drafter') return (typeof DRAFTER_VIEW_LABEL !== 'undefined' && DRAFTER_VIEW_LABEL[v]) || 'Edit';
-  if (m.kind === 'viewer') return (typeof VIEWER_VIEW_LABEL !== 'undefined' && VIEWER_VIEW_LABEL[v]) || 'Table';
-  if (m.kind === 'connector') return (typeof CONNECTOR_VIEW_LABEL !== 'undefined' && CONNECTOR_VIEW_LABEL[v]) || 'Graph';
+  if (m.kind === 'exhibitor') return (typeof EXH_VIEW_LABEL !== 'undefined' && EXH_VIEW_LABEL[v]) || 'Scene';
   if (m.kind === 'sketcher') return (typeof SKETCHER_VIEW_LABEL !== 'undefined' && SKETCHER_VIEW_LABEL[v]) || 'Canvas';
   if (m.kind === 'designer') return (typeof DESIGNER_VIEW_LABEL !== 'undefined' && DESIGNER_VIEW_LABEL[v]) || 'Canvas';
   if (m.kind === 'locator') return 'Canvas';

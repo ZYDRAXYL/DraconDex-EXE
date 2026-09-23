@@ -25,6 +25,9 @@ const { makePkcePair, runOAuthLoopback } = require('./oauth-loopback');
 
 const SNAPSHOT_FORMAT = 'dracondex-vault-snapshot';
 const SNAPSHOT_VERSION = 1;
+// Pre-v5 module kinds a snapshot (an older desktop build, the APK, an old
+// .mddx) can still carry. Mapped on apply; the v5 module CHECK rejects them.
+const V5_KIND_MAP = { viewer: 'exhibitor', connector: 'exhibitor' };
 
 // Build-mode gate: packaged builds (portable + installer) talk to the real
 // Supabase backend configured by the user; an unpackaged run (`npm start`,
@@ -492,9 +495,28 @@ function serializeVault(nexusId, moduleIds = null) {
       FROM design_edge e JOIN module m ON e.module_ref=m.id WHERE m.nexus_ref=?`),
   };
 
+  // v5 (APP docs/V5.md §3.5): rel_type / directed / moduleRef travel with
+  // the relation — without them every pull would silently reset them (the
+  // Plan's Part 7 warning). Readers that predate v5 (the APK today) ignore
+  // the extra fields; INSERT OR IGNORE on their side is unchanged.
   const relations = allGlobal(`
-    SELECT from_key AS fromKey, to_key AS toKey, label
+    SELECT from_key AS fromKey, to_key AS toKey, label,
+           rel_type AS relType, directed, module_ref AS moduleId
     FROM entity_relation WHERE nexus_ref=? ORDER BY id`);
+
+  // v5 Exhibitor scenes. Module-scoped like designer, so a module export
+  // carries its own scene. A new top-level key: older readers skip it.
+  const exhibitor = {
+    nodes: all(`
+      SELECT n.id, n.module_ref AS moduleId, n.parent_id AS parentId, n.node_type AS nodeType,
+             n.linker_key AS linkerKey, n.label, n.x, n.y, n.w, n.h, n.z, n.rotation, n.scale,
+             n.locked, n.hidden, n.color, n.props
+      FROM exhibit_node n JOIN module m ON n.module_ref=m.id
+      WHERE m.nexus_ref=? ORDER BY n.id`),
+    views: all(`
+      SELECT v.module_ref AS moduleId, v.scale, v.tx, v.ty, v.bg_linker_key AS bgLinkerKey, v.grid, v.snap
+      FROM exhibit_view v JOIN module m ON v.module_ref=m.id WHERE m.nexus_ref=?`),
+  };
 
   // Nexus-scoped like relations, so allGlobal (skipped for a module-scoped
   // export — a single module can't carry the whole vault's templates).
@@ -554,6 +576,7 @@ function serializeVault(nexusId, moduleIds = null) {
     modules, moduleAttrs, moduleUi, moduleTags,
     classifier, locator, chronicler, wanderer, narrator, author,
     chatscribe, sketcher, designer, relations, notes, calendarTemplates,
+    exhibitor,
   };
 }
 
@@ -671,6 +694,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
 
     // 4. Modules, parents-first (BFS so a child never lands before its parent).
     const modMap = new Map();
+    const legacyKind = new Map(); // old module id -> 'viewer'|'connector' for pre-v5 payloads
     let pending = arr(payload.modules).slice();
     while (pending.length) {
       const next = [];
@@ -689,11 +713,12 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
           INSERT INTO module (nexus_ref, parent_id, name, kind, icon, icon_color, color,
                               description, display_order, pinned, cat_type, handle, create_at, update_at)
           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,COALESCE(?,datetime('now')),COALESCE(?,datetime('now')))`)
-          .run(nexusId, parentId, m.name, m.kind,
+          .run(nexusId, parentId, m.name, V5_KIND_MAP[m.kind] || m.kind,
                m.icon ?? null, colorId(m.iconColorCode), colorId(m.colorCode),
                m.description ?? null, m.displayOrder ?? 0, m.pinned ?? 0, m.catType ?? null, handle,
                m.createAt ?? null, m.updateAt ?? null);
         modMap.set(m.id, r.lastInsertRowid);
+        if (V5_KIND_MAP[m.kind]) legacyKind.set(m.id, m.kind);
         progressed = true;
       }
       if (!progressed) break; // orphaned parentIds — drop the remainder
@@ -921,8 +946,40 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       const fk = remapEntityKey(rel.fromKey, keyMaps);
       const tk = remapEntityKey(rel.toKey, keyMaps);
       if (!fk || !tk) { droppedRelations++; continue; }
-      db.prepare(`INSERT OR IGNORE INTO entity_relation (nexus_ref, from_key, to_key, label) VALUES (?,?,?,?)`)
-        .run(nexusId, fk, tk, rel.label ?? null);
+      db.prepare(`INSERT OR IGNORE INTO entity_relation (nexus_ref, from_key, to_key, label, rel_type, directed, module_ref)
+        VALUES (?,?,?,?,?,?,?)`)
+        .run(nexusId, fk, tk, rel.label ?? null, rel.relType ?? null,
+             rel.directed === 0 ? 0 : 1, rel.moduleId != null ? (mod(rel.moduleId) ?? null) : null);
+    }
+
+    // v5 Exhibitor scenes — after every key map exists (note_ included).
+    // A node whose entity did not come across keeps its place and label
+    // with the link cleared, rather than vanishing from the user's layout.
+    const exh = sect(payload.exhibitor);
+    const enodeMap = new Map();
+    const enodeParents = [];
+    for (const n of arr(exh.nodes)) {
+      if (mod(n.moduleId) == null) continue;
+      const k = n.linkerKey ? remapEntityKey(n.linkerKey, keyMaps) : null;
+      const r = db.prepare(`
+        INSERT INTO exhibit_node (module_ref, node_type, linker_key, label, x, y, w, h, z, rotation, scale, locked, hidden, color, props)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(mod(n.moduleId), n.nodeType ?? 'entity', k, n.label ?? null, n.x ?? 0, n.y ?? 0,
+             n.w ?? null, n.h ?? null, n.z ?? 0, n.rotation ?? 0, n.scale ?? 1,
+             n.locked ? 1 : 0, n.hidden ? 1 : 0, n.color ?? null, n.props ?? null);
+      enodeMap.set(n.id, r.lastInsertRowid);
+      if (n.parentId != null) enodeParents.push([n.id, n.parentId]);
+    }
+    for (const [id, pid] of enodeParents) {
+      if (enodeMap.has(pid)) {
+        db.prepare(`UPDATE exhibit_node SET parent_id=? WHERE id=?`).run(enodeMap.get(pid), enodeMap.get(id));
+      }
+    }
+    for (const v of arr(exh.views)) {
+      if (mod(v.moduleId) == null) continue;
+      const bg = v.bgLinkerKey ? remapEntityKey(v.bgLinkerKey, keyMaps) : null;
+      db.prepare(`INSERT OR IGNORE INTO exhibit_view (module_ref, scale, tx, ty, bg_linker_key, grid, snap) VALUES (?,?,?,?,?,?,?)`)
+        .run(mod(v.moduleId), v.scale ?? 1, v.tx ?? 0, v.ty ?? 0, bg, v.grid === 0 ? 0 : 1, v.snap ? 1 : 0);
     }
 
     // Templates carry no entity ids, so unlike relations they need no remap —
@@ -941,6 +998,11 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     for (const u of arr(payload.moduleUi)) {
       if (mod(u.moduleId) == null) continue;
       let value = u.value;
+      // A pre-v5 Connector's saved view maps the way migrateModuleKindV5
+      // maps it in place: graph -> the Scene, edge list -> Edges.
+      if (u.key === 'activeView' && legacyKind.get(u.moduleId) === 'connector') {
+        value = u.value === 'edgelist' ? 'edges' : 'scene';
+      }
       if (u.key === 'mapModule' || u.key === 'timelineModule') {
         const target = modMap.get(Number(u.value));
         if (target == null) continue;
@@ -948,6 +1010,11 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       }
       db.prepare(`INSERT OR IGNORE INTO module_ui (module_ref, ui_key, ui_value) VALUES (?,?,?)`)
         .run(mod(u.moduleId), u.key, value ?? null);
+    }
+    for (const [oldId, kind] of legacyKind) {
+      if (kind !== 'connector') continue;
+      db.prepare(`INSERT OR IGNORE INTO module_ui (module_ref, ui_key, ui_value) VALUES (?,'activeView','scene')`).run(mod(oldId));
+      db.prepare(`INSERT OR IGNORE INTO module_ui (module_ref, ui_key, ui_value) VALUES (?,'seedScene','1')`).run(mod(oldId));
     }
 
     return {

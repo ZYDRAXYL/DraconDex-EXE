@@ -799,9 +799,19 @@ h('calendar:deleteTemplate', (id)          => db.deleteCalendarTemplate(id));
 h('calendar:ensureBuiltin',  (nx,n,spec)   => db.ensureBuiltinCalendarTemplate(nx,n,spec));
 h('viewer:index',          (nx)         => db.viewerIndex(nx));
 h('viewer:getRelations',   (nx)         => db.getEntityRelations(nx));
-h('viewer:createRelation', (nx,f,tk,l,c)  => db.createEntityRelation(nx,f,tk,l,c));
-h('viewer:updateRelation', (id,l,c)       => db.updateEntityRelation(id,l,c));
+h('viewer:createRelation', (nx,f,tk,l,c,o) => db.createEntityRelation(nx,f,tk,l,c,o || {}));
+h('viewer:updateRelation', (id,l,c,o)     => db.updateEntityRelation(id,l,c,o));
 h('viewer:deleteRelation', (id)         => db.deleteEntityRelation(id));
+h('viewer:relationTypes',  (nx)         => db.getRelationTypes(nx));
+// Exhibitor scene (v5 Part 2)
+h('exhibitor:scene',       (mid)        => db.getExhibitScene(mid));
+h('exhibitor:addNodes',    (mid, ns)    => db.addExhibitNodes(mid, ns));
+h('exhibitor:updateNode',  (id, patch)  => db.updateExhibitNode(id, patch));
+h('exhibitor:moveNodes',   (moves)      => db.moveExhibitNodes(moves));
+h('exhibitor:deleteNode',  (id)         => db.deleteExhibitNode(id));
+h('exhibitor:setView',     (mid, patch) => db.setExhibitView(mid, patch));
+h('exhibitor:findFor',     (mid)        => db.findExhibitorFor(mid));
+h('exhibitor:dedupeReport', ()          => db.takeRelationDedupeReport());
 
 // Drawing "Sketcher" (v3 Phase 15) — pages, strokes, pins, PNG export
 h('sketcher:getPages',     (mref)       => db.getSketchPages(mref));

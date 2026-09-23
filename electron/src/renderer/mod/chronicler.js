@@ -245,48 +245,14 @@ function renderChroniclerEventLinksHtml(ev) {
       <span class="cls-link-name" onclick="openEntityByKey('${x(otherKey)}')">${x(e ? e.name : otherKey)}</span>
       <span class="cls-link-mod">${x(from)}</span>
       ${l.label ? `<span class="cls-link-lbl">${x(l.label)}</span>` : ''}
-      <button class="btn btn-g btn-i" onclick="deleteChroniclerEventLink(${l.id})" title="${t('delete')}">${I.delete}</button>
     </div>`;
   }).join('');
   return `<div class="insp-label cls-link-label">${t('linkedElements')}</div>
     <div class="cls-link-list">${rows || `<div class="cls-lv-empty">${t('noLinkedElements')}</div>`}</div>
-    <button class="btn btn-g" style="margin:4px 0" onclick="openChroniclerEventLinkModal(${ev.id})">${I.plus} ${t('addLinkedElement')}</button>`;
+    <button class="btn btn-g" style="margin:4px 0" onclick="openExhibitorFor(${S.activeItemNode?.moduleId ?? S.activeModuleNode?.id ?? 'null'},'tlev_${ev.id}')">${I.relation} ${t('openInExhibitor')}</button>`;
 }
 
-async function openChroniclerEventLinkModal(evId) {
-  const ix = await api.viewer.index(S.nexus.id);
-  const opts = ix.filter(e => e.key !== `tlev_${evId}` && !e.key.startsWith('module_'));
-  openModal(t('addLinkedElement'), `
-    <div class="fg"><label>${t('element')}</label>
-      <select id="chrl-target">${opts.map(e =>
-        `<option value="${x(e.key)}">${x(e.name)} — ${x(e.moduleName || '')}</option>`).join('')}</select></div>
-    <div class="fg"><label>${t('relationLabel')}</label><input id="chrl-label"></div>
-    <div class="mfoot">
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitChroniclerEventLink(${evId})">${t('create')}</button>
-    </div>`);
-}
-
-async function submitChroniclerEventLink(evId) {
-  const target = q('#chrl-target')?.value;
-  if (!target) { closeModal(); return; }
-  try {
-    await api.viewer.createRelation(S.nexus.id, `tlev_${evId}`, target, q('#chrl-label')?.value.trim() || null, null);
-  } catch (e) {
-    toast(t('linkExists'), 'err');
-    return;
-  }
-  closeModal();
-  await reloadChroniclerLinks();
-  await mountChroniclerGraph();
-  toast(t('created'), 'ok');
-}
-
-async function deleteChroniclerEventLink(id) {
-  await api.viewer.deleteRelation(id);
-  await reloadChroniclerLinks();
-  await mountChroniclerGraph();
-}
+// v5 (APP docs/V5.md §3.5): links are read here, authored in an Exhibitor.
 
 async function reloadChroniclerLinks() {
   const [relations, index] = await Promise.all([

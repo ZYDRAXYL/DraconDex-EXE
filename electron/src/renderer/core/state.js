@@ -358,8 +358,8 @@ const KIND_CLASSIC_KEY = {
   collector: 'kcFolder', manager: 'kcProject', inspector: 'kcDetail',
   classifier: 'kcCategory', locator: 'kcMap', chronicler: 'kcTimeline',
   wanderer: 'kcTimeMap', narrator: 'kcStory', author: 'kcBook',
-  scribe: 'kcChat', drafter: 'kcDoc', viewer: 'kcAnalys',
-  connector: 'kcRelation', sketcher: 'kcDrawing', designer: 'kcGraph',
+  scribe: 'kcChat', drafter: 'kcDoc',
+  exhibitor: 'kcExhibitor', sketcher: 'kcDrawing', designer: 'kcGraph',
 };
 function kindLabel(kind) {
   if (S.settings?.nameMode === 'classic') {

@@ -153,9 +153,21 @@ contextBridge.exposeInMainWorld('api', {
   viewer: {
     index:          (nx)        => inv('viewer:index', nx),
     getRelations:   (nx)        => inv('viewer:getRelations', nx),
-    createRelation: (nx,f,tk,l,c) => inv('viewer:createRelation', nx,f,tk,l,c),
-    updateRelation: (id,l,c)      => inv('viewer:updateRelation', id,l,c),
+    createRelation: (nx,f,tk,l,c,o) => inv('viewer:createRelation', nx,f,tk,l,c,o),
+    updateRelation: (id,l,c,o)      => inv('viewer:updateRelation', id,l,c,o),
     deleteRelation: (id)        => inv('viewer:deleteRelation', id),
+    relationTypes:  (nx)        => inv('viewer:relationTypes', nx),
+  },
+  // v5 Exhibitor scene (APP docs/V5.md §3.4)
+  exhibitor: {
+    scene:        (mid)        => inv('exhibitor:scene', mid),
+    addNodes:     (mid, ns)    => inv('exhibitor:addNodes', mid, ns),
+    updateNode:   (id, patch)  => inv('exhibitor:updateNode', id, patch),
+    moveNodes:    (moves)      => inv('exhibitor:moveNodes', moves),
+    deleteNode:   (id)         => inv('exhibitor:deleteNode', id),
+    setView:      (mid, patch) => inv('exhibitor:setView', mid, patch),
+    findFor:      (mid)        => inv('exhibitor:findFor', mid),
+    dedupeReport: ()           => inv('exhibitor:dedupeReport'),
   },
   sketcher: {
     getPages:     (mref)         => inv('sketcher:getPages', mref),

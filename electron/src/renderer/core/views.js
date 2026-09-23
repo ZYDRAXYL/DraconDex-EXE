@@ -279,7 +279,7 @@ function runBuilderMounts() {
   }
   if (S.activeModuleNode?.kind === 'scribe' && typeof mountChatScribe === 'function') mountChatScribe();
   if (S.activeModuleNode?.kind === 'drafter' && typeof mountDrafterEditor === 'function') mountDrafterEditor(S.activeModuleNode);
-  if (S.activeModuleNode?.kind === 'connector' && typeof mountConnectorBoard === 'function') mountConnectorBoard();
+  if (S.activeModuleNode?.kind === 'exhibitor' && typeof mountExhibitor === 'function') mountExhibitor();
   if (S.activeModuleNode?.kind === 'classifier' && S.classifierView === 'relationCat' && typeof mountClassifierRelationGraph === 'function') mountClassifierRelationGraph();
   if (S.activeModuleNode?.kind === 'sketcher' && typeof mountSketcherBoard === 'function') {
     mountSketcherBoard();

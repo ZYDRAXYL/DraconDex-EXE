@@ -118,8 +118,9 @@ function migrateLegacy(nexusId, target, legacyId, batchCtx) {
 
   // Director's relation/relation_obob/relation_obtl/relation_tltl tables
   // (the only legacy source with a dedicated relation-instance schema) →
-  // one 'connector' module whose saved filter scopes to this project's own
-  // classifier/chronicler modules, with real entity_relation edges between
+  // one 'exhibitor' module (a 'connector' before v5) whose saved filter
+  // scopes to this project's own classifier/chronicler modules, with real
+  // entity_relation edges between
   // the migrated classifier_object/timeline_event rows — using the same
   // entity-key scheme viewer.js's own index already uses for those tables
   // (cobj_<id> / tlev_<id>), now that objects/events are real content rows
@@ -127,8 +128,13 @@ function migrateLegacy(nexusId, target, legacyId, batchCtx) {
   const mkRelationConnector = (parentId, name, legacyProjectId, moduleIds, objModMap, eventModMap) => {
     const relRows = d.prepare(`SELECT * FROM relation WHERE project_id=?`).all(legacyProjectId);
     if (!relRows.length || !moduleIds.length) return null;
-    const connId = mkModule(parentId, name, 'connector');
+    // v5: what was a Connector is an Exhibitor, opened on its Scene and
+    // seeded from the filter on first open (migrateModuleKindV5 does the same
+    // for Connectors that already exist).
+    const connId = mkModule(parentId, name, 'exhibitor');
     module_.setModuleUi(connId, 'filterDef', JSON.stringify({ query: '', kinds: [], moduleIds, tag: '' }));
+    module_.setModuleUi(connId, 'activeView', 'scene');
+    module_.setModuleUi(connId, 'seedScene', '1');
     for (const r of relRows) {
       const typeName = r.relation_type ? d.prepare(`SELECT relation_name FROM relation_type WHERE id=?`).get(r.relation_type)?.relation_name : null;
       for (const e of d.prepare(`SELECT * FROM relation_obob WHERE relation_id=?`).all(r.id)) {

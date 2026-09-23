@@ -1,12 +1,12 @@
 'use strict';
-// Analys "Viewer" / Relation "Connector" (progress.md Phase 14).
-// Both kinds are read-only lenses over a saved filter (module_ui key
-// 'filterDef'); this module supplies the two data feeds:
+// Data feeds behind the Exhibitor (v5; formerly the Viewer and Connector
+// kinds, progress.md Phase 14). The file keeps its name because the IPC
+// namespace (api.viewer.*) is read by half the renderer.
 //  - viewerIndex: one flat list of every filterable content item in the
 //    vault (classifier objects, timeline events, story dialogues, book
-//    chapters, chat sessions, modules), each tagged with its source
+//    chapters, chat sessions, modules, assets), each tagged with its source
 //    module and that module's hashtags, so filters evaluate live on open.
-//  - entity_relation CRUD: the Connector's own labeled key->key edges.
+//  - entity_relation CRUD: labeled key->key edges, authored in an Exhibitor.
 const { getDB } = require('./core');
 const { scopedAll } = require('./sqlscope');
 
@@ -84,31 +84,59 @@ function _viewerIndex(nexusId) {
   return out;
 }
 
-// ── Connector relations ─────────────────────────────────────────────────
-// Also the data source for Classifier's relation view (Plan part5 #6) —
-// entity_relation is a generic key->key table, not Connector-specific.
+// ── Relations (entity_relation) ─────────────────────────────────────────
+// Vault-wide on purpose: Classifier, Chronicler, Narrator, Manager and the
+// Exhibitor all read it. v5 (APP docs/V5.md §3.5): an Exhibitor is where
+// relations are authored; module_ref records which one (provenance only).
 const getEntityRelations = (nexusId) => getDB().prepare(`
   SELECT er.*, uc.color_code FROM entity_relation er
   LEFT JOIN use_color uc ON uc.id = er.color
   WHERE er.nexus_ref=? ORDER BY er.id
 `).all(nexusId);
 
-const createEntityRelation = (nexusId, fromKey, toKey, label, colorId) => getDB().prepare(`
-  INSERT INTO entity_relation (nexus_ref, from_key, to_key, label, color) VALUES (?,?,?,?,?)
-  ON CONFLICT(from_key, to_key, label) DO NOTHING
-`).run(nexusId, fromKey, toKey, label || null, colorId || null).lastInsertRowid;
+// INSERT OR IGNORE rather than ON CONFLICT(...): the v5 duplicate guard is
+// the expression index idx_entity_relation_v5 (NULL-safe on label/rel_type),
+// which no ON CONFLICT column list can name. On a duplicate the existing
+// row's id comes back, so callers can treat create as idempotent.
+function createEntityRelation(nexusId, fromKey, toKey, label, colorId, opts = {}) {
+  const d = getDB();
+  const relType = opts.relType ? String(opts.relType).trim() || null : null;
+  const r = d.prepare(`
+    INSERT OR IGNORE INTO entity_relation (nexus_ref, from_key, to_key, label, color, rel_type, directed, module_ref)
+    VALUES (?,?,?,?,?,?,?,?)
+  `).run(nexusId, fromKey, toKey, label || null, colorId || null, relType,
+         opts.directed === false || opts.directed === 0 ? 0 : 1, opts.moduleRef ?? null);
+  if (r.changes) return r.lastInsertRowid;
+  return d.prepare(`
+    SELECT id FROM entity_relation WHERE from_key=? AND to_key=?
+      AND COALESCE(label,'')=COALESCE(?,'') AND COALESCE(rel_type,'')=COALESCE(?,'')
+  `).get(fromKey, toKey, label || null, relType)?.id ?? null;
+}
 
-// colorId===undefined (Connector's existing 2-arg call site) preserves the
-// current color instead of wiping it — Connector never sets a color, so a
-// plain label edit there must not clear one Classifier's modal set.
-const updateEntityRelation = (id, label, colorId) => colorId === undefined
-  ? getDB().prepare(`UPDATE entity_relation SET label=? WHERE id=?`).run(label || null, id)
-  : getDB().prepare(`UPDATE entity_relation SET label=?, color=? WHERE id=?`).run(label || null, colorId || null, id);
+// colorId===undefined preserves the current color instead of wiping it, and
+// opts (rel_type / directed) are only written when the caller passes them —
+// so a plain label edit from any older call site changes nothing else.
+function updateEntityRelation(id, label, colorId, opts) {
+  const d = getDB();
+  if (colorId === undefined) d.prepare(`UPDATE entity_relation SET label=? WHERE id=?`).run(label || null, id);
+  else d.prepare(`UPDATE entity_relation SET label=?, color=? WHERE id=?`).run(label || null, colorId || null, id);
+  if (opts && 'relType' in opts) {
+    d.prepare(`UPDATE entity_relation SET rel_type=? WHERE id=?`).run(opts.relType ? String(opts.relType).trim() || null : null, id);
+  }
+  if (opts && 'directed' in opts) {
+    d.prepare(`UPDATE entity_relation SET directed=? WHERE id=?`).run(opts.directed ? 1 : 0, id);
+  }
+}
 
 const deleteEntityRelation = (id) =>
   getDB().prepare(`DELETE FROM entity_relation WHERE id=?`).run(id);
 
+// Distinct rel_type values in use, for the Exhibitor's relation form.
+const getRelationTypes = (nexusId) => getDB().prepare(`
+  SELECT DISTINCT rel_type FROM entity_relation WHERE nexus_ref=? AND rel_type IS NOT NULL ORDER BY rel_type COLLATE NOCASE
+`).all(nexusId).map((r) => r.rel_type);
+
 module.exports = {
   viewerIndex,
-  getEntityRelations, createEntityRelation, updateEntityRelation, deleteEntityRelation,
+  getEntityRelations, createEntityRelation, getRelationTypes, updateEntityRelation, deleteEntityRelation,
 };

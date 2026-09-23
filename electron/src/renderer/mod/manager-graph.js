@@ -9,7 +9,7 @@
 //               link a user draws in Connector. These are the lines the
 //               feature is actually about; the nest lines are the backdrop.
 //
-// Built on mod/connector.js's board idiom (absolutely-positioned nodes over
+// Built on the pre-v5 Connector's board idiom (now mod/exhibitor-graph.js) (absolutely-positioned nodes over
 // one SVG edge layer, right-drag pan, wheel zoom) rather than sage.js's
 // force graph: buildSageGraph's animation loop is hard-coded to
 // `#sage-graph-wrap`, an element that no longer exists anywhere, so its

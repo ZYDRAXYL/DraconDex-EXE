@@ -21,7 +21,7 @@ const { SEED_SYMBOLS } = require('./seed');
 const {
   migrateInlineColumns, migrateNexusV28, migrateMapV3, migrateTimelineV3,
   migrateWriterV27, migrateHeroV26, migratePluginV42, ensureIndexes,
-  migrateDesignNodeShapes,
+  migrateDesignNodeShapes, migrateModuleKindV5, migrateEntityRelationV5,
 } = require('./migrations');
 // Bumped to 2 by the app/vault schema split: every existing database re-runs
 // its (idempotent) init path once and re-stamps.
@@ -55,6 +55,7 @@ function vaultSchemaStamp() {
       String(initVaultDB), String(migrateInlineColumns), String(migrateNexusV28),
       String(migrateMapV3), String(migrateTimelineV3), String(migrateWriterV27),
       String(migrateHeroV26), String(migrateDesignNodeShapes), String(ensureIndexes),
+      String(migrateModuleKindV5), String(migrateEntityRelationV5),
     ]);
   }
   return _vaultStamp;

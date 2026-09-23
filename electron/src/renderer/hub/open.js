@@ -31,8 +31,7 @@ async function openModuleNode(id) {
   if (m.kind === 'narrator' && typeof loadNarratorData === 'function') loaders.push(loadNarratorData(m));
   if (m.kind === 'author' && typeof loadAuthorData === 'function') loaders.push(loadAuthorData(m));
   if (m.kind === 'scribe' && typeof loadChatScribeData === 'function') loaders.push(loadChatScribeData(m));
-  if (m.kind === 'viewer' && typeof loadViewerData === 'function') loaders.push(loadViewerData(m));
-  if (m.kind === 'connector' && typeof loadConnectorData === 'function') loaders.push(loadConnectorData(m));
+  if (m.kind === 'exhibitor' && typeof loadExhibitorData === 'function') loaders.push(loadExhibitorData(m));
   if (m.kind === 'sketcher' && typeof loadSketcherData === 'function') loaders.push(loadSketcherData(m));
   if (m.kind === 'designer' && typeof loadDesignerData === 'function') loaders.push(loadDesignerData(m));
   // renderNexusHome() above has already painted the shell, so the pane sits
@@ -99,8 +98,7 @@ const KIND_MAIN_BUILDER = {
   author: () => typeof buildAuthorMainHtml === 'function' && buildAuthorMainHtml,
   scribe: () => typeof buildChatScribeMainHtml === 'function' && buildChatScribeMainHtml,
   drafter: () => typeof buildDrafterMainHtml === 'function' && buildDrafterMainHtml,
-  viewer: () => typeof buildViewerMainHtml === 'function' && buildViewerMainHtml,
-  connector: () => typeof buildConnectorMainHtml === 'function' && buildConnectorMainHtml,
+  exhibitor: () => typeof buildExhibitorMainHtml === 'function' && buildExhibitorMainHtml,
   sketcher: () => typeof buildSketcherMainHtml === 'function' && buildSketcherMainHtml,
   designer: () => typeof buildDesignerMainHtml === 'function' && buildDesignerMainHtml,
 };
@@ -120,7 +118,10 @@ function buildModuleDetailHtml(m) {
   const tagChips = (d?.tags || []).map(tg =>
     `<span class="htag" style="border-color:${x(tg.color_code || '#6366f1')};color:${x(tg.color_code || '#6366f1')}">#${x(tg.tag_name)}</span>`).join('');
   const linkCount = d ? (d.links.outgoing.length + d.links.backlinks.length) : 0;
-  const linkChip = `<span class="htag lk" data-no-i18n title="${t('moduleLink')}">🔗 ${linkCount} links</span>`;
+  // v5 (§3.6): the count still comes from wiki_link, but a click now opens
+  // this module's Exhibitor, where links are seen and relations drawn.
+  const linkChip = `<span class="htag lk" data-no-i18n title="${t('openInExhibitor')}" style="cursor:pointer"
+    onclick="openExhibitorFor(${m.id},'module_${m.id}')">🔗 ${linkCount} links</span>`;
   const renamingHead = S.renamingModuleId === m.id;
   const nameHtml = renamingHead
     ? `<input id="rename-head-${m.id}" class="rename-input" style="font-size:1.15em" value="${x(m.name)}" onclick="event.stopPropagation()" onblur="saveModuleRename(${m.id},this.value)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=${x(JSON.stringify(m.name))};this.blur();}">`

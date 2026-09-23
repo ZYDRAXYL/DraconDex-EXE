@@ -12,11 +12,11 @@
 // migrate into Artisan templates.
 
 const MODULE_KINDS = ['collector','manager','inspector','classifier','locator','chronicler',
-  'wanderer','narrator','author','scribe','drafter','viewer','connector','sketcher','designer'];
+  'wanderer','narrator','author','scribe','drafter','exhibitor','sketcher','designer'];
 const KIND_ICON = {
   collector:'folder', manager:'manager', inspector:'document', classifier:'layer',
   locator:'map', chronicler:'timeline', wanderer:'wanderer', narrator:'narrator',
-  author:'book', scribe:'story', drafter:'scribe', viewer:'list', connector:'relation',
+  author:'book', scribe:'story', drafter:'scribe', exhibitor:'relation',
   sketcher:'sketcher', designer:'relation',
 };
 // Unique names (progress.md Section A.3 #7) are locale-invariant by design —
@@ -24,7 +24,7 @@ const KIND_ICON = {
 const KIND_LABEL = {
   collector:'Collector', manager:'Manager', inspector:'Inspector', classifier:'Classifier',
   locator:'Locator', chronicler:'Chronicler', wanderer:'Wanderer', narrator:'Narrator',
-  author:'Author', scribe:'Scribe', drafter:'Drafter', viewer:'Viewer', connector:'Connector',
+  author:'Author', scribe:'Scribe', drafter:'Drafter', exhibitor:'Exhibitor',
   sketcher:'Sketcher', designer:'Designer',
 };
 // Distinct accent per kind for the create-modal picker cards (buildKindPicker
@@ -33,7 +33,7 @@ const KIND_LABEL = {
 const KIND_COLOR = {
   collector:'#64748b', manager:'#6366f1', inspector:'#3b82f6', classifier:'#8b5cf6',
   locator:'#22c55e', chronicler:'#f97316', wanderer:'#06b6d4', narrator:'#ec4899',
-  author:'#eab308', scribe:'#38bdf8', drafter:'#a78bfa', viewer:'#34d399', connector:'#f43f5e',
+  author:'#eab308', scribe:'#38bdf8', drafter:'#a78bfa', exhibitor:'#f43f5e',
   sketcher:'#fb923c', designer:'#a3e635',
 };
 // i18n key per kind's one-line description on the same cards.
@@ -41,8 +41,8 @@ const KIND_DESC_KEY = {
   collector:'kindDescCollector', manager:'kindDescManager', inspector:'kindDescInspector',
   classifier:'kindDescClassifier', locator:'kindDescLocator', chronicler:'kindDescChronicler',
   wanderer:'kindDescWanderer', narrator:'kindDescNarrator', author:'kindDescAuthor',
-  scribe:'kindDescScribe', drafter:'kindDescDrafter', viewer:'kindDescViewer',
-  connector:'kindDescConnector', sketcher:'kindDescSketcher', designer:'kindDescDesigner',
+  scribe:'kindDescScribe', drafter:'kindDescDrafter',
+  exhibitor:'kindDescExhibitor', sketcher:'kindDescSketcher', designer:'kindDescDesigner',
 };
 
 // The 4 legacy-fixed-module-shaped structure templates Artisan's create

@@ -16,6 +16,7 @@ const narrator  = require('./src/db/narrator');
 const author    = require('./src/db/author');
 const chatscribe = require('./src/db/chatscribe');
 const viewer    = require('./src/db/viewer');
+const exhibitor = require('./src/db/exhibitor');
 const calendar  = require('./src/db/calendar');
 const sketcher  = require('./src/db/sketcher');
 const designer  = require('./src/db/designer');
@@ -51,6 +52,7 @@ module.exports = {
   ...author,
   ...chatscribe,
   ...viewer,
+  ...exhibitor,
   ...calendar,
   ...sketcher,
   ...designer,

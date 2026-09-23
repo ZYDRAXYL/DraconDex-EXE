@@ -141,11 +141,11 @@ async function saveClassifierAttrInput(el) {
   if (obj) obj.attrMap[tid] = value;
 }
 
-// ── Relation view (real force graph, Plan part5 #6) ─────────────────────
+// ── Relation view (real force graph, Plan part5 #6) — read-only in v5 ───
 function renderClassifierRelation(m, d) {
   return `<div class="cls-rel-wrap">
     <div id="cls-rel-graph" style="position:relative;overflow:hidden;min-height:340px;border:1px solid var(--border);border-radius:var(--r)"></div>
-    <button class="btn btn-p cls-rel-add" onclick="openClassifierRelationModal(${m.id})">${I.plus} ${t('addRelation')}</button>
+    <button class="btn btn-p cls-rel-add" onclick="openExhibitorFor(${m.id})">${I.relation || I.plus} ${t('openInExhibitor')}</button>
     ${buildClassifierRelationListHtml(m, d)}
   </div>`;
 }
@@ -163,14 +163,10 @@ function buildClassifierRelationListHtml(m, d) {
       <td>${x(nameOf(r.from_key))}</td>
       <td><span class="cswatch cls-rel-swatch" style="background:${x(r.color_code || 'var(--border)')}"></span>${x(r.label || '—')}</td>
       <td>${x(nameOf(r.to_key))}</td>
-      <td><span class="acts">
-        <button class="btn btn-g btn-i" onclick="openClassifierRelationModal(${m.id},${r.id})" title="${t('edit')}">${I.edit}</button>
-        <button class="btn btn-g btn-i" onclick="deleteClassifierRelationRow(${r.id})" title="${t('delete')}">${I.delete}</button>
-      </span></td>
     </tr>`).join('');
   return `<table class="vw-table cls-rel-list">
-    <thead><tr><th>${t('relFrom')}</th><th>${t('relationLabel')}</th><th>${t('relTo')}</th><th></th></tr></thead>
-    <tbody>${rows || `<tr><td colspan="4" class="ghost">—</td></tr>`}</tbody>
+    <thead><tr><th>${t('relFrom')}</th><th>${t('relationLabel')}</th><th>${t('relTo')}</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="3" class="ghost">—</td></tr>`}</tbody>
   </table>`;
 }
 
@@ -192,72 +188,9 @@ async function mountClassifierRelationGraph() {
   });
 }
 
-// ── Create/edit relation modal ───────────────────────────────────────────
-function classifierRecentRelationNames() {
-  const rels = S.classifierData?.relations || [];
-  return [...new Set(rels.slice().sort((a, b) => b.id - a.id).map(r => r.label).filter(Boolean))].slice(0, 3);
-}
-
-function classifierRelationObjectOptions(sel) {
-  return (S.classifierData?.objects || []).map(o =>
-    `<option value="cobj_${o.id}" ${sel === `cobj_${o.id}` ? 'selected' : ''}>${x(o.name)}</option>`).join('');
-}
-
-async function openClassifierRelationModal(moduleId, relId = null) {
-  const rel = relId ? classifierModuleRelations(S.activeModuleNode, S.classifierData).find(r => r.id === relId) : null;
-  openModal(rel ? t('moduleEdit') : t('addRelation'), `
-    <div class="fg"><label>${t('relationLabel')}</label>
-      <input id="cr-name" value="${x(rel?.label || '')}" oninput="filterClassifierRecentNames()" autocomplete="off">
-      <div class="cls-rel-recent-lbl">${t('recentUsed')}</div>
-      <div class="crecent-row" id="cr-recent"></div>
-    </div>
-    <div class="fg cls-rel-endpoints">
-      <div><label>${t('relFrom')}</label><select id="cr-from" ${rel ? 'disabled' : ''}>${classifierRelationObjectOptions(rel?.from_key)}</select></div>
-      <div><label>${t('relTo')}</label><select id="cr-to" ${rel ? 'disabled' : ''}>${classifierRelationObjectOptions(rel?.to_key)}</select></div>
-    </div>
-    <div class="fg"><label>${t('color')}</label>${await colorPicker(rel?.color || null)}</div>
-    <div class="mfoot">
-      ${rel ? `<button class="btn btn-d" onclick="deleteClassifierRelationRow(${rel.id})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitClassifierRelationForm(${moduleId},${relId ?? 'null'})">${rel ? t('save') : t('create')}</button>
-    </div>`);
-  filterClassifierRecentNames();
-}
-
-function filterClassifierRecentNames() {
-  const box = q('#cr-recent');
-  if (!box) return;
-  const value = (q('#cr-name')?.value || '').trim().toLowerCase();
-  const names = classifierRecentRelationNames().filter(n => !value || n.toLowerCase().includes(value));
-  box.innerHTML = names.length
-    ? names.map(n => `<span class="htag-chip" style="cursor:pointer" onclick="q('#cr-name').value=${xj(n)}">${x(n)}</span>`).join('')
-    : '';
-}
-
-async function submitClassifierRelationForm(moduleId, relId) {
-  const label = q('#cr-name').value.trim();
-  const colorId = q('#sel-color').value || null;
-  if (relId) {
-    await api.viewer.updateRelation(relId, label, colorId);
-  } else {
-    const from = q('#cr-from').value, to = q('#cr-to').value;
-    if (!from || !to || from === to) return;
-    await api.viewer.createRelation(S.nexus.id, from, to, label, colorId);
-  }
-  closeModal();
-  await loadClassifierData(S.activeModuleNode);
-  renderNexusHome();
-  toast(relId ? t('saved') : t('created'), 'ok');
-}
-
-async function deleteClassifierRelationRow(id) {
-  if (!await uiConfirm(t('moduleDeleteConfirm'))) return;
-  await api.viewer.deleteRelation(id);
-  closeModal();
-  await loadClassifierData(S.activeModuleNode);
-  renderNexusHome();
-  toast(t('deleted'), 'ok');
-}
+// v5 (APP docs/V5.md §3.5): relations are authored in an Exhibitor, not
+// here. This view reads them (list + force graph) and hands off through
+// "Open in Exhibitor" (mod/exhibitor.js openExhibitorFor).
 
 // ── Object CRUD ─────────────────────────────────────────────────────────
 async function openClassifierObjectModal(moduleId, objectId) {

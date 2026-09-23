@@ -1,7 +1,7 @@
 {
   "name": "@zydraxyl/dracondex",
   "productName": "DraconDex",
-  "version": "5.0.0-1",
+  "version": "5.0.0-2",
   "description": "Novel data management app",
   "main": "electron/main.js",
   "license": "MIT",

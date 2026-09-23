@@ -212,51 +212,14 @@ function renderClassifierLinksHtml(o) {
       <span class="cls-link-name" onclick="openEntityByKey('${x(otherKey)}')">${x(name)}</span>
       <span class="cls-link-mod">${x(from)}</span>
       ${l.label ? `<span class="cls-link-lbl">${x(l.label)}</span>` : ''}
-      <button class="btn btn-g btn-i" onclick="deleteClassifierLink(${l.id})" title="${t('delete')}">${I.delete}</button>
     </div>`;
   }).join('');
   return `<div class="insp-label cls-link-label">${t('linkedElements')}</div>
     <div class="cls-link-list">${rows || `<div class="cls-lv-empty">${t('noLinkedElements')}</div>`}</div>
-    <button class="btn btn-g" style="margin:4px 14px" onclick="openClassifierLinkModal(${o.id})">${I.plus} ${t('addLinkedElement')}</button>`;
+    <button class="btn btn-g" style="margin:4px 14px" onclick="openExhibitorFor(${o.module_ref ?? S.activeItemNode?.moduleId ?? S.activeModuleNode?.id ?? 'null'},'cobj_${o.id}')">${I.relation} ${t('openInExhibitor')}</button>`;
 }
 
-async function openClassifierLinkModal(objectId) {
-  const ix = await api.viewer.index(S.nexus.id);
-  // Modules themselves aren't "minor elements", and an element can't link to
-  // itself — everything else in the vault is fair game, including elements
-  // from other Major modules, which is the whole point of the feature.
-  const opts = ix.filter(e => e.key !== `cobj_${objectId}` && !e.key.startsWith('module_'));
-  openModal(t('addLinkedElement'), `
-    <div class="fg"><label>${t('element')}</label>
-      <select id="cl-target">${opts.map(e =>
-        `<option value="${x(e.key)}">${x(e.name)} — ${x(e.moduleName || '')}</option>`).join('')}</select></div>
-    <div class="fg"><label>${t('relationLabel')}</label><input id="cl-label"></div>
-    <div class="mfoot">
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitClassifierLink(${objectId})">${t('create')}</button>
-    </div>`);
-}
-
-async function submitClassifierLink(objectId) {
-  const target = q('#cl-target')?.value;
-  if (!target) { closeModal(); return; }
-  try {
-    await api.viewer.createRelation(S.nexus.id, `cobj_${objectId}`, target, q('#cl-label')?.value.trim() || null, null);
-  } catch (e) {
-    // UNIQUE(from_key,to_key,label) — re-adding the same pair is a no-op the
-    // user shouldn't see as a crash.
-    toast(t('linkExists'), 'err');
-    return;
-  }
-  closeModal();
-  await reloadClassifierDetail();
-  toast(t('created'), 'ok');
-}
-
-async function deleteClassifierLink(id) {
-  await api.viewer.deleteRelation(id);
-  await reloadClassifierDetail();
-}
+// v5 (APP docs/V5.md §3.5): links are read here, authored in an Exhibitor.
 
 // ── One attribute row ───────────────────────────────────────────────────
 // Branch order matters: a levelable or conditioned template renders as the

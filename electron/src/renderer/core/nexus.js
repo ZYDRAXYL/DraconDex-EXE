@@ -153,6 +153,7 @@ async function selectNexus(id) {
   ]);
   S.moduleTree = moduleTree;
   seedNestItems(nestItems);
+  if (typeof reportRelationDedupe === 'function') reportRelationDedupe();
   renderNexusHome();
   renderModuleRail();
   updateStatusBar({ item: null, words: null, saveState: null });
