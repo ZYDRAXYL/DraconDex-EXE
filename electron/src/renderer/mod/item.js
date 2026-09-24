@@ -21,6 +21,7 @@ const ITEM_KIND = {
   classifier: {
     badgeKey: 'itemBadgeClassifierObject',
     icon: () => I.layer,
+    keyOf: (o) => `cobj_${o.id}`,
     async list(moduleId) { return api.classifier.getObjects(moduleId); },
     nameOf: (o) => o.name,
     async renderBody(o, m) {
@@ -51,6 +52,7 @@ const ITEM_KIND = {
   chronicler: {
     badgeKey: 'itemBadgeChroniclerEvent',
     icon: () => I.timeline,
+    keyOf: (e) => `tlev_${e.id}`,
     async list(moduleId) {
       const tls = await api.timeline.getModuleTimelines(moduleId);
       const lists = await Promise.all(tls.map(tl =>
@@ -71,6 +73,7 @@ const ITEM_KIND = {
   author: {
     badgeKey: 'itemBadgeAuthorChapter',
     icon: () => I.book,
+    keyOf: (c) => `bchp_${c.id}`,
     async list(moduleId) { return api.author.getChapters(moduleId); },
     nameOf: (c) => c.name,
     async renderBody() { return `<div id="author-item-editor" class="scribe-editor au-editor"></div>`; },
@@ -81,6 +84,7 @@ const ITEM_KIND = {
   scribe: {
     badgeKey: 'itemBadgeChatSession',
     icon: () => I.story,
+    keyOf: (s) => `chss_${s.id}`,
     async list(moduleId) { return api.chatscribe.getSessions(moduleId); },
     nameOf: (s) => s.name,
     async renderBody(s) {
@@ -128,7 +132,12 @@ async function openItemNode(itemKind, moduleId, id) {
   }
   const m = findModuleNode(moduleId);
   const bodyHtml = await reg.renderBody(item, m);
-  S.activeItemNode = { itemKind, moduleId, id, item, m, bodyHtml };
+  // v5 Part 8 (§12.9): an element with an entity key has a page of blocks —
+  // the shared '*' layout until it is split. The body above is one of them
+  // (item.body, page/item-page.js).
+  const itemKey = reg.keyOf ? reg.keyOf(item) : null;
+  if (itemKey && m) await loadModulePage(m, itemKey);
+  S.activeItemNode = { itemKind, moduleId, id, item, m, bodyHtml, itemKey };
   S.activeModuleNode = null;
   S.filePreview = null;
   S.sageHut = null;
@@ -142,12 +151,15 @@ function buildItemPageHtml(node) {
   const reg = ITEM_KIND[node.itemKind];
   const col = node.m?.color_code || 'var(--accent)';
   const name = reg.nameOf(node.item);
+  const paged = node.itemKey && pageOf(node.moduleId, node.itemKey);
   return `${pageHeadHtml({
       color: col, title: `<span data-no-i18n>${x(name)}</span>`, titleText: name,
       after: `<span class="kind-chip" data-no-i18n>${x(t(reg.badgeKey))}</span>`,
       sub: `<span data-no-i18n>${x(node.m?.name || '')}</span>`,
+      acts: paged ? pageHeadActsHtml(node.moduleId, node.itemKey) : '',
     })}
-    <div class="item-page-body">${node.bodyHtml}</div>`;
+    ${paged ? `<div class="item-page-body module-page">${itemPageNoteHtml(node)}${pageBlocksHtml(node.moduleId, node.itemKey)}</div>`
+      : `<div class="item-page-body">${node.bodyHtml}</div>`}`;
 }
 
 // ── ChatScribe item page: send handler mirroring sendChatMessage, but

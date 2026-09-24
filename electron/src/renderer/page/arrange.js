@@ -7,7 +7,7 @@
 
 const pbArranging = (page) => !!page && S.arranging.has(pageKey(page.moduleId, page.itemKey));
 
-function togglePageArrange(moduleId = S.activeModuleNode?.id, itemKey = S.activeItemNode ? pbItemKeyOf(S.activeItemNode) : null) {
+function togglePageArrange(moduleId = S.activeItemNode?.moduleId ?? S.activeModuleNode?.id, itemKey = pbItemKeyOf(S.activeItemNode)) {
   if (!moduleId) return;
   const k = pageKey(moduleId, itemKey);
   if (S.arranging.has(k)) S.arranging.delete(k); else S.arranging.add(k);
@@ -62,7 +62,7 @@ function openPbPicker(moduleId, itemKey, where) {
 async function pbAddBlock(moduleId, itemKey, b, where) {
   const spec = { ...b };
   if (where) { spec.parentId = where.parentId; spec.config = { ...(spec.config || {}), col: where.col }; }
-  await api.block.add(moduleId, itemKey, spec);
+  await api.block.add(moduleId, pbLayoutKey(moduleId, itemKey), spec); // page/item-page.js
   closeModal();
   await reloadModulePage(moduleId, itemKey);
 }

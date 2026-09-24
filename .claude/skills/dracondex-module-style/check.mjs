@@ -258,6 +258,7 @@ console.log('=== command registry (core/commands.js) ===');
     'empty.state': ['hub/kind-page.js'],
     'kind.picker': ['hub/menus.js'], 'nexus.options': ['core/nexus-options.js'], 'bundle.picker': ['hub/bundles.js'], 'left.panel': ['hub/activity.js'], 'setting.data': ['core/db-transfer.js'],
     'page.head': ['hub/open.js'],
+    'page.layout': ['page/item-page.js'],
   };
   const surfaceFiles = (sf) => SURFACE_FILES[sf] || (sf.endsWith('.toolbar') ? [`mod/${sf.slice(0, -8)}.js`] : null);
   const srcOf = (f) => { try { return read(app(R + f)); } catch (_) { return null; } };

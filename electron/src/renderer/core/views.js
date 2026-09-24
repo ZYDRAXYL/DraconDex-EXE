@@ -267,7 +267,8 @@ function buildBuilderPageHtml() {
 
 // Post-DOM hooks for the focused pane's page.
 function runBuilderMounts() {
-  if (S.activeItemNode && typeof ITEM_KIND !== 'undefined') ITEM_KIND[S.activeItemNode.itemKind]?.mount?.(S.activeItemNode);
+  // An element page of blocks mounts its editor as the item.body block.
+  if (S.activeItemNode && !S.activeItemNode.itemKey && typeof ITEM_KIND !== 'undefined') ITEM_KIND[S.activeItemNode.itemKind]?.mount?.(S.activeItemNode);
   if (!S.activeModuleNode && !S.filePreview && S.sageHut && typeof mountSageHutGraph === 'function') mountSageHutGraph();
   // v5 Part 8: a module page's blocks mount themselves — the kind's own
   // view is one of them (page/registry.js), Properties another.
