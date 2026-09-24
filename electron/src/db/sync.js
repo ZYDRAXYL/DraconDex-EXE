@@ -587,7 +587,10 @@ function serializeVault(nexusId, moduleIds = null) {
       SELECT n.id, n.folder_ref AS folderId, n.title, n.content,
              c.color_code AS colorCode, n.pinned
       FROM note n LEFT JOIN use_color c ON n.color=c.id
-      WHERE n.nexus_ref=? ORDER BY n.id`),
+      WHERE n.nexus_ref=? AND n.migrated_v3=0 ORDER BY n.id`),
+    // ↑ a converted note is a module now (db/migrate_v3.js autoMigrateNotes)
+    //   and travels as one; sending the note too would make the receiver
+    //   convert it a second time.
   };
 
   // Every color code referenced anywhere above, deduped.

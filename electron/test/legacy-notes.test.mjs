@@ -64,3 +64,29 @@ test('notes convert silently once, and note_ keys follow them', () => {
   const t = db.prepare(`SELECT target_key FROM wiki_link WHERE src_key=?`).get(`module_${mid}`);
   assert.match(t.target_key, /^module_\d+$/);
 });
+
+// Procress 12 part 0: a converted note's stored keys name its module, and a
+// snapshot leaves converted notes out — otherwise a sync to another device
+// would convert the same note a second time, into a duplicate module.
+test('keys follow a converted note, and snapshots leave it out', () => {
+  freshVault();
+  const n1 = db.prepare(`INSERT INTO note (nexus_ref, title, content) VALUES (1, 'Dragons', 'x')`).run().lastInsertRowid;
+  const other = mkModule('Other', 'inspector');
+  db.prepare(`INSERT INTO entity_relation (nexus_ref, from_key, to_key, rel_type, directed) VALUES (1, ?, ?, 'knows', 1)`).run(`note_${n1}`, `module_${other}`);
+  const nar = mkModule('Story', 'narrator');
+  const dlg = db.prepare(`INSERT INTO story_dialogue (module_ref, name) VALUES (?, 'A')`).run(nar).lastInsertRowid;
+  const talk = db.prepare(`INSERT INTO story_talk (dialogue_ref, talk_sentence, talk_order) VALUES (?, 'hi', 0)`).run(dlg).lastInsertRowid;
+  db.prepare(`INSERT INTO story_choice_option (talk_ref, option_text, condition) VALUES (?, 'go', ?)`).run(talk, JSON.stringify([{ key: `note_${n1}`, op: 'eq', value: '1' }]));
+
+  assert.equal(legacy.autoMigrateNotes(1), 1);
+  const mid = legacy.moduleOfNote(n1);
+  const rel = db.prepare(`SELECT from_key FROM entity_relation WHERE to_key=?`).get(`module_${other}`);
+  assert.equal(rel.from_key, `module_${mid}`);
+  const cond = db.prepare(`SELECT condition FROM story_choice_option`).get().condition;
+  assert.match(cond, new RegExp(`"module_${mid}"`));
+
+  const sync = require('../src/db/sync.js');
+  const snap = sync.serializeVault(1);
+  assert.equal(snap.notes.notes.length, 0, 'the converted note is not sent');
+  assert.ok(snap.modules.some((m) => m.id === mid), 'its module is');
+});

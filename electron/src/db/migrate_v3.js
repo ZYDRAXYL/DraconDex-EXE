@@ -426,6 +426,7 @@ function migrateLegacy(nexusId, target, legacyId, batchCtx) {
       walk(null, majorId);
 
       const notes = d.prepare(`SELECT * FROM note WHERE nexus_ref=? AND migrated_v3=0`).all(nexusId);
+      const moved = []; // [noteId, moduleId]
       for (const n of notes) {
         const parentId = n.folder_ref ? (folderModMap.get(n.folder_ref) || majorId) : majorId;
         const mid = mkModule(parentId, n.title, 'inspector');
@@ -433,7 +434,9 @@ function migrateLegacy(nexusId, target, legacyId, batchCtx) {
         // v5 Part 8 (§12): where this note went, so a stale note_<id> key
         // (a link, a relation, a recent entry) still opens it.
         d.prepare(`INSERT OR REPLACE INTO module_ui (module_ref, ui_key, ui_value) VALUES (?, 'legacyNote', ?)`).run(mid, String(n.id));
+        moved.push([n.id, mid]);
       }
+      rewriteNoteKeys(d, moved);
 
       d.prepare(`UPDATE note SET migrated_v3=1 WHERE nexus_ref=? AND migrated_v3=0`).run(nexusId);
       return majorId;
@@ -553,6 +556,33 @@ function getLegacyPromptSeen(nexusId) {
 function setLegacyPromptSeen(nexusId) {
   setAppSetting(`${LEGACY_PROMPT_SEEN_PREFIX}${nexusId}`, app.getVersion());
   return { ok: true };
+}
+
+// Procress 12 part 0: every stored key that named a converted note now names
+// its module, so a snapshot — which leaves converted notes out (db/sync.js)
+// — never carries a relation or a pin that points at nothing. Key columns
+// come from ENTITY_KINDS' KEY_COLUMNS; a JSON column holds the key quoted.
+// entity_relation is UNIQUE, so a rewrite that would duplicate a relation
+// the module already has is dropped instead.
+function rewriteNoteKeys(d, moved) {
+  if (!moved.length) return;
+  const { KEY_COLUMNS } = require('./entity-kinds');
+  for (const [noteId, mid] of moved) {
+    const from = `note_${noteId}`, to = `module_${mid}`;
+    for (const k of KEY_COLUMNS) {
+      for (const col of k.cols) {
+        try {
+          if (k.json) d.prepare(`UPDATE ${k.table} SET ${col}=REPLACE(${col}, ?, ?) WHERE ${col} LIKE ?`).run(`"${from}"`, `"${to}"`, `%"${from}"%`);
+          else d.prepare(`UPDATE OR IGNORE ${k.table} SET ${col}=? WHERE ${col}=?`).run(to, from);
+        } catch (_) { /* a table this vault does not have */ }
+      }
+    }
+    d.prepare(`DELETE FROM entity_relation WHERE from_key=? OR to_key=?`).run(from, from);
+    try {
+      d.prepare(`UPDATE OR IGNORE wiki_link SET target_key=? WHERE target_key=?`).run(to, from);
+      d.prepare(`DELETE FROM wiki_link WHERE src_key=? OR target_key=?`).run(from, from);
+    } catch (_) {}
+  }
 }
 
 // v5 Part 8 (§12): legacy Scribe is gone, so its notes are converted as
