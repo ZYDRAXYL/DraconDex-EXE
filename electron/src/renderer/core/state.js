@@ -5,6 +5,13 @@
 'use strict';
 
 const I = {
+  // V5.md §7.2: menus used the characters ✓ and › for want of these.
+  check: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  chevronDown: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`,
+  chevronUp: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`,
+  copy: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+  eye: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  eyeOff: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
   info: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
   book: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`,
   projects: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="2" y1="10" x2="22" y2="10"/></svg>`,
@@ -70,12 +77,13 @@ const I = {
 
 const UI_SETTINGS_KEY = 'novel-manager-ui-settings';
 const LEFT_PANEL_COLLAPSED_KEY = 'novel-manager-left-panel-collapsed';
-const INSPECTOR_COLLAPSED_KEY = 'novel-manager-inspector-collapsed';
 const LEFT_PANEL_WIDTH_KEY = 'novel-manager-left-panel-width';
 const NAV_RAIL_WIDTH_KEY = 'novel-manager-nav-rail-width';
 // Process 6 part 1: horizontal nav orientation's own resize lever (--navh),
 // same idiom as NAV_RAIL_WIDTH_KEY/--nav for vertical mode.
 const NAV_H_HEIGHT_KEY = 'novel-manager-nav-h-height';
+// The Inspector dock's width — read once by page/side-panel.js, which took
+// over its job (v5 Part 8).
 const INSPECTOR_WIDTH_KEY = 'novel-manager-inspector-width';
 const PAGE_VIEW_WIDTH_KEY = 'novel-manager-page-view-width';
 const NEXUS_ACTIVE_KEY = 'novel-manager-active-nexus';
@@ -296,7 +304,10 @@ function loadUiSettings(){
   const language = UI_LANGUAGE_OPTIONS.includes(saved.language) ? saved.language : 'th';
   const savedSize = Number(saved.size);
   const size = Number.isFinite(savedSize) ? Math.min(UI_SIZE_MAX, Math.max(UI_SIZE_MIN, savedSize)) : autoUiSizeFromScreen();
-  const nameMode = saved.nameMode === 'classic' ? 'classic' : 'unique';
+  // v5 Part 6 (APP docs/V5.md §10.5, closes §7.8): Classic — the translated
+  // names — is the default. Only an explicit 'unique' keeps the English set;
+  // kindLabelBoth() shows the other name beside it either way.
+  const nameMode = saved.nameMode === 'unique' ? 'unique' : 'classic';
   const savedFont = Number(saved.fontScale);
   const fontScale = Number.isFinite(savedFont) ? Math.min(130, Math.max(80, Math.round(savedFont))) : 100;
   const customThemes = Array.isArray(saved.customThemes) ? saved.customThemes : [];
@@ -348,7 +359,7 @@ function loadUiSettings(){
   // preset is the "advanced" sub-setting, only meaningful while enabled.
   const animationsEnabled = saved.animationsEnabled !== false;
   const animationSpeed = ['fast', 'normal', 'slow'].includes(saved.animationSpeed) ? saved.animationSpeed : 'normal';
-  return { theme: theme2, language, size, nameMode, fontScale, customThemes, nestShowItems, nestShowMajorIcon, nestShowMinorIcon, nestSignatureMode, quickExtras, navToggles, hubQuickToggles, statusToggles, workspaceStyle, uiStyle, navOrientation, navHorizontalDisplay, navVerticalAlwaysLabel, dragonView, animationsEnabled, animationSpeed };
+  return { theme: theme2, language, size, nameMode, fontScale, customThemes, nestShowItems, nestShowMajorIcon, nestShowMinorIcon, nestSignatureMode, quickExtras, navToggles, hubQuickToggles, statusToggles, workspaceStyle, uiStyle, navOrientation, navHorizontalDisplay, navVerticalAlwaysLabel, dragonView, animationsEnabled, animationSpeed, autoCollapseLeft: saved.autoCollapseLeft !== false };
 }
 
 // Kind display names (Phase 22): the Unique set (KIND_LABEL, locale-
@@ -358,8 +369,8 @@ const KIND_CLASSIC_KEY = {
   collector: 'kcFolder', manager: 'kcProject', inspector: 'kcDetail',
   classifier: 'kcCategory', locator: 'kcMap', chronicler: 'kcTimeline',
   wanderer: 'kcTimeMap', narrator: 'kcStory', author: 'kcBook',
-  scribe: 'kcChat', drafter: 'kcDoc', viewer: 'kcAnalys',
-  connector: 'kcRelation', sketcher: 'kcDrawing', designer: 'kcGraph',
+  scribe: 'kcChat', drafter: 'kcDoc',
+  exhibitor: 'kcExhibitor', sketcher: 'kcDrawing', designer: 'kcGraph', diviner: 'kcRandom',
 };
 function kindLabel(kind) {
   if (S.settings?.nameMode === 'classic') {
@@ -374,33 +385,22 @@ const S = {
   colors:[],
   recentColors:[],
   activeModule:null,
-  // map/mapAreaId/mapTool are shared with Locator (mod/locator.js reuses
-  // map.js's board/area-list rendering against a module-owned map instead
-  // of a Director project's map list).
-  map:null, mapAreaId:null, mapTool:'move',
   view:'nexus',
-  entityTabs:[],
-  activeEntityTabKey:null,
   settings:loadUiSettings(),
   relListHeight:null,
   leftPanelCollapsed:localStorage.getItem(LEFT_PANEL_COLLAPSED_KEY) === '1',
-  inspectorCollapsed:localStorage.getItem(INSPECTOR_COLLAPSED_KEY) === '1',
   leftPanelWidth:Number(localStorage.getItem(LEFT_PANEL_WIDTH_KEY)) || 264,
   navRailWidth:Number(localStorage.getItem(NAV_RAIL_WIDTH_KEY)) || 42,
   navHorizontalHeight:Number(localStorage.getItem(NAV_H_HEIGHT_KEY)) || 44,
-  inspectorWidth:Number(localStorage.getItem(INSPECTOR_WIDTH_KEY)) || 290,
   pageViewWidth:Number(localStorage.getItem(PAGE_VIEW_WIDTH_KEY)) || null, // Plan part1 #2: null = fill pane (default)
   // Sage module state
   sageTab:'dataSize',
   // Artisan module state
   artisanTarget:null,
-  // Scribe module state
-  scribeNote:null, scribeFolders:[], scribeNotes:[], scribeOpenFolders:new Set(), scribeTab:'notes',
   // Wiki navigation state
   recentEntities:[],
   // Kind-browser accordion state (Plan part2 #1, replaces legacy Explorer —
-  // session-only, not persisted, consistent with other in-session accordion
-  // Sets like scribeOpenFolders above).
+  // session-only, not persisted).
   kindBrowserOpen:new Set(),
   // Plan part2 #New Workspace: Import Dock promoted to its own full page
   // for Wyvern's View-set menu — mutually exclusive with
@@ -436,13 +436,12 @@ const S = {
   // Hero/Writer physically deleted, Process 2 Part 2); see progress.md
   // Section C for the scoping decision.
   moduleTree:[], activeModuleNode:null, inspectorData:null,
-  moduleTabs:[], renamingModuleId:null,
-  // Plugin panels (v4.3.0, src/renderer/pluginpanel.js). pluginPanels is the
-  // cached contribution list from api.plugin.list(); pluginPanel is the one
-  // currently replacing the Module Inspector dock, declared here rather than
-  // materialised on first use so it can be cleared on module switch (the
-  // versionPanel next door skipped that and leaks across modules).
-  pluginPanels:[], pluginPanel:null,
+  moduleTabs:[], renamingModuleId:null, editingHandleId:null, handleDraft:null,
+  // Plugin panels (v4.3.0, src/renderer/pluginpanel.js): the cached
+  // contribution list from api.plugin.list(). v5 Part 8: `side` is what the
+  // side panel shows (page/side-panel.js), `pages` the loaded page blocks
+  // (page/page.js), `arranging` the pages in Arrange mode.
+  pluginPanels:[], side:null, pages:{}, arranging:new Set(),
   // Content-item "minor module" pages (Plan part4) — a separate mirror from
   // activeModuleNode since an item is never itself a `module` row. nestItems
   // is the Nest tree's per-module item-list cache (moduleId -> null while
@@ -456,7 +455,6 @@ const S = {
   // (Plan part2 #2.3) — {nexusId, stats?, linkRows?, graph?}, each a promise.
   sageHutCache:null,
   classifierData:null, classifierView:'table', classifierSelectedObject:null,
-  managerData:null,
   locatorAreas:null,
   chroniclerData:null,
   wandererData:null,
@@ -468,8 +466,6 @@ const S = {
   dragTab:null,   // { key, paneIdx } — tab currently mid-drag in the Builder's split panes
 };
 const timelineGraphState = {};
-let timelineGraphCleanup = null;
-let konvaStage = null;
 const mapState = { viewByMap:{}, pointsByArea:{} };
 
 // Walks the full module tree (arbitrary nesting depth) for every node of a

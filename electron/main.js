@@ -1,8 +1,13 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, protocol, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, protocol, shell, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const { Readable } = require('stream');
 const db = require('./database');
 const { isSecretKey } = require('./src/db/secret-store');
+const {
+  ASSET_CLASS, assetClassOf, mimeOf, isStreamable, parseRange, normalizeAssetUrl, LARGE_BYTES, PROXY_MAX_BYTES,
+} = require('./src/db/asset-media');
 const { windowNexus, runWithVault, currentNexusId } = require('./src/db/vault-context');
 
 // Data location per build flavor:
@@ -367,7 +372,7 @@ app.whenReady().then(() => {
 // pickFolder below), so there is no directory prefix to sandbox against.
 // The URL therefore carries row ids, never a path: ddx-file://<nexusId>-<importFileId>
 // is looked up in that vault's import_file and served only if it is a
-// registered image. A path in the URL would be an arbitrary-file-read hole;
+// registered image/audio/video/pdf asset (v5). A path in the URL would be an arbitrary-file-read hole;
 // don't add one.
 //
 // The nexus id joined the URL in v4.9.0, when import_file moved into per-vault
@@ -376,11 +381,12 @@ app.whenReady().then(() => {
 // no calling window to infer a vault from. The URL has to say. The id is
 // validated against the registry and the lookup runs inside runWithVault, so a
 // forged nexus id can only reach a vault that actually exists, and only its
-// registered images.
+// registered assets.
 function registerDisplayImageProtocol() {
   if (!protocol) return;
   protocol.handle('ddx-file', async (req) => {
-    const raw = String(req.url).replace(/^ddx-file:(\/\/)?/, '').split(/[?#/]/)[0];
+    const url = String(req.url);
+    const raw = url.replace(/^ddx-file:(\/\/)?/, '').split(/[?#/]/)[0];
     const [nexusPart, idPart] = raw.split('-');
     const nexusId = Number(nexusPart);
     const id = Number(idPart);
@@ -391,20 +397,42 @@ function registerDisplayImageProtocol() {
     try { f = await runWithVault(nexusId, () => db.getImportFile(id)); }
     catch (_) { return new Response(null, { status: 404 }); }
     const ext = (f?.file_type || '').toLowerCase();
-    if (!f || !IMAGE_EXTS.has(ext)) return new Response(null, { status: 404 });
-    try {
-      // ETag off mtime+size, served with no-cache: the browser reuses the
-      // decoded image across re-renders but still revalidates, so replacing
-      // the file on disk shows up immediately. The old base64 path cached
-      // bytes in a renderer Map that was never invalidated.
-      const st = await fs.promises.stat(f.file_path);
-      const etag = `"${st.mtimeMs}-${st.size}"`;
-      if (req.headers.get('if-none-match') === etag) {
-        return new Response(null, { status: 304, headers: { ETag: etag, 'Cache-Control': 'no-cache' } });
-      }
-      return new Response(await fs.promises.readFile(f.file_path), {
-        headers: { 'Content-Type': imageMime(ext), ETag: etag, 'Cache-Control': 'no-cache' },
+    if (!f || f.source_kind !== 'file' || !isStreamable(ext)) return new Response(null, { status: 404 });
+    // v5 (APP docs/V5.md §2.5): the cover proxy stored in the vault, served
+    // on ?proxy=1 and as the automatic fallback for an image whose original
+    // has gone missing — the vault still shows every cover after a move.
+    const serveProxy = async () => {
+      const p = await runWithVault(nexusId, () => db.getImportProxy(id));
+      if (!p?.proxy) return new Response(null, { status: 404 });
+      return new Response(Buffer.from(p.proxy), {
+        headers: { 'Content-Type': p.proxy_type || 'image/jpeg', 'Cache-Control': 'no-cache' },
       });
+    };
+    if (/[?&]proxy=1(?:&|#|$)/.test(url)) return serveProxy();
+    let st;
+    try { st = await fs.promises.stat(f.file_path); }
+    catch (_) { return assetClassOf(ext) === 'image' ? serveProxy() : new Response(null, { status: 404 }); }
+    // ETag off mtime+size, served with no-cache: the browser reuses the
+    // decoded image across re-renders but still revalidates, so replacing
+    // the file on disk shows up immediately.
+    const etag = `"${st.mtimeMs}-${st.size}"`;
+    const headers = { 'Content-Type': mimeOf(ext), ETag: etag, 'Cache-Control': 'no-cache', 'Accept-Ranges': 'bytes' };
+    // §2.6: Range / 206 is what lets <video> seek, and streaming (never
+    // readFile) is what keeps a 2 GB mkv from becoming one 2 GB Response.
+    const range = parseRange(req.headers.get('range'), st.size);
+    if (range?.invalid) {
+      return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${st.size}` } });
+    }
+    if (!range && req.headers.get('if-none-match') === etag) {
+      return new Response(null, { status: 304, headers: { ETag: etag, 'Cache-Control': 'no-cache' } });
+    }
+    const start = range ? range.start : 0;
+    const end = range ? range.end : st.size - 1;
+    if (range) headers['Content-Range'] = `bytes ${start}-${end}/${st.size}`;
+    headers['Content-Length'] = String(Math.max(0, end - start + 1));
+    try {
+      const body = st.size === 0 ? null : Readable.toWeb(fs.createReadStream(f.file_path, { start, end }));
+      return new Response(body, { status: range ? 206 : 200, headers });
     } catch (_) {
       return new Response(null, { status: 404 });
     }
@@ -467,9 +495,9 @@ h('db:pickImportFile', async () => {
   // to a .ddx vault export; the renderer branches on extension afterward,
   // see importDatabaseFile() in core/views.js).
   const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
-    title: 'Import Database (.ddx / .mdx / .db)',
+    title: 'Import Database (.ddx / .mddx / .db)',
     properties: ['openFile'],
-    filters: [{ name: 'DraconDex File', extensions: ['ddx', 'mdx', 'db'] }],
+    filters: [{ name: 'DraconDex File', extensions: ['ddx', 'mddx', 'mdx', 'db'] }],
   });
   if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
   pickedImportDbPaths.add(path.resolve(result.filePaths[0]));
@@ -509,24 +537,26 @@ h('db:importNexusFile', async (nexusId) => {
   if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true };
   return db.importNexusFile(nexusId, result.filePaths[0]);
 });
-// .mdx, not .json (Plan process5 part2) — disambiguates a module-scoped
-// export from the Nexus snapshot export right above (both used to write a
-// bare .json, indistinguishable in a file picker/Downloads folder).
+// .mddx (v5 Part 4, V5.md §8.7) — the same snapshot this always wrote, under
+// the extension the folder mirror (db/mirror.js) uses for a module's file,
+// so an exported module and a mirrored one are the same kind of file.
+// (Plan process5 part2 had moved it from bare .json to .mdx to tell it apart
+// from the Nexus snapshot export above.)
 h('db:exportModuleFile', async (nexusId, moduleId, moduleName) => {
-  const defaultName = `${String(moduleName || 'module').replace(/[\\/:*?"<>|]/g, '_')}.mdx`;
+  const defaultName = `${String(moduleName || 'module').replace(/[\\/:*?"<>|]/g, '_')}.mddx`;
   const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
     title: 'Export Module', defaultPath: path.join(app.getPath('documents'), defaultName),
-    filters: [{ name: 'DraconDex Module File', extensions: ['mdx'] }],
+    filters: [{ name: 'DraconDex Module File', extensions: ['mddx'] }],
   });
   if (result.canceled || !result.filePath) return { ok: false, canceled: true };
   return db.exportModuleFile(nexusId, moduleId, result.filePath);
 });
-// Accepts .json too — a module exported before this switched to .mdx is
+// Accepts .mdx and .json too — a module exported before either switch is
 // still a valid snapshot in the same shape, only the extension changed.
 h('db:importModuleFile', async (nexusId, parentModuleId) => {
   const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
     title: 'Import Module', properties: ['openFile'],
-    filters: [{ name: 'DraconDex Module File', extensions: ['mdx', 'json'] }],
+    filters: [{ name: 'DraconDex Module File', extensions: ['mddx', 'mdx', 'json'] }],
   });
   if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true };
   return db.importModuleFile(nexusId, parentModuleId, result.filePaths[0]);
@@ -581,11 +611,17 @@ h('nexus:exportFile', async (id) => {
   const n = db.getNexus(id);
   if (!n) return { ok: false, code: 'not_found' };
   const safe = String(n.name || 'nexus').replace(/[\\/:*?"<>|]/g, '_');
+  // v5 Part 4 (§8.7): .ddx (data; media stay paths on this machine) or
+  // .zip (the .ddx plus the real media files — db-transfer exportNexusZip).
   const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
     title: 'Export Nexus', defaultPath: path.join(app.getPath('documents'), `${safe}.ddx`),
-    filters: [{ name: 'DraconDex Nexus', extensions: ['ddx'] }],
+    filters: [
+      { name: 'DraconDex Nexus', extensions: ['ddx'] },
+      { name: 'DraconDex Nexus + media (.zip)', extensions: ['zip'] },
+    ],
   });
   if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  if (/\.zip$/i.test(result.filePath)) return db.exportNexusZip(id, result.filePath);
   return db.exportNexusVaultFile(id, result.filePath);
 });
 
@@ -652,6 +688,14 @@ h('nexus:relink', async (id) => {
 });
 h('nexus:update', (id,n,m,c)     => db.updateNexus(id,n,m,c));
 h('nexus:delete', (id)           => db.deleteNexus(id));
+h('nexus:taught',     (nx)         => db.getTaught(nx));
+h('nexus:markTaught', (nx, tip, st) => db.markTaught(nx, tip, st));
+// v5 Part 6 (§10.8): the user's own module presets. Built-ins live in the
+// renderer (hub/presets.js) and are applied through preset:apply too.
+h('preset:list',   (nx, kind)        => db.listPresets(nx, kind));
+h('preset:save',   (nx, mid, name)   => db.savePreset(nx, mid, name));
+h('preset:delete', (id)              => db.deletePreset(id));
+h('preset:apply',  (mid, spec)       => db.applyPreset(mid, spec));
 
 // Scribe (markdown notes)
 h('note:getFolders',   (nx)            => db.getNoteFolders(nx));
@@ -666,26 +710,110 @@ h('note:updateContent',(id,content)    => db.updateNoteContent(id,content));
 h('note:delete',       (id)            => db.deleteNote(id));
 
 // Module system (v3 Nexus nest)
-h('module:getTree',     (nx)          => db.getTree(nx));
+// Legacy Scribe notes become modules the first time a tree is read (v5 Part
+// 8, §12) — boot, a vault switch, and the reload after an import merge all
+// pass through here, so none of them can show a tree with notes left out.
+h('module:getTree',     (nx)          => { db.autoMigrateNotes(nx); return db.getTree(nx); });
 h('module:getNestItems', (nx)         => db.getNestItems(nx));
 h('module:get',         (id)          => db.getModule(id));
 h('module:create',      (data)        => db.createModule(data));
 h('module:update',      (id,data)     => db.updateModule(id,data));
 h('module:updateDescription', (id,d)  => db.updateModuleDescription(id,d));
 h('module:delete',      (id)          => db.deleteModule(id));
+// v5 Part 7 (§11.4): the trash — a deleted module is kept as a snapshot.
+h('trash:module',  (nx, id)  => db.trashModule(nx, id));
+h('trash:list',    (nx)      => db.listTrash(nx));
+h('trash:restore', (nx, id)  => db.restoreTrash(nx, id));
+h('trash:delete',  (nx, id)  => db.deleteTrash(nx, id));
+h('trash:empty',   (nx)      => db.emptyTrash(nx));
+// v5 Part 7 (§11.4): content search (FTS5 trigram, LIKE fallback).
+h('search:rebuild', (nx)     => db.rebuildSearch(nx, true));
+h('search:query',   (nx, qy) => db.searchContent(nx, qy));
+
+// v5 Part 7 (§11.5): Diviner — random tables and dice.
+h('diviner:getTables',   (mref)          => db.getDivinerTables(mref));
+h('diviner:tablesInNexus', (nx)          => db.getDivinerTablesInNexus(nx));
+h('diviner:createTable', (mref,n,dc,md)  => db.createDivinerTable(mref,n,dc,md));
+h('diviner:updateTable', (id,n,dc,md)    => db.updateDivinerTable(id,n,dc,md));
+h('diviner:deleteTable', (id)            => db.deleteDivinerTable(id));
+h('diviner:getEntries',  (tref)          => db.getDivinerEntries(tref));
+h('diviner:createEntry', (tref,tx,k)     => db.createDivinerEntry(tref,tx,k));
+h('diviner:updateEntry', (id,e)          => db.updateDivinerEntry(id,e));
+h('diviner:deleteEntry', (id)            => db.deleteDivinerEntry(id));
+h('diviner:moveEntry',   (id,dir)        => db.moveDivinerEntry(id,dir));
+h('diviner:roll',        (tref)          => db.rollDivinerTable(tref));
+h('diviner:rollDice',    (expr)          => db.rollDiceOnly(expr));
+h('diviner:getRolls',    (tref)          => db.getDivinerRolls(tref));
+h('diviner:clearRolls',  (tref)          => db.clearDivinerRolls(tref));
+h('diviner:wouldCycle',  (tref,target)   => db.divinerWouldCycle(tref,target));
+
+// v5 Part 7 (§11.7): a whole project from one spec, in one transaction.
+h('bundle:create', (nx, parent, spec) => db.createBundle(nx, parent, spec));
+// v5 Part 7 (§11.10): the Problems panel.
+h('tools:problems', (nx) => db.listProblems(nx));
+// CSV → Classifier: pick and read here (the renderer cannot touch files);
+// the Classifier itself is made through bundle:create.
+h('tools:csvPick', async () => {
+  const r = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'CSV', properties: ['openFile'], filters: [{ name: 'CSV', extensions: ['csv', 'tsv', 'txt'] }],
+  });
+  if (r.canceled || !r.filePaths?.[0]) return { ok: false, canceled: true };
+  const out = db.readCsvFile(r.filePaths[0]);
+  return { ...out, name: path.basename(r.filePaths[0]).replace(/\.(csv|tsv|txt)$/i, '') };
+});
+// §11.8: the guide's spec for a locale (installed PKG guide › bundled › English).
+h('bundle:guide',  (locale)          => db.guideSpec(locale));
+// The genre bundles, vendored from DraconDex-SDB and resolved in the UI language.
+h('bundle:catalog', (locale)         => db.bundleCatalog(locale));
+
+// v5 Part 7 (§11.4): the whole Nexus as .md files in a .zip — export only.
+h('nexus:exportMarkdown', async (id) => {
+  const n = db.getNexus(id);
+  if (!n) return { ok: false, code: 'not_found' };
+  const safe = String(n.name || 'nexus').replace(/[\\/:*?"<>|]/g, '_');
+  const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'Export Markdown', defaultPath: path.join(app.getPath('documents'), `${safe}-markdown.zip`),
+    filters: [{ name: 'Markdown (.zip)', extensions: ['zip'] }],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  return db.exportNexusMarkdown(id, result.filePath);
+});
+// v5 Part 8 (§12.13): a website of pages — the walk, then the zip.
+h('htmlExport:collect', (nx,key,depth) => db.collectPages(nx,key,depth));
+h('htmlExport:write', async (nx, payload) => {
+  const n = db.getNexus(nx);
+  if (!n) return { ok: false, code: 'not_found' };
+  const safe = String(n.name || 'nexus').replace(/[\\/:*?"<>|]/g, '_');
+  const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'Export HTML', defaultPath: path.join(app.getPath('documents'), `${safe}-site.zip`),
+    filters: [{ name: 'Website (.zip)', extensions: ['zip'] }],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  return db.exportHtmlSite(result.filePath, payload);
+});
 h('module:duplicate',   (id)          => db.duplicateModule(id));
 h('module:move',        (nx,id,parentId,ids) => db.moveModule(nx,id,parentId,ids));
+h('module:normalizeReport', ()        => db.takeParentNormalizeReport());
 h('module:count',       (nx)          => db.countModules(nx));
-h('module:getAttrs',    (id)          => db.getModuleAttrs(id));
-h('module:upsertAttr',  (id,aid,n,v)  => db.upsertModuleAttr(id,aid,n,v));
-h('module:deleteAttr',  (id)          => db.deleteModuleAttr(id));
 h('module:getUi',       (id)          => db.getModuleUi(id));
 h('module:setUi',       (id,k,v)      => db.setModuleUi(id,k,v));
 h('module:getTags',     (id)          => db.getModuleTags(id));
 h('module:setTags',     (id,tags)     => db.setModuleTags(id,tags));
 h('module:getLinks',    (id)          => db.getModuleLinks(id));
-h('module:getInspector',(id)          => db.getModuleInspector(id));
-h('module:getChildStats', (pid)      => db.getChildModuleStats(pid));
+h('module:getProps',    (id,item)     => db.getPageProps(id,item));
+
+// v5 Part 8 (§12) — pages made of blocks (db/page-block.js).
+h('block:list',     (id,item)       => db.listBlocks(id,item));
+h('block:ensure',   (id,item,defs)  => db.ensurePage(id,item,defs));
+h('block:add',      (id,item,b)     => db.addBlock(id,item,b));
+h('block:get',      (id)            => db.getBlock(id));
+h('block:update',   (id,patch)      => db.updateBlock(id,patch));
+h('block:move',     (id,to)         => db.moveBlock(id,to));
+h('block:remove',   (id)            => db.deleteBlock(id));
+h('block:restore',  (rows)          => db.restoreBlocks(rows));
+h('block:split',    (id,item)       => db.splitItemPage(id,item));
+h('block:revert',   (id,item)       => db.revertItemPage(id,item));
+h('block:setProp',  (id,item,pid,n,v,tp) => db.setProp(id,item,pid,n,v,tp));
 
 // Process 7 part 2 — app-wide session undo/redo (Ctrl+Z/Ctrl+Shift+Z),
 // scoped to the active vault the same way every handler above is.
@@ -696,20 +824,18 @@ h('history:redo', () => db.historyRedo());
 h('classifier:setCatType',        (id,ct)              => db.setCatType(id,ct));
 h('classifier:getObjects',        (mref)                => db.getObjects(mref));
 h('classifier:getObjectsFull',    (mref)                => db.getObjectsFull(mref));
-h('classifier:getObject',         (id)                  => db.getObject(id));
 h('classifier:createObject',      (mref,n,c,ic)         => db.createObject(mref,n,c,ic));
 h('classifier:updateObject',      (id,n,c,ic)           => db.updateObject(id,n,c,ic));
-h('classifier:updateObjectNote',  (id,note)             => db.updateObjectNote(id,note));
 h('classifier:deleteObject',      (id)                  => db.deleteObject(id));
+h('classifier:duplicateObject',   (id,n)                => db.duplicateObject(id,n));
+h('classifier:moveObject',        (id,mref)             => db.moveObject(id,mref));
 h('classifier:getTemplates',      (mref)                => db.getTemplates(mref));
 h('classifier:getObjectTemplates',(mref,oref)           => db.getObjectTemplates(mref,oref));
-h('classifier:createTemplate',    (mref,d,t,lv,c,oref,ls)=> db.createTemplate(mref,d,t,lv,c,oref,ls));
-h('classifier:updateTemplate',    (id,d,t,lv,c,ls)      => db.updateTemplate(id,d,t,lv,c,ls));
+h('classifier:createTemplate',    (mref,d,t,lv,c,oref,op) => db.createTemplate(mref,d,t,lv,c,oref,op));
+h('classifier:updateTemplate',    (id,d,t,lv,c,op)      => db.updateTemplate(id,d,t,lv,c,op));
 h('classifier:deleteTemplate',    (id)                  => db.deleteTemplate(id));
-h('classifier:countObjectTemplates', (oref)             => db.countObjectTemplates(oref));
 h('classifier:getAttrs',          (oid)                 => db.getAttrs(oid));
 h('classifier:upsertAttr',        (oid,tid,v)           => db.upsertAttr(oid,tid,v));
-h('classifier:upsertAttrCondition', (oid,tid,v)         => db.upsertAttrCondition(oid,tid,v));
 h('classifier:getLevels',         (oid)                 => db.getLevels(oid));
 h('classifier:createLevel',       (oid,tid)             => db.createLevel(oid,tid));
 h('classifier:updateLevelField',  (id,f,v)              => db.updateLevelField(id,f,v));
@@ -720,6 +846,7 @@ h('classifier:moveLevels',        (oid,tid,ids)         => db.moveLevels(oid,tid
 h('wanderer:list',   (mref)                     => db.getMapEvents(mref));
 h('wanderer:create', (mref,ev,key,px,py,ar)     => db.createMapEvent(mref,ev,key,px,py,ar));
 h('wanderer:update', (id,ev,key,px,py,ar)       => db.updateMapEvent(id,ev,key,px,py,ar));
+h('wanderer:setLabel', (id,label)               => db.setMapEventLabel(id,label));
 h('wanderer:delete', (id)                       => db.deleteMapEvent(id));
 
 // Story "Narrator" (v3 Phase 10) — Dialogue route board
@@ -742,6 +869,8 @@ h('narrator:getChoiceOptions',   (did)          => db.getChoiceOptions(did));
 h('narrator:createChoiceOption', (tid,tx)       => db.createChoiceOption(tid,tx));
 h('narrator:updateChoiceOption', (id,tx,k,ef,j) => db.updateChoiceOption(id,tx,k,ef,j));
 h('narrator:deleteChoiceOption', (id)           => db.deleteChoiceOption(id));
+h('narrator:setChoiceLogic',     (id,c,s)       => db.setChoiceOptionLogic(id,c,s));
+h('narrator:variables',          (nx)           => db.getStoryVariables(nx));
 
 // Book "Author" (v3 Phase 11) — chapters
 h('author:getChapters',    (mref)      => db.getBookChapters(mref));
@@ -751,6 +880,7 @@ h('author:updateContent',  (id,c)      => db.updateBookChapterContent(id,c));
 h('author:deleteChapter',  (id)        => db.deleteBookChapter(id));
 h('author:setChapterLabel', (id,lb)    => db.setBookChapterLabel(id,lb));
 h('author:moveChapter',    (mref,ids)  => db.moveBookChapter(mref,ids));
+h('author:setChapterMeta', (id,meta)   => db.setBookChapterMeta(id,meta));
 
 // Chat "Scribe" (v3 Phase 12) — sessions + bubble messages
 h('chatscribe:getSessions',   (mref)   => db.getChatSessions(mref));
@@ -771,9 +901,19 @@ h('calendar:deleteTemplate', (id)          => db.deleteCalendarTemplate(id));
 h('calendar:ensureBuiltin',  (nx,n,spec)   => db.ensureBuiltinCalendarTemplate(nx,n,spec));
 h('viewer:index',          (nx)         => db.viewerIndex(nx));
 h('viewer:getRelations',   (nx)         => db.getEntityRelations(nx));
-h('viewer:createRelation', (nx,f,tk,l,c)  => db.createEntityRelation(nx,f,tk,l,c));
-h('viewer:updateRelation', (id,l,c)       => db.updateEntityRelation(id,l,c));
+h('viewer:createRelation', (nx,f,tk,l,c,o) => db.createEntityRelation(nx,f,tk,l,c,o || {}));
+h('viewer:updateRelation', (id,l,c,o)     => db.updateEntityRelation(id,l,c,o));
 h('viewer:deleteRelation', (id)         => db.deleteEntityRelation(id));
+h('viewer:relationTypes',  (nx)         => db.getRelationTypes(nx));
+// Exhibitor scene (v5 Part 2)
+h('exhibitor:scene',       (mid)        => db.getExhibitScene(mid));
+h('exhibitor:addNodes',    (mid, ns)    => db.addExhibitNodes(mid, ns));
+h('exhibitor:updateNode',  (id, patch)  => db.updateExhibitNode(id, patch));
+h('exhibitor:moveNodes',   (moves)      => db.moveExhibitNodes(moves));
+h('exhibitor:deleteNode',  (id)         => db.deleteExhibitNode(id));
+h('exhibitor:setView',     (mid, patch) => db.setExhibitView(mid, patch));
+h('exhibitor:findFor',     (mid)        => db.findExhibitorFor(mid));
+h('exhibitor:dedupeReport', ()          => db.takeRelationDedupeReport());
 
 // Drawing "Sketcher" (v3 Phase 15) — pages, strokes, pins, PNG export
 h('sketcher:getPages',     (mref)       => db.getSketchPages(mref));
@@ -788,10 +928,11 @@ h('sketcher:getPins',      (pref)       => db.getSketchPins(pref));
 h('sketcher:addPin',       (pref,k,px,py) => db.createSketchPin(pref,k,px,py));
 h('sketcher:movePin',      (id,px,py)   => db.moveSketchPin(id,px,py));
 h('sketcher:deletePin',    (id)         => db.deleteSketchPin(id));
-// Import Dock (v3 Phase 18) — folder import, file<->linker, viewers
-const IMPORT_EXTS = new Set(['png','jpg','jpeg','gif','webp','svg','md','txt','docx']);
-const IMAGE_EXTS = new Set(['png','jpg','jpeg','gif','webp','svg']);
-const imageMime = (ext) => (ext === 'svg' ? 'image/svg+xml' : `image/${ext === 'jpg' ? 'jpeg' : ext}`);
+// Import Dock (v3 Phase 18) — folder import, file<->linker, viewers.
+// v5 Asset Nest (APP docs/V5.md §2): assets live in module nodes, four asset
+// classes (asset-media.js), URL assets, a stat/hash/thumbnail sweep, relink.
+const IMPORT_EXTS = new Set(Object.keys(ASSET_CLASS));
+const IMAGE_EXTS = new Set(Object.keys(ASSET_CLASS).filter((e) => ASSET_CLASS[e] === 'image'));
 // Roots the USER actually chose through a dialog this session. importdock:add
 // takes absolute paths straight from the renderer and import_file rows are
 // later read back as bytes (importdock:readFile / readFiles and the
@@ -812,55 +953,186 @@ const isUnderPickedRoot = (p) => {
   return false;
 };
 
+const pickDirectory = async () => {
+  const res = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), { properties: ['openDirectory'] });
+  return res.canceled || !res.filePaths?.length ? null : res.filePaths[0];
+};
+
+// Walk a picked folder. Every file carries `folder` (the provenance string
+// the flat Dock always stored) and `dir` (its directory as a path array
+// starting at the root's own name) — importFolderTree turns the latter into
+// collector modules. dirs lists only directories that hold an importable
+// file somewhere below them, and dot-directories are skipped, so a picked
+// project folder does not sprout a collector per .git subfolder.
+function walkImportFolder(root) {
+  const rootName = path.basename(root);
+  const files = [];
+  const dirs = [];
+  const walk = (dir, segs) => {
+    let found = false;
+    let ents;
+    try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return false; }
+    for (const ent of ents) {
+      const p = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        if (ent.name.startsWith('.')) continue;
+        if (walk(p, [...segs, ent.name])) found = true;
+        continue;
+      }
+      const ext = path.extname(ent.name).slice(1).toLowerCase();
+      if (!IMPORT_EXTS.has(ext)) continue;
+      let size = 0;
+      try { size = fs.statSync(p).size; } catch (_) {}
+      files.push({
+        name: ent.name, path: p, type: ext, size, dir: segs,
+        folder: rootName + (dir === root ? '' : '/' + path.relative(root, dir).replace(/\\/g, '/')),
+      });
+      found = true;
+    }
+    if (found) dirs.push(segs);
+    return found;
+  };
+  walk(root, [rootName]);
+  // Parents before children, so a collector's parent always exists first.
+  dirs.sort((a, b) => a.length - b.length);
+  return { rootName, dirs, files };
+}
+
 h('importdock:list',          (nx)     => db.getImportFiles(nx));
-h('importdock:add', (nx, fs2) => {
+h('importdock:get',           (id)     => db.getImportFile(id));
+h('importdock:add', (nx, fs2, moduleRef) => {
   const clean = (Array.isArray(fs2) ? fs2 : []).filter((f) => isUnderPickedRoot(f?.path)).map((f) => ({
-    ...f,
+    name: String(f.name || path.basename(String(f.path))),
+    path: String(f.path),
+    size: Number(f.size) || 0,
+    folder: f.folder == null ? null : String(f.folder),
     // Derived here, never taken from the renderer: file_type decides which
     // reader will later serve the bytes, so letting the caller pick it would
     // re-open the same hole from the other side.
     type: path.extname(String(f.path || '')).slice(1).toLowerCase(),
   })).filter((f) => IMPORT_EXTS.has(f.type));
-  return db.addImportFiles(nx, clean);
+  return db.addImportFiles(nx, clean, moduleRef ?? null);
 });
 h('importdock:setLinker',     (id,k)   => db.setImportLinker(id,k));
 h('importdock:setUseAsImage', (id,on)  => db.setImportUseAsImage(id,on));
+h('importdock:setModule',     (id,m)   => db.setImportModule(id, m ?? null));
+h('importdock:moduleAssets',  (mid)    => db.getModuleAssets(mid));
+h('importdock:nestAssets',    (nx)     => db.getNestAssets(nx));
 h('importdock:delete',        (id)     => db.deleteImportFile(id));
 h('importdock:displayImages', (nx)     => db.getDisplayImages(nx));
+// Kept for the flat-file path (and Part 4's locate-nexus, which reuses the
+// dialog + guard): returns the walk, registers nothing.
 h('importdock:pickFolder', async () => {
-  const win = BrowserWindow.getFocusedWindow();
-  const res = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
-  if (res.canceled || !res.filePaths?.length) return { canceled: true };
-  const root = res.filePaths[0];
+  const root = await pickDirectory();
+  if (!root) return { canceled: true };
   // The user picked it, so anything under it may be registered later.
   pickedImportRoots.add(path.resolve(root));
-  const files = [];
-  const walk = (dir) => {
-    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-      const p = path.join(dir, ent.name);
-      if (ent.isDirectory()) { walk(p); continue; }
-      const ext = path.extname(ent.name).slice(1).toLowerCase();
-      if (!IMPORT_EXTS.has(ext)) continue;
-      files.push({
-        name: ent.name, path: p, type: ext,
-        size: fs.statSync(p).size,
-        folder: path.basename(root) + (path.dirname(p) === root ? '' : '/' + path.relative(root, path.dirname(p)).replace(/\\/g, '/')),
-      });
-    }
-  };
-  walk(root);
-  return { folder: path.basename(root), files };
+  const { rootName, files } = walkImportFolder(root);
+  return { folder: rootName, files };
+});
+// §2.3 "locate folder asset": pick a folder, mirror its directory tree as
+// collector modules under parentModuleId (null = top level), file each asset
+// into its own folder's collector. The walk never leaves main, so there is
+// no renderer-supplied path to vet.
+h('importdock:importFolder', async (nx, parentModuleId) => {
+  const root = await pickDirectory();
+  if (!root) return { canceled: true };
+  pickedImportRoots.add(path.resolve(root));
+  const { dirs, files } = walkImportFolder(root);
+  return db.importFolderTree(nx, parentModuleId ?? null, dirs, files);
+});
+// ─── Locate Nexus (v5 Part 4, APP docs/V5.md §8.5–§8.6) ──────────────────
+// One sync, both directions (§8.11.4): folders the user made on disk come in
+// as collectors — and their files as assets — through the same
+// importFolderTree the Dock's folder import uses, then the vault is written
+// back out as folders + .mddx files (db/mirror.js). The locate root joins
+// pickedImportRoots, the same guard every other picked folder goes through.
+function syncLocate(nx) {
+  const v = db.getNexus(nx);
+  if (!v?.locate_dir) return { ok: false, code: 'no_dir' };
+  if (v.locate_missing) return { ok: false, code: 'missing' };
+  const root = path.resolve(v.locate_dir);
+  pickedImportRoots.add(root);
+  // walkImportFolder names its first segment after the root; the root IS
+  // the Nexus top level here, so that segment is dropped.
+  const { dirs, files } = walkImportFolder(root);
+  const sub = dirs.map((segs) => segs.slice(1)).filter((segs) => segs.length);
+  const inFolders = files.map((f) => ({ ...f, dir: f.dir.slice(1) }));
+  const imported = sub.length || inFolders.length ? db.importFolderTree(nx, null, sub, inFolders) : null;
+  return { ...db.syncNexusMirror(nx), imported };
+}
+h('nexus:locatePick', async (nx) => {
+  const root = await pickDirectory();
+  if (!root) return { canceled: true };
+  db.setVaultLocateDir(nx, path.resolve(root));
+  return syncLocate(nx);
+});
+h('nexus:locateSync',   (nx) => syncLocate(nx));
+h('nexus:locateForget', (nx) => { db.setVaultLocateDir(nx, null); return true; });
+// Opens only the folder the registry holds, never a path from the renderer.
+h('nexus:locateOpen', async (nx) => {
+  const v = db.getNexus(nx);
+  if (!v?.locate_dir || v.locate_missing) return false;
+  return (await shell.openPath(v.locate_dir)) === '';
+});
+
+// URL assets (§2.6): metadata + shell.openExternal only. connect-src 'none'
+// and frame-src 'none' stay exactly as they are — no preview, no embed.
+h('importdock:addUrl', (nx, url, name, moduleRef) => {
+  const u = normalizeAssetUrl(url);
+  if (!u) return { error: 'invalid_url' };
+  const label = String(name || '').trim() || new URL(u).hostname;
+  return { id: db.addImportUrl(nx, u, label, moduleRef ?? null) };
+});
+// Opens only what the ROW says, never a URL the renderer hands over, and
+// re-validates the scheme on the way out.
+h('importdock:openUrl', async (id) => {
+  const f = db.getImportFile(id);
+  const u = f && f.source_kind === 'url' ? normalizeAssetUrl(f.file_path) : null;
+  if (!u) return false;
+  await shell.openExternal(u);
+  return true;
+});
+// A Classifier url field (v5 Part 7, §11.3) — same rule as a URL asset:
+// main opens what the STORED value says, re-validated, never a string the
+// renderer hands over.
+h('classifier:openUrl', async (objectId, templateId) => {
+  const v = db.getAttrValue(objectId, templateId);
+  const u = v != null ? normalizeAssetUrl(v) : null;
+  if (!u) return false;
+  await shell.openExternal(u);
+  return true;
+});
+// PDFs (and anything else without an in-app reader) open in the OS default
+// app — object-src/frame-src 'none' rule out an embedded viewer. Registered
+// rows only, and only an importable type: file_type is derived in main and a
+// relink must keep the extension, so this can never launch an executable.
+h('importdock:openPath', async (id) => {
+  const f = db.getImportFile(id);
+  const ext = (f?.file_type || '').toLowerCase();
+  if (!f || f.source_kind !== 'file' || !IMPORT_EXTS.has(ext)
+      || path.extname(f.file_path).slice(1).toLowerCase() !== ext) return false;
+  return !(await shell.openPath(f.file_path));
 });
 // Content is only served for files already registered in import_file.
 h('importdock:readFile', async (id) => {
   const f = db.getImportFile(id);
   if (!f) return null;
+  if (f.source_kind === 'url') return { kind: 'url', url: f.file_path };
   const ext = (f.file_type || '').toLowerCase();
+  const cls = assetClassOf(ext);
   try {
-    // Images carry no payload any more (Plan part2 #2.2) — the viewer points
-    // <img> at ddx-file://<id> instead. Only the existence/readability check
-    // still matters here, so a missing file still renders the error state.
-    if (IMAGE_EXTS.has(ext)) { await fs.promises.access(f.file_path); return { kind: 'image' }; }
+    await fs.promises.access(f.file_path);
+  } catch (_) {
+    // §2.5: the original is gone but the row (and its proxy, if any) stays —
+    // the viewer shows the proxy with a Relink button instead of an error.
+    return { kind: 'missing', cls, hasProxy: !!f.has_proxy };
+  }
+  try {
+    // Images, audio and video carry no payload — the viewer points the
+    // element at ddx-file://<id>, which streams with Range support.
+    if (cls === 'image' || cls === 'audio' || cls === 'video') return { kind: cls };
+    if (ext === 'pdf') return { kind: 'pdf' };
     if (ext === 'md' || ext === 'txt') return { kind: ext, text: await fs.promises.readFile(f.file_path, 'utf8') };
     return { kind: 'binary' };
   } catch (e) {
@@ -881,10 +1153,135 @@ h('importdock:readFiles', async (ids) => {
     const ext = (f.file_type || '').toLowerCase();
     if (!IMAGE_EXTS.has(ext)) return;
     try {
-      out[id] = `data:${imageMime(ext)};base64,${(await fs.promises.readFile(f.file_path)).toString('base64')}`;
+      out[id] = `data:${mimeOf(ext)};base64,${(await fs.promises.readFile(f.file_path)).toString('base64')}`;
     } catch (_) { /* unreadable/moved file — leave it out, renderer shows the empty state */ }
   }));
   return out;
+});
+
+// ── Asset sweep (§2.5) ─────────────────────────────────────────────────────
+// stat every file asset (missing flag + last_seen_at), hash the ones never
+// hashed, and build a cover proxy for images that have none. Async fs work
+// between synchronous one-row db writes, so it never blocks the main process
+// for long; the renderer runs it once per vault per session and after every
+// import. One sweep per vault at a time.
+const hashFile = (p) => new Promise((resolve) => {
+  const hash = crypto.createHash('sha256');
+  fs.createReadStream(p).on('error', () => resolve(null))
+    .on('data', (c) => hash.update(c)).on('end', () => resolve(hash.digest('hex')));
+});
+
+// ≤512px JPEG, stepped down until it fits the per-file cap. JPEG drops
+// transparency, which a cover thumbnail can afford. SVG (nativeImage can't
+// decode it, and it is small and scalable anyway) and anything undecodable
+// get no proxy. Audio/video posters are deferred — they need a decoder the
+// app does not ship; the renderer shows the class icon instead.
+function makeImageProxy(p) {
+  const img = nativeImage.createFromPath(p);
+  if (img.isEmpty()) return null;
+  const { width, height } = img.getSize();
+  for (const [edge, q] of [[512, 80], [512, 60], [256, 60]]) {
+    const dims = width >= height ? { width: Math.min(edge, width) } : { height: Math.min(edge, height) };
+    const buf = img.resize({ ...dims, quality: 'good' }).toJPEG(q);
+    if (buf.length <= PROXY_MAX_BYTES) return buf;
+  }
+  return null;
+}
+
+const sweepsRunning = new Set();
+h('importdock:sweep', async (nx) => {
+  if (nx == null || sweepsRunning.has(nx)) return { busy: true };
+  sweepsRunning.add(nx);
+  const stats = { checked: 0, missing: 0, changed: 0, hashed: 0, proxied: 0 };
+  try {
+    for (const r of db.getSweepRows(nx)) {
+      stats.checked++;
+      let st = null;
+      try { st = await fs.promises.stat(r.file_path); if (!st.isFile()) st = null; } catch (_) {}
+      if (!st) stats.missing++;
+      if (!!r.missing !== !st || (st && !r.last_seen_at)) {
+        db.markImportSeen(r.id, !!st);
+        if (!!r.missing !== !st) stats.changed++;
+      }
+      if (!st) continue;
+      if (!r.sha256) {
+        const hex = await hashFile(r.file_path);
+        if (hex) { db.setImportHash(r.id, hex, st.size); stats.hashed++; }
+      }
+      const ext = (r.file_type || '').toLowerCase();
+      if (r.needs_proxy && assetClassOf(ext) === 'image' && ext !== 'svg' && st.size <= LARGE_BYTES) {
+        let buf = null;
+        try { buf = makeImageProxy(r.file_path); } catch (_) {}
+        if (buf && db.setImportProxy(r.id, buf, 'image/jpeg')) stats.proxied++;
+      }
+    }
+  } finally {
+    sweepsRunning.delete(nx);
+  }
+  return stats;
+});
+
+// ── Relink (§2.5) ──────────────────────────────────────────────────────────
+// The dialog runs here, so the new path always comes from the user, never
+// from the renderer. A hash mismatch is parked in pendingRelink and needs a
+// second, explicit call — the renderer confirms, it does not supply a path.
+const pendingRelink = new Map();
+const sameExt = (p, ext) => path.extname(p).slice(1).toLowerCase() === String(ext || '').toLowerCase();
+
+h('importdock:relink', async (id) => {
+  const f = db.getImportFile(id);
+  if (!f || f.source_kind !== 'file') return { error: 'not_file' };
+  const ext = (f.file_type || '').toLowerCase();
+  const res = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
+    properties: ['openFile'], filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
+  });
+  if (res.canceled || !res.filePaths?.length) return { canceled: true };
+  const p = res.filePaths[0];
+  if (!sameExt(p, ext)) return { error: 'type' };
+  const st = await fs.promises.stat(p);
+  const hex = await hashFile(p);
+  if (f.sha256 && hex && hex !== f.sha256) {
+    pendingRelink.set(id, { path: p, size: st.size, hex });
+    return { mismatch: true };
+  }
+  db.relinkImportFile(id, p, st.size);
+  if (hex) db.setImportHash(id, hex, st.size);
+  return { ok: true };
+});
+h('importdock:relinkConfirm', (id) => {
+  const pend = pendingRelink.get(id);
+  pendingRelink.delete(id);
+  if (!pend) return { error: 'none' };
+  db.relinkImportFile(id, pend.path, pend.size);
+  if (pend.hex) db.setImportHash(id, pend.hex, pend.size);
+  return { ok: true };
+});
+// Folder relink: every missing asset of this vault is matched by file name
+// + extension inside the picked folder, and — when the row was ever hashed —
+// by sha256 as well, so two different "cover.png"s never swap places. An
+// unhashed row relinks only on a unique name match.
+h('importdock:relinkFolder', async (nx) => {
+  const root = await pickDirectory();
+  if (!root) return { canceled: true };
+  pickedImportRoots.add(path.resolve(root));
+  const byName = new Map();
+  for (const f of walkImportFolder(root).files) {
+    const k = f.name.toLowerCase();
+    (byName.get(k) || byName.set(k, []).get(k)).push(f);
+  }
+  let relinked = 0;
+  const missing = db.getMissingImports(nx);
+  for (const m of missing) {
+    const cands = (byName.get(String(m.file_name).toLowerCase()) || []).filter((c) => sameExt(c.path, m.file_type));
+    let hit = null;
+    if (m.sha256) {
+      for (const c of cands) if (await hashFile(c.path) === m.sha256) { hit = c; break; }
+    } else if (cands.length === 1) {
+      hit = cands[0];
+    }
+    if (hit) { db.relinkImportFile(m.id, hit.path, hit.size); relinked++; }
+  }
+  return { relinked, remaining: missing.length - relinked };
 });
 
 // Version control (v3 Phase 21)
@@ -1130,6 +1527,9 @@ h('sagehut:linkerList', (nx) => db.sageHutLinkerList(nx));
 h('designer:getNodes',   (mref)             => db.getDesignNodes(mref));
 h('designer:createNode', (mref,s,px,py,tx,c,k) => db.createDesignNode(mref,s,px,py,tx,c,k));
 h('designer:updateNode', (id,s,tx,c)        => db.updateDesignNode(id,s,tx,c));
+h('designer:resizeNode', (id,w,hh)          => db.resizeDesignNode(id,w,hh));
+h('designer:setComic',   (id,k,ro)          => db.setDesignNodeComic(id,k,ro));
+h('designer:renumber',   (mref,rtl)         => db.renumberDesignReadOrder(mref,rtl));
 h('designer:moveNode',   (id,px,py)         => db.moveDesignNode(id,px,py));
 h('designer:deleteNode', (id)               => db.deleteDesignNode(id));
 h('designer:getEdges',   (mref)             => db.getDesignEdges(mref));

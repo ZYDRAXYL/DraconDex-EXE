@@ -1,6 +1,19 @@
 'use strict';
 const core      = require('./src/db/core');
 const nexus     = require('./src/db/nexus');
+const teach     = require('./src/db/teach');
+const preset    = require('./src/db/preset');
+const trash     = require('./src/db/trash');
+const search    = require('./src/db/search');
+const mdExport  = require('./src/db/md-export');
+const diviner   = require('./src/db/diviner');
+const bundle    = require('./src/db/bundle');
+const guide     = require('./src/db/guide');
+const problems  = require('./src/db/problems');
+const csvImport = require('./src/db/csv-import');
+const pageBlock = require('./src/db/page-block');
+const htmlExport = require('./src/db/html-export');
+const bundleCatalog = require('./src/db/bundle-catalog');
 const scribe    = require('./src/db/scribe');
 const wiki      = require('./src/db/wiki');
 const color     = require('./src/db/color');
@@ -16,6 +29,7 @@ const narrator  = require('./src/db/narrator');
 const author    = require('./src/db/author');
 const chatscribe = require('./src/db/chatscribe');
 const viewer    = require('./src/db/viewer');
+const exhibitor = require('./src/db/exhibitor');
 const calendar  = require('./src/db/calendar');
 const sketcher  = require('./src/db/sketcher');
 const designer  = require('./src/db/designer');
@@ -30,12 +44,27 @@ const plugin    = require('./src/db/plugin');
 const extension = require('./src/db/extension');
 const pkg       = require('./src/db/pkg');
 const dbTransfer = require('./src/db/db-transfer');
+const mirror    = require('./src/db/mirror');
+const vaults    = require('./src/db/vaults');
 const transfer  = require('./src/db/transfer');
 const cloud     = require('./src/db/cloud');
 
 module.exports = {
   ...core,
   ...nexus,
+  ...teach,
+  ...preset,
+  ...trash,
+  ...search,
+  ...mdExport,
+  ...diviner,
+  ...bundle,
+  ...guide,
+  ...problems,
+  ...csvImport,
+  ...pageBlock,
+  ...htmlExport,
+  ...bundleCatalog,
   ...scribe,
   ...wiki,
   ...color,
@@ -51,6 +80,7 @@ module.exports = {
   ...author,
   ...chatscribe,
   ...viewer,
+  ...exhibitor,
   ...calendar,
   ...sketcher,
   ...designer,
@@ -65,6 +95,8 @@ module.exports = {
   ...extension,
   ...pkg,
   ...dbTransfer,
+  ...mirror,
+  setVaultLocateDir: vaults.setVaultLocateDir,
   ...transfer,
   ...cloud,
 };

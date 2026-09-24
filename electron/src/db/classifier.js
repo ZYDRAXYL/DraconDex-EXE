@@ -19,10 +19,6 @@ const getObjects = (moduleRef) => getDB().prepare(`
   WHERE o.module_ref=? ORDER BY o.display_order, o.id
 `).all(moduleRef);
 
-const getObject = (id) => getDB().prepare(`
-  SELECT o.*, uc.color_code FROM classifier_object o LEFT JOIN use_color uc ON uc.id = o.color WHERE o.id=?
-`).get(id);
-
 // Objects are wikilink targets/sources under the cobj_<id> key kind
 // (added in Phase 14 — [[Name]] typed before this resolved to nothing).
 const nexusOfObjectRow = (id) => getDB().prepare(`
@@ -51,14 +47,18 @@ const updateObject = (id, name, colorId, icon) => {
   return r;
 };
 
+// Not reachable from the renderer (V5.md §7.4 retired the IPC) — the note
+// column has no UI. Kept for the two data-layer callers that still write it:
+// migrate_v3 carrying a legacy object's note across, and version restore.
 const updateObjectNote = (id, note) => {
   const r = getDB().prepare(`UPDATE classifier_object SET note=?, update_at=datetime('now') WHERE id=?`).run(note, id);
-  wiki.reindexWikiLinks(`cobj_${id}`, note, nexusOfObjectRow(id));
+  wiki.reindexSource('cobj', id); // note + text field values, db/wiki-sources.js
   return r;
 };
 
 const deleteObject = (id) => {
   const prev = getDB().prepare(`SELECT * FROM classifier_object WHERE id=?`).get(id);
+  require('./page-block').clearItemBlocks(`cobj_${id}`); // its page goes with it (§12)
   const r = getDB().prepare(`DELETE FROM classifier_object WHERE id=?`).run(id);
   getDB().prepare(`DELETE FROM wiki_link WHERE src_key=?`).run(`cobj_${id}`);
   if (prev) versions.recordVersion(prev.module_ref, 'objectDel', prev.name,
@@ -66,44 +66,157 @@ const deleteObject = (id) => {
   return r;
 };
 
+// Duplicate (V5.md §7.4 object menu): the row, every attribute value, every
+// level row, and its private fields — one transaction, placed right after the
+// original.
+function duplicateObject(id, copyName) {
+  const d = getDB();
+  const o = d.prepare(`SELECT * FROM classifier_object WHERE id=?`).get(id);
+  if (!o) return null;
+  return d.transaction(() => {
+    d.prepare(`UPDATE classifier_object SET display_order=display_order+1 WHERE module_ref=? AND display_order>?`).run(o.module_ref, o.display_order);
+    const name = copyName || `${o.name} (2)`;
+    const nid = d.prepare(`INSERT INTO classifier_object (module_ref, name, color, icon, display_order) VALUES (?,?,?,?,?)`)
+      .run(o.module_ref, name, o.color, o.icon, o.display_order + 1).lastInsertRowid;
+    const tplMap = new Map();
+    for (const tp of d.prepare(`SELECT * FROM classifier_template WHERE object_ref=?`).all(id)) {
+      tplMap.set(tp.id, d.prepare(`INSERT INTO classifier_template (module_ref, object_ref, description, attribute_type, levelable, has_condition, display_order, options)
+        VALUES (?,?,?,?,?,?,?,?)`).run(tp.module_ref, nid, tp.description, tp.attribute_type, tp.levelable, tp.has_condition, tp.display_order, tp.options ?? null).lastInsertRowid);
+    }
+    const tpl = (tid) => tplMap.get(tid) ?? tid;
+    for (const a of d.prepare(`SELECT * FROM classifier_attribute WHERE object_ref=?`).all(id)) {
+      d.prepare(`INSERT INTO classifier_attribute (object_ref, template_ref, attribute_value, condition_value) VALUES (?,?,?,?)`)
+        .run(nid, tpl(a.template_ref), a.attribute_value, a.condition_value);
+    }
+    for (const l of d.prepare(`SELECT * FROM classifier_level WHERE object_ref=?`).all(id)) {
+      d.prepare(`INSERT INTO classifier_level (object_ref, template_ref, level_label, condition_value, info_value, display_order) VALUES (?,?,?,?,?,?)`)
+        .run(nid, tpl(l.template_ref), l.level_label, l.condition_value, l.info_value, l.display_order);
+    }
+    // Relation-field values (§11.3) are rows this object's fields own — the
+    // copy gets its own, under its own (possibly copied private) field.
+    for (const r of d.prepare(`SELECT * FROM entity_relation WHERE from_key=? AND rel_type GLOB 'ctpl_[0-9]*'`).all(`cobj_${id}`)) {
+      const tid = tpl(Number(String(r.rel_type).slice(5)));
+      d.prepare(`INSERT OR IGNORE INTO entity_relation (nexus_ref, from_key, to_key, label, color, rel_type, directed, module_ref, valid_from, valid_to)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`).run(r.nexus_ref, `cobj_${nid}`, r.to_key, r.label, r.color, `ctpl_${tid}`, r.directed, r.module_ref, r.valid_from, r.valid_to);
+    }
+    wiki.resolveDanglingLinks(name, nexusOfObjectRow(nid));
+    versions.recordVersion(o.module_ref, 'object', `+ ${name}`, { op: 'classifierObjectDelete', args: { objectId: nid } });
+    wiki.reindexSource('cobj', nid); // the copied values carry their [[links]] too
+    return nid;
+  })();
+}
+
+// Move to another Classifier (§7.4). Values live under the SOURCE's shared
+// fields, so each one is re-pointed at the target's field of the same name —
+// created there if missing — rather than dropped. Private fields travel with
+// the object. The cobj_<id> key is unchanged, so links and relations follow.
+function moveObject(id, targetModuleRef) {
+  const d = getDB();
+  const o = d.prepare(`SELECT * FROM classifier_object WHERE id=?`).get(id);
+  if (!o || o.module_ref === targetModuleRef) return false;
+  const target = d.prepare(`SELECT id, kind FROM module WHERE id=?`).get(targetModuleRef);
+  if (!target || target.kind !== 'classifier') return false;
+  d.transaction(() => {
+    const byName = new Map(getTemplates(targetModuleRef).map((tp) => [tp.description.toLowerCase(), tp.id]));
+    const remap = new Map();
+    for (const tp of getTemplates(o.module_ref)) {
+      let tid = byName.get(tp.description.toLowerCase());
+      if (tid == null) {
+        tid = createTemplate(targetModuleRef, tp.description, tp.attribute_type, tp.levelable, tp.has_condition, null, tp.options ?? null);
+        byName.set(tp.description.toLowerCase(), tid);
+      }
+      remap.set(tp.id, tid);
+    }
+    for (const [from, to] of remap) {
+      // OR IGNORE: two source fields with the same name land on one target
+      // field; the first value wins and the leftover row is cleared below.
+      d.prepare(`UPDATE OR IGNORE classifier_attribute SET template_ref=? WHERE object_ref=? AND template_ref=?`).run(to, id, from);
+      d.prepare(`DELETE FROM classifier_attribute WHERE object_ref=? AND template_ref=?`).run(id, from);
+      d.prepare(`UPDATE classifier_level SET template_ref=? WHERE object_ref=? AND template_ref=?`).run(to, id, from);
+      // Its relation-field rows now belong to the target's field (§11.3).
+      d.prepare(`UPDATE OR IGNORE entity_relation SET rel_type=?, module_ref=? WHERE from_key=? AND rel_type=?`).run(`ctpl_${to}`, targetModuleRef, `cobj_${id}`, `ctpl_${from}`);
+      d.prepare(`DELETE FROM entity_relation WHERE from_key=? AND rel_type=?`).run(`cobj_${id}`, `ctpl_${from}`);
+    }
+    d.prepare(`UPDATE classifier_template SET module_ref=? WHERE object_ref=?`).run(targetModuleRef, id);
+    const top = d.prepare(`SELECT COALESCE(MAX(display_order),-1) AS m FROM classifier_object WHERE module_ref=?`).get(targetModuleRef).m;
+    d.prepare(`UPDATE classifier_object SET module_ref=?, display_order=?, update_at=datetime('now') WHERE id=?`).run(targetModuleRef, top + 1, id);
+  })();
+  wiki.reindexSource('cobj', id); // a value dropped by a same-name merge takes its links with it
+  return true;
+}
+
 // ── Templates ───────────────────────────────────────────────────────────
 // Shared (object_ref NULL) — every object in the category gets these.
 const getTemplates = (moduleRef) => getDB().prepare(`
   SELECT * FROM classifier_template WHERE module_ref=? AND object_ref IS NULL ORDER BY display_order, id
 `).all(moduleRef);
 
-// Shared + this object's own private template (Character type only).
+// Shared + this object's own private fields (any number, any category —
+// V5.md §7.4; this used to be one field, Character type only).
 const getObjectTemplates = (moduleRef, objectRef) => getDB().prepare(`
   SELECT * FROM classifier_template WHERE module_ref=? AND (object_ref IS NULL OR object_ref=?) ORDER BY display_order, id
 `).all(moduleRef, objectRef);
 
-function createTemplate(moduleRef, description, attributeType, levelable, hasCondition, objectRef, levelSteps) {
+// level_steps is no longer written (V5.md §7.4: stages are classifier_level
+// rows per element since Process 8); the column stays in vault.sql, unread,
+// until a breaking SDB release drops it.
+// v5 Part 7 (§11.3): `options` is the field type's JSON settings (select
+// choices, a formula's expression, a relation's target kinds) — stored as
+// given, validated where it is read (mod/cls-field-types.js).
+const optionsText = (o) => (o == null || o === '' ? null : typeof o === 'string' ? o : JSON.stringify(o));
+function createTemplate(moduleRef, description, attributeType, levelable, hasCondition, objectRef, options = null) {
   const d = getDB();
   const maxOrder = d.prepare(`SELECT COALESCE(MAX(display_order),-1) AS m FROM classifier_template WHERE module_ref=?`).get(moduleRef).m;
   return d.prepare(`
-    INSERT INTO classifier_template (module_ref, object_ref, description, attribute_type, levelable, has_condition, level_steps, display_order)
+    INSERT INTO classifier_template (module_ref, object_ref, description, attribute_type, levelable, has_condition, display_order, options)
     VALUES (?,?,?,?,?,?,?,?)
-  `).run(moduleRef, objectRef || null, description, attributeType || 'text', levelable ? 1 : 0, hasCondition ? 1 : 0, levelSteps || null, maxOrder + 1).lastInsertRowid;
+  `).run(moduleRef, objectRef || null, description, attributeType || 'text', levelable ? 1 : 0, hasCondition ? 1 : 0, maxOrder + 1, optionsText(options)).lastInsertRowid;
 }
 
-const updateTemplate = (id, description, attributeType, levelable, hasCondition, levelSteps) => {
+// options === undefined keeps the stored options (an older caller that only
+// renames a field must not wipe a select's choices).
+const updateTemplate = (id, description, attributeType, levelable, hasCondition, options) => {
   const prev = getDB().prepare(`SELECT * FROM classifier_template WHERE id=?`).get(id);
   const r = getDB().prepare(`
-    UPDATE classifier_template SET description=?, attribute_type=?, levelable=?, has_condition=?, level_steps=?, update_at=datetime('now') WHERE id=?
-  `).run(description, attributeType || 'text', levelable ? 1 : 0, hasCondition ? 1 : 0, levelSteps || null, id);
+    UPDATE classifier_template SET description=?, attribute_type=?, levelable=?, has_condition=?, update_at=datetime('now') WHERE id=?
+  `).run(description, attributeType || 'text', levelable ? 1 : 0, hasCondition ? 1 : 0, id);
+  if (options !== undefined) getDB().prepare(`UPDATE classifier_template SET options=? WHERE id=?`).run(optionsText(options), id);
+  // A field that stops being a relation field no longer owns its rows.
+  if (prev?.attribute_type === 'relation' && attributeType !== 'relation') {
+    getDB().prepare(`DELETE FROM entity_relation WHERE rel_type=?`).run(`ctpl_${id}`);
+  }
+  // A date field is not free text, so switching the type moves its values
+  // in or out of the object's indexed text.
+  if (prev && (prev.attribute_type || 'text') !== (attributeType || 'text')) {
+    for (const oid of objectsWithValuesOf(id)) wiki.reindexSource('cobj', oid);
+  }
   if (prev) versions.recordVersion(prev.module_ref, 'template', `${prev.description} → ${description}`,
-    { op: 'classifierTemplate', args: { templateId: id, description: prev.description, attributeType: prev.attribute_type, levelable: prev.levelable, hasCondition: prev.has_condition, levelSteps: prev.level_steps } });
+    { op: 'classifierTemplate', args: { templateId: id, description: prev.description, attributeType: prev.attribute_type, levelable: prev.levelable, hasCondition: prev.has_condition } });
   return r;
 };
 
-const deleteTemplate = (id) => getDB().prepare(`DELETE FROM classifier_template WHERE id=?`).run(id);
+// A field's values leave every object's indexed text with it (v5 Part 4 —
+// field values hold [[links]], db/wiki-sources.js 'cobj').
+const objectsWithValuesOf = (templateId) => getDB()
+  .prepare(`SELECT DISTINCT object_ref AS id FROM classifier_attribute WHERE template_ref=? AND attribute_value LIKE '%[[%'`)
+  .all(templateId).map((r) => r.id);
 
-// A Character-type object may hold exactly one private template — enforced
-// here (not a DB constraint) since it's cheap and keeps the schema simple.
-const countObjectTemplates = (objectRef) =>
-  getDB().prepare(`SELECT COUNT(*) AS c FROM classifier_template WHERE object_ref=?`).get(objectRef).c;
+const deleteTemplate = (id) => {
+  const touched = objectsWithValuesOf(id);
+  const r = getDB().prepare(`DELETE FROM classifier_template WHERE id=?`).run(id);
+  // A relation field's values are entity_relation rows it owns (§11.3) —
+  // they go with it, like classifier_attribute rows go by CASCADE.
+  getDB().prepare(`DELETE FROM entity_relation WHERE rel_type=?`).run(`ctpl_${id}`);
+  for (const oid of touched) wiki.reindexSource('cobj', oid);
+  return r;
+};
 
 // ── Attribute values ───────────────────────────────────────────────────
+// One stored value, for a caller that must not trust the renderer's copy
+// (main's classifier:openUrl). Only a url-type field answers.
+const getAttrValue = (objectId, templateId) => getDB().prepare(`
+  SELECT ca.attribute_value AS v FROM classifier_attribute ca JOIN classifier_template ct ON ct.id=ca.template_ref
+  WHERE ca.object_ref=? AND ca.template_ref=? AND ct.attribute_type='url'`).get(objectId, templateId)?.v ?? null;
 const getAttrs = (objectId) => getDB().prepare(`
   SELECT ca.*, ct.description, ct.attribute_type, ct.levelable, ct.has_condition, ct.object_ref AS template_object_ref
   FROM classifier_attribute ca JOIN classifier_template ct ON ca.template_ref = ct.id
@@ -159,12 +272,9 @@ function getObjectsFull(moduleRef) {
       (byTpl[l.template_ref] ||= []).push(l);
     }
     for (const o of objects) {
-      o.attrMap = {}; o.conditionMap = {};
+      o.attrMap = {};
       o.levelMap = lvlByObj.get(o.id) || {};
-      for (const a of (attrsByObj.get(o.id) || [])) {
-        o.attrMap[a.template_ref] = a.attribute_value;
-        o.conditionMap[a.template_ref] = a.condition_value;
-      }
+      for (const a of (attrsByObj.get(o.id) || [])) o.attrMap[a.template_ref] = a.attribute_value;
       o.privateTemplates = (privByObj.get(o.id) || [])
         .map(tp => ({ id: tp.id, description: tp.description, value: o.attrMap[tp.id] || '' }));
     }
@@ -186,16 +296,11 @@ const upsertAttr = (objectId, templateId, value) => {
       `${obj.name} · ${tpl?.description ?? ''}: ${prev?.attribute_value ?? '—'} → ${value ?? ''}`,
       { op: 'classifierAttr', args: { objectId, templateId, value: prev?.attribute_value ?? '' } });
   }
+  // Field values hold [[links]] (v5 Part 4) — reindex when a link could
+  // have appeared or disappeared, not on every keystroke-save of plain text.
+  if (/\[\[/.test(prev?.attribute_value ?? '') || /\[\[/.test(value ?? '')) wiki.reindexSource('cobj', objectId);
   return r;
 };
-
-// Condition is metadata about an attribute's value, not the value itself —
-// kept in its own column/upsert so every existing attribute_value consumer
-// (Table view, saveClassifierAttrCell) stays untouched.
-const upsertAttrCondition = (objectId, templateId, value) => getDB().prepare(`
-  INSERT INTO classifier_attribute (object_ref, template_ref, condition_value) VALUES (?,?,?)
-  ON CONFLICT(object_ref, template_ref) DO UPDATE SET condition_value=excluded.condition_value, update_at=datetime('now')
-`).run(objectId, templateId, value);
 
 // ── Level rows (Process 8 part 1) ──────────────────────────────────────
 // One row per level stage, per (object, template). Supersedes the template's
@@ -246,9 +351,10 @@ function moveLevels(objectId, templateId, orderedIds) {
 }
 
 module.exports = {
+  getAttrValue,
   setCatType,
-  getObjects, getObject, createObject, updateObject, updateObjectNote, deleteObject,
-  getTemplates, getObjectTemplates, createTemplate, updateTemplate, deleteTemplate, countObjectTemplates,
-  getAttrs, getObjectsFull, upsertAttr, upsertAttrCondition,
+  getObjects, createObject, updateObject, updateObjectNote, deleteObject, duplicateObject, moveObject,
+  getTemplates, getObjectTemplates, createTemplate, updateTemplate, deleteTemplate,
+  getAttrs, getObjectsFull, upsertAttr,
   getLevels, getLevelsForModule, createLevel, updateLevelField, deleteLevel, moveLevels,
 };

@@ -35,16 +35,20 @@ function vaultDefaultPath(name, id) {
 // NULL file_path means "still inside the pre-split single database", which is
 // never missing.
 const rowMissing = (r) => (r.file_path ? !fs.existsSync(r.file_path) : false);
+// The locate folder follows the same rule (§8.5): gone = dim + Locate, never
+// an error. Nothing is lost — the mirror is rebuilt from the .ddx.
+const locateMissing = (r) => (r.locate_dir ? !fs.existsSync(r.locate_dir) : false);
+const withState = (r) => ({ ...r, missing: rowMissing(r) ? 1 : 0, locate_missing: locateMissing(r) ? 1 : 0 });
 
 function listVaults() {
   return getAppDB().prepare(`
     SELECT * FROM nexus_file ORDER BY name COLLATE NOCASE
-  `).all().map((r) => ({ ...r, missing: rowMissing(r) ? 1 : 0 }));
+  `).all().map(withState);
 }
 
 function getVault(id) {
   const r = getAppDB().prepare(`SELECT * FROM nexus_file WHERE id=?`).get(id);
-  return r ? { ...r, missing: rowMissing(r) ? 1 : 0 } : null;
+  return r ? withState(r) : null;
 }
 
 // The registry row is written FIRST and AUTOINCREMENT hands out the id, which
@@ -72,6 +76,12 @@ function insertVaultWithId({ id, name, memo = null, colorCode = null, filePath =
 const updateVaultMeta = (id, { name, memo, colorCode }) => getAppDB().prepare(`
   UPDATE nexus_file SET name=?, memo=?, color_code=?, update_at=datetime('now') WHERE id=?
 `).run(name, memo ?? null, colorCode ?? null, id);
+
+// v5 Part 4 (§8.5): the mirror folder. null forgets it (the folder and its
+// files stay on disk — the .ddx was always the truth, §8.1).
+const setVaultLocateDir = (id, dir) => getAppDB().prepare(`
+  UPDATE nexus_file SET locate_dir=?, update_at=datetime('now') WHERE id=?
+`).run(dir || null, id);
 
 const setVaultPath = (id, filePath) => getAppDB().prepare(`
   UPDATE nexus_file SET file_path=?, missing=0, update_at=datetime('now') WHERE id=?
@@ -139,6 +149,6 @@ function refreshOpenVaultCounts() {
 module.exports = {
   NEXUS_PROJECT_TABLES, refreshOpenVaultCounts,
   vaultDefaultPath, vaultsDir, listVaults, getVault, insertVault, insertVaultWithId,
-  updateVaultMeta, setVaultPath, touchVaultOpened, removeVault, vaultPathInUse,
+  updateVaultMeta, setVaultPath, setVaultLocateDir, touchVaultOpened, removeVault, vaultPathInUse,
   countVaultItems, refreshVaultCounts,
 };

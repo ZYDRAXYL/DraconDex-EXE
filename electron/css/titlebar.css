@@ -3,10 +3,10 @@
 #window-frame{height:100%;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
 /* Popped-out Builder tab window (Plan part3 #2) — just that tab's content,
    no Nexus Nest tree / nav rail / settings. Window controls + .title-drag
-   stay so the popup remains movable/closable. */
+   stay so the popup remains movable/closable, and since v5 Part 8 its tabs
+   sit on the title bar like the main window's (core/titlebar-tabs.js). */
 #window-frame.popup-mode #nav-sidebar,
 #window-frame.popup-mode #left-panel,
-#window-frame.popup-mode #builder-tabs,
 #window-frame.popup-mode #layout-menu-wrap,
 #window-frame.popup-mode #hub-toggle-btn,
 #window-frame.popup-mode #titlebar-vault,

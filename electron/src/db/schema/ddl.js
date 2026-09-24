@@ -64,6 +64,11 @@ const APP_DDL_SQL = `
       counts_at TEXT,
       last_opened_at TEXT,
       missing INTEGER NOT NULL DEFAULT 0,
+      -- v5 Part 4 (V5.md §8.5): the folder this Nexus is mirrored into on
+      -- disk — collectors as sub-folders, modules as .mddx files. NOT
+      -- file_path, which is the .ddx itself (vaultPathInUse / setVaultPath
+      -- read it that way). EXE-only: the PWA has no disk to mirror to.
+      locate_dir TEXT,
       create_at TEXT NOT NULL DEFAULT (datetime('now')),
       update_at TEXT NOT NULL DEFAULT (datetime('now'))
     );

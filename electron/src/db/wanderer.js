@@ -28,7 +28,13 @@ const updateMapEvent = (id, eventRef, linkerKey, xPos, yPos, areaRef) =>
   getDB().prepare(`UPDATE map_event SET event_ref=?, linker_key=?, x=?, y=?, area_ref=?, update_at=datetime('now') WHERE id=?`)
     .run(eventRef || null, linkerKey || null, Number(xPos) || 0, Number(yPos) || 0, areaRef || null, id);
 
-const deleteMapEvent = (id) =>
-  getDB().prepare(`DELETE FROM map_event WHERE id=?`).run(id);
+// A pin's own caption — its element page names it (mevt_, V5.md §12.4).
+const setMapEventLabel = (id, label) =>
+  getDB().prepare(`UPDATE map_event SET label=?, update_at=datetime('now') WHERE id=?`).run(label || null, id);
 
-module.exports = { getMapEvents, createMapEvent, updateMapEvent, deleteMapEvent };
+const deleteMapEvent = (id) => {
+  require('./page-block').clearItemBlocks(`mevt_${id}`); // its page goes with it (§12)
+  return getDB().prepare(`DELETE FROM map_event WHERE id=?`).run(id);
+};
+
+module.exports = { getMapEvents, createMapEvent, updateMapEvent, setMapEventLabel, deleteMapEvent };

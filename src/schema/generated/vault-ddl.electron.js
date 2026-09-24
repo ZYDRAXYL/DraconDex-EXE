@@ -2,7 +2,7 @@
 // GENERATED FILE — do not hand-edit, in this repo or in the repo that vendors it.
 // Source: ZYDRAXYL/DraconDex-SDB schema/vault.sql (+ schema/version.json).
 // Regenerate with: npm run generate
-const VAULT_SCHEMA_VERSION = 4;
+const VAULT_SCHEMA_VERSION = 6;
 const VAULT_DDL_SQL = `
 -- src/schema/vault.sql — the CANONICAL, shared vault-level SQLite schema.
 --
@@ -49,11 +49,17 @@ const VAULT_DDL_SQL = `
     );
 
     -- Nexus (v2.8): vault grouping projects from every module --
+    -- taught (v5, APP docs/V5.md §10.4): which just-in-time tips this Nexus has
+    -- already shown — a JSON object of tip id -> 'shown' | 'done' | 'dismissed'.
+    -- In the vault rather than localStorage so a backup / restore / transfer
+    -- carries it and clearing a cache does not teach everything again. Rides
+    -- the vaultSchemaVersion 4 -> 5 bump v5 already makes.
     CREATE TABLE IF NOT EXISTS nexus (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
       memo TEXT,
       color INTEGER REFERENCES use_color(id),
+      taught TEXT NOT NULL DEFAULT '{}',
       update_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -738,9 +744,13 @@ const VAULT_DDL_SQL = `
       -- index idx_module_handle, created in migrations.js rather than here so
       -- pre-existing duplicate data can't abort the whole index pass.
       handle TEXT,
+      -- v5 (APP docs/V5.md §3.1): 'exhibitor' replaces both 'viewer' and
+      -- 'connector'; 'diviner' (§11.5) joins in the same release so this
+      -- CHECK — which SQLite cannot ALTER — is rebuilt once, not twice.
+      -- Existing vaults are rebuilt by EXE migrations.js migrateModuleKindV5.
       kind TEXT NOT NULL CHECK(kind IN ('collector','manager','inspector','classifier',
         'locator','chronicler','wanderer','narrator','author','scribe','drafter',
-        'viewer','connector','sketcher','designer')),
+        'exhibitor','sketcher','designer','diviner')),
       icon TEXT,
       icon_color INTEGER REFERENCES use_color(id),
       color INTEGER REFERENCES use_color(id),
@@ -752,16 +762,9 @@ const VAULT_DDL_SQL = `
       update_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    -- Module Inspector (Phase 4): free-form attributes, per-kind UI spec
-    -- (active view etc., populated from Phase 5 onward) and tag links.
-    CREATE TABLE IF NOT EXISTS module_attribute (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      module_ref INTEGER NOT NULL REFERENCES module(id) ON DELETE CASCADE,
-      attr_name TEXT NOT NULL,
-      attr_value TEXT,
-      display_order INTEGER NOT NULL DEFAULT 0,
-      update_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
+    -- Per-kind UI spec (active view etc., populated from Phase 5 onward) and
+    -- tag links. module_attribute (the Inspector's free-form attributes) was
+    -- removed in v5 Part 8: its rows became property blocks in page_block.
 
     CREATE TABLE IF NOT EXISTS module_ui (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -857,7 +860,14 @@ const VAULT_DDL_SQL = `
       jump_ref INTEGER REFERENCES story_dialogue(id) ON DELETE SET NULL,
       option_order INTEGER NOT NULL DEFAULT 0,
       create_at TEXT NOT NULL DEFAULT (datetime('now')),
-      update_at TEXT NOT NULL DEFAULT (datetime('now'))
+      update_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- v5 (APP docs/V5.md §11.6): story variables. JSON arrays, never a typed
+      -- expression — condition = AND of [{key,op,value}] comparisons that
+      -- must hold for the option to show; set_ops = [{key,op,value}] applied
+      -- when it is chosen. key is a cobj_<id> (a variable is a Classifier
+      -- object), so both columns hold entity keys an importer must remap.
+      condition TEXT,
+      set_ops TEXT
     );
 
     -- Book "Author" (Phase 11). An Author module IS a book; its chapters
@@ -871,7 +881,13 @@ const VAULT_DDL_SQL = `
       chapter_content TEXT,
       chapter_order INTEGER NOT NULL DEFAULT 0,
       create_at TEXT NOT NULL DEFAULT (datetime('now')),
-      update_at TEXT NOT NULL DEFAULT (datetime('now'))
+      update_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- v5 (APP docs/V5.md §11.6): the corkboard card. status is free text
+      -- the app offers a short list for; pov_key is an entity key (usually a
+      -- cobj_ character) — an importer must remap it.
+      synopsis TEXT,
+      status TEXT,
+      pov_key TEXT
     );
 
     -- Chat "Scribe" (Phase 12). A Scribe module holds chat sessions
@@ -968,6 +984,17 @@ const VAULT_DDL_SQL = `
     -- hub section. linker_key optionally binds a file to a nest entity
     -- (module_5, cobj_3, ...); use_as_image marks an image file as that
     -- entity's display picture (cards / List+Detail / Grid).
+    --
+    -- v5 Asset Nest (APP docs/V5.md §2.2): the module tree IS the asset tree.
+    -- module_ref files the asset into a module node; NULL = unfiled, shown in
+    -- the Import Dock tray. folder is provenance only now (which disk folder
+    -- it came from), no longer the organizing axis. source_kind='url' rows
+    -- keep the URL in file_path with file_type='url', file_size=0. proxy is
+    -- a small cover thumbnail (<=512px, ~200 KB cap) so the vault still shows
+    -- every asset after a move to another machine; sha256 + missing drive
+    -- the relink flow. Every column below the v4 set is also added by an
+    -- ALTER TABLE ADD COLUMN on each app side for existing vaults, which is
+    -- why every NOT NULL one carries a DEFAULT.
     CREATE TABLE IF NOT EXISTS import_file (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nexus_ref INTEGER NOT NULL REFERENCES nexus(id) ON DELETE CASCADE,
@@ -978,7 +1005,14 @@ const VAULT_DDL_SQL = `
       folder TEXT,
       linker_key TEXT,
       use_as_image INTEGER NOT NULL DEFAULT 0,
-      create_at TEXT NOT NULL DEFAULT (datetime('now'))
+      create_at TEXT NOT NULL DEFAULT (datetime('now')),
+      module_ref INTEGER REFERENCES module(id) ON DELETE SET NULL,
+      source_kind TEXT CHECK(source_kind IN ('file','url')) NOT NULL DEFAULT 'file',
+      sha256 TEXT,
+      proxy BLOB,
+      proxy_type TEXT,
+      missing INTEGER NOT NULL DEFAULT 0,
+      last_seen_at TEXT
     );
 
     -- Graph "Designer" (Phase 16). Free-form diagram: shaped nodes
@@ -998,7 +1032,12 @@ const VAULT_DDL_SQL = `
       color TEXT,
       linker_key TEXT,
       create_at TEXT NOT NULL DEFAULT (datetime('now')),
-      update_at TEXT NOT NULL DEFAULT (datetime('now'))
+      update_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- v5 (APP docs/V5.md §11.6): comic panels and balloons. NULL w/h = the
+      -- shape's natural size; read_order NULL = not part of the reading order.
+      w REAL,
+      h REAL,
+      read_order INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS design_edge (
@@ -1011,9 +1050,6 @@ const VAULT_DDL_SQL = `
       UNIQUE(from_ref, to_ref)
     );
 
-    -- Relation "Connector" (Phase 14). Labeled key->key relations between
-    -- any two vault entities (cobj_3, module_5, bchp_1, ...), authored from
-    -- the Connector's graph; the entities themselves stay read-only.
     -- Calendar templates (Process 8 part 1). A Chronicler's own calendar lives
     -- in module_ui.calendarConfig — it is per-module display config with no
     -- ids, which is what that JSON blob is for. Templates are the one part
@@ -1032,6 +1068,20 @@ const VAULT_DDL_SQL = `
       UNIQUE(nexus_ref, name)
     );
 
+    -- Labeled key->key relations between any two vault entities (cobj_3,
+    -- module_5, bchp_1, file_7, ...). Vault-wide on purpose — seven readers
+    -- across the app depend on that. v5 (APP docs/V5.md §3.5): relations are
+    -- authored in an Exhibitor; module_ref records WHICH one (provenance, not
+    -- scope — everyone still reads every row), rel_type gives the edge a kind
+    -- beyond its free-text label, directed says whether it has an arrow.
+    --
+    -- The table-level UNIQUE treats every NULL as distinct, so it does not
+    -- dedupe the usual NULL label / NULL rel_type rows. The real guard is the
+    -- expression index idx_entity_relation_v5 on
+    -- (from_key, to_key, COALESCE(label,''), COALESCE(rel_type,'')), created
+    -- in EXE migrations.js after existing duplicates are removed — never
+    -- here, where one leftover duplicate would abort the whole init (the
+    -- same trap as idx_module_handle).
     CREATE TABLE IF NOT EXISTS entity_relation (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nexus_ref INTEGER NOT NULL REFERENCES nexus(id) ON DELETE CASCADE,
@@ -1040,7 +1090,58 @@ const VAULT_DDL_SQL = `
       label TEXT,
       color INTEGER REFERENCES use_color(id),
       create_at TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE(from_key, to_key, label)
+      module_ref INTEGER REFERENCES module(id) ON DELETE SET NULL,
+      rel_type TEXT,
+      directed INTEGER NOT NULL DEFAULT 1,
+      -- v5 (APP docs/V5.md §11.6): a relation that holds only for a span of
+      -- story time ("married 1020–1045"), on Chronicler's own date rows.
+      -- NULL = open on that side. rel_type 'ctpl_<id>' marks a row a
+      -- Classifier relation FIELD owns (§11.3).
+      valid_from INTEGER REFERENCES timeline_date(id),
+      valid_to INTEGER REFERENCES timeline_date(id),
+      UNIQUE(from_key, to_key, label, rel_type)
+    );
+
+    -- Exhibitor scene (v5, APP docs/V5.md §3.4) — the one canvas in the app
+    -- whose node positions are real rows. Deliberately the design_node shape
+    -- widened: linker_key points at an entity or asset (file_<id>), parent_id
+    -- groups nodes for the Hierarchy panel. node_type and props carry no
+    -- CHECK for the reason design_node.shape has none: an SQL allowlist turns
+    -- every new value into a table rebuild of every existing vault.
+    CREATE TABLE IF NOT EXISTS exhibit_node (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      module_ref INTEGER NOT NULL REFERENCES module(id) ON DELETE CASCADE,
+      parent_id INTEGER REFERENCES exhibit_node(id) ON DELETE CASCADE,
+      node_type TEXT NOT NULL DEFAULT 'entity',
+      linker_key TEXT,
+      label TEXT,
+      x REAL NOT NULL DEFAULT 0,
+      y REAL NOT NULL DEFAULT 0,
+      w REAL,
+      h REAL,
+      z INTEGER NOT NULL DEFAULT 0,
+      rotation REAL NOT NULL DEFAULT 0,
+      scale REAL NOT NULL DEFAULT 1,
+      locked INTEGER NOT NULL DEFAULT 0,
+      hidden INTEGER NOT NULL DEFAULT 0,
+      color TEXT,
+      props TEXT,
+      create_at TEXT NOT NULL DEFAULT (datetime('now')),
+      update_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- One camera per Exhibitor: pan/zoom survive closing the module.
+    CREATE TABLE IF NOT EXISTS exhibit_view (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      module_ref INTEGER NOT NULL REFERENCES module(id) ON DELETE CASCADE,
+      scale REAL NOT NULL DEFAULT 1,
+      tx REAL NOT NULL DEFAULT 0,
+      ty REAL NOT NULL DEFAULT 0,
+      bg_linker_key TEXT,
+      grid INTEGER NOT NULL DEFAULT 1,
+      snap INTEGER NOT NULL DEFAULT 0,
+      update_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(module_ref)
     );
 
     -- Category "Classifier" (Phase 5). A Classifier module IS its category --
@@ -1076,7 +1177,13 @@ const VAULT_DDL_SQL = `
       has_condition INTEGER NOT NULL DEFAULT 0,
       level_steps TEXT,
       display_order INTEGER NOT NULL DEFAULT 0,
-      update_at TEXT NOT NULL DEFAULT (datetime('now'))
+      update_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- v5 (APP docs/V5.md §11.3): per-type settings, JSON. select /
+      -- multi-select: {"choices":[...]}; formula: {"expr":"{HP} * 2"};
+      -- relation: {"targetKinds":[...]}. attribute_type has no CHECK, so the
+      -- new types (number, select, multi, checkbox, url, relation, formula)
+      -- need no rebuild.
+      options TEXT
     );
 
     CREATE TABLE IF NOT EXISTS classifier_attribute (
@@ -1106,6 +1213,113 @@ const VAULT_DDL_SQL = `
       update_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- Module presets (v5, APP docs/V5.md §10.8) — a starting point for ONE
+    -- module of one kind, saved by the user ("my character sheet"). The
+    -- built-in presets (Classifier: character / item / place) live in app
+    -- code; this table holds only the user's own. spec is JSON the app reads
+    -- per kind (icon, colour, description, view settings; a Classifier's
+    -- fields). A new table, so no vaultSchemaVersion bump: both apps run
+    -- CREATE TABLE IF NOT EXISTS on every open.
+    CREATE TABLE IF NOT EXISTS module_preset (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nexus_ref INTEGER NOT NULL REFERENCES nexus(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL,
+      name TEXT NOT NULL,
+      spec TEXT NOT NULL DEFAULT '{}',
+      update_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(nexus_ref, kind, name)
+    );
+
+    -- Diviner (v5, APP docs/V5.md §11.5) — random tables and dice. A Diviner
+    -- module holds tables; a table rolls either its dice against each
+    -- entry's range, or (dice NULL) a weighted pick. mode 'join' rolls every
+    -- row and joins the results — the name generator. An entry may point at
+    -- an entity, or at divt_<table id> to roll that table in turn (depth-
+    -- capped and cycle-checked in the app).
+    CREATE TABLE IF NOT EXISTS diviner_table (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      module_ref INTEGER NOT NULL REFERENCES module(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      dice TEXT,
+      mode TEXT NOT NULL DEFAULT 'pick',
+      display_order INTEGER NOT NULL DEFAULT 0,
+      update_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS diviner_entry (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      table_ref INTEGER NOT NULL REFERENCES diviner_table(id) ON DELETE CASCADE,
+      weight INTEGER NOT NULL DEFAULT 1,
+      range_lo INTEGER,
+      range_hi INTEGER,
+      entry_text TEXT,
+      linker_key TEXT,
+      display_order INTEGER NOT NULL DEFAULT 0
+    );
+
+    -- Roll history. result_text copies the outcome at roll time, so editing
+    -- or deleting the entry later does not rewrite what was rolled.
+    CREATE TABLE IF NOT EXISTS diviner_roll (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      table_ref INTEGER NOT NULL REFERENCES diviner_table(id) ON DELETE CASCADE,
+      dice_result TEXT,
+      entry_ref INTEGER REFERENCES diviner_entry(id) ON DELETE SET NULL,
+      result_text TEXT,
+      create_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Pages made of components (v5 Part 8, APP docs/V5.md §12). A page is an
+    -- ordered stack of blocks. Which page a row belongs to:
+    --   item_key NULL        the module's own page
+    --   item_key '*'         the shared layout every element page of the
+    --                        module uses (a Classifier's objects, …)
+    --   item_key 'cobj_12'   one element's own page, split off the shared one
+    -- block_type: component | text | heading | divider | image | property |
+    -- columns. An image block's picture is its source_key (file_<id>).
+    --   component  component names it (e.g. 'classifier.table'); config
+    --              is JSON (preset + options); source_key is set when it
+    --              shows ANOTHER module or element than the page's own
+    --              (a Manager borrowing a Classifier's table)
+    --   text       content is Markdown
+    --   property   prop_name / prop_type, value in content (was
+    --              module_attribute)
+    --   columns    a container; its children point at it with parent_id
+    -- item_key and source_key are entity keys, remapped on import like every
+    -- other key column. Its index lives with each app's other indexes.
+    CREATE TABLE IF NOT EXISTS page_block (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      module_ref INTEGER NOT NULL REFERENCES module(id) ON DELETE CASCADE,
+      item_key TEXT,
+      parent_id INTEGER REFERENCES page_block(id) ON DELETE CASCADE,
+      block_type TEXT NOT NULL DEFAULT 'component' CHECK(block_type IN ('component','text','heading','divider','image','property','columns')),
+      component TEXT,
+      source_key TEXT,
+      config TEXT,
+      content TEXT,
+      prop_name TEXT,
+      prop_type TEXT,
+      block_order INTEGER NOT NULL DEFAULT 0,
+      create_at TEXT NOT NULL DEFAULT (datetime('now')),
+      update_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Trash (v5, APP docs/V5.md §11.4). A deleted module subtree is kept as a
+    -- snapshot (the same format a .mddx export writes) plus every relation
+    -- that touched it, in or out; then the rows are deleted for real. Restore
+    -- imports the snapshot back under parent_ref (top level if that parent
+    -- is gone). Nothing else in the schema knows the trash exists — no
+    -- deleted_at column any query could forget to filter on.
+    CREATE TABLE IF NOT EXISTS trash (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nexus_ref INTEGER NOT NULL REFERENCES nexus(id) ON DELETE CASCADE,
+      parent_ref INTEGER REFERENCES module(id) ON DELETE SET NULL,
+      name TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      module_count INTEGER NOT NULL DEFAULT 1,
+      payload TEXT NOT NULL,
+      relations TEXT NOT NULL DEFAULT '[]',
+      deleted_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
 
 `;
 module.exports = { VAULT_SCHEMA_VERSION, VAULT_DDL_SQL };

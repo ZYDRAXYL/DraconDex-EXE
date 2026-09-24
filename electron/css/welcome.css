@@ -9,7 +9,6 @@
 /* ── Chrome the Welcome window has no use for ───────────────────────── */
 body.welcome-mode #nav-sidebar,
 body.welcome-mode #hub-toggle-btn,
-body.welcome-mode #builder-tabs,
 body.welcome-mode #layout-menu-wrap,
 body.welcome-mode #search-bar,
 body.welcome-mode #left-panel-resize,

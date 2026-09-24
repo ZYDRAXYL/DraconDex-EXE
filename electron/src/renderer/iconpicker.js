@@ -1,9 +1,8 @@
 'use strict';
 // ═══ Icon Collection picker (progress.md Phase 5) ═════════════════════
 // Embedded markup (no modal chrome of its own) used to pick a module's
-// icon + color, with a live nest-row preview — hosted inside hub.js's
-// edit modal (moduleFormModal) or its live-save icon popup
-// (openModuleIconPopup). Three
+// icon + color, with a live nest-row preview — hosted inside the module's
+// live-save icon popup (openModuleIconPopup) and the object forms. Three
 // working tabs — Icons (this app's `I.*` SVG dict), Symbols (the
 // existing `symbol_collection`, already user-extendable via Navigator),
 // and Uploaded (native <input type=file> + canvas circular crop, no libs).
@@ -15,7 +14,7 @@
 const ICON_PICKER_KEYS = [
   'globe','sword','book','scribe','sage','artisan','projects','timeline','relation','map',
   'hashtag','folder','star','pin','fields','list','table','person','layer','item','story',
-  'func','series','document','chart','manager','narrator','sketcher','wanderer','director','navigator',
+  'func','series','document','chart','manager','narrator','sketcher','dice','wanderer','director','navigator',
 ];
 
 // Upload-crop module-scope state (iconpicker.js has no shared store beyond

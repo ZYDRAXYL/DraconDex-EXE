@@ -119,3 +119,4 @@
 .scribe-row-edit:hover{color:var(--t1);background:var(--hover)}
 .scribe-row-edit .icon{width:13px;height:13px}
 
+.wiki-field-ac{position:fixed;z-index:1000}

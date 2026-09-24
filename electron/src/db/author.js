@@ -56,8 +56,23 @@ const updateBookChapterContent = (id, content) => {
   return r;
 };
 
-const deleteBookChapter = (id) =>
+// v5 Part 7 (§11.6): the corkboard's three facts about a chapter. Only the
+// keys present are written, so the board can save one at a time.
+const CHAPTER_STATUSES = ['idea', 'draft', 'revised', 'done'];
+function setBookChapterMeta(id, meta = {}) {
+  const set = [], args = [];
+  if ('synopsis' in meta) { set.push('synopsis=?'); args.push(String(meta.synopsis ?? '').slice(0, 4000) || null); }
+  if ('status' in meta) { set.push('status=?'); args.push(CHAPTER_STATUSES.includes(meta.status) ? meta.status : null); }
+  if ('povKey' in meta) { set.push('pov_key=?'); args.push(/^[a-z]+_\d+$/.test(meta.povKey || '') ? meta.povKey : null); }
+  if (!set.length) return { ok: true };
+  getDB().prepare(`UPDATE book_chapter SET ${set.join(', ')}, update_at=datetime('now') WHERE id=?`).run(...args, id);
+  return { ok: true };
+}
+
+function deleteBookChapter(id) {
+  require('./page-block').clearItemBlocks(`bchp_${id}`); // its page goes with it (§12)
   getDB().prepare(`DELETE FROM book_chapter WHERE id=?`).run(id);
+}
 
 // Free chapter reordering (Plan part5 Author #3) — modeled on
 // src/db/module.js's moveModule, simpler since chapters don't nest.
@@ -71,6 +86,7 @@ const moveBookChapter = (moduleRef, orderedIds) => {
 };
 
 module.exports = {
+  setBookChapterMeta,
   getBookChapters, createBookChapter, renameBookChapter, setBookChapterLabel,
   updateBookChapterContent, deleteBookChapter, moveBookChapter,
 };

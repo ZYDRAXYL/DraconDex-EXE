@@ -187,6 +187,144 @@ console.log('=== i18n parity (COMMON_UI_TEXT fallback dict) ===');
   }
 }
 
+// ═══ Global check 2c: every module kind is fully registered ═══
+// V5.md §9.4. MODULE_KINDS is a flat array and each kind's metadata sits in
+// separate flat maps beside it (hub/kinds.js). A 16th kind added to the
+// array but forgotten in KIND_CATEGORY would not throw anywhere — it would
+// fall through as "not data", drop out of the Manager's pool and out of the
+// kind picker's groups, silently. The APK gets this for free from Dart's
+// exhaustive switch; here the checker does it.
+console.log('=== module kind registry (hub/kinds.js) ===');
+{
+  let kindsSrc = '';
+  try { kindsSrc = read(app('src/renderer/hub/kinds.js')); } catch (_) {}
+  const arrayOf = (name) => {
+    const m = kindsSrc.match(new RegExp(`const ${name}\\s*=\\s*\\[([\\s\\S]*?)\\];`));
+    return m ? [...m[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]) : null;
+  };
+  const mapOf = (name) => {
+    const m = kindsSrc.match(new RegExp(`const ${name}\\s*=\\s*\\{([\\s\\S]*?)\\n\\};`));
+    return m ? new Map([...m[1].replace(/\/\/[^\n]*/g, '').matchAll(/([a-z_]+)\s*:\s*'([^']*)'/g)].map((x) => [x[1], x[2]])) : null;
+  };
+  const kinds = arrayOf('MODULE_KINDS');
+  if (!kinds) warn('could not locate `const MODULE_KINDS` in hub/kinds.js');
+  else {
+    const CATEGORIES = new Set(['structure', 'view', 'data']);
+    let bad = 0;
+    for (const name of ['KIND_CATEGORY', 'KIND_ICON', 'KIND_LABEL', 'KIND_COLOR', 'KIND_DESC_KEY']) {
+      const map = mapOf(name);
+      if (!map) { bad++; err(`hub/kinds.js: \`const ${name}\` not found`); continue; }
+      const missing = kinds.filter((k) => !map.has(k));
+      if (missing.length) { bad++; err(`${name} has no entry for kind(s): ${missing.join(', ')}`); }
+      const stray = [...map.keys()].filter((k) => !kinds.includes(k));
+      if (stray.length) { bad++; err(`${name} lists kind(s) not in MODULE_KINDS: ${stray.join(', ')}`); }
+      if (name === 'KIND_CATEGORY') {
+        const wrong = [...map].filter(([, v]) => !CATEGORIES.has(v)).map(([k, v]) => `${k}=${v}`);
+        if (wrong.length) { bad++; err(`KIND_CATEGORY values must be structure/view/data: ${wrong.join(', ')}`); }
+      }
+    }
+    // The picker's groups (§9.5) must place every kind exactly once.
+    const groupsSrc = kindsSrc.match(/const KIND_GROUPS\s*=\s*\[([\s\S]*?)\n\];/)?.[1] || '';
+    const grouped = [...groupsSrc.matchAll(/kinds:\s*\[([^\]]*)\]/g)].flatMap((g) => [...g[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]));
+    const ungrouped = kinds.filter((k) => !grouped.includes(k));
+    const twice = grouped.filter((k, i) => grouped.indexOf(k) !== i);
+    if (ungrouped.length) { bad++; err(`KIND_GROUPS never lists kind(s): ${ungrouped.join(', ')} — they vanish from the create picker`); }
+    if (twice.length) { bad++; err(`KIND_GROUPS lists kind(s) twice: ${[...new Set(twice)].join(', ')}`); }
+    if (!bad) ok(`${kinds.length} kinds, each with a category, icon, label, colour, description and picker group`);
+  }
+}
+
+// ═══ Global check 2d: every command is findable two ways ═══
+// V5.md §10.1. A button may only be hidden while its command stays reachable
+// another way, so the palette (Ctrl+P, which lists every COMMANDS entry by
+// construction) plus at least one more surface. This makes the rule a build
+// error instead of a review comment:
+//   (a) every entry names a surface besides the palette
+//   (b) every named surface's file really references the command
+//   (c) no menu is built from a raw `label: t(...)` — only via cmdItem(), so
+//       nothing lands in a context menu without also landing in the palette
+//   (d) every cmdItem / cmdBtn / runCommand / data-cmd id exists
+//   (e) every label key exists in the en locale
+console.log('=== command registry (core/commands.js) ===');
+{
+  const R = 'src/renderer/';
+  const SURFACE_FILES = {
+    'nest.ctx': ['hub/menus.js'], 'nest.head': ['hub/sections.js'], 'pane.ctx': ['hub/menus.js'],
+    'rail': ['hub/kinds.js'], 'settings.menu': ['core/settings.js'], 'shortcut': ['core/shortcuts.js'],
+    'dock': ['mod/importdock.js'], 'assets.strip': ['mod/importdock.js'], 'asset.ctx': ['mod/importdock.js'],
+    'asset.viewer': ['mod/fileviewer.js'], 'text.ctx': ['core/wiki-field.js'],
+    'canvas.ctx': ['mod/canvas-ctx.js'], 'classifier.ctx': ['mod/classifier-ctx.js'], 'exhibitor.ctx': ['mod/exhibitor-cards.js'],
+    'locator.page': ['mod/locator.js'], 'sketcher.board': ['mod/sketcher.js'], 'scribe.toolbar': ['mod/chatscribe.js'],
+    'empty.state': ['hub/kind-page.js'],
+    'kind.picker': ['hub/menus.js'], 'nexus.options': ['core/nexus-options.js'], 'bundle.picker': ['hub/bundles.js'], 'left.panel': ['hub/activity.js'], 'setting.data': ['core/db-transfer.js'],
+    'page.head': ['hub/open.js'],
+    'page.layout': ['page/item-page.js'],
+  };
+  const surfaceFiles = (sf) => SURFACE_FILES[sf] || (sf.endsWith('.toolbar') ? [`mod/${sf.slice(0, -8)}.js`] : null);
+  const srcOf = (f) => { try { return read(app(R + f)); } catch (_) { return null; } };
+  const cmdSrc = srcOf('core/commands.js');
+  const block = cmdSrc?.match(/const COMMANDS = \{([\s\S]*?)\n\};/)?.[1];
+  if (!block) warn('could not locate `const COMMANDS` in core/commands.js');
+  else {
+    const en = locales.en || new Set();
+    const settingSrc = srcOf('core/setting-window.js') || '';
+    const settingGroups = settingSrc.match(/const SETTING_GROUPS\s*=\s*\{([\s\S]*?)\n\};/)?.[1] || '';
+    const settingLabels = new Map([...(settingSrc.match(/const SETTING_PAGE_LABEL_KEY\s*=\s*\{([\s\S]*?)\n\};/)?.[1] || '')
+      .matchAll(/([a-z]+)\s*:\s*'([A-Za-z0-9_]+)'/g)].map((x) => [x[1], x[2]]));
+    const heads = [...block.matchAll(/^  '([a-z]+\.[A-Za-z]+)':/gm)];
+    const ids = new Set(heads.map((h) => h[1]));
+    let bad = 0;
+    heads.forEach((h, i) => {
+      const id = h[1];
+      const body = block.slice(h.index, i + 1 < heads.length ? heads[i + 1].index : block.length);
+      const setting = body.match(/settingCmd\('([a-z]+)',\s*'([a-z]+)'\)/);
+      const surfaces = setting ? ['setting.nav'] : (body.match(/surfaces:\s*\[([^\]]*)\]/)?.[1].match(/'([^']+)'/g) || []).map((q) => q.slice(1, -1));
+      if (!surfaces.length) { bad++; err(`command ${id}: no surface besides the palette — it would be findable one way only (§10.1)`); }
+      for (const sf of surfaces) {
+        if (sf === 'setting.nav') {
+          if (!setting || !new RegExp(`\\b${setting[1]}:\\s*\\[[^\\]]*'${setting[2]}'`).test(settingGroups)) { bad++; err(`command ${id}: setting page is not in SETTING_GROUPS`); }
+          continue;
+        }
+        const files = surfaceFiles(sf);
+        if (!files) { bad++; err(`command ${id}: unknown surface '${sf}' — add it to SURFACE_FILES in check.mjs`); continue; }
+        if (!files.some((f) => (srcOf(f) || '').match(new RegExp(`['"]${id.replace('.', '\\.')}['"]`)))) { bad++; err(`command ${id}: surface '${sf}' (${files.join(', ')}) never references it`); }
+      }
+      const keys = setting ? [settingLabels.get(setting[2]), 'settingWindowTitle']
+        : [...(body.match(/(?:label|prefix):\s*(?:'[^']*'|\([^)]*\)\s*=>[^,]*?(?:'[^']*'[^,]*?)+)(?=,)/g) || [])].flatMap((l) => (l.match(/'([^']+)'/g) || []).map((q) => q.slice(1, -1)));
+      if (!keys.length) { bad++; err(`command ${id}: no label key found`); }
+      for (const k of keys) if (!k || !en.has(k)) { bad++; err(`command ${id}: label key '${k}' is not in the en locale`); }
+    });
+    // (c) + (d) across the renderer
+    const walk = (dir) => readdirSync(path.join(root, dir), { withFileTypes: true })
+      .flatMap((e) => (e.isDirectory() ? walk(`${dir}/${e.name}`) : e.name.endsWith('.js') ? [`${dir}/${e.name}`] : []));
+    for (const f of walk(app('src/renderer'))) {
+      if (f.endsWith('/core/commands.js')) continue;
+      const src = read(f);
+      const rel = f.slice(app(R).length);
+      if (/label:\s*t\(/.test(src)) { bad++; err(`${rel}: a menu item built with \`label: t(...)\` — build it with cmdItem() so it is also a palette command (§10.2)`); }
+      // KIND_PAGE's `start:` names a command too — only there; `start:` is a
+      // common key elsewhere (theme gradients, ranges).
+      const startRe = rel === 'hub/kind-page.js' ? /\bstart:\s*'([^']+)'/g : null;
+      const refs = [...src.matchAll(/(?:cmdItem|cmdBtn|runCommand)\(\s*'([^']+)'|data-cmd="([^"$]+)"/g), ...(startRe ? src.matchAll(startRe) : [])];
+      for (const m of refs) {
+        const id = m[1] || m[2];
+        if (!ids.has(id)) { bad++; err(`${rel}: command '${id}' is not in COMMANDS`); }
+      }
+    }
+    // §10.4: every kind with a page of its own content has an empty state,
+    // and its one button is the KIND_PAGE `start` command. Inspector and
+    // Drafter are always an editor, so they are the exceptions.
+    const kindPage = srcOf('hub/kind-page.js') || '';
+    const pageBlock = kindPage.match(/const KIND_PAGE = \{([\s\S]*?)\n\};/)?.[1] || '';
+    const pageKinds = [...pageBlock.matchAll(/^  ([a-z]+):/gm)].map((x) => [x[1], pageBlock.slice(x.index).split(/\n  [a-z]+:/)[0]]);
+    for (const [k, body] of pageKinds) {
+      if (['inspector', 'drafter'].includes(k)) continue;
+      if (!/\bstart:\s*'/.test(body)) { bad++; err(`KIND_PAGE.${k} has no \`start\` command — its empty page would offer no way to begin (§10.4)`); }
+    }
+    if (!bad) ok(`${ids.size} commands, each in the palette and on at least one other surface; every kind page has a start command`);
+  }
+}
+
 // ═══ Per-file lint ═══
 // Recursive: renderer code lives in src/renderer/{,mod/,core/,hub/,navigator/,
 // hero/}. A flat readdir here used to skip mod/ entirely and would now skip

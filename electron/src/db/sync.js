@@ -19,12 +19,35 @@ const { app } = require('electron');
 // ambient context surviving that await. applySnapshotCore in particular can
 // wipe a nexus; it must never be able to wipe the wrong one.
 const { getDB, getVaultDB } = require('./core');
+const { entityKeyMaps } = require('./entity-kinds');
 const { getAppSetting, setAppSetting } = require('./versions');
 const { getSecret, setSecret } = require('./secret-store');
 const { makePkcePair, runOAuthLoopback } = require('./oauth-loopback');
 
 const SNAPSHOT_FORMAT = 'dracondex-vault-snapshot';
-const SNAPSHOT_VERSION = 1;
+// v2 (v5 Part 8, APP docs/V5.md §12): pageBlocks replaces moduleAttrs. A
+// v1 snapshot (an older build, an old .mddx, a trash row from before the
+// upgrade) still applies — its moduleAttrs become property blocks.
+const SNAPSHOT_VERSION = 2;
+const READABLE_VERSIONS = new Set([1, 2]);
+// Pre-v5 module kinds a snapshot (an older desktop build, the APK, an old
+// .mddx) can still carry. Mapped on apply; the v5 module CHECK rejects them.
+const V5_KIND_MAP = { viewer: 'exhibitor', connector: 'exhibitor' };
+
+// A §7.9 card/table keeps the classifier_template ids it shows in props
+// (fields / columns). Those ids are renumbered on apply like every other
+// row, so they go through the same map; a field that did not come across
+// drops out of the list instead of pointing at someone else's template.
+function remapExhibitProps(props, tplMap) {
+  if (props == null) return null;
+  let p;
+  try { p = JSON.parse(props); } catch (_) { return props; }
+  if (!p || typeof p !== 'object') return props;
+  for (const k of ['fields', 'columns']) {
+    if (Array.isArray(p[k])) p[k] = p[k].filter(id => tplMap.has(id)).map(id => tplMap.get(id));
+  }
+  return JSON.stringify(p);
+}
 
 // Build-mode gate: packaged builds (portable + installer) talk to the real
 // Supabase backend configured by the user; an unpackaged run (`npm start`,
@@ -327,11 +350,13 @@ function serializeVault(nexusId, moduleIds = null) {
     LEFT JOIN use_color cc ON m.color = cc.id
     WHERE m.nexus_ref=? ORDER BY m.id`);
 
-  const moduleAttrs = all(`
-    SELECT a.module_ref AS moduleId, a.attr_name AS name, a.attr_value AS value,
-           a.display_order AS displayOrder
-    FROM module_attribute a JOIN module m ON a.module_ref=m.id
-    WHERE m.nexus_ref=? ORDER BY a.id`);
+  // Same shape as the APK's VaultSnapshotService.serializeVault.
+  const pageBlocks = all(`
+    SELECT b.id, b.module_ref AS moduleId, b.item_key AS itemKey, b.parent_id AS parentId,
+           b.block_type AS type, b.component, b.source_key AS sourceKey, b.config,
+           b.content, b.prop_name AS propName, b.prop_type AS propType, b.block_order AS "order"
+    FROM page_block b JOIN module m ON b.module_ref=m.id
+    WHERE m.nexus_ref=? ORDER BY b.id`);
 
   const moduleUi = all(`
     SELECT u.module_ref AS moduleId, u.ui_key AS key, u.ui_value AS value
@@ -354,7 +379,7 @@ function serializeVault(nexusId, moduleIds = null) {
     templates: all(`
       SELECT t.id, t.module_ref AS moduleId, t.object_ref AS objectId, t.description,
              t.attribute_type AS attributeType, t.levelable, t.has_condition AS hasCondition,
-             t.display_order AS displayOrder
+             t.display_order AS displayOrder, t.options
       FROM classifier_template t JOIN module m ON t.module_ref=m.id
       WHERE m.nexus_ref=? ORDER BY t.id`),
     attributes: all(`
@@ -363,6 +388,17 @@ function serializeVault(nexusId, moduleIds = null) {
       FROM classifier_attribute a
       JOIN classifier_object o ON a.object_ref=o.id
       JOIN module m ON o.module_ref=m.id WHERE m.nexus_ref=?`),
+    // A levelable / conditioned field keeps its value here, not in
+    // classifier_attribute — without these rows a synced, transferred,
+    // exported or trashed-and-restored object came back with empty tables.
+    // Older readers ignore the key; a missing key reads as no rows.
+    levels: all(`
+      SELECT l.object_ref AS objectId, l.template_ref AS templateId,
+             l.level_label AS levelLabel, l.condition_value AS conditionValue,
+             l.info_value AS infoValue, l.display_order AS displayOrder
+      FROM classifier_level l
+      JOIN classifier_object o ON l.object_ref=o.id
+      JOIN module m ON o.module_ref=m.id WHERE m.nexus_ref=? ORDER BY l.display_order, l.id`),
   };
 
   // v3 Locator/Chronicler rows have module_ref set (project_id NULL) — select
@@ -416,8 +452,8 @@ function serializeVault(nexusId, moduleIds = null) {
 
   const wanderer = {
     mapEvents: all(`
-      SELECT me.module_ref AS moduleId, me.event_ref AS eventId, me.area_ref AS areaId,
-             me.label, me.x, me.y
+      SELECT me.id, me.module_ref AS moduleId, me.event_ref AS eventId, me.area_ref AS areaId,
+             me.label, me.linker_key AS linkerKey, me.x, me.y
       FROM map_event me JOIN module m ON me.module_ref=m.id
       WHERE m.nexus_ref=? ORDER BY me.id`),
   };
@@ -440,7 +476,8 @@ function serializeVault(nexusId, moduleIds = null) {
     // defaults to 'talk' on re-insert) and its options would be gone.
     choiceOptions: all(`
       SELECT o.talk_ref AS talkId, o.option_text AS text, o.effect_kind AS effectKind,
-             o.effect_text AS effectText, o.jump_ref AS jumpId, o.option_order AS "order"
+             o.effect_text AS effectText, o.jump_ref AS jumpId, o.option_order AS "order",
+             o.condition, o.set_ops AS setOps
       FROM story_choice_option o
       JOIN story_talk tk ON o.talk_ref=tk.id JOIN story_dialogue d ON tk.dialogue_ref=d.id
       JOIN module m ON d.module_ref=m.id WHERE m.nexus_ref=? ORDER BY o.id`),
@@ -449,7 +486,7 @@ function serializeVault(nexusId, moduleIds = null) {
   const author = {
     chapters: all(`
       SELECT ch.id, ch.module_ref AS moduleId, ch.name, ch.chapter_content AS content,
-             ch.chapter_order AS "order"
+             ch.chapter_order AS "order", ch.synopsis, ch.status, ch.pov_key AS povKey
       FROM book_chapter ch JOIN module m ON ch.module_ref=m.id
       WHERE m.nexus_ref=? ORDER BY ch.id`),
   };
@@ -484,7 +521,7 @@ function serializeVault(nexusId, moduleIds = null) {
   const designer = {
     nodes: all(`
       SELECT n.id, n.module_ref AS moduleId, n.shape, n.x, n.y, n.node_text AS text,
-             n.color, n.linker_key AS linkerKey
+             n.color, n.linker_key AS linkerKey, n.w, n.h, n.read_order AS readOrder
       FROM design_node n JOIN module m ON n.module_ref=m.id
       WHERE m.nexus_ref=? ORDER BY n.id`),
     edges: all(`
@@ -492,14 +529,65 @@ function serializeVault(nexusId, moduleIds = null) {
       FROM design_edge e JOIN module m ON e.module_ref=m.id WHERE m.nexus_ref=?`),
   };
 
+  // v5 Part 7 (§11.5): Diviner tables, their entries and roll history. An
+  // entry's linker_key (divt_<id> = roll that table) is a key like any other.
+  const diviner = {
+    tables: all(`
+      SELECT t.id, t.module_ref AS moduleId, t.name, t.dice, t.mode, t.display_order AS "order"
+      FROM diviner_table t JOIN module m ON t.module_ref=m.id WHERE m.nexus_ref=? ORDER BY t.id`),
+    entries: all(`
+      SELECT e.id, e.table_ref AS tableId, e.weight, e.range_lo AS lo, e.range_hi AS hi,
+             e.entry_text AS text, e.linker_key AS linkerKey, e.display_order AS "order"
+      FROM diviner_entry e JOIN diviner_table t ON e.table_ref=t.id
+      JOIN module m ON t.module_ref=m.id WHERE m.nexus_ref=? ORDER BY e.id`),
+    rolls: all(`
+      SELECT r.table_ref AS tableId, r.dice_result AS dice, r.entry_ref AS entryId,
+             r.result_text AS text, r.create_at AS createAt
+      FROM diviner_roll r JOIN diviner_table t ON r.table_ref=t.id
+      JOIN module m ON t.module_ref=m.id WHERE m.nexus_ref=? ORDER BY r.id`),
+  };
+
+  // v5 (APP docs/V5.md §3.5): rel_type / directed / moduleRef travel with
+  // the relation — without them every pull would silently reset them (the
+  // Plan's Part 7 warning). Readers that predate v5 (the APK today) ignore
+  // the extra fields; INSERT OR IGNORE on their side is unchanged.
+  // v5 Part 7 (§11.6): a time-bound relation carries its span as date KEYS
+  // (the same lookups.dates the events use), never the vault-local row ids.
   const relations = allGlobal(`
-    SELECT from_key AS fromKey, to_key AS toKey, label
-    FROM entity_relation WHERE nexus_ref=? ORDER BY id`);
+    SELECT r.from_key AS fromKey, r.to_key AS toKey, r.label,
+           r.rel_type AS relType, r.directed, r.module_ref AS moduleId,
+           f.day AS fDay, f.month AS fMonth, f.years AS fYears, f.hour AS fHour, f.minute AS fMinute,
+           u.day AS uDay, u.month AS uMonth, u.years AS uYears, u.hour AS uHour, u.minute AS uMinute
+    FROM entity_relation r
+    LEFT JOIN timeline_date f ON r.valid_from=f.id LEFT JOIN timeline_date u ON r.valid_to=u.id
+    WHERE r.nexus_ref=? ORDER BY r.id`).map(({ fDay, fMonth, fYears, fHour, fMinute, uDay, uMonth, uYears, uHour, uMinute, ...r }) => {
+    const from = fYears == null ? null : { day: fDay, month: fMonth, years: fYears, hour: fHour, minute: fMinute };
+    const to = uYears == null ? null : { day: uDay, month: uMonth, years: uYears, hour: uHour, minute: uMinute };
+    for (const d of [from, to]) if (d && !dates.some((x) => x.key === dateKey(d))) dates.push({ key: dateKey(d), ...d });
+    return { ...r, validFrom: from ? dateKey(from) : null, validTo: to ? dateKey(to) : null };
+  });
+
+  // v5 Exhibitor scenes. Module-scoped like designer, so a module export
+  // carries its own scene. A new top-level key: older readers skip it.
+  const exhibitor = {
+    nodes: all(`
+      SELECT n.id, n.module_ref AS moduleId, n.parent_id AS parentId, n.node_type AS nodeType,
+             n.linker_key AS linkerKey, n.label, n.x, n.y, n.w, n.h, n.z, n.rotation, n.scale,
+             n.locked, n.hidden, n.color, n.props
+      FROM exhibit_node n JOIN module m ON n.module_ref=m.id
+      WHERE m.nexus_ref=? ORDER BY n.id`),
+    views: all(`
+      SELECT v.module_ref AS moduleId, v.scale, v.tx, v.ty, v.bg_linker_key AS bgLinkerKey, v.grid, v.snap
+      FROM exhibit_view v JOIN module m ON v.module_ref=m.id WHERE m.nexus_ref=?`),
+  };
 
   // Nexus-scoped like relations, so allGlobal (skipped for a module-scoped
   // export — a single module can't carry the whole vault's templates).
   const calendarTemplates = allGlobal(`
     SELECT name, spec, builtin FROM calendar_template WHERE nexus_ref=? ORDER BY id`);
+  // v5 Part 6 (§10.8): the user's module presets — nexus-scoped the same way.
+  const modulePresets = allGlobal(`
+    SELECT kind, name, spec FROM module_preset WHERE nexus_ref=? ORDER BY id`);
 
   const notes = {
     folders: allGlobal(`
@@ -510,7 +598,10 @@ function serializeVault(nexusId, moduleIds = null) {
       SELECT n.id, n.folder_ref AS folderId, n.title, n.content,
              c.color_code AS colorCode, n.pinned
       FROM note n LEFT JOIN use_color c ON n.color=c.id
-      WHERE n.nexus_ref=? ORDER BY n.id`),
+      WHERE n.nexus_ref=? AND n.migrated_v3=0 ORDER BY n.id`),
+    // ↑ a converted note is a module now (db/migrate_v3.js autoMigrateNotes)
+    //   and travels as one; sending the note too would make the receiver
+    //   convert it a second time.
   };
 
   // Every color code referenced anywhere above, deduped.
@@ -551,9 +642,10 @@ function serializeVault(nexusId, moduleIds = null) {
     exportedAt: new Date().toISOString(),
     nexus: { name: nexus.name, memo: nexus.memo, colorCode: nexus.colorCode },
     lookups: { colors: [...colors], hashtags, dates },
-    modules, moduleAttrs, moduleUi, moduleTags,
+    modules, pageBlocks, moduleUi, moduleTags,
     classifier, locator, chronicler, wanderer, narrator, author,
     chatscribe, sketcher, designer, relations, notes, calendarTemplates,
+    exhibitor, modulePresets, diviner,
   };
 }
 
@@ -586,7 +678,7 @@ function collectModuleSubtreeIds(nexusId, moduleId) {
 // vaults), so children are re-keyed through in-memory old→new Maps.
 // ---------------------------------------------------------------------------
 function validateSnapshot(p) {
-  if (!p || p.format !== SNAPSHOT_FORMAT || p.version !== SNAPSHOT_VERSION) return false;
+  if (!p || p.format !== SNAPSHOT_FORMAT || !READABLE_VERSIONS.has(p.version)) return false;
   return Array.isArray(p.modules) && p.nexus && typeof p.nexus === 'object';
 }
 
@@ -599,6 +691,16 @@ function remapEntityKey(key, maps) {
   if (!map) return null;
   const mapped = map.get(Number(m[2]));
   return mapped == null ? null : `${m[1]}_${mapped}`;
+}
+
+// A JSON list of {key, …} (story_choice_option.condition / set_ops) with
+// every key remapped; entries whose key cannot be mapped are left out.
+function remapKeyList(json, maps) {
+  let list;
+  try { list = JSON.parse(json); } catch (_) { return null; }
+  if (!Array.isArray(list)) return null;
+  const out = list.map((e) => ({ ...e, key: remapEntityKey(e?.key, maps) })).filter((e) => e.key);
+  return out.length ? JSON.stringify(out) : null;
 }
 
 // Shared by applySnapshot (whole-nexus wipe-and-rebuild, Token Sync pull)
@@ -617,7 +719,7 @@ function remapEntityKey(key, maps) {
 // Everything else — lookups, the modules BFS insert, every per-kind child
 // insert, relation/note insert, module_ui remap — is identical either way.
 function applySnapshotCore(nexusId, payload, opts = {}) {
-  const { wipe = false, updateNexusMeta = false, reparentRootTo = null } = opts;
+  const { wipe = false, updateNexusMeta = false, reparentRootTo = null } = opts; // + withKeyMaps (db/trash.js)
   if (!validateSnapshot(payload)) return { ok: false, code: 'bad_snapshot' };
   const db = getVaultDB(nexusId);
   const arr = (a) => (Array.isArray(a) ? a : []);
@@ -633,6 +735,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       db.prepare(`DELETE FROM note_folder WHERE nexus_ref=?`).run(nexusId);
       db.prepare(`DELETE FROM wiki_link WHERE nexus_ref=?`).run(nexusId);
       db.prepare(`DELETE FROM calendar_template WHERE nexus_ref=?`).run(nexusId);
+      db.prepare(`DELETE FROM module_preset WHERE nexus_ref=?`).run(nexusId);
     }
 
     // 2. Lookups by natural key (same pattern as importDatabaseMerge).
@@ -671,13 +774,21 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
 
     // 4. Modules, parents-first (BFS so a child never lands before its parent).
     const modMap = new Map();
+    const legacyKind = new Map(); // old module id -> 'viewer'|'connector' for pre-v5 payloads
     let pending = arr(payload.modules).slice();
+    // A subtree's root still names its old parent, which is not in the
+    // payload (a .mddx of a nested module, a trashed module — §11.4). That
+    // parent is outside what is being imported, so the root lands where the
+    // caller says (reparentRootTo). Before this, such a root waited for a
+    // parent that never came and the whole subtree was silently skipped.
+    const inPayload = new Set(arr(payload.modules).map((m) => m.id));
+    const isRoot = (m) => m.parentId == null || !inPayload.has(m.parentId);
     while (pending.length) {
       const next = [];
       let progressed = false;
       for (const m of pending) {
-        if (m.parentId != null && !modMap.has(m.parentId)) { next.push(m); continue; }
-        const parentId = m.parentId != null ? modMap.get(m.parentId) : reparentRootTo;
+        if (!isRoot(m) && !modMap.has(m.parentId)) { next.push(m); continue; }
+        const parentId = isRoot(m) ? reparentRootTo : modMap.get(m.parentId);
         // A handle is unique per vault, and an import lands in a vault that
         // may already use this one. Dropping the clash to NULL keeps the
         // module (and every module after it) importable — throwing here would
@@ -689,11 +800,12 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
           INSERT INTO module (nexus_ref, parent_id, name, kind, icon, icon_color, color,
                               description, display_order, pinned, cat_type, handle, create_at, update_at)
           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,COALESCE(?,datetime('now')),COALESCE(?,datetime('now')))`)
-          .run(nexusId, parentId, m.name, m.kind,
+          .run(nexusId, parentId, m.name, V5_KIND_MAP[m.kind] || m.kind,
                m.icon ?? null, colorId(m.iconColorCode), colorId(m.colorCode),
                m.description ?? null, m.displayOrder ?? 0, m.pinned ?? 0, m.catType ?? null, handle,
                m.createAt ?? null, m.updateAt ?? null);
         modMap.set(m.id, r.lastInsertRowid);
+        if (V5_KIND_MAP[m.kind]) legacyKind.set(m.id, m.kind);
         progressed = true;
       }
       if (!progressed) break; // orphaned parentIds — drop the remainder
@@ -702,9 +814,10 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     const mod = (oldId) => modMap.get(oldId);
 
     // 5. Per-kind children, dependency order, each building its own map.
+    // A v1 snapshot's module attributes are property blocks now (§12).
     for (const a of arr(payload.moduleAttrs)) {
       if (mod(a.moduleId) == null) continue;
-      db.prepare(`INSERT INTO module_attribute (module_ref, attr_name, attr_value, display_order) VALUES (?,?,?,?)`)
+      db.prepare(`INSERT INTO page_block (module_ref, block_type, prop_name, prop_type, content, block_order) VALUES (?,'property',?,'text',?,?)`)
         .run(mod(a.moduleId), a.name, a.value ?? null, a.displayOrder ?? 0);
     }
     for (const tg of arr(payload.moduleTags)) {
@@ -727,17 +840,24 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       if (t.objectId != null && !cobjMap.has(t.objectId)) continue;
       const r = db.prepare(`
         INSERT INTO classifier_template (module_ref, object_ref, description, attribute_type,
-                                         levelable, has_condition, display_order)
-        VALUES (?,?,?,?,?,?,?)`)
+                                         levelable, has_condition, display_order, options)
+        VALUES (?,?,?,?,?,?,?,?)`)
         .run(mod(t.moduleId), t.objectId != null ? cobjMap.get(t.objectId) : null,
              t.description, t.attributeType ?? 'text', t.levelable ?? 0,
-             t.hasCondition ?? 0, t.displayOrder ?? 0);
+             t.hasCondition ?? 0, t.displayOrder ?? 0, t.options ?? null);
       ctplMap.set(t.id, r.lastInsertRowid);
     }
     for (const a of arr(cls.attributes)) {
       if (!cobjMap.has(a.objectId) || !ctplMap.has(a.templateId)) continue;
       db.prepare(`INSERT OR IGNORE INTO classifier_attribute (object_ref, template_ref, attribute_value) VALUES (?,?,?)`)
         .run(cobjMap.get(a.objectId), ctplMap.get(a.templateId), a.value ?? null);
+    }
+    for (const l of arr(cls.levels)) {
+      if (!cobjMap.has(l.objectId) || !ctplMap.has(l.templateId)) continue;
+      db.prepare(`INSERT INTO classifier_level (object_ref, template_ref, level_label, condition_value, info_value, display_order)
+        VALUES (?,?,?,?,?,?)`)
+        .run(cobjMap.get(l.objectId), ctplMap.get(l.templateId), l.levelLabel ?? null,
+             l.conditionValue ?? null, l.infoValue ?? null, l.displayOrder ?? 0);
     }
 
     const loc = sect(payload.locator);
@@ -781,13 +901,20 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       evtMap.set(e.id, r.lastInsertRowid);
     }
 
+    // A pin is an entity (mevt_) with its own page, and its linker_key points
+    // at any element — remapped with the other key columns once every map is
+    // full. Before SDB 2.0.3 neither travelled, so a synced pin lost its link.
+    const mevtMap = new Map();
+    const pinLinks = [];
     for (const me of arr(sect(payload.wanderer).mapEvents)) {
       if (mod(me.moduleId) == null) continue;
-      db.prepare(`INSERT INTO map_event (module_ref, event_ref, area_ref, label, x, y) VALUES (?,?,?,?,?,?)`)
+      const r = db.prepare(`INSERT INTO map_event (module_ref, event_ref, area_ref, label, x, y) VALUES (?,?,?,?,?,?)`)
         .run(mod(me.moduleId),
              me.eventId != null && evtMap.has(me.eventId) ? evtMap.get(me.eventId) : null,
              me.areaId != null && areaMap.has(me.areaId) ? areaMap.get(me.areaId) : null,
              me.label ?? null, me.x ?? 0, me.y ?? 0);
+      if (me.id != null) mevtMap.set(me.id, r.lastInsertRowid);
+      if (me.linkerKey) pinLinks.push(['map_event', 'linker_key', r.lastInsertRowid, me.linkerKey]);
     }
 
     const nar = sect(payload.narrator);
@@ -811,19 +938,26 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
           tk.rowType === 'choice' ? 'choice' : 'talk', tk.order ?? 0);
       if (tk.id != null) talkMap.set(tk.id, r.lastInsertRowid);
     }
+    // condition / set_ops hold entity keys (§11.6) — remapped once every key
+    // map exists, below; stored raw here only for the ids.
+    const pendingKeyJson = []; // [table, col, id, json]
     for (const op of arr(nar.choiceOptions)) {
       if (!talkMap.has(op.talkId)) continue;
-      db.prepare(`INSERT INTO story_choice_option (talk_ref, option_text, effect_kind, effect_text, jump_ref, option_order) VALUES (?,?,?,?,?,?)`)
+      const r = db.prepare(`INSERT INTO story_choice_option (talk_ref, option_text, effect_kind, effect_text, jump_ref, option_order) VALUES (?,?,?,?,?,?)`)
         .run(talkMap.get(op.talkId), op.text ?? null, op.effectKind ?? 'none', op.effectText ?? null,
           op.jumpId != null ? (dlgMap.get(op.jumpId) ?? null) : null, op.order ?? 0);
+      if (op.condition) pendingKeyJson.push(['story_choice_option', 'condition', r.lastInsertRowid, op.condition]);
+      if (op.setOps) pendingKeyJson.push(['story_choice_option', 'set_ops', r.lastInsertRowid, op.setOps]);
     }
 
     const bchpMap = new Map();
+    const pendingKeys = [...pinLinks]; // [table, col, id, key] — single-key columns, remapped below
     for (const ch of arr(sect(payload.author).chapters)) {
       if (mod(ch.moduleId) == null) continue;
-      const r = db.prepare(`INSERT INTO book_chapter (module_ref, name, chapter_content, chapter_order) VALUES (?,?,?,?)`)
-        .run(mod(ch.moduleId), ch.name, ch.content ?? null, ch.order ?? 0);
+      const r = db.prepare(`INSERT INTO book_chapter (module_ref, name, chapter_content, chapter_order, synopsis, status) VALUES (?,?,?,?,?,?)`)
+        .run(mod(ch.moduleId), ch.name, ch.content ?? null, ch.order ?? 0, ch.synopsis ?? null, ch.status ?? null);
       bchpMap.set(ch.id, r.lastInsertRowid);
+      if (ch.povKey) pendingKeys.push(['book_chapter', 'pov_key', r.lastInsertRowid, ch.povKey]);
     }
 
     const cht = sect(payload.chatscribe);
@@ -856,39 +990,31 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
         .run(pageMap.get(st.pageId), st.color ?? null, st.width ?? 3, st.points);
     }
 
-    const dsg = sect(payload.designer);
-    const dnodeMap = new Map();
-    // Nodes first WITHOUT linker_key remap (the target maps are complete by
-    // now, but keep one code path: remap inline since all maps exist here).
-    const keyMaps = { module: modMap, cobj: cobjMap, bchp: bchpMap, chss: chssMap };
-
-    let droppedPins = 0;
-    for (const pn of arr(skt.pins)) {
-      if (!pageMap.has(pn.pageId)) continue;
-      const k = remapEntityKey(pn.linkerKey, keyMaps);
-      if (!k) { droppedPins++; continue; } // linker_key NOT NULL — drop unmappable pins
-      db.prepare(`INSERT INTO sketch_pin (page_ref, linker_key, x, y) VALUES (?,?,?,?)`)
-        .run(pageMap.get(pn.pageId), k, pn.x ?? 0, pn.y ?? 0);
+    // Diviner (§11.5) — before the key maps, which need divtMap; an entry's
+    // linker_key is remapped with the other deferred single keys below.
+    const dvn = sect(payload.diviner);
+    const divtMap = new Map(), dveMap = new Map();
+    for (const t of arr(dvn.tables)) {
+      if (mod(t.moduleId) == null) continue;
+      const r = db.prepare(`INSERT INTO diviner_table (module_ref, name, dice, mode, display_order) VALUES (?,?,?,?,?)`)
+        .run(mod(t.moduleId), t.name, t.dice ?? null, t.mode === 'join' ? 'join' : 'pick', t.order ?? 0);
+      divtMap.set(t.id, r.lastInsertRowid);
+    }
+    for (const e of arr(dvn.entries)) {
+      if (!divtMap.has(e.tableId)) continue;
+      const r = db.prepare(`INSERT INTO diviner_entry (table_ref, weight, range_lo, range_hi, entry_text, display_order) VALUES (?,?,?,?,?,?)`)
+        .run(divtMap.get(e.tableId), e.weight ?? 1, e.lo ?? null, e.hi ?? null, e.text ?? null, e.order ?? 0);
+      dveMap.set(e.id, r.lastInsertRowid);
+      if (e.linkerKey) pendingKeys.push(['diviner_entry', 'linker_key', r.lastInsertRowid, e.linkerKey]);
+    }
+    for (const r of arr(dvn.rolls)) {
+      if (!divtMap.has(r.tableId)) continue;
+      db.prepare(`INSERT INTO diviner_roll (table_ref, dice_result, entry_ref, result_text, create_at) VALUES (?,?,?,?,COALESCE(?,datetime('now')))`)
+        .run(divtMap.get(r.tableId), r.dice ?? null, r.entryId != null ? (dveMap.get(r.entryId) ?? null) : null, r.text ?? null, r.createAt ?? null);
     }
 
-    for (const n of arr(dsg.nodes)) {
-      if (mod(n.moduleId) == null) continue;
-      const k = n.linkerKey ? remapEntityKey(n.linkerKey, keyMaps) : null;
-      const r = db.prepare(`
-        INSERT INTO design_node (module_ref, shape, x, y, node_text, color, linker_key)
-        VALUES (?,?,?,?,?,?,?)`)
-        .run(mod(n.moduleId), n.shape ?? 'box', n.x ?? 0, n.y ?? 0,
-             n.text ?? null, n.color ?? null, k);
-      dnodeMap.set(n.id, r.lastInsertRowid);
-    }
-    for (const e of arr(dsg.edges)) {
-      if (mod(e.moduleId) == null || !dnodeMap.has(e.fromId) || !dnodeMap.has(e.toId)) continue;
-      db.prepare(`INSERT OR IGNORE INTO design_edge (module_ref, from_ref, to_ref, label) VALUES (?,?,?,?)`)
-        .run(mod(e.moduleId), dnodeMap.get(e.fromId), dnodeMap.get(e.toId), e.label ?? null);
-    }
-
-    // Notes (folder tree parents-first), then relations — noteMap joins the
-    // key maps so note_<id> relation endpoints remap too.
+    // Notes (folder tree parents-first) — before anything that remaps a key,
+    // so a pin, a Designer link or a relation to note_<id> comes across too.
     const nts = sect(payload.notes);
     const nfMap = new Map();
     let pendingF = arr(nts.folders).slice();
@@ -914,15 +1040,121 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
              n.title, n.content ?? '', colorId(n.colorCode), n.pinned ?? 0);
       if (r.changes) noteMap.set(n.id, r.lastInsertRowid);
     }
-    keyMaps.note = noteMap;
+    // v5 Part 7 (§11.1/§11.2): the key maps come from db/entity-kinds.js —
+    // every family that declares `sync` gets its map, by name. Registering
+    // them by hand here is what dropped tlev_/sdlg_ endpoints on every pull.
+    const keyMaps = entityKeyMaps({ modMap, cobjMap, ctplMap, bchpMap, chssMap, evtMap, dlgMap, noteMap, pageMap, divtMap, mevtMap });
+    // Key columns written before the maps were complete (KEY_COLUMNS in
+    // db/entity-kinds.js): a single key that cannot be mapped is cleared; an
+    // entry of a JSON list that cannot be mapped is left out.
+    for (const [table, col, id, key] of pendingKeys) {
+      db.prepare(`UPDATE ${table} SET ${col}=? WHERE id=?`).run(remapEntityKey(key, keyMaps), id);
+    }
+    for (const [table, col, id, json] of pendingKeyJson) {
+      db.prepare(`UPDATE ${table} SET ${col}=? WHERE id=?`).run(remapKeyList(json, keyMaps), id);
+    }
+
+    const dsg = sect(payload.designer);
+    const dnodeMap = new Map();
+
+    let droppedPins = 0;
+    for (const pn of arr(skt.pins)) {
+      if (!pageMap.has(pn.pageId)) continue;
+      const k = remapEntityKey(pn.linkerKey, keyMaps);
+      if (!k) { droppedPins++; continue; } // linker_key NOT NULL — drop unmappable pins
+      db.prepare(`INSERT INTO sketch_pin (page_ref, linker_key, x, y) VALUES (?,?,?,?)`)
+        .run(pageMap.get(pn.pageId), k, pn.x ?? 0, pn.y ?? 0);
+    }
+
+    for (const n of arr(dsg.nodes)) {
+      if (mod(n.moduleId) == null) continue;
+      const k = n.linkerKey ? remapEntityKey(n.linkerKey, keyMaps) : null;
+      const r = db.prepare(`
+        INSERT INTO design_node (module_ref, shape, x, y, node_text, color, linker_key, w, h, read_order)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`)
+        .run(mod(n.moduleId), n.shape ?? 'box', n.x ?? 0, n.y ?? 0,
+             n.text ?? null, n.color ?? null, k, n.w ?? null, n.h ?? null, n.readOrder ?? null);
+      dnodeMap.set(n.id, r.lastInsertRowid);
+    }
+    for (const e of arr(dsg.edges)) {
+      if (mod(e.moduleId) == null || !dnodeMap.has(e.fromId) || !dnodeMap.has(e.toId)) continue;
+      db.prepare(`INSERT OR IGNORE INTO design_edge (module_ref, from_ref, to_ref, label) VALUES (?,?,?,?)`)
+        .run(mod(e.moduleId), dnodeMap.get(e.fromId), dnodeMap.get(e.toId), e.label ?? null);
+    }
+
 
     let droppedRelations = 0;
     for (const rel of arr(payload.relations)) {
       const fk = remapEntityKey(rel.fromKey, keyMaps);
       const tk = remapEntityKey(rel.toKey, keyMaps);
-      if (!fk || !tk) { droppedRelations++; continue; }
-      db.prepare(`INSERT OR IGNORE INTO entity_relation (nexus_ref, from_key, to_key, label) VALUES (?,?,?,?)`)
-        .run(nexusId, fk, tk, rel.label ?? null);
+      // A Classifier relation FIELD's row names its field in rel_type
+      // (ctpl_<id>, §11.3) — the field's id changes too, and a row whose
+      // field did not come across has lost its owner, so it is dropped.
+      const rt = /^ctpl_\d+$/.test(rel.relType || '') ? remapEntityKey(rel.relType, keyMaps) : (rel.relType ?? null);
+      if (!fk || !tk || (rel.relType && rt == null)) { droppedRelations++; continue; }
+      db.prepare(`INSERT OR IGNORE INTO entity_relation (nexus_ref, from_key, to_key, label, rel_type, directed, module_ref, valid_from, valid_to)
+        VALUES (?,?,?,?,?,?,?,?,?)`)
+        .run(nexusId, fk, tk, rel.label ?? null, rt,
+             rel.directed === 0 ? 0 : 1, rel.moduleId != null ? (mod(rel.moduleId) ?? null) : null,
+             rel.validFrom ? (dateMap.get(rel.validFrom) ?? null) : null,
+             rel.validTo ? (dateMap.get(rel.validTo) ?? null) : null);
+    }
+
+    // Page blocks (§12): item_key and source_key are entity keys, so they
+    // wait for every map. '*' (the shared element layout) is not a key. An
+    // element page whose element did not come across is dropped; a borrowed
+    // component whose source did not is kept, pointing at nothing. Parents
+    // first — a columns block before the blocks inside it.
+    const blockMap = new Map();
+    let pendingBlocks = arr(payload.pageBlocks);
+    while (pendingBlocks.length) {
+      const next = [];
+      let progressed = false;
+      for (const b of pendingBlocks) {
+        if (mod(b.moduleId) == null) continue;
+        if (b.parentId != null && !blockMap.has(b.parentId)) { next.push(b); continue; }
+        const itemKey = b.itemKey == null || b.itemKey === '*' ? (b.itemKey ?? null) : remapEntityKey(b.itemKey, keyMaps);
+        if (b.itemKey != null && itemKey == null) continue;
+        const r = db.prepare(`INSERT INTO page_block (module_ref, item_key, parent_id, block_type, component, source_key, config, content, prop_name, prop_type, block_order)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+          .run(mod(b.moduleId), itemKey, b.parentId != null ? blockMap.get(b.parentId) : null, b.type || 'component',
+               b.component ?? null, b.sourceKey ? remapEntityKey(b.sourceKey, keyMaps) : null,
+               b.config ?? null, b.content ?? null, b.propName ?? null, b.propType ?? null, b.order ?? 0);
+        blockMap.set(b.id, r.lastInsertRowid);
+        progressed = true;
+      }
+      if (!progressed) break;
+      pendingBlocks = next;
+    }
+
+    // v5 Exhibitor scenes — after every key map exists (note_ included).
+    // A node whose entity did not come across keeps its place and label
+    // with the link cleared, rather than vanishing from the user's layout.
+    const exh = sect(payload.exhibitor);
+    const enodeMap = new Map();
+    const enodeParents = [];
+    for (const n of arr(exh.nodes)) {
+      if (mod(n.moduleId) == null) continue;
+      const k = n.linkerKey ? remapEntityKey(n.linkerKey, keyMaps) : null;
+      const r = db.prepare(`
+        INSERT INTO exhibit_node (module_ref, node_type, linker_key, label, x, y, w, h, z, rotation, scale, locked, hidden, color, props)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(mod(n.moduleId), n.nodeType ?? 'entity', k, n.label ?? null, n.x ?? 0, n.y ?? 0,
+             n.w ?? null, n.h ?? null, n.z ?? 0, n.rotation ?? 0, n.scale ?? 1,
+             n.locked ? 1 : 0, n.hidden ? 1 : 0, n.color ?? null, remapExhibitProps(n.props, ctplMap));
+      enodeMap.set(n.id, r.lastInsertRowid);
+      if (n.parentId != null) enodeParents.push([n.id, n.parentId]);
+    }
+    for (const [id, pid] of enodeParents) {
+      if (enodeMap.has(pid)) {
+        db.prepare(`UPDATE exhibit_node SET parent_id=? WHERE id=?`).run(enodeMap.get(pid), enodeMap.get(id));
+      }
+    }
+    for (const v of arr(exh.views)) {
+      if (mod(v.moduleId) == null) continue;
+      const bg = v.bgLinkerKey ? remapEntityKey(v.bgLinkerKey, keyMaps) : null;
+      db.prepare(`INSERT OR IGNORE INTO exhibit_view (module_ref, scale, tx, ty, bg_linker_key, grid, snap) VALUES (?,?,?,?,?,?,?)`)
+        .run(mod(v.moduleId), v.scale ?? 1, v.tx ?? 0, v.ty ?? 0, bg, v.grid === 0 ? 0 : 1, v.snap ? 1 : 0);
     }
 
     // Templates carry no entity ids, so unlike relations they need no remap —
@@ -934,6 +1166,14 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
         .run(nexusId, ct.name, ct.spec, ct.builtin ? 1 : 0);
     }
 
+    // Presets are self-contained too (spec holds colour CODES, never ids);
+    // a name the target already has for that kind keeps the target's copy.
+    for (const p of arr(payload.modulePresets)) {
+      if (!p || !p.kind || !p.name || typeof p.spec !== 'string') continue;
+      db.prepare(`INSERT OR IGNORE INTO module_preset (nexus_ref, kind, name, spec) VALUES (?,?,?,?)`)
+        .run(nexusId, p.kind, p.name, p.spec);
+    }
+
     // module_ui last: Wanderer's mapModule/timelineModule values are module
     // ids and must go through modMap. Other ui values are copied verbatim —
     // any entity id embedded in them (e.g. viewer filter defs) stays stale;
@@ -941,6 +1181,11 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     for (const u of arr(payload.moduleUi)) {
       if (mod(u.moduleId) == null) continue;
       let value = u.value;
+      // A pre-v5 Connector's saved view maps the way migrateModuleKindV5
+      // maps it in place: graph -> the Scene, edge list -> Edges.
+      if (u.key === 'activeView' && legacyKind.get(u.moduleId) === 'connector') {
+        value = u.value === 'edgelist' ? 'edges' : 'scene';
+      }
       if (u.key === 'mapModule' || u.key === 'timelineModule') {
         const target = modMap.get(Number(u.value));
         if (target == null) continue;
@@ -949,6 +1194,11 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       db.prepare(`INSERT OR IGNORE INTO module_ui (module_ref, ui_key, ui_value) VALUES (?,?,?)`)
         .run(mod(u.moduleId), u.key, value ?? null);
     }
+    for (const [oldId, kind] of legacyKind) {
+      if (kind !== 'connector') continue;
+      db.prepare(`INSERT OR IGNORE INTO module_ui (module_ref, ui_key, ui_value) VALUES (?,'activeView','scene')`).run(mod(oldId));
+      db.prepare(`INSERT OR IGNORE INTO module_ui (module_ref, ui_key, ui_value) VALUES (?,'seedScene','1')`).run(mod(oldId));
+    }
 
     return {
       modules: modMap.size,
@@ -956,15 +1206,23 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       relations: arr(payload.relations).length - droppedRelations,
       droppedRelations,
       droppedPins,
+      keyMaps, // taken off below — the trash (db/trash.js) asks for it
     };
   })();
+  const { keyMaps } = summary;
+  delete summary.keyMaps;
+
+  // A snapshot from an older app (or the APK, which has not adopted the
+  // rule yet) can carry modules under a non-collector — wrap them the same
+  // way the v5 migration does (db/module-parents.js, V5.md §8.8).
+  require('./module-parents').normalizeModuleParents(db);
 
   // Regenerate the wiki-link index (global — fine at prototype scale).
   try { require('./wiki').rebuildWikiIndex(); } catch (e) {
     console.error('sync: wiki rebuild after pull failed:', e);
   }
 
-  return { ok: true, summary };
+  return opts.withKeyMaps ? { ok: true, summary, keyMaps } : { ok: true, summary };
 }
 
 // Whole-nexus wipe-and-rebuild — Token Sync pull's only caller, same
@@ -976,8 +1234,8 @@ function applySnapshot(nexusId, payload) {
 // Module-subtree merge-in (Setting window → Appdata → Database "import
 // module") — additive, never wipes the target nexus, and reparents the
 // snapshot's root module(s) under parentModuleId (or to top-level if null).
-function importModuleSnapshot(nexusId, parentModuleId, payload) {
-  return applySnapshotCore(nexusId, payload, { wipe: false, updateNexusMeta: false, reparentRootTo: parentModuleId ?? null });
+function importModuleSnapshot(nexusId, parentModuleId, payload, extra = {}) {
+  return applySnapshotCore(nexusId, payload, { ...extra, wipe: false, updateNexusMeta: false, reparentRootTo: parentModuleId ?? null });
 }
 
 // ---------------------------------------------------------------------------

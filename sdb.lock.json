@@ -3,21 +3,25 @@
   "self": "EXE",
   "source": {
     "repo": "ZYDRAXYL/DraconDex-SDB",
-    "ref": "37d5317ce1cf947cc228059c81741417eee0d6f3",
-    "version": "1.0.0"
+    "ref": "400dd41",
+    "version": "2.0.3"
   },
   "expect": {
-    "vaultSchemaVersion": 4,
+    "vaultSchemaVersion": 6,
     "supabaseSchemaVersion": 2
   },
   "vendored": {
     "src/schema/generated/vault-ddl.electron.js": {
       "artifact": "generated/electron/vault-ddl.electron.js",
-      "sha256": "df5be959813b2ec1b82024ef89c6d2d14569e0ab35e8c839f9119f2d2f1f24f3"
+      "sha256": "ea9f145c312ebcfb555483be62dc6aff25a81909a2fdb2d60934af1431a69ac2"
     },
     "electron/src/db/supabase-schema.js": {
       "artifact": "generated/electron/supabase-schema.js",
       "sha256": "5c8b631db18a16b2c8c9e120835c02e3cd222c153f93957d26489ec0fd5d556f"
+    },
+    "src/schema/generated/entity-kinds.json": {
+      "artifact": "generated/electron/entity-kinds.json",
+      "sha256": "29fdd294651e2f0e61c8971e335a49de81797075f74171cb8d1810756b4a4913"
     },
     "src/assets/brand/DraconDex_BlackIn.png": {
       "artifact": "assets/brand/DraconDex_BlackIn.png",
@@ -46,6 +50,22 @@
     "src/assets/brand/DraconDex_WhiteOut.png": {
       "artifact": "assets/brand/DraconDex_WhiteOut.png",
       "sha256": "7677500149b9655d06460bc69ac31c46a1b7323fe9c85f1c8680247b1a107821"
+    },
+    "electron/templates/bundles.json": {
+      "artifact": "generated/templates/bundles.json",
+      "sha256": "7d10b0cfdd0217a00a610e75ce8315499778836b5802f0b35fa4027f234fad15"
+    },
+    "electron/test/fixtures/snapshot-v2.json": {
+      "artifact": "fixtures/snapshot-v2.json",
+      "sha256": "468eee3ad95e58a56404b81d65d0eb7a0ff21292540ecb6ca534268103f0d9e2"
+    },
+    "electron/guide/en.json": {
+      "artifact": "templates/guide/en.json",
+      "sha256": "5989449ffa2b21e4329da99cf75e5f0311d32cb529a08628b133ce4687518ad6"
+    },
+    "electron/guide/th.json": {
+      "artifact": "templates/guide/th.json",
+      "sha256": "899eb328b6056bf28112d7fe6b839afe22f6aff90a7966fb163c4553bfbd1a1f"
     }
   }
 }

@@ -1,6 +1,8 @@
 'use strict';
 const { getDB } = require('./core');
 const { scopedAll, scopedGet } = require('./sqlscope');
+const { CONTENT_SOURCES, NEXUS_OF } = require('./wiki-sources');
+const { ENTITY_KINDS } = require('./entity-kinds');
 
 // Wiki-link index (v2.8). [[Name]] references typed inside markdown content
 // (Scribe notes, Director object notes, Writer chapters) are parsed on save,
@@ -17,8 +19,15 @@ const WIKILINK_RE = /\[\[([^\[\]|]+?)(?:\|([^\[\]]+?))?\]\]/g;
 // ── Name resolution ─────────────────────────────────────────────────────────
 // Fixed, deterministic precedence; case-insensitive (ASCII). A namespace
 // prefix ([[note:X]], [[obj:X]], …) forces one resolver.
+// v5 Part 7 (§11.2): the v3+ families come from db/entity-kinds.js — note
+// first, then the read-only legacy prefixes, then the rest in declared order
+// (file last, so an asset's file name never shadows an entity's name). A
+// family with `wiki: false` (tlev, sdlg) is left out on purpose, and says so
+// there.
+const ekResolver = (prefix) => [prefix, (d, n, nx) => scopedGet(d, ENTITY_KINDS[prefix].wiki.sql, nx, n)?.id, `${prefix}_`];
+const WIKI_FAMILIES = Object.keys(ENTITY_KINDS).filter((p) => ENTITY_KINDS[p].wiki);
 const RESOLVERS = [
-  ['note',  (d, n, nx) => d.prepare(`SELECT id FROM note WHERE nexus_ref=? AND title=? COLLATE NOCASE`).get(nx, n)?.id, 'note_'],
+  ...WIKI_FAMILIES.filter((p) => p === 'note').map(ekResolver),
   ['obj',   (d, n, nx) => scopedGet(d, `SELECT o.id FROM object o JOIN project p ON o.project_id=p.id WHERE (? IS NULL OR p.nexus_ref=?) AND o.name=? COLLATE NOCASE`, nx, n)?.id, 'obj_'],
   ['wchar', (d, n, nx) => scopedGet(d, `SELECT c.id FROM world_character c JOIN world_project w ON c.world_ref=w.id WHERE (? IS NULL OR w.nexus_ref=?) AND c.name=? COLLATE NOCASE`, nx, n)?.id, 'wchar_'],
   ['wobj',  (d, n, nx) => scopedGet(d, `SELECT o.id FROM world_orig_object o JOIN world_orig_category c ON o.category_id=c.id JOIN world_project w ON c.world_ref=w.id WHERE (? IS NULL OR w.nexus_ref=?) AND o.name=? COLLATE NOCASE`, nx, n)?.id, 'wobj_'],
@@ -30,13 +39,11 @@ const RESOLVERS = [
   ['world', (d, n, nx) => scopedGet(d, `SELECT id FROM world_project WHERE (? IS NULL OR nexus_ref=?) AND name=? COLLATE NOCASE`, nx, n)?.id, 'world_'],
   ['game',  (d, n, nx) => scopedGet(d, `SELECT id FROM game_project WHERE (? IS NULL OR nexus_ref=?) AND name=? COLLATE NOCASE`, nx, n)?.id, 'game_'],
   ['write', (d, n, nx) => scopedGet(d, `SELECT id FROM write_project WHERE (? IS NULL OR nexus_ref=?) AND project_name=? COLLATE NOCASE`, nx, n)?.id, 'write_'],
-  ['module', (d, n, nx) => scopedGet(d, `SELECT id FROM module WHERE (? IS NULL OR nexus_ref=?) AND name=? COLLATE NOCASE`, nx, n)?.id, 'module_'],
-  ['bchp',  (d, n, nx) => scopedGet(d, `SELECT ch.id FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND ch.name=? COLLATE NOCASE`, nx, n)?.id, 'bchp_'],
-  ['chss',  (d, n, nx) => scopedGet(d, `SELECT s.id FROM chat_session s JOIN module m ON s.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND s.name=? COLLATE NOCASE`, nx, n)?.id, 'chss_'],
-  ['cobj',  (d, n, nx) => scopedGet(d, `SELECT o.id FROM classifier_object o JOIN module m ON o.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?) AND o.name=? COLLATE NOCASE`, nx, n)?.id, 'cobj_'],
+  ...WIKI_FAMILIES.filter((p) => p !== 'note' && p !== 'file').map(ekResolver),
+  ...WIKI_FAMILIES.filter((p) => p === 'file').map(ekResolver),
 ];
 
-// Optional memo for bulk passes (Plan part2 #2.4). A miss costs all 16
+// Optional memo for bulk passes (Plan part2 #2.4). A miss costs all 17
 // resolvers, and a rebuild resolves the same [[Name]] once per source that
 // mentions it — reindexWikiLinks only dedupes within one source. Scope is
 // deliberately ONE bulk operation, never process-lifetime: creating an
@@ -133,42 +140,31 @@ function rebuildWikiIndex() {
 function _rebuildWikiIndex() {
   const d = getDB();
   d.prepare(`DELETE FROM wiki_link`).run();
-  for (const r of d.prepare(`SELECT id, content, nexus_ref FROM note WHERE content LIKE '%[[%'`).all()) {
-    reindexWikiLinks(`note_${r.id}`, r.content, r.nexus_ref);
+  // One loop over the registry (db/wiki-sources.js) — the list of indexed
+  // fields and the list that is rebuilt can no longer drift apart.
+  for (const [prefix, src] of Object.entries(CONTENT_SOURCES)) {
+    for (const r of d.prepare(src.rebuild).all()) {
+      const content = src.rebuildContent ? src.rebuildContent(d, r.id) : r.c;
+      reindexWikiLinks(`${prefix}_${r.id}`, content, r.nexus_ref);
+    }
   }
-  for (const r of d.prepare(`SELECT o.id, o.note, p.nexus_ref FROM object o JOIN project p ON o.project_id=p.id WHERE o.note LIKE '%[[%'`).all()) {
-    reindexWikiLinks(`obj_${r.id}`, r.note, r.nexus_ref);
-  }
-  for (const r of d.prepare(`
-    SELECT ch.id, ch.chapter_content, p.nexus_ref FROM write_chapter ch
-    JOIN write_book b ON ch.book_id=b.id JOIN write_series s ON b.series_id=s.id
-    JOIN write_project p ON s.project_id=p.id WHERE ch.chapter_content LIKE '%[[%'
-  `).all()) {
-    reindexWikiLinks(`wchp_${r.id}`, r.chapter_content, r.nexus_ref);
-  }
-  for (const r of d.prepare(`SELECT id, description, nexus_ref FROM module WHERE description LIKE '%[[%'`).all()) {
-    reindexWikiLinks(`module_${r.id}`, r.description, r.nexus_ref);
-  }
-  for (const r of d.prepare(`SELECT ch.id, ch.chapter_content, m.nexus_ref FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE ch.chapter_content LIKE '%[[%'`).all()) {
-    reindexWikiLinks(`bchp_${r.id}`, r.chapter_content, r.nexus_ref);
-  }
-  for (const r of d.prepare(`
-    SELECT s.id, m.nexus_ref, COALESCE(GROUP_CONCAT(g.message, char(10)), '') AS content
-    FROM chat_session s JOIN module m ON s.module_ref=m.id
-    JOIN chat_message g ON g.session_ref=s.id
-    GROUP BY s.id HAVING content LIKE '%[[%'
-  `).all()) {
-    reindexWikiLinks(`chss_${r.id}`, r.content, r.nexus_ref);
-  }
-  for (const r of d.prepare(`SELECT o.id, o.note, m.nexus_ref FROM classifier_object o JOIN module m ON o.module_ref=m.id WHERE o.note LIKE '%[[%'`).all()) {
-    reindexWikiLinks(`cobj_${r.id}`, r.note, r.nexus_ref);
-  }
+}
+
+// Save-time hook for a field registered in db/wiki-sources.js: re-read the
+// field's whole indexed text and reindex it. The callers are the db writes
+// of those fields (classifier values, event stories, dialogue descriptions,
+// Exhibitor notes).
+function reindexSource(prefix, id) {
+  const d = getDB();
+  const src = CONTENT_SOURCES[prefix];
+  if (!src || !NEXUS_OF[prefix]) throw new Error(`reindexSource: no source '${prefix}'`);
+  const nexusRef = d.prepare(NEXUS_OF[prefix]).get(id)?.n ?? null;
+  reindexWikiLinks(`${prefix}_${id}`, src.content(d, id), nexusRef);
 }
 
 // ── Key hydration ───────────────────────────────────────────────────────────
 // key → {key, name, type, module}; unknown/dangling keys are omitted.
 const KEY_LOOKUPS = {
-  note:  { sql: `SELECT id, title AS name FROM note WHERE id=?`,               type: 'note',      module: 'scribe' },
   obj:   { sql: `SELECT id, name FROM object WHERE id=?`,                      type: 'object',    module: 'director' },
   wchar: { sql: `SELECT id, name FROM world_character WHERE id=?`,             type: 'character', module: 'navigator' },
   wobj:  { sql: `SELECT id, name FROM world_orig_object WHERE id=?`,           type: 'object',    module: 'navigator' },
@@ -180,14 +176,9 @@ const KEY_LOOKUPS = {
   world: { sql: `SELECT id, name FROM world_project WHERE id=?`,               type: 'project',   module: 'navigator' },
   game:  { sql: `SELECT id, name FROM game_project WHERE id=?`,                type: 'project',   module: 'hero' },
   write: { sql: `SELECT id, project_name AS name FROM write_project WHERE id=?`, type: 'project', module: 'writer' },
-  module: { sql: `SELECT id, name FROM module WHERE id=?`, type: 'module', module: 'hub' },
-  bchp:  { sql: `SELECT id, name FROM book_chapter WHERE id=?`,               type: 'chapter',   module: 'author' },
-  chss:  { sql: `SELECT id, name FROM chat_session WHERE id=?`,               type: 'chat',      module: 'scribe' },
-  cobj:  { sql: `SELECT id, name FROM classifier_object WHERE id=?`,          type: 'object',    module: 'classifier' },
-  tlev:  { sql: `SELECT id, event_name AS name FROM timeline_event WHERE id=?`, type: 'event',   module: 'chronicler' },
-  sdlg:  { sql: `SELECT id, name FROM story_dialogue WHERE id=?`,            type: 'dialogue',  module: 'narrator' },
+  // v5 Part 7 (§11.2): every v3+ family's lookup, from db/entity-kinds.js.
+  ...Object.fromEntries(Object.entries(ENTITY_KINDS).map(([p, k]) => [p, k.lookup])),
 };
-
 // Plan part2 #2.4: one .get() per key became one IN-query per key PREFIX.
 // The chunk size is fixed and the last chunk is padded by repeating an id
 // (IN is a set — duplicates cannot add rows) so the SQL string set stays at
@@ -306,6 +297,7 @@ function _quickIndex(nexusId) {
   add(`SELECT ch.id, ch.name, NULL AS color_code FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'bchp_', 'chapter', 'author');
   add(`SELECT s.id, s.name, NULL AS color_code FROM chat_session s JOIN module m ON s.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'chss_', 'chat', 'scribe');
   add(`SELECT o.id, o.name, uc.color_code FROM classifier_object o JOIN module m ON o.module_ref=m.id LEFT JOIN use_color uc ON uc.id=o.color WHERE (? IS NULL OR m.nexus_ref=?)`, 'cobj_', 'object', 'classifier');
+  add(`SELECT t.id, t.name, NULL AS color_code FROM diviner_table t JOIN module m ON t.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'divt_', 'table', 'diviner');
   return out;
 }
 
@@ -374,7 +366,12 @@ function getEntityPath(key) {
   const id = Number(m[2]);
   try {
     switch (m[1]) {
-      case 'note': return { kind: 'note', noteId: id };
+      // Notes are modules now (v5 Part 8): a stale note_ key opens the
+      // module the note became.
+      case 'note': {
+        const mid = require('./migrate_v3').moduleOfNote(id);
+        return mid ? { kind: 'module', moduleId: mid } : null;
+      }
       case 'obj': {
         const r = d.prepare(`SELECT id, project_id, category_id FROM object WHERE id=?`).get(id);
         return r && { kind: 'obj', projectId: r.project_id, categoryId: r.category_id, objectId: id };
@@ -438,6 +435,32 @@ function getEntityPath(key) {
         const r = d.prepare(`SELECT module_ref FROM story_dialogue WHERE id=?`).get(id);
         return r && { kind: 'sdlg', moduleId: r.module_ref, dialogueId: id };
       }
+      // v5 Part 7: a Sketcher page opens its module on that page.
+      case 'skpg': {
+        const r = d.prepare(`SELECT module_ref FROM sketch_page WHERE id=?`).get(id);
+        return r && { kind: 'skpg', moduleId: r.module_ref, pageId: id };
+      }
+      case 'divt': { // v5 Part 7 (§11.5): a Diviner table, selected
+        const r = d.prepare(`SELECT module_ref FROM diviner_table WHERE id=?`).get(id);
+        return r && { kind: 'divt', moduleId: r.module_ref, tableId: id };
+      }
+      // A Wanderer map pin (mevt_, SDB 2.0.3) opens its own page.
+      case 'mevt': {
+        const r = d.prepare(`SELECT module_ref FROM map_event WHERE id=?`).get(id);
+        return r && { kind: 'mevt', moduleId: r.module_ref, pinId: id };
+      }
+      // v5 Part 4: a link written in an Exhibitor note leads back to that
+      // note, selected, in its own Exhibitor.
+      case 'exn': {
+        const r = d.prepare(`SELECT module_ref FROM exhibit_node WHERE id=?`).get(id);
+        return r && { kind: 'exn', moduleId: r.module_ref, nodeId: id };
+      }
+      // v5 Asset Nest: an asset opens in the file viewer; moduleId (null when
+      // unfiled) lets the renderer reveal its node in the Nest.
+      case 'file': {
+        const r = d.prepare(`SELECT module_ref FROM import_file WHERE id=?`).get(id);
+        return r && { kind: 'file', moduleId: r.module_ref ?? null, fileId: id };
+      }
     }
   } catch (_) {}
   return null;
@@ -447,7 +470,7 @@ function getEntityPath(key) {
 // they were indexed with target_key NULL. Called from entity create paths.
 // Plan part2 #2.4: every matched row here resolves the SAME name (they only
 // differ by an optional ns: prefix), and a dangling name is the worst case
-// for resolveWikiName — all 16 resolvers miss. One memo + one transaction
+// for resolveWikiName — all 17 resolvers miss. One memo + one transaction
 // around the UPDATE loop; the memo is torn down on exit, since this function
 // is precisely what makes a previously-null resolution start succeeding.
 function resolveDanglingLinks(name, nexusId) {
@@ -470,32 +493,8 @@ function resolveDanglingLinks(name, nexusId) {
 // ── Rename safety ───────────────────────────────────────────────────────────
 // [[links]] live in plain text, so renaming a target breaks them. This
 // rewrites [[Old]] / [[Old|alias]] / [[ns:Old]] inside every source that
-// references targetKey, then reindexes those sources.
-const CONTENT_SOURCES = {
-  note: { get: `SELECT content AS c FROM note WHERE id=?`, set: `UPDATE note SET content=?, update_at=datetime('now') WHERE id=?` },
-  obj:  { get: `SELECT note AS c FROM object WHERE id=?`,  set: `UPDATE object SET note=?, update_at=datetime('now') WHERE id=?` },
-  wchp: { get: `SELECT chapter_content AS c FROM write_chapter WHERE id=?`, set: `UPDATE write_chapter SET chapter_content=?, update_at=datetime('now') WHERE id=?` },
-  module: { get: `SELECT description AS c FROM module WHERE id=?`, set: `UPDATE module SET description=?, update_at=datetime('now') WHERE id=?` },
-  bchp: { get: `SELECT chapter_content AS c FROM book_chapter WHERE id=?`, set: `UPDATE book_chapter SET chapter_content=?, update_at=datetime('now') WHERE id=?` },
-  cobj: { get: `SELECT note AS c FROM classifier_object WHERE id=?`, set: `UPDATE classifier_object SET note=?, update_at=datetime('now') WHERE id=?` },
-  // Chat "Scribe" sessions: the indexed content is the concatenation of the
-  // session's chat_message rows, so the rename rewrite runs per message row
-  // (rewrite: below) instead of through a single get/set column pair.
-  chss: {
-    rewrite: (d, sessionId, apply) => {
-      let any = false;
-      for (const g of d.prepare(`SELECT id, message FROM chat_message WHERE session_ref=?`).all(sessionId)) {
-        const next = apply(g.message);
-        if (next === g.message) continue;
-        d.prepare(`UPDATE chat_message SET message=? WHERE id=?`).run(next, g.id);
-        any = true;
-      }
-      if (!any) return null;
-      return d.prepare(`SELECT COALESCE(GROUP_CONCAT(message, char(10)), '') AS c FROM chat_message WHERE session_ref=?`).get(sessionId)?.c ?? '';
-    },
-  },
-};
-
+// references targetKey, then reindexes those sources. The sources are the
+// registry in db/wiki-sources.js — one entry per field that can hold links.
 function renameWikiTarget(targetKey, oldName, newName) {
   const d = getDB();
   if (!oldName || !newName || oldName === newName) return 0;
@@ -507,17 +506,8 @@ function renameWikiTarget(targetKey, oldName, newName) {
     const m = String(r.src_key).match(/^([a-z]+)_(\d+)$/);
     const src = m && CONTENT_SOURCES[m[1]];
     if (!src) continue;
-    const id = Number(m[2]);
-    if (src.rewrite) {
-      const next = src.rewrite(d, id, (c) => String(c || '').replace(re, (_, ns, tail) => `[[${ns}${newName}${tail}`));
-      if (next !== null) { reindexWikiLinks(r.src_key, next, r.nexus_ref); changed++; }
-      continue;
-    }
-    const row = d.prepare(src.get).get(id);
-    if (!row || !row.c) continue;
-    const next = row.c.replace(re, (_, ns, tail) => `[[${ns}${newName}${tail}`);
-    if (next === row.c) continue;
-    d.prepare(src.set).run(next, id);
+    const next = src.rewrite(d, Number(m[2]), (c) => String(c || '').replace(re, (_, ns, tail) => `[[${ns}${newName}${tail}`));
+    if (next === null) continue;
     reindexWikiLinks(r.src_key, next, r.nexus_ref);
     changed++;
   }
@@ -526,7 +516,7 @@ function renameWikiTarget(targetKey, oldName, newName) {
 
 module.exports = {
   renameWikiTarget, resolveDanglingLinks,
-  resolveWikiName, reindexWikiLinks, rebuildWikiIndex,
+  resolveWikiName, reindexWikiLinks, reindexSource, rebuildWikiIndex,
   nexusOfNote, nexusOfObject, nexusOfChapter,
   getBacklinks, getOutgoingLinks, resolveEntityKeys,
   quickIndex, getEntityPath, getGraph, getLinkCounts,

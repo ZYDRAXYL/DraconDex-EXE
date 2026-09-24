@@ -1,16 +1,17 @@
 'use strict';
-// Analys "Viewer" / Relation "Connector" (progress.md Phase 14).
-// Both kinds are read-only lenses over a saved filter (module_ui key
-// 'filterDef'); this module supplies the two data feeds:
+// Data feeds behind the Exhibitor (v5; formerly the Viewer and Connector
+// kinds, progress.md Phase 14). The file keeps its name because the IPC
+// namespace (api.viewer.*) is read by half the renderer.
 //  - viewerIndex: one flat list of every filterable content item in the
 //    vault (classifier objects, timeline events, story dialogues, book
-//    chapters, chat sessions, modules), each tagged with its source
+//    chapters, chat sessions, modules, assets), each tagged with its source
 //    module and that module's hashtags, so filters evaluate live on open.
-//  - entity_relation CRUD: the Connector's own labeled key->key edges.
+//  - entity_relation CRUD: labeled key->key edges, authored in an Exhibitor.
 const { getDB } = require('./core');
 const { scopedAll } = require('./sqlscope');
+const { ENTITY_KINDS } = require('./entity-kinds');
 
-// One read transaction around the 6 vault-wide scans + the hashtag roll-up —
+// One read transaction around the 7 vault-wide scans + the hashtag roll-up —
 // outside one, each statement pays its own file-lock cycle (~2.5ms vs ~6µs).
 function viewerIndex(nexusId) {
   return getDB().readTx(() => _viewerIndex(nexusId))();
@@ -24,33 +25,12 @@ function _viewerIndex(nexusId) {
       for (const r of scopedAll(d, sql, nx)) out.push({ kind, ...fn(r) });
     } catch (_) {}
   };
-  push(`SELECT o.id, o.name, uc.color_code, m.id mid, m.name mname, m.kind mkind
-    FROM classifier_object o JOIN module m ON o.module_ref=m.id
-    LEFT JOIN use_color uc ON uc.id=o.color WHERE (? IS NULL OR m.nexus_ref=?)`,
-    'object', r => ({ key: `cobj_${r.id}`, name: r.name, color: r.color_code, moduleId: r.mid, moduleName: r.mname, moduleKind: r.mkind }));
-  push(`SELECT te.id, te.event_name AS name, uc.color_code, m.id mid, m.name mname, m.kind mkind,
-      s.day, s.month, s.years, s.hour, s.minute
-    FROM timeline_event te JOIN timeline tl ON te.timeline_id=tl.id
-    JOIN module m ON tl.module_ref=m.id
-    LEFT JOIN use_color uc ON uc.id=te.color
-    LEFT JOIN timeline_date s ON te.start_at=s.id WHERE (? IS NULL OR m.nexus_ref=?)`,
-    'event', r => ({ key: `tlev_${r.id}`, name: r.name, color: r.color_code, moduleId: r.mid, moduleName: r.mname, moduleKind: r.mkind,
-      time: { day: r.day, month: r.month, years: r.years, hour: r.hour, minute: r.minute } }));
-  push(`SELECT sd.id, sd.name, uc.color_code, m.id mid, m.name mname, m.kind mkind
-    FROM story_dialogue sd JOIN module m ON sd.module_ref=m.id
-    LEFT JOIN use_color uc ON uc.id=sd.color WHERE (? IS NULL OR m.nexus_ref=?)`,
-    'dialogue', r => ({ key: `sdlg_${r.id}`, name: r.name, color: r.color_code, moduleId: r.mid, moduleName: r.mname, moduleKind: r.mkind }));
-  push(`SELECT ch.id, ch.name, ch.chapter_order, m.id mid, m.name mname, m.kind mkind
-    FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`,
-    'chapter', r => ({ key: `bchp_${r.id}`, name: r.name, color: null, moduleId: r.mid, moduleName: r.mname, moduleKind: r.mkind }));
-  push(`SELECT s.id, s.name, m.id mid, m.name mname, m.kind mkind
-    FROM chat_session s JOIN module m ON s.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`,
-    'chat', r => ({ key: `chss_${r.id}`, name: r.name, color: null, moduleId: r.mid, moduleName: r.mname, moduleKind: r.mkind }));
-  push(`SELECT m.id, m.name, m.kind, m.handle, uc.color_code, pm.id mid, pm.name mname, pm.kind mkind
-    FROM module m LEFT JOIN module pm ON m.parent_id=pm.id
-    LEFT JOIN use_color uc ON uc.id=m.color WHERE (? IS NULL OR m.nexus_ref=?)`,
-    'module', r => ({ key: `module_${r.id}`, name: r.name, handle: r.handle, color: r.color_code,
-      moduleId: r.mid ?? r.id, moduleName: r.mname ?? r.name, moduleKind: r.mkind ?? r.kind }));
+  // v5 Part 7 (§11.2): one scan per family that declares an `index` in
+  // db/entity-kinds.js — a family with `index: false` (note, exn) is left
+  // out on purpose, and says why there.
+  for (const k of Object.values(ENTITY_KINDS)) {
+    if (k.index) push(k.index.sql, k.index.kind, k.index.row);
+  }
 
   // Source-module hashtags apply to every item of that module — the
   // filter's tag facet works on these.
@@ -74,31 +54,81 @@ function _viewerIndex(nexusId) {
   return out;
 }
 
-// ── Connector relations ─────────────────────────────────────────────────
-// Also the data source for Classifier's relation view (Plan part5 #6) —
-// entity_relation is a generic key->key table, not Connector-specific.
+// ── Relations (entity_relation) ─────────────────────────────────────────
+// Vault-wide on purpose: Classifier, Chronicler, Narrator, Manager and the
+// Exhibitor all read it. v5 (APP docs/V5.md §3.5): an Exhibitor is where
+// relations are authored; module_ref records which one (provenance only).
+// v5 Part 7 (§11.6): a relation may hold only for a span of story time,
+// on Chronicler's own date rows — returned as {day, month, years} or null.
+const spanDate = (r, p) => (r[`${p}_years`] == null ? null : { day: r[`${p}_day`], month: r[`${p}_month`], years: r[`${p}_years`] });
 const getEntityRelations = (nexusId) => getDB().prepare(`
-  SELECT er.*, uc.color_code FROM entity_relation er
+  SELECT er.*, uc.color_code,
+         f.day vf_day, f.month vf_month, f.years vf_years, u.day vt_day, u.month vt_month, u.years vt_years
+  FROM entity_relation er
   LEFT JOIN use_color uc ON uc.id = er.color
+  LEFT JOIN timeline_date f ON f.id = er.valid_from LEFT JOIN timeline_date u ON u.id = er.valid_to
   WHERE er.nexus_ref=? ORDER BY er.id
-`).all(nexusId);
+`).all(nexusId).map(({ vf_day, vf_month, vf_years, vt_day, vt_month, vt_years, ...r }) => ({
+  ...r,
+  validFrom: spanDate({ vf_day, vf_month, vf_years }, 'vf'),
+  validTo: spanDate({ vt_day, vt_month, vt_years }, 'vt'),
+}));
 
-const createEntityRelation = (nexusId, fromKey, toKey, label, colorId) => getDB().prepare(`
-  INSERT INTO entity_relation (nexus_ref, from_key, to_key, label, color) VALUES (?,?,?,?,?)
-  ON CONFLICT(from_key, to_key, label) DO NOTHING
-`).run(nexusId, fromKey, toKey, label || null, colorId || null).lastInsertRowid;
+// A span end as a timeline_date id: {years[, month, day]} → the shared row.
+function spanDateId(v) {
+  if (!v || v.years == null || v.years === '' || !Number.isFinite(Number(v.years))) return null;
+  return require('./timeline').getOrCreateDate(Number(v.day) || 1, Number(v.month) || 1, Number(v.years), 0, 0);
+}
+function setRelationSpan(id, opts) {
+  if (!opts) return;
+  if ('validFrom' in opts) getDB().prepare(`UPDATE entity_relation SET valid_from=? WHERE id=?`).run(spanDateId(opts.validFrom), id);
+  if ('validTo' in opts) getDB().prepare(`UPDATE entity_relation SET valid_to=? WHERE id=?`).run(spanDateId(opts.validTo), id);
+}
 
-// colorId===undefined (Connector's existing 2-arg call site) preserves the
-// current color instead of wiping it — Connector never sets a color, so a
-// plain label edit there must not clear one Classifier's modal set.
-const updateEntityRelation = (id, label, colorId) => colorId === undefined
-  ? getDB().prepare(`UPDATE entity_relation SET label=? WHERE id=?`).run(label || null, id)
-  : getDB().prepare(`UPDATE entity_relation SET label=?, color=? WHERE id=?`).run(label || null, colorId || null, id);
+// INSERT OR IGNORE rather than ON CONFLICT(...): the v5 duplicate guard is
+// the expression index idx_entity_relation_v5 (NULL-safe on label/rel_type),
+// which no ON CONFLICT column list can name. On a duplicate the existing
+// row's id comes back, so callers can treat create as idempotent.
+function createEntityRelation(nexusId, fromKey, toKey, label, colorId, opts = {}) {
+  const d = getDB();
+  const relType = opts.relType ? String(opts.relType).trim() || null : null;
+  const r = d.prepare(`
+    INSERT OR IGNORE INTO entity_relation (nexus_ref, from_key, to_key, label, color, rel_type, directed, module_ref)
+    VALUES (?,?,?,?,?,?,?,?)
+  `).run(nexusId, fromKey, toKey, label || null, colorId || null, relType,
+         opts.directed === false || opts.directed === 0 ? 0 : 1, opts.moduleRef ?? null);
+  if (r.changes) { setRelationSpan(r.lastInsertRowid, opts); return r.lastInsertRowid; }
+  return d.prepare(`
+    SELECT id FROM entity_relation WHERE from_key=? AND to_key=?
+      AND COALESCE(label,'')=COALESCE(?,'') AND COALESCE(rel_type,'')=COALESCE(?,'')
+  `).get(fromKey, toKey, label || null, relType)?.id ?? null;
+}
+
+// colorId===undefined preserves the current color instead of wiping it, and
+// opts (rel_type / directed) are only written when the caller passes them —
+// so a plain label edit from any older call site changes nothing else.
+function updateEntityRelation(id, label, colorId, opts) {
+  const d = getDB();
+  if (colorId === undefined) d.prepare(`UPDATE entity_relation SET label=? WHERE id=?`).run(label || null, id);
+  else d.prepare(`UPDATE entity_relation SET label=?, color=? WHERE id=?`).run(label || null, colorId || null, id);
+  if (opts && 'relType' in opts) {
+    d.prepare(`UPDATE entity_relation SET rel_type=? WHERE id=?`).run(opts.relType ? String(opts.relType).trim() || null : null, id);
+  }
+  if (opts && 'directed' in opts) {
+    d.prepare(`UPDATE entity_relation SET directed=? WHERE id=?`).run(opts.directed ? 1 : 0, id);
+  }
+  setRelationSpan(id, opts);
+}
 
 const deleteEntityRelation = (id) =>
   getDB().prepare(`DELETE FROM entity_relation WHERE id=?`).run(id);
 
+// Distinct rel_type values in use, for the Exhibitor's relation form.
+const getRelationTypes = (nexusId) => getDB().prepare(`
+  SELECT DISTINCT rel_type FROM entity_relation WHERE nexus_ref=? AND rel_type IS NOT NULL ORDER BY rel_type COLLATE NOCASE
+`).all(nexusId).map((r) => r.rel_type);
+
 module.exports = {
   viewerIndex,
-  getEntityRelations, createEntityRelation, updateEntityRelation, deleteEntityRelation,
+  getEntityRelations, createEntityRelation, getRelationTypes, updateEntityRelation, deleteEntityRelation,
 };

@@ -10,7 +10,10 @@
 function settingDatabasePageHtml(){
   settingRefreshDatabaseSection();
   settingRefreshHistorySection();
-  return `<div id="setting-db-legacy"></div><div class="settings-label">${t('settingDbNexusList')}</div><div id="setting-db-body">${t('syncWorking')}</div>
+  // v5 Part 7 (§11.9): Import / Export DB moved here off the rail (and are in Ctrl+P).
+  return `<div class="settings-label">${t('settingDbWhole')}</div>
+    <div class="setting-db-io">${cmdBtn('db.import', {}, { cls: 'btn-s' })}${cmdBtn('db.export', {}, { cls: 'btn-s' })}</div>
+    <div id="setting-db-legacy"></div><div class="settings-label">${t('settingDbNexusList')}</div><div id="setting-db-body">${t('syncWorking')}</div>
     <div class="settings-label" style="margin-top:18px">${t('settingHistoryLimit')}</div>
     <div id="setting-history-body">${t('syncWorking')}</div>`;
 }
@@ -111,7 +114,7 @@ async function settingDbImportNexus(nexusId){
   const r = await api.db.importNexusFile(nexusId);
   if (r.canceled) return;
   if (!r.ok) return toast(t('driveErrServer'), 'error');
-  toast(t('settingDbImportOk'), 'ok');
+  toastSnapshotResult(r, 'settingDbImportOk');
   if (S.nexus?.id === nexusId) renderNexusHome();
 }
 async function settingDbExportModule(nexusId, moduleId){
@@ -129,7 +132,7 @@ async function settingDbImportModule(nexusId, parentModuleId){
   const r = await api.db.importModuleFile(nexusId, parentModuleId);
   if (r.canceled) return;
   if (!r.ok) return toast(t('driveErrServer'), 'error');
-  toast(t('settingDbImportOk'), 'ok');
+  toastSnapshotResult(r, 'settingDbImportOk');
   settingDbLoadModules(nexusId);
   if (S.nexus?.id === nexusId) renderNexusHome();
 }

@@ -235,7 +235,7 @@ function renderSettingsMenu(){
       ${uiSizeOnlySliderHtml()}
     </div>
     ${extraBlocks}
-    <button class="btn btn-p" style="width:100%;margin-top:4px" onclick="toggleSettingsMenu(false);openSettingWindow()">${I.settings} ${t('settingOpenWindow')}</button>
+    <button class="btn btn-p" style="width:100%;margin-top:4px" data-cmd="app.settings" onclick="toggleSettingsMenu(false);runCommand('app.settings')">${I.settings} ${t('settingOpenWindow')}</button>
   `;
 }
 
@@ -251,7 +251,7 @@ function quickThemeExtraHtml(){
     return `<button type="button" class="theme-item${active?' active':''}" onclick="setUiSetting('theme','${theme}')" title="${t(theme)}">
         <span class="theme-swatches">${swatches}</span>
         <span class="theme-name">${t(theme)}</span>
-        ${active?'<span class="theme-check">✓</span>':''}
+        ${active?`<span class="theme-check">${I.check}</span>`:''}
       </button>`;
   }).join('');
   const customOptions = (S.settings.customThemes || []).map(ct => {
@@ -262,7 +262,7 @@ function quickThemeExtraHtml(){
     return `<button type="button" class="theme-item${active?' active':''}" onclick="setUiSetting('theme','${key}')" title="${x(ct.name)}">
         <span class="theme-swatches">${swatches}</span>
         <span class="theme-name" data-no-i18n>${x(ct.name)}</span>
-        ${active?'<span class="theme-check">✓</span>':''}
+        ${active?`<span class="theme-check">${I.check}</span>`:''}
       </button>`;
   }).join('');
   return `<div class="settings-group">

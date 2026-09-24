@@ -32,7 +32,10 @@ const moveSketchPage = (id, dir) => {
   d.prepare(`UPDATE sketch_page SET page_order=? WHERE id=?`).run(cur.page_order, other.id);
 };
 
-const deleteSketchPage = (id) => getDB().prepare(`DELETE FROM sketch_page WHERE id=?`).run(id);
+function deleteSketchPage(id) {
+  require('./page-block').clearItemBlocks(`skpg_${id}`); // its page goes with it (§12)
+  return getDB().prepare(`DELETE FROM sketch_page WHERE id=?`).run(id);
+}
 
 const getSketchStrokes = (pageRef) => getDB().prepare(`
   SELECT * FROM sketch_stroke WHERE page_ref=? ORDER BY id

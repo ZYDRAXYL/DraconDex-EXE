@@ -1,5 +1,6 @@
 'use strict';
 const { getDB } = require('./core');
+const { assertCollectorParent, takeParentNormalizeReport } = require('./module-parents');
 const wiki = require('./wiki');
 const versions = require('./versions');
 
@@ -54,9 +55,12 @@ function assertHandleFree(handle, nexusRef, exceptId = null) {
   if (clash) throw new Error('handle already in use');
 }
 
-function createModule(data, { logHistory = true } = {}) {
+// anyParent: only db/migrate_v3.js, which builds the v3 tree (children under
+// a Manager "project") and normalizes it into collectors when it finishes.
+function createModule(data, { logHistory = true, anyParent = false } = {}) {
   const d = getDB();
   const { nexus_ref, parent_id = null, name, kind, icon = null, icon_color = null, color = null, cat_type = null } = data;
+  if (!anyParent) assertCollectorParent(d, parent_id); // V5.md §8.8
   const handle = normalizeHandle(data.handle);
   assertHandleFree(handle, nexus_ref);
   const maxOrder = d.prepare(`SELECT COALESCE(MAX(display_order),-1) AS m FROM module WHERE nexus_ref=? AND parent_id IS ?`)
@@ -147,7 +151,8 @@ function duplicateModule(id) {
 function updateModuleDescription(id, description) {
   const prev = getDB().prepare(`SELECT description FROM module WHERE id=?`).get(id)?.description ?? '';
   getDB().prepare(`UPDATE module SET description=?, update_at=datetime('now') WHERE id=?`).run(description, id);
-  wiki.reindexWikiLinks(`module_${id}`, description, nexusOfModule(id));
+  // The whole page's text — description plus text/property blocks (§12).
+  wiki.reindexSource('module', id);
   if (prev !== (description ?? '')) {
     versions.recordVersion(id, 'note', String(prev).slice(0, 60),
       { op: 'moduleDescription', args: { id, value: prev } });
@@ -174,6 +179,7 @@ function deleteModule(id) {
 // renderer before this is ever called — see hub.js's onNestDrop.
 function moveModule(nexusRef, moduleId, newParentId, orderedSiblingIds) {
   const d = getDB();
+  assertCollectorParent(d, newParentId); // V5.md §8.8 — only a collector holds modules
   const prev = d.prepare(`SELECT parent_id, name FROM module WHERE id=?`).get(moduleId);
   const tx = d.transaction(() => {
     d.prepare(`UPDATE module SET parent_id=? WHERE id=? AND nexus_ref=?`).run(newParentId, moduleId, nexusRef);
@@ -197,7 +203,7 @@ const countModules = (nexusRef) => getDB().prepare(`SELECT COUNT(*) AS c FROM mo
 // through that kind's own list-getter — 1 IPC per module, and chronicler
 // was 1+M since it walked its timelines — with a full re-render firing
 // per resolved fetch. This returns every content module's items for a
-// whole nexus in one call, over the five content tables, so the tree loads
+// whole nexus in one call, over the content tables, so the tree loads
 // together with the module tree and renders once. It also replaces the old
 // module:getItemCounts chevron gate — the count is just the array length.
 //
@@ -253,39 +259,35 @@ function getNestItems(nexusRef) {
       JOIN module m ON n.module_ref=m.id WHERE m.nexus_ref=?
       ORDER BY n.module_ref, n.id
     `).all(nexusRef));
+    // The four element families that got pages in Procress 11's last item
+    // (V5.md §12.4): dialogues, Diviner tables, Sketcher pages, map pins.
+    add(d.prepare(`
+      SELECT sd.module_ref, sd.id, sd.name FROM story_dialogue sd
+      JOIN module m ON sd.module_ref=m.id WHERE m.nexus_ref=?
+      ORDER BY sd.module_ref, sd.id
+    `).all(nexusRef));
+    add(d.prepare(`
+      SELECT t.module_ref, t.id, t.name FROM diviner_table t
+      JOIN module m ON t.module_ref=m.id WHERE m.nexus_ref=?
+      ORDER BY t.module_ref, t.display_order, t.id
+    `).all(nexusRef));
+    add(d.prepare(`
+      SELECT p.module_ref, p.id, p.name FROM sketch_page p
+      JOIN module m ON p.module_ref=m.id WHERE m.nexus_ref=?
+      ORDER BY p.module_ref, p.page_order, p.id
+    `).all(nexusRef));
+    add(d.prepare(`
+      SELECT me.module_ref, me.id, me.label, me.linker_key, te.event_name FROM map_event me
+      JOIN module m ON me.module_ref=m.id LEFT JOIN timeline_event te ON te.id=me.event_ref
+      WHERE m.nexus_ref=? ORDER BY me.module_ref, me.id
+    `).all(nexusRef));
     return items;
   })();
 }
 
-// ═══ Module Inspector (Phase 4) ═══════════════════════════════════════
-const getModuleAttrs = (moduleId) =>
-  getDB().prepare(`SELECT * FROM module_attribute WHERE module_ref=? ORDER BY display_order, id`).all(moduleId);
-
-function upsertModuleAttr(moduleId, attrId, name, value) {
-  const d = getDB();
-  if (attrId) {
-    const prev = d.prepare(`SELECT * FROM module_attribute WHERE id=?`).get(attrId);
-    d.prepare(`UPDATE module_attribute SET attr_name=?, attr_value=?, update_at=datetime('now') WHERE id=?`).run(name, value, attrId);
-    if (prev) versions.recordVersion(moduleId, 'attr', `${prev.attr_name}: ${prev.attr_value ?? ''} → ${value ?? ''}`,
-      { op: 'moduleAttr', args: { moduleId, attrId, name: prev.attr_name, value: prev.attr_value } });
-    return attrId;
-  }
-  const maxOrder = d.prepare(`SELECT COALESCE(MAX(display_order),-1) AS m FROM module_attribute WHERE module_ref=?`).get(moduleId).m;
-  const newId = d.prepare(`INSERT INTO module_attribute (module_ref, attr_name, attr_value, display_order) VALUES (?,?,?,?)`)
-    .run(moduleId, name, value, maxOrder + 1).lastInsertRowid;
-  versions.recordVersion(moduleId, 'attr', `+ ${name}`,
-    { op: 'moduleAttrDelete', args: { attrId: newId } });
-  return newId;
-}
-
-function deleteModuleAttr(id) {
-  const prev = getDB().prepare(`SELECT * FROM module_attribute WHERE id=?`).get(id);
-  const r = getDB().prepare(`DELETE FROM module_attribute WHERE id=?`).run(id);
-  if (prev) versions.recordVersion(prev.module_ref, 'attrDel', prev.attr_name,
-    { op: 'moduleAttr', args: { moduleId: prev.module_ref, attrId: null, name: prev.attr_name, value: prev.attr_value } });
-  return r;
-}
-
+// ═══ Module UI spec, tags, links ══════════════════════════════════════
+// (module_attribute is gone — v5 Part 8 made its rows property blocks;
+// db/page-block.js owns them now.)
 function getModuleUi(moduleId) {
   const rows = getDB().prepare(`SELECT ui_key, ui_value FROM module_ui WHERE module_ref=?`).all(moduleId);
   return rows.reduce((m, r) => (m[r.ui_key] = r.ui_value, m), {});
@@ -327,82 +329,11 @@ const getModuleLinks = (moduleId) => ({
   backlinks: wiki.getBacklinks(`module_${moduleId}`),
 });
 
-// Everything inspector.js's loadInspectorData needs, in one round-trip
-// instead of four (Plan part2 #2.1). Key names are load-bearing — hub.js,
-// mod/classifier.js and mod/manager.js all read S.inspectorData.{attrs,
-// tags,links,ui} directly, and two of them patch .ui in place.
-const getModuleInspector = (moduleId) => getDB().readTx(() => ({
-  attrs: getModuleAttrs(moduleId),
-  tags: getModuleTags(moduleId),
-  links: getModuleLinks(moduleId),
-  ui: getModuleUi(moduleId),
-}))();
-
-// Process 8 part 2: Manager's Table/Cards used to show each child's
-// module_attribute count — a field almost nobody fills in, so the column read
-// as "0" everywhere and said nothing about the tree. It is replaced by two
-// counts that describe the tree itself, per direct child:
-//   majors — every module BELOW that child, at any depth (itself excluded)
-//   minors — that child's OWN minor elements
-// Returns {childModuleId: {majors, minors}}, both defaulting to 0.
-//
-// The element tables are the wider 9-table set from db/sage.js, not
-// getNestItems' 5: a Narrator or Locator child reporting 0 elements when it
-// plainly holds some would read as a bug, not as "that kind has no items".
-const CHILD_ELEMENT_COUNT_SQL = [
-  `SELECT o.module_ref AS mid, COUNT(*) AS c FROM classifier_object o
-     JOIN module m ON o.module_ref=m.id WHERE m.parent_id=? GROUP BY o.module_ref`,
-  `SELECT tl.module_ref AS mid, COUNT(*) AS c FROM timeline_event te
-     JOIN timeline tl ON te.timeline_id=tl.id JOIN module m ON tl.module_ref=m.id
-     WHERE m.parent_id=? GROUP BY tl.module_ref`,
-  `SELECT sd.module_ref AS mid, COUNT(*) AS c FROM story_dialogue sd
-     JOIN module m ON sd.module_ref=m.id WHERE m.parent_id=? GROUP BY sd.module_ref`,
-  `SELECT ch.module_ref AS mid, COUNT(*) AS c FROM book_chapter ch
-     JOIN module m ON ch.module_ref=m.id WHERE m.parent_id=? GROUP BY ch.module_ref`,
-  `SELECT s.module_ref AS mid, COUNT(*) AS c FROM chat_session s
-     JOIN module m ON s.module_ref=m.id WHERE m.parent_id=? GROUP BY s.module_ref`,
-  `SELECT sp.module_ref AS mid, COUNT(*) AS c FROM sketch_page sp
-     JOIN module m ON sp.module_ref=m.id WHERE m.parent_id=? GROUP BY sp.module_ref`,
-  `SELECT dn.module_ref AS mid, COUNT(*) AS c FROM design_node dn
-     JOIN module m ON dn.module_ref=m.id WHERE m.parent_id=? GROUP BY dn.module_ref`,
-  `SELECT me.module_ref AS mid, COUNT(*) AS c FROM map_event me
-     JOIN module m ON me.module_ref=m.id WHERE m.parent_id=? GROUP BY me.module_ref`,
-  `SELECT mp.module_ref AS mid, COUNT(*) AS c FROM map_point mp
-     JOIN module m ON mp.module_ref=m.id WHERE m.parent_id=? GROUP BY mp.module_ref`,
-];
-
-function getChildModuleStats(parentId) {
-  const d = getDB();
-  return d.readTx(() => {
-    const out = {};
-    const row = (id) => (out[id] || (out[id] = { majors: 0, minors: 0 }));
-    for (const c of d.prepare(`SELECT id FROM module WHERE parent_id=?`).all(parentId)) row(c.id);
-    // One walk down from each direct child; the child seeds its own group, so
-    // COUNT(*)-1 is "everything below it".
-    for (const r of d.prepare(`
-      WITH RECURSIVE sub(id, root) AS (
-        SELECT id, id FROM module WHERE parent_id=?
-        UNION ALL
-        SELECT m.id, s.root FROM module m JOIN sub s ON m.parent_id=s.id
-      )
-      SELECT root, COUNT(*) - 1 AS majors FROM sub GROUP BY root
-    `).all(parentId)) row(r.root).majors = r.majors;
-    for (const sql of CHILD_ELEMENT_COUNT_SQL) {
-      // A vault whose schema predates one of these tables must not take the
-      // whole panel down over it — same tolerance db/sage.js's roll-up has.
-      try {
-        for (const r of d.prepare(sql).all(parentId)) row(r.mid).minors += r.c;
-      } catch (_) {}
-    }
-    return out;
-  })();
-}
-
 module.exports = {
   getTree, getModule, createModule, updateModule, updateModuleDescription, deleteModule,
   duplicateModule, moveModule, countModules, nexusOfModule, getNestItems,
-  getModuleAttrs, upsertModuleAttr, deleteModuleAttr,
   getModuleUi, setModuleUi,
   getModuleTags, setModuleTags,
-  getModuleLinks, getModuleInspector, getChildModuleStats,
+  getModuleLinks,
+  takeParentNormalizeReport,
 };

@@ -105,6 +105,9 @@ async function init() {
   ]);
   S.moduleTree = moduleTree;
   seedNestItems(nestItems);
+  if (S.nexus && typeof reportRelationDedupe === 'function') reportRelationDedupe();
+  if (S.nexus) reportParentNormalize();
+  if (S.nexus) scheduleMirrorSync(3000);
   window.__splash?.set(88);
   // Set before the first render below — builderPaneHeadHtml (builder.js)
   // reads S.isPopup to decide whether to show the "move to main window" tab
@@ -124,7 +127,6 @@ async function init() {
   q('#nav-toolbar-h-resize')?.setAttribute('title', t('resizePanel'));
   observeUiLanguage();
   renderModuleRail();
-  applyNavToggles();
   applyAreaScales();
   renderSettingsMenu();
   translateStaticChrome();
@@ -160,9 +162,11 @@ async function init() {
   // it must fire exactly once even if the tour script fails to load.
   if (!isPopup && S.nexus && localStorage.getItem(NEXUS_PENDING_GUIDE_KEY) === String(S.nexus.id)) {
     localStorage.removeItem(NEXUS_PENDING_GUIDE_KEY);
-    loadModule('src/renderer/guide.js').then(() => {
-      if (typeof startNexusGuide === 'function') startNexusGuide();
-    }).catch(() => {});
+    // v5 Part 7 (§11.8): the example folder, then the tour over it.
+    Promise.resolve(createGuideBundle({ quiet: true })).catch(() => {})
+      .then(() => loadModule('src/renderer/guide.js'))
+      .then(() => { if (typeof startNexusGuide === 'function') startNexusGuide(); })
+      .catch(() => {});
   }
   bindNav();
   bindWikilinkClicks();

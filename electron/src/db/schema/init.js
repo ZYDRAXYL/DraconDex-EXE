@@ -21,7 +21,7 @@ const { SEED_SYMBOLS } = require('./seed');
 const {
   migrateInlineColumns, migrateNexusV28, migrateMapV3, migrateTimelineV3,
   migrateWriterV27, migrateHeroV26, migratePluginV42, ensureIndexes,
-  migrateDesignNodeShapes,
+  migrateDesignNodeShapes, migrateModuleKindV5, migrateEntityRelationV5, migratePageBlockV6,
 } = require('./migrations');
 // Bumped to 2 by the app/vault schema split: every existing database re-runs
 // its (idempotent) init path once and re-stamps.
@@ -55,6 +55,8 @@ function vaultSchemaStamp() {
       String(initVaultDB), String(migrateInlineColumns), String(migrateNexusV28),
       String(migrateMapV3), String(migrateTimelineV3), String(migrateWriterV27),
       String(migrateHeroV26), String(migrateDesignNodeShapes), String(ensureIndexes),
+      String(migrateModuleKindV5), String(migrateEntityRelationV5), String(migratePageBlockV6),
+      String(require('../module-parents').normalizeModuleParents),
     ]);
   }
   return _vaultStamp;
@@ -93,6 +95,10 @@ function initAppDB(db) {
   const tDDL = _now();
   db.exec(APP_DDL_SQL);
   _t('app DDL exec', tDDL);
+  // v5 Part 4: an app.ddx made before the locate folder existed.
+  if (!db.prepare(`PRAGMA table_info(nexus_file)`).all().some((c) => c.name === 'locate_dir')) {
+    db.exec(`ALTER TABLE nexus_file ADD COLUMN locate_dir TEXT`);
+  }
 
   db.exec(`PRAGMA user_version = ${appSchemaStamp() | 0}`);
 }

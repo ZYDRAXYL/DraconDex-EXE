@@ -104,7 +104,7 @@ const INDEX_SQL = `
     -- Module system (v3)
     CREATE INDEX IF NOT EXISTS idx_module_nexus            ON module(nexus_ref);
     CREATE INDEX IF NOT EXISTS idx_module_parent           ON module(parent_id);
-    CREATE INDEX IF NOT EXISTS idx_module_attribute_module ON module_attribute(module_ref);
+    CREATE INDEX IF NOT EXISTS idx_page_block_page         ON page_block(module_ref, item_key, block_order);
     CREATE INDEX IF NOT EXISTS idx_module_ui_module        ON module_ui(module_ref);
     CREATE INDEX IF NOT EXISTS idx_module_hashtag_tag      ON module_hashtag(hashtag_id);
 
@@ -146,6 +146,8 @@ const INDEX_SQL = `
     CREATE INDEX IF NOT EXISTS idx_module_version_module  ON module_version(module_ref, seq);
     -- Composite matches addImportFiles' dedupe probe exactly (nexus_ref + file_path).
     CREATE INDEX IF NOT EXISTS idx_import_file_nexus      ON import_file(nexus_ref, file_path);
+    -- v5 Asset Nest: the Nest tree and a module's Assets strip list by owner.
+    CREATE INDEX IF NOT EXISTS idx_import_file_module     ON import_file(module_ref);
 `;
 
 

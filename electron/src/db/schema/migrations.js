@@ -1,4 +1,5 @@
 'use strict';
+const { normalizeModuleParents } = require('../module-parents');
 // Additive column migrations and one-time data fixes, plus ensureIndexes().
 // Every one takes the open connection as an argument, is idempotent, and is
 // order-dependent — and each is hashed by schemaStamp() (schema/init.js), so
@@ -28,6 +29,9 @@ function migrateInlineColumns(db) {
   if (!hasColumn(db, 'module', 'handle')) {
     try { db.prepare(`ALTER TABLE module ADD COLUMN handle TEXT`).run(); } catch (_) {}
   }
+  // v5: rebuild module for its kind CHECK BEFORE idx_module_handle is made —
+  // a rebuild drops every index on the table, and this one is not in INDEX_SQL.
+  migrateModuleKindV5(db);
   try { db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_module_handle ON module(nexus_ref, handle COLLATE NOCASE) WHERE handle IS NOT NULL`).run(); } catch (_) {}
   migrateClassifierLevels(db);
   migrateDesignNodeShapes(db);
@@ -86,6 +90,50 @@ function migrateInlineColumns(db) {
   if (!hasColumn(db, 'entity_relation', 'color')) {
     try { db.prepare(`ALTER TABLE entity_relation ADD COLUMN color INTEGER REFERENCES use_color(id)`).run(); } catch (_) {}
   }
+  // v5 Asset Nest (APP docs/V5.md §2.2) — plain ADD COLUMNs on import_file,
+  // mirroring SDB's vault.sql. Every NOT NULL one carries a DEFAULT (SQLite
+  // refuses it otherwise); module_ref's REFERENCES is legal under
+  // foreign_keys=ON only because its default is NULL. Existing rows backfill
+  // to source_kind='file', missing=0.
+  for (const [col, ddl] of [
+    ['module_ref',   `INTEGER REFERENCES module(id) ON DELETE SET NULL`],
+    ['source_kind',  `TEXT CHECK(source_kind IN ('file','url')) NOT NULL DEFAULT 'file'`],
+    ['sha256',       `TEXT`],
+    ['proxy',        `BLOB`],
+    ['proxy_type',   `TEXT`],
+    ['missing',      `INTEGER NOT NULL DEFAULT 0`],
+    ['last_seen_at', `TEXT`],
+  ]) {
+    if (!hasColumn(db, 'import_file', col)) {
+      try { db.prepare(`ALTER TABLE import_file ADD COLUMN ${col} ${ddl}`).run(); } catch (_) {}
+    }
+  }
+  // v5 Part 7 (APP docs/V5.md §11.3–§11.6): every new column is nullable (or
+  // carries a DEFAULT), so each is one idempotent ADD COLUMN; the REFERENCES
+  // on entity_relation.valid_from/valid_to are legal under foreign_keys=ON
+  // only because their default is NULL.
+  for (const [table, col, ddl] of [
+    ['classifier_template', 'options', 'TEXT'],
+    ['story_choice_option', 'condition', 'TEXT'],
+    ['story_choice_option', 'set_ops', 'TEXT'],
+    ['book_chapter', 'synopsis', 'TEXT'],
+    ['book_chapter', 'status', 'TEXT'],
+    ['book_chapter', 'pov_key', 'TEXT'],
+    ['design_node', 'w', 'REAL'],
+    ['design_node', 'h', 'REAL'],
+    ['design_node', 'read_order', 'INTEGER'],
+    ['entity_relation', 'valid_from', 'INTEGER REFERENCES timeline_date(id)'],
+    ['entity_relation', 'valid_to', 'INTEGER REFERENCES timeline_date(id)'],
+  ]) {
+    if (hasTable(db, table) && !hasColumn(db, table, col)) {
+      try { db.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`).run(); } catch (_) {}
+    }
+  }
+  // v5 Part 6 (APP docs/V5.md §10.4): which just-in-time tips this Nexus has
+  // shown. NOT NULL with a DEFAULT, so existing rows backfill to '{}'.
+  if (hasTable(db, 'nexus') && !hasColumn(db, 'nexus', 'taught')) {
+    try { db.prepare(`ALTER TABLE nexus ADD COLUMN taught TEXT NOT NULL DEFAULT '{}'`).run(); } catch (_) {}
+  }
   if (hasTable(db, 'world_project') && !hasColumn(db, 'world_project', 'color')) {
     try {
       db.prepare(`ALTER TABLE world_project ADD COLUMN color INTEGER REFERENCES use_color(id)`).run();
@@ -130,6 +178,154 @@ function migrateInlineColumns(db) {
   migrateHeroV26(db);
   migrateWriterV27(db);
   migrateNexusV28(db);
+  // Needs entity_relation.color (added above) to already exist so the
+  // rebuild can carry it.
+  migrateEntityRelationV5(db);
+  // v5 Part 4 (§8.8): a module's parent must be a collector. Wrap the
+  // children an old vault keeps under any other kind — move, never delete.
+  normalizeModuleParents(db);
+  // v5 Part 8 (§12): module_attribute's rows become property blocks.
+  migratePageBlockV6(db);
+}
+
+// v5 Part 8 (APP docs/V5.md §12): the Inspector's free-form attributes are
+// property blocks on the module's page now, and the table is gone from the
+// shared schema. Copy, then drop, in one transaction — a crash in between
+// leaves the table for the next open. APK does the same in its _onOpen.
+function migratePageBlockV6(db) {
+  if (!hasTable(db, 'module_attribute') || !hasTable(db, 'page_block')) return;
+  try {
+    db.transaction(() => {
+      db.exec(`
+        INSERT INTO page_block (module_ref, block_type, prop_name, prop_type, content, block_order, update_at)
+        SELECT module_ref, 'property', attr_name, 'text', attr_value, display_order, update_at
+        FROM module_attribute ORDER BY module_ref, display_order, id;
+        DROP INDEX IF EXISTS idx_module_attribute_module;
+        DROP TABLE module_attribute;
+      `);
+    })();
+  } catch (e) {
+    console.error('page_block v6 migration error:', e);
+  }
+}
+
+// ── v5 table rebuilds (APP docs/V5.md §4.2) ────────────────────────────────
+// SQLite cannot ALTER a CHECK or a table-level UNIQUE, so both follow the
+// standard 12-step rebuild: foreign_keys OFF (outside any transaction — the
+// pragma is a no-op inside one, see init.js), create <t>_new from the
+// VENDORED DDL, copy with ids preserved (every FK pointing at the table stays
+// valid), drop, rename, foreign_keys ON, then foreign_key_check.
+
+// The CREATE TABLE body for `name` out of the vendored vault DDL, with its
+// SQL comments stripped (they contain unbalanced-looking parens) and the
+// name swapped. Using the vendored text rather than a copy here means the
+// rebuilt table is byte-for-byte what a fresh vault gets.
+function vendoredTableDdl(name, newName) {
+  const { VAULT_DDL_SQL } = require('./ddl');
+  const head = `CREATE TABLE IF NOT EXISTS ${name} (`;
+  const at = VAULT_DDL_SQL.indexOf(head);
+  if (at < 0) throw new Error(`vendored DDL has no table ${name}`);
+  const src = VAULT_DDL_SQL.slice(at).split('\n').map((l) => l.replace(/--.*$/, '')).join('\n');
+  let depth = 0;
+  for (let i = head.length - 1; i < src.length; i++) {
+    if (src[i] === '(') depth++;
+    else if (src[i] === ')' && --depth === 0) {
+      return `CREATE TABLE ${newName} (` + src.slice(head.length, i + 1);
+    }
+  }
+  throw new Error(`unbalanced DDL for ${name}`);
+}
+
+const tableSql = (db, name) =>
+  db.prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name=?`).get(name)?.sql || '';
+const columnsOf = (db, name) => db.prepare(`PRAGMA table_info(${name})`).all().map((c) => c.name);
+
+// 'exhibitor' replaces 'viewer' + 'connector' (§3.1), 'diviner' rides along
+// (§11.5). Existing viewer/connector rows become exhibitors; their saved
+// view carries over (a Connector's graph opens as the Scene, its edge list
+// as Edges) and a former Connector is flagged seedScene so the renderer lays
+// its current filter results out as saved scene nodes on first open (§4.3) —
+// the filter engine lives in the renderer, not here.
+function migrateModuleKindV5(db) {
+  // Match the CHECK list itself, not the table text: the stored DDL keeps its
+  // comments, and the vendored comment above kind mentions 'exhibitor'.
+  if (!hasTable(db, 'module') || /kind\s+IN\s*\([^)]*'exhibitor'/i.test(tableSql(db, 'module'))) return;
+  try {
+    const cols = columnsOf(db, 'module');
+    db.exec(`PRAGMA foreign_keys = OFF`);
+    db.exec(vendoredTableDdl('module', 'module_new'));
+    const keep = columnsOf(db, 'module_new').filter((c) => cols.includes(c));
+    const sel = keep.map((c) => (c === 'kind'
+      ? `CASE WHEN kind IN ('viewer','connector') THEN 'exhibitor' ELSE kind END` : c)).join(', ');
+    const setUi = db.prepare(`INSERT INTO module_ui (module_ref, ui_key, ui_value) VALUES (?,?,?)
+      ON CONFLICT(module_ref, ui_key) DO UPDATE SET ui_value=excluded.ui_value`);
+    const viewOf = db.prepare(`SELECT ui_value FROM module_ui WHERE module_ref=? AND ui_key='activeView'`);
+    for (const m of db.prepare(`SELECT id, kind FROM module WHERE kind IN ('viewer','connector')`).all()) {
+      const v = viewOf.get(m.id)?.ui_value;
+      if (m.kind === 'connector') {
+        setUi.run(m.id, 'activeView', v === 'edgelist' ? 'edges' : 'scene');
+        setUi.run(m.id, 'seedScene', '1');
+      } else {
+        setUi.run(m.id, 'activeView', ['table', 'cards', 'board'].includes(v) ? v : 'table');
+      }
+    }
+    db.exec(`INSERT INTO module_new (${keep.join(', ')}) SELECT ${sel} FROM module`);
+    db.exec(`DROP TABLE module`);
+    db.exec(`ALTER TABLE module_new RENAME TO module`);
+  } catch (e) {
+    console.error('module kind v5 migration error:', e);
+    try { db.exec(`DROP TABLE IF EXISTS module_new`); } catch (_) {}
+  } finally {
+    db.exec(`PRAGMA foreign_keys = ON`);
+  }
+  const bad = db.prepare(`PRAGMA foreign_key_check`).all();
+  if (bad.length) console.error(`module kind v5 migration: ${bad.length} foreign-key violation(s)`, bad.slice(0, 5));
+}
+
+// Rows removed as duplicates by the last entity_relation rebuild, reported
+// once to the renderer (takeRelationDedupeReport) so the user sees it (§4.2).
+let _relationDedupe = 0;
+const takeRelationDedupeReport = () => { const n = _relationDedupe; _relationDedupe = 0; return n; };
+
+// module_ref / rel_type / directed + the 4-column UNIQUE (§3.5). Order is the
+// point (§4.2.2): rebuild, THEN dedupe, THEN create the NULL-safe expression
+// index — building the index first aborts on any duplicate an old vault
+// already carries (the old UNIQUE never deduped NULL labels, §4.2.1).
+function migrateEntityRelationV5(db) {
+  if (hasTable(db, 'entity_relation') && !hasColumn(db, 'entity_relation', 'rel_type')) {
+    try {
+      const cols = columnsOf(db, 'entity_relation');
+      db.exec(`PRAGMA foreign_keys = OFF`);
+      db.exec(vendoredTableDdl('entity_relation', 'entity_relation_new'));
+      const keep = columnsOf(db, 'entity_relation_new').filter((c) => cols.includes(c));
+      db.exec(`INSERT INTO entity_relation_new (${keep.join(', ')}) SELECT ${keep.join(', ')} FROM entity_relation`);
+      db.exec(`DROP TABLE entity_relation`);
+      db.exec(`ALTER TABLE entity_relation_new RENAME TO entity_relation`);
+    } catch (e) {
+      console.error('entity_relation v5 rebuild error:', e);
+      try { db.exec(`DROP TABLE IF EXISTS entity_relation_new`); } catch (_) {}
+    } finally {
+      db.exec(`PRAGMA foreign_keys = ON`);
+    }
+    const bad = db.prepare(`PRAGMA foreign_key_check`).all();
+    if (bad.length) console.error(`entity_relation v5 rebuild: ${bad.length} foreign-key violation(s)`, bad.slice(0, 5));
+  }
+  if (!hasColumn(db, 'entity_relation', 'rel_type')) return; // rebuild failed; leave the old table working
+  try {
+    const before = db.prepare(`SELECT COUNT(*) AS n FROM entity_relation`).get().n;
+    db.prepare(`DELETE FROM entity_relation WHERE id NOT IN (
+      SELECT MIN(id) FROM entity_relation
+      GROUP BY from_key, to_key, COALESCE(label,''), COALESCE(rel_type,''))`).run();
+    const removed = before - db.prepare(`SELECT COUNT(*) AS n FROM entity_relation`).get().n;
+    if (removed) {
+      _relationDedupe += removed;
+      console.warn(`entity_relation v5: removed ${removed} duplicate relation row(s)`);
+    }
+    db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_entity_relation_v5 ON entity_relation
+      (from_key, to_key, COALESCE(label,''), COALESCE(rel_type,''))`).run();
+  } catch (e) {
+    console.error('entity_relation v5 index error:', e);
+  }
 }
 
 // v2.8 introduces the Nexus vault: every module's project root gains a
@@ -422,6 +618,7 @@ function migratePluginV42(db) {
 }
 
 module.exports = {
+  migrateModuleKindV5, migrateEntityRelationV5, migratePageBlockV6, takeRelationDedupeReport, vendoredTableDdl,
   migrateInlineColumns, NEXUS_PROJECT_TABLES, migrateNexusV28, migrateMapV3,
   migrateTimelineV3, migrateWriterV27, ensureIndexes, migrateHeroV26,
   migratePluginV42, migrateClassifierLevels, migrateDesignNodeShapes,

@@ -57,7 +57,9 @@ function migrateLegacy(nexusId, target, legacyId, batchCtx) {
     ).get(nexusId, parentId, kind, name);
     if (existing) return existing.id;
     counts.modules++;
-    return module_.createModule({ nexus_ref: nexusId, parent_id: parentId, name, kind, cat_type: catType || null, color: color || null });
+    // anyParent: v3 content lands under its Manager "project" here and is
+    // wrapped into collectors by normalizeModuleParents when the tx ends.
+    return module_.createModule({ nexus_ref: nexusId, parent_id: parentId, name, kind, cat_type: catType || null, color: color || null }, { anyParent: true });
   };
   // findOrCreateChild is now just mkModule under its old, narrower name —
   // kept as an alias so the wrapper/series/folder call sites below don't
@@ -118,8 +120,9 @@ function migrateLegacy(nexusId, target, legacyId, batchCtx) {
 
   // Director's relation/relation_obob/relation_obtl/relation_tltl tables
   // (the only legacy source with a dedicated relation-instance schema) →
-  // one 'connector' module whose saved filter scopes to this project's own
-  // classifier/chronicler modules, with real entity_relation edges between
+  // one 'exhibitor' module (a 'connector' before v5) whose saved filter
+  // scopes to this project's own classifier/chronicler modules, with real
+  // entity_relation edges between
   // the migrated classifier_object/timeline_event rows — using the same
   // entity-key scheme viewer.js's own index already uses for those tables
   // (cobj_<id> / tlev_<id>), now that objects/events are real content rows
@@ -127,8 +130,13 @@ function migrateLegacy(nexusId, target, legacyId, batchCtx) {
   const mkRelationConnector = (parentId, name, legacyProjectId, moduleIds, objModMap, eventModMap) => {
     const relRows = d.prepare(`SELECT * FROM relation WHERE project_id=?`).all(legacyProjectId);
     if (!relRows.length || !moduleIds.length) return null;
-    const connId = mkModule(parentId, name, 'connector');
+    // v5: what was a Connector is an Exhibitor, opened on its Scene and
+    // seeded from the filter on first open (migrateModuleKindV5 does the same
+    // for Connectors that already exist).
+    const connId = mkModule(parentId, name, 'exhibitor');
     module_.setModuleUi(connId, 'filterDef', JSON.stringify({ query: '', kinds: [], moduleIds, tag: '' }));
+    module_.setModuleUi(connId, 'activeView', 'scene');
+    module_.setModuleUi(connId, 'seedScene', '1');
     for (const r of relRows) {
       const typeName = r.relation_type ? d.prepare(`SELECT relation_name FROM relation_type WHERE id=?`).get(r.relation_type)?.relation_name : null;
       for (const e of d.prepare(`SELECT * FROM relation_obob WHERE relation_id=?`).all(r.id)) {
@@ -418,11 +426,17 @@ function migrateLegacy(nexusId, target, legacyId, batchCtx) {
       walk(null, majorId);
 
       const notes = d.prepare(`SELECT * FROM note WHERE nexus_ref=? AND migrated_v3=0`).all(nexusId);
+      const moved = []; // [noteId, moduleId]
       for (const n of notes) {
         const parentId = n.folder_ref ? (folderModMap.get(n.folder_ref) || majorId) : majorId;
         const mid = mkModule(parentId, n.title, 'inspector');
         if (n.content) module_.updateModuleDescription(mid, n.content);
+        // v5 Part 8 (§12): where this note went, so a stale note_<id> key
+        // (a link, a relation, a recent entry) still opens it.
+        d.prepare(`INSERT OR REPLACE INTO module_ui (module_ref, ui_key, ui_value) VALUES (?, 'legacyNote', ?)`).run(mid, String(n.id));
+        moved.push([n.id, mid]);
       }
+      rewriteNoteKeys(d, moved);
 
       d.prepare(`UPDATE note SET migrated_v3=1 WHERE nexus_ref=? AND migrated_v3=0`).run(nexusId);
       return majorId;
@@ -435,6 +449,10 @@ function migrateLegacy(nexusId, target, legacyId, batchCtx) {
   });
 
   const id = tx();
+  // v5 (§8.8): the v3 shape put a project's content under its Manager; a
+  // Manager holds no children now, so fold them into a collector beside it
+  // and point the Manager's selection at that collector.
+  require('./module-parents').normalizeModuleParents(d);
   // batchCtx is mutated in place (director connectors recorded, navigator
   // folds into them) — handed back so the IPC caller can pass the updated
   // copy into the next migrateLegacy call in the same import batch, since
@@ -540,4 +558,51 @@ function setLegacyPromptSeen(nexusId) {
   return { ok: true };
 }
 
-module.exports = { migrateLegacy, listLegacyProjects, previewLegacyMigration, getLegacyPromptSeen, setLegacyPromptSeen };
+// Procress 12 part 0: every stored key that named a converted note now names
+// its module, so a snapshot — which leaves converted notes out (db/sync.js)
+// — never carries a relation or a pin that points at nothing. Key columns
+// come from ENTITY_KINDS' KEY_COLUMNS; a JSON column holds the key quoted.
+// entity_relation is UNIQUE, so a rewrite that would duplicate a relation
+// the module already has is dropped instead.
+function rewriteNoteKeys(d, moved) {
+  if (!moved.length) return;
+  const { KEY_COLUMNS } = require('./entity-kinds');
+  for (const [noteId, mid] of moved) {
+    const from = `note_${noteId}`, to = `module_${mid}`;
+    for (const k of KEY_COLUMNS) {
+      for (const col of k.cols) {
+        try {
+          if (k.json) d.prepare(`UPDATE ${k.table} SET ${col}=REPLACE(${col}, ?, ?) WHERE ${col} LIKE ?`).run(`"${from}"`, `"${to}"`, `%"${from}"%`);
+          else d.prepare(`UPDATE OR IGNORE ${k.table} SET ${col}=? WHERE ${col}=?`).run(to, from);
+        } catch (_) { /* a table this vault does not have */ }
+      }
+    }
+    d.prepare(`DELETE FROM entity_relation WHERE from_key=? OR to_key=?`).run(from, from);
+    try {
+      d.prepare(`UPDATE OR IGNORE wiki_link SET target_key=? WHERE target_key=?`).run(to, from);
+      d.prepare(`DELETE FROM wiki_link WHERE src_key=? OR target_key=?`).run(from, from);
+    } catch (_) {}
+  }
+}
+
+// v5 Part 8 (§12): legacy Scribe is gone, so its notes are converted as
+// soon as a vault shows any — no prompt, nothing to choose. Cheap when there
+// is nothing to do (one COUNT), which is every call after the first.
+function autoMigrateNotes(nexusId) {
+  if (!nexusId) return 0;
+  const d = getDB();
+  let n = 0;
+  try { n = d.prepare(`SELECT COUNT(*) AS n FROM note WHERE nexus_ref=? AND migrated_v3=0`).get(nexusId)?.n || 0; } catch (_) { return 0; }
+  if (!n) return 0;
+  try { migrateLegacy(nexusId, 'scribe', nexusId); } catch (e) { console.error('legacy note migration failed:', e); return 0; }
+  return n;
+}
+
+// The module a migrated note became, or null.
+function moduleOfNote(noteId) {
+  try {
+    return getDB().prepare(`SELECT module_ref FROM module_ui WHERE ui_key='legacyNote' AND ui_value=?`).get(String(noteId))?.module_ref ?? null;
+  } catch (_) { return null; }
+}
+
+module.exports = { autoMigrateNotes, moduleOfNote, migrateLegacy, listLegacyProjects, previewLegacyMigration, getLegacyPromptSeen, setLegacyPromptSeen };
