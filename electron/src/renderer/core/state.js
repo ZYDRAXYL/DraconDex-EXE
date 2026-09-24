@@ -77,12 +77,13 @@ const I = {
 
 const UI_SETTINGS_KEY = 'novel-manager-ui-settings';
 const LEFT_PANEL_COLLAPSED_KEY = 'novel-manager-left-panel-collapsed';
-const INSPECTOR_COLLAPSED_KEY = 'novel-manager-inspector-collapsed';
 const LEFT_PANEL_WIDTH_KEY = 'novel-manager-left-panel-width';
 const NAV_RAIL_WIDTH_KEY = 'novel-manager-nav-rail-width';
 // Process 6 part 1: horizontal nav orientation's own resize lever (--navh),
 // same idiom as NAV_RAIL_WIDTH_KEY/--nav for vertical mode.
 const NAV_H_HEIGHT_KEY = 'novel-manager-nav-h-height';
+// The Inspector dock's width — read once by page/side-panel.js, which took
+// over its job (v5 Part 8).
 const INSPECTOR_WIDTH_KEY = 'novel-manager-inspector-width';
 const PAGE_VIEW_WIDTH_KEY = 'novel-manager-page-view-width';
 const NEXUS_ACTIVE_KEY = 'novel-manager-active-nexus';
@@ -392,11 +393,9 @@ const S = {
   settings:loadUiSettings(),
   relListHeight:null,
   leftPanelCollapsed:localStorage.getItem(LEFT_PANEL_COLLAPSED_KEY) === '1',
-  inspectorCollapsed:localStorage.getItem(INSPECTOR_COLLAPSED_KEY) === '1',
   leftPanelWidth:Number(localStorage.getItem(LEFT_PANEL_WIDTH_KEY)) || 264,
   navRailWidth:Number(localStorage.getItem(NAV_RAIL_WIDTH_KEY)) || 42,
   navHorizontalHeight:Number(localStorage.getItem(NAV_H_HEIGHT_KEY)) || 44,
-  inspectorWidth:Number(localStorage.getItem(INSPECTOR_WIDTH_KEY)) || 290,
   pageViewWidth:Number(localStorage.getItem(PAGE_VIEW_WIDTH_KEY)) || null, // Plan part1 #2: null = fill pane (default)
   // Sage module state
   sageTab:'dataSize',
@@ -442,12 +441,11 @@ const S = {
   // Section C for the scoping decision.
   moduleTree:[], activeModuleNode:null, inspectorData:null,
   moduleTabs:[], renamingModuleId:null, editingHandleId:null, handleDraft:null,
-  // Plugin panels (v4.3.0, src/renderer/pluginpanel.js). pluginPanels is the
-  // cached contribution list from api.plugin.list(); pluginPanel is the one
-  // currently replacing the Module Inspector dock, declared here rather than
-  // materialised on first use so it can be cleared on module switch (the
-  // versionPanel next door skipped that and leaks across modules).
-  pluginPanels:[], pluginPanel:null,
+  // Plugin panels (v4.3.0, src/renderer/pluginpanel.js): the cached
+  // contribution list from api.plugin.list(). v5 Part 8: `side` is what the
+  // side panel shows (page/side-panel.js), `pages` the loaded page blocks
+  // (page/page.js), `arranging` the pages in Arrange mode.
+  pluginPanels:[], side:null, pages:{}, arranging:new Set(),
   // Content-item "minor module" pages (Plan part4) — a separate mirror from
   // activeModuleNode since an item is never itself a `module` row. nestItems
   // is the Nest tree's per-module item-list cache (moduleId -> null while

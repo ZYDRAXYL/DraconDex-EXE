@@ -119,6 +119,7 @@ contextBridge.exposeInMainWorld('api', {
     update:  (id,patch)      => inv('block:update', id,patch),
     move:    (id,to)         => inv('block:move', id,to),
     remove:  (id)            => inv('block:remove', id),
+    restore: (rows)          => inv('block:restore', rows),
     split:   (id,item)       => inv('block:split', id,item),
     revert:  (id,item)       => inv('block:revert', id,item),
     setProp: (id,item,pid,n,v,tp) => inv('block:setProp', id,item,pid,n,v,tp),

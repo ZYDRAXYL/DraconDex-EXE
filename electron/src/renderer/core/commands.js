@@ -102,6 +102,9 @@ const COMMANDS = {
   'dock.importFolder': { label: 'importFolder', icon: 'import', scope: 'app', run: () => importDockPickFolder(null), surfaces: ['dock'] },
   'dock.addLink': { label: 'addAssetLink', icon: 'plus', scope: 'app', run: () => openAddAssetUrlModal(null), surfaces: ['dock'] },
   'dock.relinkFolder': { label: 'assetRelinkFolder', icon: 'folder', scope: 'app', when: () => (S.importFiles || []).some(f => f.missing), run: () => relinkMissingFromFolder(), surfaces: ['dock'] },
+  // v5 Part 8 (§12.5/§12.8): the page's own buttons.
+  'page.arrange': { label: 'pbArrange', icon: 'move', scope: 'app', when: () => !!S.activeModuleNode, run: () => togglePageArrange(), surfaces: ['page.head'] },
+  'page.history': { label: 'versionHistory', icon: 'timeline', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode, run: () => toggleVersionPanel(S.activeModuleNode.id), surfaces: ['page.head'] },
   'history.undo': { label: 'scUndo', icon: 'return', scope: 'app', hint: 'Ctrl+Z', run: () => handleHistoryShortcut('undo'), surfaces: ['shortcut'] },
   'history.redo': { label: 'scRedo', icon: 'return', scope: 'app', hint: 'Ctrl+Shift+Z', run: () => handleHistoryShortcut('redo'), surfaces: ['shortcut'] },
 

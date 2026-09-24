@@ -20,6 +20,7 @@
 //   o.after      HTML after the title on the same line (handle, kind chip)
 //   o.sub        a second line (hint text, breadcrumb)
 //   o.tags       the chips row (.mtags) — hidden while folded
+//   o.acts       the page's own buttons, at the end of the title row
 //   o.cls        extra class names
 //   o.bare       o.sub replaces the title row (Wyvern / Dragon breadcrumbs)
 //   o.forceOpen  render unfolded regardless — an inline rename / handle edit
@@ -34,13 +35,13 @@ function pageHeadHtml(o = {}) {
   const cls = ['detail-head', 'module-head', 'page-navbar', folded ? 'is-folded' : '', o.cls || ''].filter(Boolean).join(' ');
   if (folded) {
     return `<div class="${cls}" style="border-left:4px solid ${x(col)}">
-      <div class="navbar-row">${icon}<span class="navbar-title" data-no-i18n>${x(o.titleText || '')}</span>${fold}</div>
+      <div class="navbar-row">${icon}<span class="navbar-title" data-no-i18n>${x(o.titleText || '')}</span>${o.acts ? `<span class="navbar-acts">${o.acts}</span>` : ''}${fold}</div>
     </div>`;
   }
   const row = o.bare
     ? `<div class="navbar-row"><div class="navbar-grow">${o.sub || ''}</div>${fold}</div>`
     : `<div class="navbar-row">
-        <h2 class="navbar-h">${icon}${o.title || ''}${o.after || ''}</h2>${fold}
+        <h2 class="navbar-h">${icon}${o.title || ''}${o.after || ''}</h2>${o.acts ? `<span class="navbar-acts">${o.acts}</span>` : ''}${fold}
       </div>${o.sub ? `<div class="drafter-hint navbar-sub">${o.sub}</div>` : ''}`;
   return `<div class="${cls}" style="border-left:4px solid ${x(col)}">
     ${row}

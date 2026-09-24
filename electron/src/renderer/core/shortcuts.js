@@ -62,8 +62,8 @@ async function handleHistoryShortcut(direction) {
     return;
   }
   await reloadModuleTree();
-  if (S.activeModuleNode && typeof loadInspectorData === 'function') {
-    try { await loadInspectorData(S.activeModuleNode.id); } catch (_) {}
+  if (S.activeModuleNode) {
+    try { await loadModulePage(S.activeModuleNode); } catch (_) {}
   }
   // The tree and the inspector were the only things repainted, so the open
   // module's own body kept showing pre-undo content until something else

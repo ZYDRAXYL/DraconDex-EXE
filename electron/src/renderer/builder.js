@@ -332,27 +332,6 @@ function builderTabMeta(key) {
   return { name: `Sage Hut · ${lbl}`, badge: 'Sage', color: 'var(--accent)', icon: I.sage };
 }
 
-// ═══ Module Inspector toggle (Plan part3 #3) ═══════════════════════════
-// Persisted show/hide for the always-on-by-default `.module-inspector`
-// dock — same persisted-flag + CSS-class pattern as the Hub's own
-// left-panel toggle (LEFT_PANEL_COLLAPSED_KEY/applyLeftPanelState in
-// core.js), just wired via inline onclick since this button lives inside
-// builderPaneHeadHtml's re-rendered template rather than a static
-// index.html element.
-// Process 7 part 1: animates the open/close, same shared helpers as the
-// Hub accordion/Nest tree toggles (core/ui.js).
-function toggleModuleInspector() {
-  const opening = S.inspectorCollapsed;
-  const commit = () => {
-    S.inspectorCollapsed = !opening;
-    localStorage.setItem(INSPECTOR_COLLAPSED_KEY, S.inspectorCollapsed ? '1' : '0');
-    renderNexusHome(); // pure re-render from current S — no data refetch
-    if (opening) animateToggleOpen(q('.module-inspector'));
-  };
-  if (opening) { commit(); return; }
-  animateToggleCloseThenCommit(q('.module-inspector'), commit);
-}
-
 // ═══ Rendering — recursive layout tree (Plan part4 #2) ═════════════════
 // Hard rule carried over from the old fixed-grid renderer: NEVER
 // innerHTML-wipe #main-inner — unfocused panes keep their live DOM
@@ -477,7 +456,6 @@ function renderBuilderPanes(contentHtml, runMounts) {
   if (!main) return;
   main.classList.add('builder-grid');
   main.classList.toggle('builder-split', b.layoutTree.type === 'split');
-  main.classList.toggle('inspector-collapsed', S.inspectorCollapsed);
 
   pruneStaleLayoutElements(b.layoutTree);
   renderLayoutNode(b.layoutTree, main, null, null);
@@ -490,13 +468,13 @@ function renderBuilderPanes(contentHtml, runMounts) {
     paneEl.querySelector('.bpane-head').innerHTML = builderPaneHeadHtml(idx, pane, focused);
     syncTabBarCompact(paneEl.querySelector('.bpane-tabs'));
     if (focused) {
-      paneEl.querySelector('.bpane-body').innerHTML = contentHtml();
+      paneEl.querySelector('.bpane-body').innerHTML = withRenderPane(idx, contentHtml);
     } else {
       // Was this pane's DOM lost (fresh grid after a legacy view)? Give it
       // a static render of its page so a split never shows a hole.
       const body = paneEl.querySelector('.bpane-body');
       if (!body.innerHTML.trim() && pane.active) {
-        body.innerHTML = builderStaticPageHtml(builderParseKey(pane.active));
+        body.innerHTML = withRenderPane(idx, () => builderStaticPageHtml(builderParseKey(pane.active)));
       }
       builderNeutralizeIds(paneEl);
     }
@@ -527,26 +505,14 @@ function builderPaneHeadHtml(i, pane, focused) {
       <span class="tab-close" onclick="event.stopPropagation();builderCloseTab(${i},${xj(key)})" title="${t('closeTab')}">&times;</span>
     </div>`;
   }).join('');
-  const isSplit = builderState().layoutTree.type === 'split';
-  // Plan part2 #2: split/close-pane buttons moved next to the nav
-  // back/forward buttons (far left), away from the Module Inspector toggle
-  // (far right) — they used to sit adjacent with identical btn-g/btn-i
-  // styling and only a 4px gap, which users confused with the inspector
-  // toggle. The tab strip's flex:1 now separates the two groups.
-  const inspectorToggle = !isSplit
-    ? `<button class="btn btn-g btn-i bnav ${S.inspectorCollapsed ? '' : 'active'}" onclick="toggleModuleInspector()" title="${t('toggleInspector')}">${I.panelRight}</button>`
-    : '';
-  // Plugin panels (v4.3.0) sit immediately left of the inspector toggle: they
-  // open in that same dock, so they belong in that group rather than with the
-  // nav/split buttons at the far left. pluginPanelButtonsHtml self-guards on
-  // S.activeModuleNode — with no module open there is no dock to replace.
-  const pluginPanelBtns = !isSplit && typeof pluginPanelButtonsHtml === 'function' ? pluginPanelButtonsHtml() : '';
   // Plan procress1 part2 #2: split/close-pane buttons removed from here —
   // right-click the pane head instead (openBuilderPaneContextMenu, wired
   // once in ensureNodeElement). Wyvern/Dragon (Plan part2 #New Workspace)
   // never split, so that handler no-ops there — matching builderNavigate's
   // single-tab guard above and onBodyDrop's disarmed drag-to-split below.
-  return `${nav}<div class="bpane-tabs" ondragover="onTabStripDragOver(event,${i})" ondrop="onTabStripDrop(event,${i})">${tabs}</div>${pluginPanelBtns}${inspectorToggle}`;
+  // The page's own buttons (plugin panels, history) are on the page's head
+  // since v5 Part 8 (§12.6); the Inspector toggle went with the dock.
+  return `${nav}<div class="bpane-tabs" ondragover="onTabStripDragOver(event,${i})" ondrop="onTabStripDrop(event,${i})">${tabs}</div>`;
 }
 
 // ═══ Pane right-click context menu (Plan procress1 part2 #2) ══════════

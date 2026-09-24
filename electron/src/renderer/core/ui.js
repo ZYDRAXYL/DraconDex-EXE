@@ -365,7 +365,7 @@ document.addEventListener('mouseup', () => {
 // Plan part1 #2: resizable page view for Hub pages that have no other
 // resize lever (Sage Hut / Import Dock file preview / Kind Browser) — same
 // mousedown/document-mousemove/document-mouseup + localStorage-persist
-// pattern as startLeftPanelResize/startInspectorResize above. Clamped at a
+// pattern as startLeftPanelResize above. Clamped at a
 // 480px floor (full page content needs more room than the inspector dock's
 // 220px) and the live pane width as the ceiling, so dragging past full
 // width is simply a no-op instead of overflowing.

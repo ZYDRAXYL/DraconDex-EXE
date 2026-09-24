@@ -18,6 +18,8 @@ const versions = require('./versions');
 const wiki = require('./wiki');
 
 const STACK_TYPES = `block_type<>'property'`;
+// '' is not a page: treat it as the module's own page (NULL).
+const ik = (k) => (k === '' || k === undefined ? null : k);
 const pageWhere = (itemKey) => (itemKey == null ? 'item_key IS NULL' : 'item_key=?');
 const pageArgs = (moduleId, itemKey) => (itemKey == null ? [moduleId] : [moduleId, itemKey]);
 const INIT_KEY = (itemKey) => (itemKey == null ? 'pageInit' : itemKey === '*' ? 'itemPageInit' : null);
@@ -45,6 +47,7 @@ function reindexFor(moduleId, itemKey) {
 // layout) | 'none'. An element page falls back to the shared layout until
 // it is split.
 function listBlocks(moduleId, itemKey = null) {
+  itemKey = ik(itemKey);
   const d = getDB();
   return d.readTx(() => {
     let rows = stackRows(d, moduleId, itemKey);
@@ -57,7 +60,7 @@ function listBlocks(moduleId, itemKey = null) {
   })();
 }
 
-const listProps = (moduleId, itemKey = null) => getDB().prepare(`
+const listProps = (moduleId, itemKey = null) => (itemKey = ik(itemKey), getDB()).prepare(`
   SELECT id, prop_name, prop_type, content, block_order FROM page_block
   WHERE module_ref=? AND ${pageWhere(itemKey)} AND block_type='property'
   ORDER BY block_order, id`).all(...pageArgs(moduleId, itemKey));
@@ -65,6 +68,7 @@ const listProps = (moduleId, itemKey = null) => getDB().prepare(`
 // Lay a page out the first time it opens. `defaults` is [{type, component,
 // config}] from the renderer's registry. Returns true when it laid one out.
 function ensurePage(moduleId, itemKey, defaults) {
+  itemKey = ik(itemKey);
   const key = INIT_KEY(itemKey);
   if (!key) return false;
   const d = getDB();
@@ -89,6 +93,7 @@ function nextOrder(d, moduleId, itemKey) {
 // b: {type, component, config, content, sourceKey, parentId, propName,
 // propType, at}. `at` inserts before that index; default is the end.
 function addBlock(moduleId, itemKey, b = {}) {
+  itemKey = ik(itemKey);
   const d = getDB();
   return d.transaction(() => {
     let order = nextOrder(d, moduleId, itemKey);
@@ -110,12 +115,12 @@ function addBlock(moduleId, itemKey, b = {}) {
 
 const getBlock = (id) => parseConfig(getDB().prepare(`SELECT * FROM page_block WHERE id=?`).get(id));
 
-// patch: any of {content, config, propName, propType, sourceKey}.
+// patch: any of {content, config, propName, propType, sourceKey, parentId}.
 function updateBlock(id, patch = {}) {
   const d = getDB();
   const prev = d.prepare(`SELECT * FROM page_block WHERE id=?`).get(id);
   if (!prev) return false;
-  const cols = { content: 'content', propName: 'prop_name', propType: 'prop_type', sourceKey: 'source_key' };
+  const cols = { content: 'content', propName: 'prop_name', propType: 'prop_type', sourceKey: 'source_key', parentId: 'parent_id' };
   const sets = [], vals = [];
   for (const [k, col] of Object.entries(cols)) if (k in patch) { sets.push(`${col}=?`); vals.push(patch[k] ?? null); }
   if ('config' in patch) { sets.push('config=?'); vals.push(patch.config == null ? null : JSON.stringify(patch.config)); }
@@ -157,7 +162,7 @@ function deleteBlock(id) {
   versions.recordVersion(prev.module_ref, prev.block_type === 'property' ? 'attrDel' : 'blockDel',
     prev.prop_name || prev.component || prev.block_type, { op: 'blockRestore', args: { rows: [prev, ...kids] } });
   if (prev.content) reindexFor(prev.module_ref, prev.item_key);
-  return true;
+  return { ok: true, rows: [prev, ...kids] }; // what an Undo hands to restoreBlocks
 }
 
 // Put rows back exactly (ids included) — the undo of a delete.
@@ -218,6 +223,7 @@ function clearItemBlocks(key) {
 
 // ── properties (module_attribute's replacement) ─────────────────────────
 function setProp(moduleId, itemKey, id, name, value, type = 'text') {
+  itemKey = ik(itemKey);
   if (id) {
     updateBlock(id, { propName: name, content: value, propType: type });
     return id;
@@ -227,6 +233,7 @@ function setProp(moduleId, itemKey, id, name, value, type = 'text') {
 
 // The Properties component's data in one round trip.
 function getPageProps(moduleId, itemKey = null) {
+  itemKey = ik(itemKey);
   const module = require('./module');
   return getDB().readTx(() => ({
     props: listProps(moduleId, itemKey),

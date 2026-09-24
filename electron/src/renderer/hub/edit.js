@@ -125,7 +125,8 @@ async function deleteModuleNode(id) {
   if (S.activeModuleNode?.id === id) S.activeModuleNode = null;
   await reloadModuleTree();
   renderNexusHome();
-  toastAction(`${t('movedToTrash')}: ${m.name}`, t('scUndo'), () => restoreTrashItem(r.trashId));
+  const blocks = r.textBlocks ? ` · ${r.textBlocks} ${t('pbTextBlocksToo')}` : '';
+  toastAction(`${t('movedToTrash')}: ${m.name}${blocks}`, t('scUndo'), () => restoreTrashItem(r.trashId));
 }
 
 // A Nest row's single click (open) and its name's double click (rename)

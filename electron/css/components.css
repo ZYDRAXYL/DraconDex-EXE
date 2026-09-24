@@ -260,7 +260,7 @@
 /* Process 7 part 1 — shared toggle-open/close animation, driven by
    core/ui.js's animateToggleOpen()/animateToggleCloseThenCommit() on any
    element a toggle shows/hides (Hub accordion .acc-body, Nest tree
-   .nest-children, Module Inspector .module-inspector). --anim-dur is
+   .nest-children). --anim-dur is
    written once by applyUiSettings() from the Workspace "animation speed"
    setting (core/settings.js), so every consumer here picks up a live
    change without touching this file. A CSS `animation` (not `transition`)

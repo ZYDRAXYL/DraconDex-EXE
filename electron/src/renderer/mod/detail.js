@@ -21,14 +21,9 @@ function mountDetailEditor(m) {
       await api.module.updateDescription(m.id, content);
       const node = findModuleNode(m.id);
       if (node) node.description = content;
-      // Refresh just the Inspector dock (its own description field + outgoing
-      // links mirror the same module.description) without tearing down this
-      // editor mid-edit.
-      if (S.inspectorData?.moduleId === m.id) {
-        await loadInspectorData(m.id);
-        const dock = q('.module-inspector');
-        if (dock && S.activeModuleNode?.id === m.id) dock.outerHTML = buildInspectorHtml(S.activeModuleNode);
-      }
+      // The page's links follow the text: refresh Properties and Related in
+      // place (page/page.js) without tearing down this editor mid-edit.
+      await refreshPageProps(m.id);
     },
   });
 }

@@ -41,7 +41,11 @@ function trashModule(nexusId, moduleId) {
     return id;
   })();
   require('./module').deleteModule(moduleId);
-  return { ok: true, trashId, modules: ids.length };
+  // v5 Part 8 (§12.2): a page's own text is content now, even on a view
+  // module — the caller says how much went, so a Manager's delete is not
+  // "only a layout" any more.
+  const textBlocks = (payload.pageBlocks || []).filter((b) => (b.type === 'text' || b.type === 'heading') && b.content).length;
+  return { ok: true, trashId, modules: ids.length, textBlocks };
 }
 
 function listTrash(nexusId) {

@@ -274,10 +274,10 @@ function buildBuilderPageHtml() {
 function runBuilderMounts() {
   if (S.activeItemNode && typeof ITEM_KIND !== 'undefined') ITEM_KIND[S.activeItemNode.itemKind]?.mount?.(S.activeItemNode);
   if (!S.activeModuleNode && !S.filePreview && S.sageHut && typeof mountSageHutGraph === 'function') mountSageHutGraph();
+  // v5 Part 8: a module page's blocks mount themselves — the kind's own
+  // view is one of them (page/registry.js), Properties another.
+  if (S.activeModuleNode || S.activeItemNode) mountPageBlocks(builderState().focused);
   if (typeof hydrateDisplayImages === 'function') hydrateDisplayImages();
-  if (S.activeModuleNode && typeof mountInspectorDescEditor === 'function') mountInspectorDescEditor(S.activeModuleNode);
-  if (S.pluginPanel && typeof mountPluginPanel === 'function') mountPluginPanel();
-  // Per-kind page mounts: one registry (hub/kind-page.js KIND_PAGE).
-  if (S.activeModuleNode) kindPagePart(S.activeModuleNode.kind, 'mount')?.(S.activeModuleNode);
+  syncSidePanel();
 }
 

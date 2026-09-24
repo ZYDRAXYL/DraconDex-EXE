@@ -795,6 +795,7 @@ h('block:get',      (id)            => db.getBlock(id));
 h('block:update',   (id,patch)      => db.updateBlock(id,patch));
 h('block:move',     (id,to)         => db.moveBlock(id,to));
 h('block:remove',   (id)            => db.deleteBlock(id));
+h('block:restore',  (rows)          => db.restoreBlocks(rows));
 h('block:split',    (id,item)       => db.splitItemPage(id,item));
 h('block:revert',   (id,item)       => db.revertItemPage(id,item));
 h('block:setProp',  (id,item,pid,n,v,tp) => db.setProp(id,item,pid,n,v,tp));

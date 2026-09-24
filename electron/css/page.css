@@ -1,0 +1,74 @@
+/* Pages made of blocks (v5 Part 8, APP docs/V5.md §12): the page shell, each
+   block's section, the Properties / Related components, the plain blocks,
+   Arrange mode, and the side panel beside #main-area. */
+.module-page{display:flex;flex-direction:column;gap:0;min-height:100%}
+.page-blocks{display:flex;flex-direction:column;gap:14px;margin-top:10px}
+.pblock{position:relative;min-width:0}
+.pb-loading{min-height:120px}
+.pb-empty{padding:18px 0}
+
+/* Properties */
+.pbc-core-properties{border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);padding:10px 0 6px}
+.pb-desc{padding:0 14px 8px}
+.pb-desc .mded{min-height:120px}
+.pb-tags{display:flex;flex-wrap:wrap;gap:6px;padding:2px 14px 8px;align-items:center}
+.pb-props{display:flex;flex-direction:column}
+.pb-prop .pk.pb-prop-name{width:130px;flex-shrink:0;background:transparent;border:1px solid transparent;border-radius:6px;
+	color:var(--t3);font:inherit;padding:3px 6px}
+.pb-prop .pk.pb-prop-name:hover,.pb-prop .pk.pb-prop-name:focus{border-color:var(--border);color:var(--t1);outline:none}
+.pb-prop .pv{white-space:normal;display:flex;align-items:center;gap:6px}
+.pb-prop .pv .pv-input,.pb-prop .pv .pv-textarea{flex:1;min-width:0}
+.pb-prop .acts{display:flex;gap:2px;opacity:0;transition:opacity .12s}
+.pb-prop:hover .acts,.pb-prop:focus-within .acts{opacity:1}
+.pb-prop-type{font-size:calc(11px * var(--fsc,1));background:var(--raised);color:var(--t2);border:1px solid var(--border);border-radius:6px}
+.pb-prop-add{align-self:flex-start;margin:4px 10px}
+
+/* Related */
+.pb-related{border-top:1px solid var(--border);padding-top:8px}
+.pb-label{font-size:calc(10.5px * var(--fsc,1));font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);padding:4px 0}
+.pb-related .insp-chips{padding:4px 0 8px}
+
+/* Plain blocks */
+.pb-md .mded{min-height:80px}
+.pb-heading{width:100%;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--t1);
+	font:inherit;font-size:calc(19px * var(--fsc,1));font-weight:700;padding:4px 6px}
+.pb-heading:hover,.pb-heading:focus{border-color:var(--border);outline:none}
+.pb-hr{border:0;border-top:1px solid var(--border);margin:6px 0}
+.pb-img{margin:0}
+.pb-img img{max-width:100%;border-radius:var(--rs);display:block}
+.pb-img figcaption{color:var(--t3);font-size:calc(11.5px * var(--fsc,1));margin-top:4px}
+.pb-cols{display:grid;gap:14px}
+.pb-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.pb-img-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pb-img-pick{border:1px solid var(--border);border-radius:var(--rs);background:var(--raised);padding:4px;cursor:pointer}
+.pb-img-pick:hover{border-color:var(--accent)}
+.pb-img-pick img{width:100%;height:80px;object-fit:cover;display:block}
+
+/* Arrange mode */
+.page-blocks.arranging .pblock{outline:1px dashed var(--border);outline-offset:4px;border-radius:var(--rs)}
+.page-blocks.arranging .pblock.drop-before{box-shadow:0 -3px 0 0 var(--accent)}
+.page-blocks.arranging .pblock.drop-after{box-shadow:0 3px 0 0 var(--accent)}
+.pb-bar{display:flex;align-items:center;gap:6px;padding:2px 4px 6px;font-size:calc(11.5px * var(--fsc,1));color:var(--t2)}
+.pb-grip{cursor:grab;color:var(--t3);font-size:calc(14px * var(--fsc,1));user-select:none}
+.pb-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.pb-src{color:var(--t3);font-weight:400}
+.pb-preset{font-size:calc(11px * var(--fsc,1));background:var(--raised);color:var(--t1);border:1px solid var(--border);border-radius:6px}
+.pb-add{align-self:flex-start}
+.pb-picks{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.pb-pick{border:1px solid var(--border);border-radius:var(--rs);background:var(--raised);color:var(--t1);
+	padding:6px 12px;font:inherit;cursor:pointer}
+.pb-pick:hover{border-color:var(--accent);background:var(--hover)}
+
+/* The page head's own buttons */
+.navbar-acts{display:flex;align-items:center;gap:4px;margin-left:auto}
+.navbar-acts .btn.active{background:var(--hover);color:var(--accentH)}
+
+/* Side panel (page/side-panel.js) */
+#side-panel{width:300px;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--border);
+	background:var(--surface);min-height:0}
+#side-panel.hidden,#side-panel-resize.hidden{display:none}
+#side-panel .sp-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#side-panel-body{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}
+#side-panel-body .hidden{display:none}
+#side-panel .sp-plugin-view{flex:1;min-height:0;border:0}
+#side-panel.is-resizing .sp-plugin-view{pointer-events:none}

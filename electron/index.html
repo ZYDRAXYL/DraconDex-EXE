@@ -49,6 +49,7 @@
   <link rel="stylesheet" href="css/compat.css">
   <link rel="stylesheet" href="css/kinds.css">
   <link rel="stylesheet" href="css/builder.css">
+  <link rel="stylesheet" href="css/page.css">
   <link rel="stylesheet" href="css/workspace.css">
   <!-- Last on purpose: welcome-mode strips the app chrome down to a bare
        two-column picker, so its hide rules must win over every layout file
@@ -209,6 +210,13 @@
   <div id="left-panel-resize" class="panel-resize-handle" onmousedown="startLeftPanelResize(event)" title="Resize panel"></div>
   <div id="workspace-toolbar" class="hidden"></div>
   <main id="main-area"><div id="main-inner"></div></main>
+  <!-- v5 Part 8 (§12.8): version history and plugin panels. Outside every
+       page, so a page render never rebuilds it (page/side-panel.js). -->
+  <div id="side-panel-resize" class="panel-resize-handle hidden" onmousedown="startSidePanelResize(event)" title="Resize panel"></div>
+  <aside id="side-panel" class="hidden">
+    <div id="side-panel-head" class="insp-head"></div>
+    <div id="side-panel-body"></div>
+  </aside>
 </div>
 <footer id="status-bar"></footer>
 </div>
@@ -277,9 +285,13 @@
   <script src="src/renderer/hub/csv-import.js"></script>
   <script src="src/renderer/hub/trash.js"></script>
   <script src="src/renderer/hub/legacy-migrate.js"></script>
-  <script src="src/renderer/inspector.js"></script>
   <script src="src/renderer/versions.js"></script>
   <script src="src/renderer/pluginpanel.js"></script>
+  <script src="src/renderer/page/registry.js"></script>
+  <script src="src/renderer/page/page.js"></script>
+  <script src="src/renderer/page/blocks.js"></script>
+  <script src="src/renderer/page/arrange.js"></script>
+  <script src="src/renderer/page/side-panel.js"></script>
   <script src="src/renderer/iconpicker.js"></script>
   <script src="src/renderer/mod/cls-field-types.js"></script>
   <script src="src/renderer/mod/classifier.js"></script>

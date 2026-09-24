@@ -1274,7 +1274,8 @@ const VAULT_DDL_SQL = `
     --   item_key '*'         the shared layout every element page of the
     --                        module uses (a Classifier's objects, …)
     --   item_key 'cobj_12'   one element's own page, split off the shared one
-    -- block_type: component | text | property | heading | columns.
+    -- block_type: component | text | heading | divider | image | property |
+    -- columns. An image block's picture is its source_key (file_<id>).
     --   component  component names it (e.g. 'classifier.table'); config
     --              is JSON (preset + options); source_key is set when it
     --              shows ANOTHER module or element than the page's own
@@ -1290,7 +1291,7 @@ const VAULT_DDL_SQL = `
       module_ref INTEGER NOT NULL REFERENCES module(id) ON DELETE CASCADE,
       item_key TEXT,
       parent_id INTEGER REFERENCES page_block(id) ON DELETE CASCADE,
-      block_type TEXT NOT NULL DEFAULT 'component' CHECK(block_type IN ('component','text','property','heading','columns')),
+      block_type TEXT NOT NULL DEFAULT 'component' CHECK(block_type IN ('component','text','heading','divider','image','property','columns')),
       component TEXT,
       source_key TEXT,
       config TEXT,

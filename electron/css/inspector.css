@@ -1,10 +1,7 @@
-/* Module Inspector dock + the pickers and popups that hang off it (icon
-   collection, classifier type, kind popup, context menu, inline rename), plus
-   the Classifier / Manager / Locator view bodies. */
-/* Module Inspector dock (progress.md Phase 4) */
-.module-builder{display:flex;gap:0;margin:-18px -22px;min-height:calc(100% + 36px)}
-.module-main{flex:1;min-width:0;padding:18px 22px}
-.module-inspector{width:290px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);padding-bottom:14px}
+/* Property rows, chips and the side panel's head (the Module Inspector dock
+   they came from went in v5 Part 8 — css/page.css has the page), plus the
+   pickers and popups (icon collection, classifier type, kind popup, context
+   menu, inline rename) and the Classifier / Manager / Locator view bodies. */
 .insp-head{padding:10px 14px;border-bottom:1px solid var(--border);font-size:calc(11px * var(--fsc,1));font-weight:700;
 	letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;align-items:center;gap:7px}
 .insp-label{padding:10px 14px 4px;font-size:calc(10.5px * var(--fsc,1));font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--t3)}
@@ -20,22 +17,9 @@
 .prop .pv[contenteditable]:focus{border-color:var(--accent);outline:none}
 .prop .pv.ghost{color:var(--t3);font-style:italic}
 .prop .acts{margin-left:auto}
-.insp-desc-wrap{padding:4px 14px 8px}
-/* Rich-editor upgrade (Plan part6 #4b) — .insp-desc-editor hosts
-   createMarkdownEditor() at a fixed height (the dock has attributes/links/
-   etc. below it, unlike mod/detail.js's full-height main-pane version).
-   .mded-linkspanel's own 230px fixed width (mdeditor.js) doesn't fit next
-   to the editor body inside this dock's 220-500px range, so it's stacked
-   below instead of beside when opened here. */
-.insp-desc-editor{height:220px}
-.module-inspector .mded-cols{flex-direction:column}
-.module-inspector .mded-linkspanel{width:100%;max-height:140px}
-.insp-desc-static .md-preview{background:var(--raised);border:1px solid var(--border);border-radius:var(--rs);
-	padding:7px 9px;font-size:calc(12px * var(--fsc,1))}
-.insp-desc-hint{margin:5px 0 0;font-size:calc(10.5px * var(--fsc,1));color:var(--t3);font-style:italic}
-.insp-chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 14px 10px;align-items:center}
 .insp-attr:hover .acts{display:flex}
 .insp-attr .acts{display:none;gap:2px}
+.insp-chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 14px 10px;align-items:center}
 .htag{font-size:calc(10.5px * var(--fsc,1));border:1px solid var(--border);border-radius:9px;padding:1px 8px;color:var(--t2);background:transparent;cursor:default}
 .htag.lk{border-color:var(--accent);color:var(--accentH);cursor:pointer}
 .htag.lk:hover{background:var(--hover)}
