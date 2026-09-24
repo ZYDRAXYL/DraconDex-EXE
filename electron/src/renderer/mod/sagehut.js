@@ -109,7 +109,7 @@ function buildSageHutLinkerListHtml(d) {
 function mountSageHutGraph() {
   const d = S.sageHut;
   if (!d || d.tab !== 'linkerGraph') return;
-  const board = q('#sh-board'), graphEl = q('#sh-graph'), svg = q('#sh-edges');
+  const board = fq('#sh-board'), graphEl = fq('#sh-graph'), svg = fq('#sh-edges');
   if (!board || !graphEl || !svg) return;
   const W = 1800, H = 1300, cx = W / 2, cy = H / 2;
   graphEl.style.cssText = `position:relative;width:${W}px;height:${H}px`;

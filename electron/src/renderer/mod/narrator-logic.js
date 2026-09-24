@@ -213,7 +213,7 @@ function toggleNarratorPlayHidden() {
 }
 
 function paintNarratorPlay() {
-  const host = q('#nar-reader'), P = S.narratorPlay, d = S.narratorData;
+  const host = pbQOr('#nar-reader'), P = S.narratorPlay, d = S.narratorData;
   if (!host || !P) return;
   const log = P.log.map(l => l.kind === 'head'
     ? `<h4 class="nar-play-head" style="color:${x(l.color || 'var(--accent)')}">${x(l.text)}</h4>`

@@ -21,12 +21,12 @@ const MGR_W = 1600, MGR_H = 1100;
 // anything is dragged; edges are the relations whose BOTH ends are selected
 // (a line to a module not on this board would be a line to nowhere).
 const MGR_ROW = 6;
-function managerGraphModel() {
-  const rows = S.managerData?.rows || [];
+function managerGraphModel(d = S.managerData) {
+  const rows = d?.rows || [];
   const nodes = rows.map((r, i) => ({ id: r.id, name: r.name, kind: r.ownKind, color: r.color, depth: Math.floor(i / MGR_ROW) }));
   const ids = new Set(nodes.map(n => n.id));
   const edges = [];
-  for (const r of (S.managerData?.relations || [])) {
+  for (const r of (d?.relations || [])) {
     const from = String(r.from_key || ''), to = String(r.to_key || '');
     if (!from.startsWith('module_') || !to.startsWith('module_')) continue;
     const a = Number(from.slice(7)), b = Number(to.slice(7));
@@ -36,17 +36,17 @@ function managerGraphModel() {
   return { nodes, edges };
 }
 
-function renderManagerGraphHtml(m) {
-  const model = managerGraphModel();
+function renderManagerGraphHtml(d) {
+  const model = managerGraphModel(d);
   const rel = model.edges.filter(e => !e.nest).length;
   return `<div class="cn-wrap">
-    <div id="mgr-board" class="nar-board cn-board">
-      <div id="mgr-graph"><svg id="mgr-edges"></svg></div>
+    <div data-r="mgr-board" class="nar-board cn-board">
+      <div data-r="mgr-graph"><svg data-r="mgr-edges"></svg></div>
     </div>
     <div class="chint" data-no-i18n>${t('connectorPanHint')}</div>
     <div class="czoom" data-no-i18n>
       <button class="btn btn-g btn-i" onclick="managerZoomBy(-0.15)">−</button>
-      <span id="mgr-zoom-label">100%</span>
+      <span data-r="mgr-zoom-label">100%</span>
       <button class="btn btn-g btn-i" onclick="managerZoomBy(0.15)">＋</button>
       <span class="cn-count">${model.nodes.length} ${t('majorModules')} · ${rel} ${t('moduleLink')}</span>
     </div>
@@ -55,12 +55,11 @@ function renderManagerGraphHtml(m) {
 
 function mountManagerGraph() {
   const d = S.managerData;
-  const m = S.activeModuleNode;
-  if (!d || !m || m.id !== d.moduleId || d.view !== 'graph') return;
-  const board = q('#mgr-board'), graphEl = q('#mgr-graph'), svg = q('#mgr-edges');
+  if (!d || d.view !== 'graph') return;
+  const board = pbQ('[data-r=mgr-board]'), graphEl = pbQ('[data-r=mgr-graph]'), svg = pbQ('[data-r=mgr-edges]');
   if (!board || !graphEl || !svg) return;
 
-  const { nodes, edges } = managerGraphModel();
+  const { nodes, edges } = managerGraphModel(d);
   graphEl.style.width = `${MGR_W}px`;
   graphEl.style.height = `${MGR_H}px`;
   const cx = MGR_W / 2, cy = MGR_H / 2;
@@ -145,6 +144,7 @@ function mountManagerGraph() {
   }
 
   applyManagerZoom();
+  canvasEngage(board);
   bindCanvasCtx(board, 'manager.graph');
   board.addEventListener('pointerdown', (e2) => {
     if (e2.button !== 2) return;
@@ -160,6 +160,7 @@ function mountManagerGraph() {
     window.addEventListener('pointerup', up);
   });
   board.addEventListener('wheel', (e2) => {
+    if (!canvasWheelTakes(board, e2)) return; // the page scrolls past it (§12.3)
     e2.preventDefault();
     managerZoomBy(e2.deltaY < 0 ? 0.1 : -0.1);
   }, { passive: false });
@@ -171,12 +172,12 @@ function applyManagerZoom() {
   const d = S.managerData;
   if (!d) return;
   const z = managerZoom[d.moduleId] || 1;
-  const graphEl = q('#mgr-graph');
+  const graphEl = pbQ('[data-r=mgr-graph]');
   if (graphEl) {
     graphEl.style.transform = `scale(${z})`;
     graphEl.style.transformOrigin = '0 0';
   }
-  const lbl = q('#mgr-zoom-label');
+  const lbl = pbQ('[data-r=mgr-zoom-label]');
   if (lbl) lbl.textContent = `${Math.round(z * 100)}%`;
 }
 

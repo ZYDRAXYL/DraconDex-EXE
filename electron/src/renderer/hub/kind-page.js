@@ -1,58 +1,33 @@
 'use strict';
-// ═══ KIND_PAGE — one registry per kind's page (v5 Part 3, V5.md §7.3) ═══
-// Replaces three separate per-kind mechanisms that had to be kept in step by
-// hand: KIND_MAIN_BUILDER (hub/open.js, a dict), the loader if-chain in
-// openModuleNode (hub/open.js) and the mount if-chain in runBuilderMounts
-// (core/views.js). A kind with a page now has ONE entry here:
-//   load(m)   async data fetch, awaited by openModuleNode before the repaint
-//   main(m)   the page body HTML, wrapped by buildModuleDetailHtml
-//   mount(m)  post-DOM hook, run by runBuilderMounts on every render
-// Parts are named globals, resolved at call time — the mod/*.js files load
-// after this one, and a lazily-loaded kind simply has nothing to call yet.
+// ═══ KIND_PAGE — what each kind's page offers to begin with ═════════════
+// v5 Part 3 (V5.md §7.3) made this the one registry for a kind's page:
+// load, main, mount. v5 Part 8 (§12) moved all three onto the kind's page
+// component (page/registry.js registerComponent, one per mod/*.js), so what
+// is left is `start` — v5 Part 6 (§10.4): the command (core/commands.js) a
+// kind's empty page offers as its ONE primary button, drawn by
+// kindEmptyStateHtml() below with "what this kind is for".
+// Inspector and Drafter are always an editor, so they have no empty page.
 // Collector has no page (it only expands), so it has no entry.
 //
 // Also here: viewBarHtml(), the one builder for the view-chip bar that was
 // copy-pasted into eleven kinds' toolbars.
-//
-// v5 Part 6 (APP docs/V5.md §10.4): `start` is the command (core/commands.js)
-// a kind's empty page offers as its ONE primary button — kindEmptyStateHtml()
-// below draws "what this kind is for + one way to begin" from it, in place
-// of the bare `<div class="empty">` that only repeated the module's name.
-// Inspector and Drafter are always an editor, so they have no empty page.
-
-const kpFn = (name) => (typeof window[name] === 'function' ? window[name] : null);
-const kpCall = (name, ...args) => kpFn(name)?.(...args);
 
 const KIND_PAGE = {
-  // v5 Part 8: a scoped page component (mod/classifier.js registers
-  // classifier.view, which loads through the page) — only the start command
-  // is read from here.
   classifier: { start: 'classifier.quickStart' },
-  manager: {
-    load: 'loadManagerData', main: 'buildManagerMainHtml', start: 'manager.pick',
-    mount: () => { if (S.managerData?.view === 'graph') kpCall('mountManagerGraph'); },
-  },
-  inspector: {}, // scoped: mod/detail.js registers inspector.view
-  locator: { start: 'locator.addArea' }, // scoped: mod/locator.js registers locator.view
-  chronicler: { start: 'chronicler.addLine' }, // scoped: mod/chronicler.js registers chronicler.view
-  wanderer: { start: 'wanderer.place' }, // scoped: mod/wanderer.js registers wanderer.view
-  narrator: { start: 'narrator.addDialogue' }, // scoped: mod/ registers narrator.view
-  author: { start: 'author.newChapter' }, // scoped: mod/ registers author.view
-  scribe: { start: 'scribe.newSession' }, // scoped: mod/ registers scribe.view
-  drafter: {}, // scoped: mod/drafter.js registers drafter.view
-  exhibitor: { start: 'exhibitor.editFilter' }, // scoped: mod/exhibitor.js registers exhibitor.view
-  sketcher: { start: 'sketcher.newPage' }, // scoped: mod/ registers sketcher.view
-  designer: { start: 'designer.addShape' }, // scoped: mod/ registers designer.view
-  diviner: { start: 'diviner.newTable' }, // scoped: mod/diviner.js registers diviner.view
+  manager: { start: 'manager.pick' },
+  inspector: {},
+  locator: { start: 'locator.addArea' },
+  chronicler: { start: 'chronicler.addLine' },
+  wanderer: { start: 'wanderer.place' },
+  narrator: { start: 'narrator.addDialogue' },
+  author: { start: 'author.newChapter' },
+  scribe: { start: 'scribe.newSession' },
+  drafter: {},
+  exhibitor: { start: 'exhibitor.editFilter' },
+  sketcher: { start: 'sketcher.newPage' },
+  designer: { start: 'designer.addShape' },
+  diviner: { start: 'diviner.newTable' },
 };
-
-// One part of a kind's page as a callable, or null. A string part names a
-// global; a function part is already the callable.
-function kindPagePart(kind, part) {
-  const p = KIND_PAGE[kind]?.[part];
-  if (!p) return null;
-  return typeof p === 'function' ? p : kpFn(p);
-}
 
 // The view-chip bar every kind's toolbar carried its own copy of.
 //   views   the view ids, in order

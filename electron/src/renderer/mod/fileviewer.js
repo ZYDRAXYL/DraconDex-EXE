@@ -94,9 +94,9 @@ function fileViewerZoom(dz) {
   const f = S.filePreview;
   if (!f) return;
   f.zoom = Math.min(4, Math.max(0.2, f.zoom + dz));
-  const img = q('#fv-img');
+  const img = fq('#fv-img');
   if (img) img.style.transform = `scale(${f.zoom})`;
-  const lbl = q('#fv-zoom-label');
+  const lbl = fq('#fv-zoom-label');
   if (lbl) lbl.textContent = `${Math.round(f.zoom * 100)}%`;
 }
 

@@ -143,7 +143,7 @@ function qsInsertLink(name) {
 async function qsPinToCanvas(item) {
   const m = S.activeModuleNode;
   if (m?.kind === 'sketcher' && S.sketcherData?.pageId) {
-    const board = q('#sk-board');
+    const board = pbRoot(S.sketcherData.iid)?.querySelector('#sk-board');
     const zoom = (typeof skTool !== 'undefined' && skTool.zoom[m.id]) || 1;
     const px = board ? (board.scrollLeft + board.clientWidth / 2) / zoom : 800;
     const py = board ? (board.scrollTop + board.clientHeight / 2) / zoom : 550;

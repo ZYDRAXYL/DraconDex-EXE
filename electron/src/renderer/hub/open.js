@@ -18,14 +18,11 @@ async function openModuleNode(id) {
   updateStatusBar({ item: null, words: null, saveState: null });
   renderModuleRail();
   renderNexusHome();
-  const loaders = [loadModulePage(m)];
-  const load = kindPagePart(m.kind, 'load'); // hub/kind-page.js
-  if (load) loaders.push(load(m));
   // renderNexusHome() above has already painted the shell, so the pane sits
-  // there empty until these IPC loads resolve — on a large module that reads as
-  // a click that did nothing.
+  // there empty until the page loads — on a large module that reads as a
+  // click that did nothing.
   setBusy('#main-inner', true);
-  try { await Promise.all(loaders); }
+  try { await loadModulePage(m); }
   finally { setBusy('#main-inner', false); }
   if (S.activeModuleNode?.id === id) renderNexusHome();
 }

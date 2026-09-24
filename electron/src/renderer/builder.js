@@ -476,7 +476,6 @@ function renderBuilderPanes(contentHtml, runMounts) {
       if (!body.innerHTML.trim() && pane.active) {
         body.innerHTML = withRenderPane(idx, () => builderStaticPageHtml(builderParseKey(pane.active)));
       }
-      builderNeutralizeIds(paneEl);
     }
   }
   if (runMounts) runMounts();
@@ -874,11 +873,13 @@ function builderStaticPageHtml(ref) {
   return '';
 }
 
-function builderNeutralizeIds(paneEl) {
-  paneEl.querySelectorAll('.bpane-body [id]').forEach(el => {
-    el.dataset.bid = el.id;
-    el.removeAttribute('id');
-  });
+// The focused pane's copy of a page element. Two panes may show the same
+// page, so a page's ids repeat across the grid (v5 Part 8 dropped the pass
+// that stripped them from unfocused panes); a page that is not made of
+// scoped components (a file, the Sage Hut) looks its parts up here.
+function fq(sel) {
+  const b = builderState();
+  return q(`#main-inner [data-pane="${b.focused}"] .bpane-body`)?.querySelector(sel) || q(sel);
 }
 
 // ── Focused-pane shortcuts (Ctrl+W close tab · Ctrl+Tab cycle) ──────────

@@ -66,7 +66,7 @@ function buildExhibitorInspectorHtml(d, n) {
 
 function filterExhibitorPalette(v) {
   const needle = String(v || '').trim().toLowerCase();
-  document.querySelectorAll('#exh-palette .exh-pal-row').forEach(row => {
+  (pbQOr('#exh-palette')?.querySelectorAll('.exh-pal-row') || []).forEach(row => {
     row.style.display = !needle || row.dataset.name.includes(needle) ? '' : 'none';
   });
 }

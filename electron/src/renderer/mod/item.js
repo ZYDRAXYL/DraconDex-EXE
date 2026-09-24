@@ -75,7 +75,7 @@ const ITEM_KIND = {
     nameOf: (c) => c.name,
     async renderBody() { return `<div id="author-item-editor" class="scribe-editor au-editor"></div>`; },
     mount(node) {
-      mountAuthorRichEditor(q('#author-item-editor'), node.item);
+      mountAuthorRichEditor(fq('#author-item-editor'), node.item);
     },
   },
   scribe: {
@@ -90,7 +90,7 @@ const ITEM_KIND = {
       });
     },
     mount() {
-      const el = q('#item-chs-stream');
+      const el = fq('#item-chs-stream');
       if (el) el.scrollTop = el.scrollHeight;
       bindChatBubbleDrag('item-chs-stream');
     },
@@ -154,7 +154,7 @@ function buildItemPageHtml(node) {
 // scoped to a specific session id rather than S.chatScribeData's current
 // selection, and refreshing via openItemNode instead of renderNexusHome. ──
 async function sendItemChatMessage(sessionId) {
-  const el = q('#item-chs-input');
+  const el = fq('#item-chs-input');
   const text = el?.value.trim();
   if (!text) return;
   await api.chatscribe.createMessage(sessionId, text);
@@ -167,8 +167,8 @@ async function sendItemChatMessage(sessionId) {
 // 'item-dn'})) and refreshing via openItemNode instead of openModuleNode. ──
 async function saveItemDesignNode(id) {
   const n = S.activeItemNode.item;
-  const text = q('#item-dn-text')?.value ?? n.node_text;
-  const shape = q('#item-dn-shape')?.value || n.shape;
+  const text = fq('#item-dn-text')?.value ?? n.node_text;
+  const shape = fq('#item-dn-shape')?.value || n.shape;
   const colorEl = document.querySelector('#item-dn-colors .sk-swatch.act');
   const color = colorEl ? colorEl.dataset.color : n.color;
   const moduleId = S.activeItemNode.moduleId;

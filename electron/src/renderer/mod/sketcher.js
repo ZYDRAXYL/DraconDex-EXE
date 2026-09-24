@@ -349,7 +349,7 @@ async function mountSketcherExtras() {
   const d = S.sketcherData;
   if (!d) return;
   if (d.view === 'gallery') {
-    for (const img of document.querySelectorAll('#sk-gallery img[data-page]')) {
+    for (const img of (pbRoot(d.iid)?.querySelectorAll('#sk-gallery img[data-page]') || [])) {
       img.src = await sketchPageDataUrl(Number(img.dataset.page), 0.16);
     }
   } else if (d.view === 'export') {

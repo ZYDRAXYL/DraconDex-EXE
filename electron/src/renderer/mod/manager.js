@@ -20,6 +20,21 @@ const MANAGER_VIEW_LABEL = { cards: 'Cards', list: 'List', table: 'Table', graph
 
 const isDataKind = (kind) => KIND_CATEGORY[kind] === 'data';
 
+// v5 Part 8: a scoped page component (page/kind-state.js). The selection and
+// its rows belong to the module; the view, the open list rows and the graph
+// layout belong to each instance.
+const MGR = kindState({
+  prop: 'managerData', kind: 'manager', component: 'manager.view', views: MANAGER_VIEWS,
+  instanceKeys: ['listOpen', 'nodePos'], defaults: () => ({ listOpen: new Set(), nodePos: null }),
+});
+registerComponent('manager.view', {
+  kind: 'manager', label: () => kindLabel('manager'), borrow: true,
+  presets: () => MANAGER_VIEWS, presetLabel: (p) => MANAGER_VIEW_LABEL[p],
+  load: (m) => loadManagerData(m),
+  render: (c) => buildManagerMainHtml(c.source, c),
+  mount: () => { if (S.managerData?.view === 'graph') mountManagerGraph(); },
+});
+
 function parseManagerPicks(ui) {
   try {
     const ids = JSON.parse(ui.managerPicks || '[]');
@@ -42,22 +57,11 @@ async function loadManagerData(m) {
   const rows = pool.filter(it => matched.has(it.id))
     .map(it => ({ ...it, picked: picks.has(it.id) }))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const prev = (S.managerData && S.managerData.moduleId === m.id) ? S.managerData : null;
-  S.managerData = {
-    moduleId: m.id, def, picks, rows, pool, relations,
-    // The view used to be one global (S.managerView), which two Manager tabs
-    // in split panes would fight over. It lives on the module's own data now.
-    view: MANAGER_VIEWS.includes(ui.activeView) ? ui.activeView : 'cards',
-    listOpen: prev?.listOpen || new Set(),
-    nodePos: prev?.nodePos || null,
-  };
+  MGR.setModule(m.id, { moduleId: m.id, ui, def, picks, rows, pool, relations });
 }
 
-async function setManagerView(moduleId, view) {
-  if (S.managerData?.moduleId === moduleId) S.managerData.view = view;
-  await api.module.setUi(moduleId, 'activeView', view);
-  if (S.inspectorData?.moduleId === moduleId) S.inspectorData.ui = { ...S.inspectorData.ui, activeView: view };
-  renderNexusHome();
+async function setManagerView(view) {
+  await MGR.setView(view); // the instance's preset (page/kind-state.js)
 }
 
 // Elements a selected module holds — the Nest's own item rows, already
@@ -70,11 +74,11 @@ function managerElementCount(id) {
 // The folder a module sits in, for the table's "where" column.
 const managerFolderName = (id) => findModuleNode(findModuleNode(id)?.parent_id)?.name || '—';
 
-function buildManagerMainHtml(m) {
-  const d = (S.managerData && S.managerData.moduleId === m.id) ? S.managerData : null;
+function buildManagerMainHtml(m, c) {
+  const d = MGR.instance(c);
   const view = d?.view || 'cards';
   const rows = d?.rows || [];
-  const viewBar = viewBarHtml(MANAGER_VIEWS, view, v => `setManagerView(${m.id},'${v}')`, v => MANAGER_VIEW_LABEL[v]);
+  const viewBar = viewBarHtml(MANAGER_VIEWS, view, v => `setManagerView('${v}')`, v => MANAGER_VIEW_LABEL[v]);
   const toolbar = `<div class="classifier-toolbar">
     <span class="vw-filterlabel">${t('exhibitorFilter')}</span>${d ? filterChipsHtml(d.def) : ''}
     ${cmdBtn('manager.editFilter', { moduleId: m.id }, { iconOnly: true })}
@@ -87,7 +91,7 @@ function buildManagerMainHtml(m) {
   let body;
   if (view === 'list') body = rows.map(r => buildManagerListRow(r)).join('');
   else if (view === 'table') body = renderManagerTable(rows);
-  else if (view === 'graph') body = renderManagerGraphHtml(m);
+  else if (view === 'graph') body = renderManagerGraphHtml(d);
   else body = renderManagerCards(rows);
   return `${toolbar}${body}`;
 }
@@ -132,8 +136,8 @@ function renderManagerTable(rows) {
 // ── List view — each module opens into its own elements ─────────────────
 // A read-only lens: no drag or rename here, the same reasoning that keeps
 // buildNestItemRow out of the Nest's buildNestRow recursion.
-function buildManagerListRow(r) {
-  const open = !!S.managerData?.listOpen.has(r.id);
+function buildManagerListRow(r, d) {
+  const open = !!d?.listOpen.has(r.id);
   const mm = findModuleNode(r.id);
   if (mm && ITEM_KIND[mm.kind] && open) ensureNestItemsLoaded(r.id);
   const items = Array.isArray(S.nestItems.get(r.id)) ? S.nestItems.get(r.id) : [];
@@ -165,7 +169,7 @@ function toggleManagerListRow(id) {
   const open = S.managerData?.listOpen;
   if (!open) return;
   if (open.has(id)) open.delete(id); else open.add(id);
-  renderNexusHome();
+  rerenderPageBlocks((i) => i.iid === S.managerData.iid);
 }
 
 // ── Right-click ─────────────────────────────────────────────────────────
@@ -176,16 +180,15 @@ function openManagerRowMenu(ev, id) {
 
 // ── Hand-pick ───────────────────────────────────────────────────────────
 async function setManagerPick(managerId, moduleId, on) {
-  const d = S.managerData;
-  const picks = new Set(d?.moduleId === managerId ? d.picks : []);
+  const picks = new Set(MGR.M[managerId]?.picks || []);
   if (on) picks.add(moduleId); else picks.delete(moduleId);
   await api.module.setUi(managerId, 'managerPicks', JSON.stringify([...picks]));
-  await openModuleNode(managerId);
+  await reloadSource(managerId);
 }
 
 function openManagerPickModal(managerId) {
-  const d = S.managerData;
-  if (!d || d.moduleId !== managerId) return;
+  const d = MGR.M[managerId];
+  if (!d) return;
   const rows = [...d.pool].sort((a, b) => a.name.localeCompare(b.name)).map(it => `
     <label class="fv-useimg mgr-pick-row" data-name="${x(it.name.toLowerCase())}">
       <input type="checkbox" class="mgr-pick" value="${it.id}" ${d.picks.has(it.id) ? 'checked' : ''}>
@@ -213,5 +216,5 @@ async function submitManagerPickModal(managerId) {
   const ids = [...document.querySelectorAll('.mgr-pick:checked')].map(el => Number(el.value));
   closeModal();
   await api.module.setUi(managerId, 'managerPicks', JSON.stringify(ids));
-  await openModuleNode(managerId);
+  await reloadSource(managerId);
 }

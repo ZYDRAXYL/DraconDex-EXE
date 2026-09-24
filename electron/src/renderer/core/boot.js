@@ -131,7 +131,6 @@ async function init() {
   renderSettingsMenu();
   translateStaticChrome();
   renderProjectTabs();
-  registerLegacyComponents(); // page/registry.js — every mod/*.js is in by now
   renderNexusHome();
   // Plugin panel contributions (v4.3.0). Deliberately NOT awaited: it only
   // adds buttons to the pane head, so it must not sit on the path to first

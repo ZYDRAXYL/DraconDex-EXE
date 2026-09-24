@@ -373,22 +373,25 @@ let pageViewResizeState = null;
 function startPageViewResize(ev) {
   if (ev.button !== 0) return;
   ev.preventDefault();
-  const el = q('.page-view');
+  // The handle's own page: a split can show two page views at once.
+  const shell = ev.target?.closest?.('.page-view-shell');
+  const el = shell?.querySelector('.page-view');
   if (!el) return;
-  pageViewResizeState = { startX: ev.clientX, startWidth: el.getBoundingClientRect().width };
-  q('#page-view-resize')?.classList.add('is-resizing');
+  pageViewResizeState = { startX: ev.clientX, startWidth: el.getBoundingClientRect().width, shell, grip: ev.target };
+  ev.target.classList.add('is-resizing');
 }
 document.addEventListener('mousemove', (ev) => {
   if (!pageViewResizeState) return;
-  const shellW = q('.page-view-shell')?.getBoundingClientRect().width || 99999;
+  const { shell } = pageViewResizeState;
+  const shellW = shell.getBoundingClientRect().width || 99999;
   S.pageViewWidth = Math.max(480, Math.min(shellW, pageViewResizeState.startWidth + (ev.clientX - pageViewResizeState.startX)));
-  const el = q('.page-view');
+  const el = shell.querySelector('.page-view');
   if (el) { el.style.flex = `0 0 ${S.pageViewWidth}px`; el.style.maxWidth = S.pageViewWidth + 'px'; }
 });
 document.addEventListener('mouseup', () => {
   if (!pageViewResizeState) return;
+  pageViewResizeState.grip.classList.remove('is-resizing');
   pageViewResizeState = null;
-  q('#page-view-resize')?.classList.remove('is-resizing');
   localStorage.setItem(PAGE_VIEW_WIDTH_KEY, String(S.pageViewWidth));
 });
 

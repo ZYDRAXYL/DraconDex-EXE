@@ -455,7 +455,6 @@ const S = {
   // (Plan part2 #2.3) — {nexusId, stats?, linkRows?, graph?}, each a promise.
   sageHutCache:null,
   classifierData:null, classifierView:'table', classifierSelectedObject:null,
-  managerData:null,
   locatorAreas:null,
   chroniclerData:null,
   wandererData:null,

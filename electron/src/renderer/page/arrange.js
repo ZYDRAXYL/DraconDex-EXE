@@ -21,7 +21,7 @@ function pbArrangeBarHtml(c) {
   const name = b.block_type === 'component' ? componentLabel(comp) : t(PB_TYPE_KEY[b.block_type] || 'pbText');
   const src = b.source_key && c.source && c.source.id !== c.page.moduleId ? ` <span class="pb-src" data-no-i18n>· ${x(c.source.name)}</span>` : '';
   const presets = comp?.presets ? comp.presets() : [];
-  const preset = presets.length > 1 && !comp.legacy ? `<select class="pb-preset" onchange="pbSetPreset(${xj(c.iid)},this.value)">
+  const preset = presets.length > 1 ? `<select class="pb-preset" onchange="pbSetPreset(${xj(c.iid)},this.value)">
       ${presets.map((p) => `<option value="${x(p)}"${(c.config.preset || presets[0]) === p ? ' selected' : ''}>${x(comp.presetLabel ? comp.presetLabel(p) : p)}</option>`).join('')}
     </select>` : '';
   const cols = b.block_type === 'columns' ? `<select class="pb-preset" onchange="pbSetConfig(${xj(c.iid)},{n:Number(this.value)})" data-no-i18n>
