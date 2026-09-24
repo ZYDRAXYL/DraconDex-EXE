@@ -482,10 +482,6 @@ function renderBuilderPanes(contentHtml, runMounts) {
 }
 
 function builderPaneHeadHtml(i, pane, focused) {
-  const canBack = pane.hIdx > 0, canFwd = pane.hIdx < pane.history.length - 1;
-  const nav = `
-    <button class="btn btn-g btn-i bnav" ${canBack ? '' : 'disabled'} onclick="builderFocusPane(${i}).then(builderBack)" title="${t('navBack')}">${I.chevronLeft}</button>
-    <button class="btn btn-g btn-i bnav" ${canFwd ? '' : 'disabled'} onclick="builderFocusPane(${i}).then(builderForward)" title="${t('navForward')}">${I.chevronRight}</button>`;
   const tabs = pane.tabs.map(key => {
     const meta = builderTabMeta(key);
     if (!meta) return '';
@@ -511,7 +507,8 @@ function builderPaneHeadHtml(i, pane, focused) {
   // single-tab guard above and onBodyDrop's disarmed drag-to-split below.
   // The page's own buttons (plugin panels, history) are on the page's head
   // since v5 Part 8 (§12.6); the Inspector toggle went with the dock.
-  return `${nav}<div class="bpane-tabs" ondragover="onTabStripDragOver(event,${i})" ondrop="onTabStripDrop(event,${i})">${tabs}</div>`;
+  // Back / forward moved onto the page's address row (page/address.js).
+  return `<div class="bpane-tabs" ondragover="onTabStripDragOver(event,${i})" ondrop="onTabStripDrop(event,${i})">${tabs}</div>`;
 }
 
 // ═══ Pane right-click context menu (Plan procress1 part2 #2) ══════════

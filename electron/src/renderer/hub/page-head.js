@@ -1,56 +1,42 @@
 'use strict';
-// ═══ Page navbar (v5 Part 4, APP docs/V5.md §8.2) ═══════════════════════
+// ═══ Page head (v5 Part 4, APP docs/V5.md §8.2; v5 Part 8, §12.10) ═══════
 // The one builder for the header every page opens with — the module page,
 // an element (item) page, a file, the Import Dock, Sage Hut, Wyvern and
 // Dragon each carried their own copy of the same `.detail-head.module-head`
-// markup before. It is the app's first position:sticky element: the scroller
-// is .bpane-body / #main-inner, so the head pins to the top of the pane
-// while the page scrolls under it.
+// markup before.
 //
-// Folding it is machine chrome, not vault data: one boolean in S.settings
-// (localStorage, the core/tool-toggle.js tier), shared by every page. The
-// folded bar keeps the icon and the title — folded, you still know where
-// you are — and the unfold button, which is sticky with it so it can be
-// reached from any scroll position.
+// Since v5 Part 8 it is two parts: the ADDRESS ROW (page/address.js) is the
+// sticky one — the scroller is .bpane-body / #main-inner, so it pins to the
+// top of the pane while the page scrolls under it — and the title below it
+// scrolls away with the page. The old sticky title and its fold toggle
+// went: a one-line address row has nothing to fold.
 //
+//   o.addr       which page this is, for the address row (page/address.js)
 //   o.color      accent for the left rule and the icon
 //   o.icon       icon HTML; o.iconOnclick makes it a button
 //   o.title      title HTML (already escaped — may be an inline input)
-//   o.titleText  plain title, for the folded bar
+//   o.titleText  plain title
 //   o.after      HTML after the title on the same line (handle, kind chip)
-//   o.sub        a second line (hint text, breadcrumb)
-//   o.tags       the chips row (.mtags) — hidden while folded
-//   o.acts       the page's own buttons, at the end of the title row
+//   o.sub        a second line (hint text)
+//   o.tags       the chips row (.mtags)
+//   o.acts       the page's own buttons, at the end of the address row
 //   o.cls        extra class names
-//   o.bare       o.sub replaces the title row (Wyvern / Dragon breadcrumbs)
-//   o.forceOpen  render unfolded regardless — an inline rename / handle edit
-//                needs its input on screen
+//   o.bare       o.sub is the whole head (Wyvern / Dragon breadcrumbs —
+//                those workspaces have no panes, so no address row)
 
 function pageHeadHtml(o = {}) {
   const col = o.color || 'var(--accent)';
-  const folded = !!S.settings.navbarFolded && !o.forceOpen;
-  const fold = `<button class="btn btn-g btn-i navbar-fold" onclick="togglePageHeadFold()"
-    title="${x(t(folded ? 'navbarUnfold' : 'navbarFold'))}" aria-expanded="${folded ? 'false' : 'true'}">${folded ? I.chevronDown : I.chevronUp}</button>`;
   const icon = o.icon ? `<span class="kicon" style="color:${x(col)}${o.iconOnclick ? ';cursor:pointer' : ''}"${o.iconOnclick ? ` onclick="event.stopPropagation();${o.iconOnclick}"` : ''} data-no-i18n>${o.icon}</span>` : '';
-  const cls = ['detail-head', 'module-head', 'page-navbar', folded ? 'is-folded' : '', o.cls || ''].filter(Boolean).join(' ');
-  if (folded) {
-    return `<div class="${cls}" style="border-left:4px solid ${x(col)}">
-      <div class="navbar-row">${icon}<span class="navbar-title" data-no-i18n>${x(o.titleText || '')}</span>${o.acts ? `<span class="navbar-acts">${o.acts}</span>` : ''}${fold}</div>
+  const cls = ['detail-head', 'module-head', o.cls || ''].filter(Boolean).join(' ');
+  if (o.bare) {
+    return `<div class="${cls} page-navbar" style="border-left:4px solid ${x(col)}">
+      <div class="navbar-row"><div class="navbar-grow">${o.sub || ''}</div></div>
     </div>`;
   }
-  const row = o.bare
-    ? `<div class="navbar-row"><div class="navbar-grow">${o.sub || ''}</div>${fold}</div>`
-    : `<div class="navbar-row">
-        <h2 class="navbar-h">${icon}${o.title || ''}${o.after || ''}</h2>${o.acts ? `<span class="navbar-acts">${o.acts}</span>` : ''}${fold}
-      </div>${o.sub ? `<div class="drafter-hint navbar-sub">${o.sub}</div>` : ''}`;
-  return `<div class="${cls}" style="border-left:4px solid ${x(col)}">
-    ${row}
-    ${o.tags ? `<div class="mtags">${o.tags}</div>` : ''}
-  </div>`;
-}
-
-function togglePageHeadFold() {
-  S.settings.navbarFolded = !S.settings.navbarFolded;
-  saveUiSettings();
-  renderNexusHome();
+  return `<div class="page-navbar addr-bar">${addressRowHtml(o.addr || { label: o.titleText }, o.acts)}</div>
+    <div class="${cls} page-title" style="border-left:4px solid ${x(col)}">
+      <div class="navbar-row"><h2 class="navbar-h">${icon}${o.title || ''}${o.after || ''}</h2></div>
+      ${o.sub ? `<div class="drafter-hint navbar-sub">${o.sub}</div>` : ''}
+      ${o.tags ? `<div class="mtags">${o.tags}</div>` : ''}
+    </div>`;
 }

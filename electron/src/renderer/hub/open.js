@@ -82,7 +82,7 @@ function buildModuleDetailHtml(m) {
   return `<div class="module-page" data-module="${m.id}">
     ${pageHeadHtml({
       color: col, icon: moduleIconHtml(m), iconOnclick: `openModuleIconPopup(${m.id},this)`,
-      title: nameHtml, titleText: m.name, forceOpen: renamingHead || S.editingHandleId === m.id,
+      title: nameHtml, titleText: m.name, addr: { moduleId: m.id },
       after: `${moduleHandleHtml(m)}<span class="kind-chip" data-no-i18n>${x(kindLabelBoth(m.kind))}</span>`,
       acts: pageHeadActsHtml(m.id, null),
     })}

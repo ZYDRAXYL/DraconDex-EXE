@@ -157,6 +157,7 @@ function buildItemPageHtml(node) {
       after: `<span class="kind-chip" data-no-i18n>${x(t(reg.badgeKey))}</span>`,
       sub: `<span data-no-i18n>${x(node.m?.name || '')}</span>`,
       acts: paged ? pageHeadActsHtml(node.moduleId, node.itemKey) : '',
+      addr: { moduleId: node.moduleId, itemName: name },
     })}
     ${paged ? `<div class="item-page-body module-page">${itemPageNoteHtml(node)}${pageBlocksHtml(node.moduleId, node.itemKey)}</div>`
       : `<div class="item-page-body">${node.bodyHtml}</div>`}`;

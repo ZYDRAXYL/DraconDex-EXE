@@ -540,11 +540,10 @@ select.fp-input[multiple]{padding:2px}
 .page-navbar .navbar-row{display:flex;align-items:center;gap:8px}
 .page-navbar .navbar-h{margin:0;font-size:1.15em;display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap}
 .page-navbar .navbar-grow{flex:1;min-width:0}
-.page-navbar .navbar-sub{margin-top:2px}
-.page-navbar .navbar-fold{margin-left:auto;flex-shrink:0;opacity:.6}
-.page-navbar .navbar-fold:hover{opacity:1}
-.page-navbar.is-folded{padding-bottom:6px;margin-bottom:10px}
-.page-navbar .navbar-title{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.page-navbar .navbar-sub,.page-title .navbar-sub{margin-top:2px}
+.page-title{padding-left:12px}
+.page-title .navbar-row{display:flex;align-items:center;gap:8px}
+.page-title .navbar-h{margin:0;font-size:1.15em;display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap}
 .module-handle-inp{width:160px;font-size:calc(12px * var(--fsc,1))}
 .module-handle-add{padding:1px 7px;opacity:.55;font-size:calc(11px * var(--fsc,1))}
 .module-handle-add:hover{opacity:1}

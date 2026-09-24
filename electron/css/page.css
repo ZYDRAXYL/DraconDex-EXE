@@ -90,3 +90,25 @@
   margin: 0 0 10px; padding: 8px 12px; border: 1px dashed var(--border); border-radius: 8px;
   color: var(--t2); font-size: 12px;
 }
+
+/* The address row (page/address.js) — the sticky part of every page head. */
+.addr-bar{padding:4px 0 6px;margin-bottom:8px;border-bottom:1px solid var(--border)}
+.addr-row{display:flex;align-items:center;gap:6px;min-width:0}
+.addr-nav{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.addr-path{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;flex-wrap:nowrap;overflow:hidden;
+  padding:3px 8px;border-radius:6px;cursor:text;font-size:calc(12px * var(--fsc,1));color:var(--t2)}
+.addr-path:hover{background:var(--raised)}
+.addr-seg{display:inline-flex;align-items:center;gap:1px;white-space:nowrap;cursor:default}
+.addr-seg .addr-name{cursor:pointer;padding:1px 3px;border-radius:4px}
+.addr-seg .addr-name:hover{color:var(--t1);background:var(--hover,var(--raised))}
+.addr-seg.cur .addr-name{color:var(--t1);font-weight:600}
+.addr-seg.is-folder{cursor:pointer;padding:1px 3px;border-radius:4px}
+.addr-seg.is-folder:hover{color:var(--t1)}
+.addr-caret{cursor:pointer;opacity:.55;padding:0 3px;font-size:.85em}
+.addr-caret:hover{opacity:1}
+.addr-sep{opacity:.4;padding:0 2px}
+.addr-input{flex:1;min-width:0;width:100%;background:transparent;border:none;outline:none;color:var(--t1);font:inherit}
+.addr-sugg{position:fixed;z-index:9999;max-height:50vh;overflow:auto;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);box-shadow:var(--shadow-menu);padding:4px}
+.addr-sugg .kind-list-item{cursor:pointer}
+.addr-row .navbar-acts{display:flex;align-items:center;gap:4px;flex-shrink:0}
