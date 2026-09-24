@@ -12,9 +12,9 @@
 // fresh), exactly like clicking an inactive editor group.
 //
 // A "page" is one of: {kind:'module',id} · {kind:'file',id} ·
-// {kind:'sagehut',tab}. Legacy Director/entity tabs stay in the slim
-// #builder-tabs strip inline in the title bar (renderProjectTabs,
-// core.js); the split-layout preset picker is its own title-bar button
+// {kind:'sagehut',tab}. A top-row pane's tab strip is lifted onto the
+// title bar (core/titlebar-tabs.js, v5 Part 8); the split-layout preset
+// picker is its own title-bar button
 // (#layout-menu-wrap, also core.js) driven by builderResetToPreset below.
 
 // S.builder.panes stays a flat, index-based array — every tab-management
@@ -359,6 +359,7 @@ function ensureNodeElement(node) {
       // than holding a reference to the one that existed at observe() time.
       const head = el.querySelector('.bpane-head');
       new ResizeObserver(() => syncTabBarCompact(head.querySelector('.bpane-tabs'))).observe(head);
+      observeTitlebarTabs(el); // core/titlebar-tabs.js — a top-row pane's tabs sit on the title bar
       // Plan procress1 part2 #2: split/close-pane actions live here now
       // instead of as inline buttons — bound once, like the ResizeObserver
       // above, since .bpane-head's own element survives every re-render.
@@ -478,6 +479,8 @@ function renderBuilderPanes(contentHtml, runMounts) {
       }
     }
   }
+  observeTitlebarTabs(main);
+  syncTitlebarTabs();
   if (runMounts) runMounts();
 }
 

@@ -15,7 +15,6 @@
 body[data-workspace="wyvern"] #nav-sidebar,
 body[data-workspace="wyvern"] #left-panel,
 body[data-workspace="wyvern"] #left-panel-resize,
-body[data-workspace="wyvern"] #builder-tabs,
 body[data-workspace="wyvern"] #layout-menu-wrap,
 body[data-workspace="wyvern"] #hub-toggle-btn,
 body[data-workspace="wyvern"] #titlebar-vault{display:none}
@@ -118,7 +117,6 @@ body[data-nav-orientation="horizontal"][data-nav-display="label"] #nav-sidebar .
    console below. */
 body[data-workspace="dragon"] #left-panel,
 body[data-workspace="dragon"] #left-panel-resize,
-body[data-workspace="dragon"] #builder-tabs,
 body[data-workspace="dragon"] #layout-menu-wrap{display:none}
 
 /* Dragon's ERP console (src/renderer/dragon.js) — toolbar + KPI strip +

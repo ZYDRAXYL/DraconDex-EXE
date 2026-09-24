@@ -4,24 +4,6 @@
 /* ═══ v3 redo pass — builder tab strip, title-bar vault label, header chips
    (progress.md mockups 01-33; decisions (o), A.2/A.3) ═══════════════════ */
 .titlebar-vault{font-size:calc(12px * var(--fsc,1));color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
-/* Lives inline in #title-tab-bar now (moved from a second row below it), so it
-   needs its own no-drag region and chips shrunk to fit the fixed 38px bar. */
-#builder-tabs{
-	display:flex;align-items:center;gap:2px;min-width:0;flex-shrink:1;
-	height:100%;overflow-x:auto;overflow-y:hidden;margin-left:-6px;
-	-webkit-app-region:no-drag;
-}
-#builder-tabs.empty{display:none}
-#builder-tabs::-webkit-scrollbar{height:0}
-#builder-tabs .project-tab{background:var(--raised);height:30px;min-width:120px;border-radius:var(--r);border-bottom:1px solid transparent}
-#builder-tabs .project-tab.active{
-	background:var(--raised);border-color:var(--border);color:var(--t1);
-	box-shadow:inset 0 2px 0 var(--accent);
-}
-#builder-tabs .project-tab .ek{
-	font-size:calc(9.5px * var(--fsc,1));color:var(--t3);border:1px solid var(--border);
-	border-radius:3px;padding:0 4px;flex-shrink:0;letter-spacing:.03em;
-}
 /* accent "create Major module" rail tool (mockup 01) */
 #nav-sidebar .nav-btn.create{background:var(--accent);color:var(--on-accent);border-radius:var(--r)}
 #nav-sidebar .nav-btn.create:hover{background:var(--accentH)}

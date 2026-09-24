@@ -294,7 +294,7 @@ function settingPreviewLang(lang){
 const SETTING_AREA_CONTAINERS = {
   leftPanel: ['#left-panel'],
   navSidebar: ['#nav-sidebar'],
-  builder: ['#builder-tabs', '#main-area'],
+  builder: ['#main-area'], // a top-row pane's tabs are in #main-area too, lifted onto the title bar
 };
 function applyAreaScales(){
   const areas = S.settings.areaScale || {};

@@ -28,8 +28,8 @@ function updateTopNavButton(){
   });
 }
 
-// The title bar's own parts. #builder-tabs is where the panes' tab groups
-// sit on the title bar (builder.js, §12).
+// The title bar's own parts. The panes' tab groups are lifted over it by
+// core/titlebar-tabs.js (§12.11).
 function renderProjectTabs(){
   updateTitlebarVault();
   renderLayoutMenuBtn();

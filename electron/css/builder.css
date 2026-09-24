@@ -223,3 +223,9 @@
 /* Artisan v3 templates (Phase 23) */
 .artisan-card.artisan-v3{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .artisan-chip small{color:var(--t3);margin-left:3px}
+/* v5 Part 8 (§12.11): a top-row pane's tab strip, lifted onto the title bar
+   by core/titlebar-tabs.js. The head drags the window; only the tabs don't,
+   so the space right of the last tab is still title bar. */
+.bpane-head.tb-tabgroup{position:fixed;z-index:60;background:transparent;border-bottom:none;padding:0 4px;
+	align-items:flex-end;-webkit-app-region:drag}
+.bpane-head.tb-tabgroup .bpane-tabs{flex:0 1 auto;min-height:0;height:100%;align-items:flex-end;padding-top:5px;-webkit-app-region:no-drag}
