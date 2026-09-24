@@ -6,6 +6,8 @@
 async function openModuleNode(id) {
   const m = findModuleNode(id);
   if (!m) return;
+  // page/focus.js — before the first await, while the click is window.event
+  if (m.kind !== 'collector' && S.activeModuleNode?.id !== id) pageAutoCollapseLeft();
   // Process 6 part 1: used to only toggle-expand a top-level collector —
   // a nested one (parent_id != null) silently no-opped on row click (the
   // chevron's own toggleMajorExpand still worked, but the row body didn't),
@@ -79,7 +81,7 @@ function buildModuleDetailHtml(m) {
   const nameHtml = renamingHead
     ? `<input id="rename-head-${m.id}" class="rename-input" style="font-size:1.15em" value="${x(m.name)}" onclick="event.stopPropagation()" onblur="saveModuleRename(${m.id},this.value)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=${x(JSON.stringify(m.name))};this.blur();}">`
     : `<span ondblclick="startRenameModule(${m.id})">${x(m.name)}</span>`;
-  return `<div class="module-page" data-module="${m.id}">
+  return `<div class="module-page${pageReadableOn(m.id) ? ' page-readable' : ''}" data-module="${m.id}">
     ${pageHeadHtml({
       color: col, icon: moduleIconHtml(m), iconOnclick: `openModuleIconPopup(${m.id},this)`,
       title: nameHtml, titleText: m.name, addr: { moduleId: m.id },
@@ -96,5 +98,6 @@ function buildModuleDetailHtml(m) {
 function pageHeadActsHtml(moduleId, itemKey) {
   const arranging = S.arranging?.has(pageKey(moduleId, itemKey));
   const hist = itemKey == null ? cmdBtn('page.history', {}, { iconOnly: true, cls: `btn-g btn-i bnav${sidePanelOpen('versions') ? ' active' : ''}` }) : '';
-  return `${cmdBtn('page.arrange', {}, { cls: `btn-g btn-sm${arranging ? ' active' : ''}` })}${hist}${typeof pluginPanelButtonsHtml === 'function' ? pluginPanelButtonsHtml() : ''}`;
+  const readable = cmdBtn('page.readable', {}, { iconOnly: true, cls: `btn-g btn-i bnav${pageReadableOn(moduleId) ? ' active' : ''}` });
+  return `${cmdBtn('page.arrange', {}, { cls: `btn-g btn-sm${arranging ? ' active' : ''}` })}${readable}${hist}${typeof pluginPanelButtonsHtml === 'function' ? pluginPanelButtonsHtml() : ''}`;
 }

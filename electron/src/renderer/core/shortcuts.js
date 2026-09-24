@@ -17,6 +17,11 @@ function bindGlobalShortcuts() {
       return;
     }
     if (modalOpen) return;
+    if (key === 'f' && e.shiftKey) { // focus mode (page/focus.js)
+      e.preventDefault();
+      await runCommand('app.focusMode');
+      return;
+    }
     if (key === 'w') { // close active tab (builder pane tab in nexus view)
       e.preventDefault();
       if (!S.activeModule && S.view === 'nexus' && typeof builderCloseActiveTab === 'function') await builderCloseActiveTab();

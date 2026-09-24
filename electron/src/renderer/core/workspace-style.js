@@ -110,6 +110,10 @@ function settingWorkspaceAnimationHtml() {
         <button class="settings-option${speed === 'normal' ? ' active' : ''}" onclick="setAnimationSpeed('normal')">${t('animSpeedNormal')}</button>
         <button class="settings-option${speed === 'slow' ? ' active' : ''}" onclick="setAnimationSpeed('slow')">${t('animSpeedSlow')}</button>
       </div>` : ''}
+    </div>
+    <div class="settings-label" style="margin-top:18px">${t('settingPages')}</div>
+    <div class="settings-group">
+      <div class="togglerow" onclick="toggleAutoCollapseLeft()"><span class="tg${S.settings.autoCollapseLeft !== false ? ' on' : ''}"></span>${t('settingAutoCollapseLeft')}</div>
     </div>`;
 }
 function toggleAnimationsEnabled() {

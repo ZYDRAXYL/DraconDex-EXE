@@ -117,3 +117,11 @@
   font-weight:600;color:var(--t2);cursor:pointer}
 .pb-src-cap:hover{color:var(--accentH)}
 .pb-src-cap .kicon .icon{width:14px;height:14px}
+
+/* Focus (page/focus.js). Focus mode: only the title bar and the page. */
+body.focus-mode #nav-sidebar,body.focus-mode #nav-sidebar-resize,body.focus-mode #left-panel,
+body.focus-mode #left-panel-resize,body.focus-mode #side-panel,body.focus-mode #side-panel-resize,
+body.focus-mode #status-bar{display:none !important}
+body.focus-mode #title-left-zone{width:44px}
+/* Readable width: a measure for long text, centred. */
+.module-page.page-readable > *:not(.page-navbar){box-sizing:border-box;width:100%;max-width:46rem;margin-left:auto;margin-right:auto}

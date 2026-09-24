@@ -119,6 +119,7 @@ async function fetchOneItem(itemKind, moduleId, id) {
 }
 
 async function openItemNode(itemKind, moduleId, id) {
+  if (S.activeItemNode?.id !== id || S.activeItemNode?.itemKind !== itemKind) pageAutoCollapseLeft(); // page/focus.js
   const reg = ITEM_KIND[itemKind];
   if (!reg) return;
   const key = builderPageKey({ kind: 'item', itemKind, moduleId, id });
@@ -159,7 +160,7 @@ function buildItemPageHtml(node) {
       acts: paged ? pageHeadActsHtml(node.moduleId, node.itemKey) : '',
       addr: { moduleId: node.moduleId, itemName: name },
     })}
-    ${paged ? `<div class="item-page-body module-page">${itemPageNoteHtml(node)}${pageBlocksHtml(node.moduleId, node.itemKey)}</div>`
+    ${paged ? `<div class="item-page-body module-page${pageReadableOn(node.moduleId) ? ' page-readable' : ''}">${itemPageNoteHtml(node)}${pageBlocksHtml(node.moduleId, node.itemKey)}</div>`
       : `<div class="item-page-body">${node.bodyHtml}</div>`}`;
 }
 
