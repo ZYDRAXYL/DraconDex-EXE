@@ -47,7 +47,37 @@ const CLS_TEXT_ATTRS = `
 function classifierObjectContent(d, id) {
   const note = d.prepare(`SELECT note FROM classifier_object WHERE id=?`).get(id)?.note || '';
   const vals = d.prepare(CLS_TEXT_ATTRS).all(id).map((r) => r.v || '').filter(Boolean);
-  return [note, ...vals].filter(Boolean).join('\n');
+  const blocks = blockTexts(d, ITEM_BLOCKS, `cobj_${id}`).map((b) => b.v);
+  return [note, ...vals, ...blocks].filter(Boolean).join('\n');
+}
+
+// v5 Part 8 (§12): a page's text and property blocks are the page's own
+// text, so they index under the page's key — module_<id> for a module page,
+// cobj_<id> for an element page split off the shared layout. The shared
+// layout ('*') is template text, the same on every element, and indexes
+// nowhere.
+const PAGE_TEXT = (where) => `SELECT id, content AS v FROM page_block
+  WHERE ${where} AND block_type IN ('text','property') AND content IS NOT NULL AND content<>''
+  ORDER BY block_order, id`;
+const MODULE_BLOCKS = PAGE_TEXT('module_ref=? AND item_key IS NULL');
+const ITEM_BLOCKS = PAGE_TEXT('item_key=?');
+const blockTexts = (d, sql, arg) => { try { return d.prepare(sql).all(arg); } catch (_) { return []; } };
+
+// Rewrite every block row of one page; true when any changed.
+function rewriteBlocks(d, sql, arg, apply) {
+  let any = false;
+  for (const b of blockTexts(d, sql, arg)) {
+    const next = apply(b.v);
+    if (next === b.v) continue;
+    d.prepare(`UPDATE page_block SET content=?, update_at=datetime('now') WHERE id=?`).run(next, b.id);
+    any = true;
+  }
+  return any;
+}
+
+function moduleContent(d, id) {
+  const desc = d.prepare(`SELECT description FROM module WHERE id=?`).get(id)?.description || '';
+  return [desc, ...blockTexts(d, MODULE_BLOCKS, id).map((b) => b.v)].filter(Boolean).join('\n');
 }
 
 const CONTENT_SOURCES = {
@@ -59,8 +89,25 @@ const CONTENT_SOURCES = {
     SELECT ch.id, ch.chapter_content AS c, p.nexus_ref FROM write_chapter ch
     JOIN write_book b ON ch.book_id=b.id JOIN write_series s ON b.series_id=s.id
     JOIN write_project p ON s.project_id=p.id WHERE ch.chapter_content LIKE '%[[%'`),
-  module: column('module', 'description',
-    `SELECT id, description AS c, nexus_ref FROM module WHERE description LIKE '%[[%'`),
+  module: {
+    content: moduleContent,
+    rewrite: (d, id, apply) => {
+      let any = false;
+      const cur = d.prepare(`SELECT description FROM module WHERE id=?`).get(id)?.description;
+      if (cur) {
+        const next = apply(cur);
+        if (next !== cur) { d.prepare(`UPDATE module SET description=?, update_at=datetime('now') WHERE id=?`).run(next, id); any = true; }
+      }
+      if (rewriteBlocks(d, MODULE_BLOCKS, id, apply)) any = true;
+      return any ? moduleContent(d, id) : null;
+    },
+    rebuild: `
+      SELECT m.id, m.nexus_ref, '' AS c FROM module m
+      WHERE m.description LIKE '%[[%' OR EXISTS (
+        SELECT 1 FROM page_block b WHERE b.module_ref=m.id AND b.item_key IS NULL
+          AND b.block_type IN ('text','property') AND b.content LIKE '%[[%')`,
+    rebuildContent: moduleContent,
+  },
   bchp: column('book_chapter', 'chapter_content',
     `SELECT ch.id, ch.chapter_content AS c, m.nexus_ref FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE ch.chapter_content LIKE '%[[%'`),
   // Chat "Scribe" sessions: the indexed content is the concatenation of the
@@ -99,12 +146,16 @@ const CONTENT_SOURCES = {
         d.prepare(`UPDATE classifier_attribute SET attribute_value=?, update_at=datetime('now') WHERE id=?`).run(next, a.id);
         any = true;
       }
+      if (rewriteBlocks(d, ITEM_BLOCKS, `cobj_${id}`, apply)) any = true;
       return any ? classifierObjectContent(d, id) : null;
     },
     rebuild: `
       SELECT o.id, m.nexus_ref, '' AS c FROM classifier_object o JOIN module m ON o.module_ref=m.id
       WHERE o.note LIKE '%[[%' OR EXISTS (
-        SELECT 1 FROM classifier_attribute ca WHERE ca.object_ref=o.id AND ca.attribute_value LIKE '%[[%')`,
+        SELECT 1 FROM classifier_attribute ca WHERE ca.object_ref=o.id AND ca.attribute_value LIKE '%[[%')
+      OR EXISTS (
+        SELECT 1 FROM page_block b WHERE b.item_key='cobj_'||o.id
+          AND b.block_type IN ('text','property') AND b.content LIKE '%[[%')`,
     rebuildContent: classifierObjectContent,
   },
   // v5 Part 4 (§8.4) — the fields opened this round.
@@ -120,6 +171,7 @@ const CONTENT_SOURCES = {
 
 // Vault of a source row, for the save-time reindex hooks of the fields above.
 const NEXUS_OF = {
+  module: `SELECT nexus_ref AS n FROM module WHERE id=?`,
   tlev: `SELECT m.nexus_ref AS n FROM timeline_event te JOIN timeline tl ON te.timeline_id=tl.id JOIN module m ON tl.module_ref=m.id WHERE te.id=?`,
   sdlg: `SELECT m.nexus_ref AS n FROM story_dialogue sd JOIN module m ON sd.module_ref=m.id WHERE sd.id=?`,
   exn: `SELECT m.nexus_ref AS n FROM exhibit_node x JOIN module m ON x.module_ref=m.id WHERE x.id=?`,

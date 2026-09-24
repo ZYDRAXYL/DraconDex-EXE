@@ -777,15 +777,24 @@ h('module:duplicate',   (id)          => db.duplicateModule(id));
 h('module:move',        (nx,id,parentId,ids) => db.moveModule(nx,id,parentId,ids));
 h('module:normalizeReport', ()        => db.takeParentNormalizeReport());
 h('module:count',       (nx)          => db.countModules(nx));
-h('module:getAttrs',    (id)          => db.getModuleAttrs(id));
-h('module:upsertAttr',  (id,aid,n,v)  => db.upsertModuleAttr(id,aid,n,v));
-h('module:deleteAttr',  (id)          => db.deleteModuleAttr(id));
 h('module:getUi',       (id)          => db.getModuleUi(id));
 h('module:setUi',       (id,k,v)      => db.setModuleUi(id,k,v));
 h('module:getTags',     (id)          => db.getModuleTags(id));
 h('module:setTags',     (id,tags)     => db.setModuleTags(id,tags));
 h('module:getLinks',    (id)          => db.getModuleLinks(id));
-h('module:getInspector',(id)          => db.getModuleInspector(id));
+h('module:getProps',    (id,item)     => db.getPageProps(id,item));
+
+// v5 Part 8 (§12) — pages made of blocks (db/page-block.js).
+h('block:list',     (id,item)       => db.listBlocks(id,item));
+h('block:ensure',   (id,item,defs)  => db.ensurePage(id,item,defs));
+h('block:add',      (id,item,b)     => db.addBlock(id,item,b));
+h('block:get',      (id)            => db.getBlock(id));
+h('block:update',   (id,patch)      => db.updateBlock(id,patch));
+h('block:move',     (id,to)         => db.moveBlock(id,to));
+h('block:remove',   (id)            => db.deleteBlock(id));
+h('block:split',    (id,item)       => db.splitItemPage(id,item));
+h('block:revert',   (id,item)       => db.revertItemPage(id,item));
+h('block:setProp',  (id,item,pid,n,v,tp) => db.setProp(id,item,pid,n,v,tp));
 
 // Process 7 part 2 — app-wide session undo/redo (Ctrl+Z/Ctrl+Shift+Z),
 // scoped to the active vault the same way every handler above is.

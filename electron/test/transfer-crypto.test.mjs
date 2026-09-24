@@ -44,7 +44,7 @@ test('a chunk is framed as [12-byte IV][ciphertext || 16-byte tag]', () => {
 
 test('a snapshot survives gzip, chunking, sealing and the whole way back', () => {
   const snapshot = Buffer.from(JSON.stringify({
-    format: 'dracondex-vault-snapshot', version: 1,
+    format: 'dracondex-vault-snapshot', version: 2,
     nexus: { name: 'My World' },
     modules: Array.from({ length: 400 }, (_, i) => ({ id: i, name: `Module ${i}`, kind: 'classifier' })),
   }));

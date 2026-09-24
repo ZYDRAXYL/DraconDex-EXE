@@ -59,6 +59,7 @@ const updateEventIcon = (id, icon, color) =>
   getDB().prepare(`UPDATE timeline_event SET icon=?, color=?, update_at=datetime('now') WHERE id=?`).run(icon || null, color || null, id);
 const deleteEvent = (id) => {
   getDB().prepare(`DELETE FROM wiki_link WHERE src_key=?`).run(`tlev_${id}`);
+  require('./page-block').clearItemBlocks(`tlev_${id}`); // its page goes with it (§12)
   return getDB().prepare(`DELETE FROM timeline_event WHERE id=?`).run(id);
 };
 

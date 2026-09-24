@@ -230,6 +230,10 @@ const KEY_COLUMNS = [
   { table: 'book_chapter', cols: ['pov_key'] },
   { table: 'story_choice_option', cols: ['condition', 'set_ops'], json: true },
   { table: 'diviner_entry', cols: ['linker_key'] },
+  // v5 Part 8 (§12): an element page's key, and what a borrowed component
+  // shows. item_key '*' is the shared layout, not a key.
+  { table: 'page_block', cols: ['item_key'], only: /^[a-z]+_\d+$/ },
+  { table: 'page_block', cols: ['source_key'] },
 ];
 
 // The importer's key maps, from the local id maps it built — by the names

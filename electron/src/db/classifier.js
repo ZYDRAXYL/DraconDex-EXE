@@ -58,6 +58,7 @@ const updateObjectNote = (id, note) => {
 
 const deleteObject = (id) => {
   const prev = getDB().prepare(`SELECT * FROM classifier_object WHERE id=?`).get(id);
+  require('./page-block').clearItemBlocks(`cobj_${id}`); // its page goes with it (§12)
   const r = getDB().prepare(`DELETE FROM classifier_object WHERE id=?`).run(id);
   getDB().prepare(`DELETE FROM wiki_link WHERE src_key=?`).run(`cobj_${id}`);
   if (prev) versions.recordVersion(prev.module_ref, 'objectDel', prev.name,

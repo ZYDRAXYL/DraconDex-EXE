@@ -69,8 +69,10 @@ function setBookChapterMeta(id, meta = {}) {
   return { ok: true };
 }
 
-const deleteBookChapter = (id) =>
+function deleteBookChapter(id) {
+  require('./page-block').clearItemBlocks(`bchp_${id}`); // its page goes with it (§12)
   getDB().prepare(`DELETE FROM book_chapter WHERE id=?`).run(id);
+}
 
 // Free chapter reordering (Plan part5 Author #3) — modeled on
 // src/db/module.js's moveModule, simpler since chapters don't nest.

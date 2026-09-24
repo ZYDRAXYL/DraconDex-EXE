@@ -12,8 +12,9 @@
 // same {attrs,tags,links,ui} keys, which hub.js / mod/classifier.js /
 // mod/manager.js all read (and patch) off S.inspectorData directly.
 async function loadInspectorData(moduleId) {
-  const d = await api.module.getInspector(moduleId);
-  S.inspectorData = { moduleId, ...d };
+  const d = await api.module.getProps(moduleId, null);
+  // Property blocks (v5 Part 8) under the attribute shape this dock reads.
+  S.inspectorData = { moduleId, ...d, attrs: d.props.map(p => ({ id: p.id, attr_name: p.prop_name, attr_value: p.content })) };
 }
 
 function buildInspectorHtml(m) {
@@ -164,7 +165,7 @@ async function submitAttrForm(moduleId, attrId) {
   const name = q('#ia-name').value.trim();
   if (!name) return;
   const value = q('#ia-value').value;
-  await api.module.upsertAttr(moduleId, attrId, name, value);
+  await api.block.setProp(moduleId, null, attrId, name, value);
   closeModal();
   await loadInspectorData(moduleId);
   renderNexusHome();
@@ -173,7 +174,7 @@ async function submitAttrForm(moduleId, attrId) {
 
 async function deleteModuleAttrRow(moduleId, attrId) {
   if (!await uiConfirm(t('confirmDeleteItem'))) return;
-  await api.module.deleteAttr(attrId);
+  await api.block.remove(attrId);
   await loadInspectorData(moduleId);
   renderNexusHome();
   toast(t('deleted'), 'ok');

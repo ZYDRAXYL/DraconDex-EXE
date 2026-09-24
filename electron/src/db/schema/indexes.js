@@ -104,7 +104,7 @@ const INDEX_SQL = `
     -- Module system (v3)
     CREATE INDEX IF NOT EXISTS idx_module_nexus            ON module(nexus_ref);
     CREATE INDEX IF NOT EXISTS idx_module_parent           ON module(parent_id);
-    CREATE INDEX IF NOT EXISTS idx_module_attribute_module ON module_attribute(module_ref);
+    CREATE INDEX IF NOT EXISTS idx_page_block_page         ON page_block(module_ref, item_key, block_order);
     CREATE INDEX IF NOT EXISTS idx_module_ui_module        ON module_ui(module_ref);
     CREATE INDEX IF NOT EXISTS idx_module_hashtag_tag      ON module_hashtag(hashtag_id);
 

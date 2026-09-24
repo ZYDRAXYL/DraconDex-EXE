@@ -115,12 +115,17 @@ function clearAllHistory() { clearModuleHistory(); clearNexusHistory(); }
 // the owning db module (required lazily to avoid import cycles).
 const RESTORE_OPS = {
   moduleDescription: (a) => require('./module').updateModuleDescription(a.id, a.value),
+  // Entries recorded before v5 Part 8 name module_attribute rows. Their
+  // values are property blocks now: restore by name.
   moduleAttr: (a) => {
     const d = getDB();
-    const row = a.attrId ? d.prepare(`SELECT id FROM module_attribute WHERE id=?`).get(a.attrId) : null;
-    require('./module').upsertModuleAttr(a.moduleId, row ? a.attrId : null, a.name, a.value);
+    const row = d.prepare(`SELECT id FROM page_block WHERE module_ref=? AND item_key IS NULL AND block_type='property' AND prop_name=?`).get(a.moduleId, a.name);
+    require('./page-block').setProp(a.moduleId, null, row?.id ?? null, a.name, a.value);
   },
-  moduleAttrDelete: (a) => require('./module').deleteModuleAttr(a.attrId),
+  moduleAttrDelete: () => {}, // the added row's id no longer exists anywhere
+  blockRemove: (a) => require('./page-block').deleteBlock(a.id),
+  blockUpdate: (a) => require('./page-block').updateBlock(a.id, { content: a.content, ...(a.propName != null ? { propName: a.propName } : {}) }),
+  blockRestore: (a) => require('./page-block').restoreBlocks(a.rows),
   moduleTags: (a) => require('./module').setModuleTags(a.moduleId, a.tagIds),
   classifierAttr: (a) => require('./classifier').upsertAttr(a.objectId, a.templateId, a.value),
   classifierObject: (a) => require('./classifier').updateObject(a.objectId, a.name, a.colorId, a.icon),

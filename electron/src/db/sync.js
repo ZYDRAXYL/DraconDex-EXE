@@ -25,7 +25,11 @@ const { getSecret, setSecret } = require('./secret-store');
 const { makePkcePair, runOAuthLoopback } = require('./oauth-loopback');
 
 const SNAPSHOT_FORMAT = 'dracondex-vault-snapshot';
-const SNAPSHOT_VERSION = 1;
+// v2 (v5 Part 8, APP docs/V5.md §12): pageBlocks replaces moduleAttrs. A
+// v1 snapshot (an older build, an old .mddx, a trash row from before the
+// upgrade) still applies — its moduleAttrs become property blocks.
+const SNAPSHOT_VERSION = 2;
+const READABLE_VERSIONS = new Set([1, 2]);
 // Pre-v5 module kinds a snapshot (an older desktop build, the APK, an old
 // .mddx) can still carry. Mapped on apply; the v5 module CHECK rejects them.
 const V5_KIND_MAP = { viewer: 'exhibitor', connector: 'exhibitor' };
@@ -346,11 +350,13 @@ function serializeVault(nexusId, moduleIds = null) {
     LEFT JOIN use_color cc ON m.color = cc.id
     WHERE m.nexus_ref=? ORDER BY m.id`);
 
-  const moduleAttrs = all(`
-    SELECT a.module_ref AS moduleId, a.attr_name AS name, a.attr_value AS value,
-           a.display_order AS displayOrder
-    FROM module_attribute a JOIN module m ON a.module_ref=m.id
-    WHERE m.nexus_ref=? ORDER BY a.id`);
+  // Same shape as the APK's VaultSnapshotService.serializeVault.
+  const pageBlocks = all(`
+    SELECT b.id, b.module_ref AS moduleId, b.item_key AS itemKey, b.parent_id AS parentId,
+           b.block_type AS type, b.component, b.source_key AS sourceKey, b.config,
+           b.content, b.prop_name AS propName, b.prop_type AS propType, b.block_order AS "order"
+    FROM page_block b JOIN module m ON b.module_ref=m.id
+    WHERE m.nexus_ref=? ORDER BY b.id`);
 
   const moduleUi = all(`
     SELECT u.module_ref AS moduleId, u.ui_key AS key, u.ui_value AS value
@@ -622,7 +628,7 @@ function serializeVault(nexusId, moduleIds = null) {
     exportedAt: new Date().toISOString(),
     nexus: { name: nexus.name, memo: nexus.memo, colorCode: nexus.colorCode },
     lookups: { colors: [...colors], hashtags, dates },
-    modules, moduleAttrs, moduleUi, moduleTags,
+    modules, pageBlocks, moduleUi, moduleTags,
     classifier, locator, chronicler, wanderer, narrator, author,
     chatscribe, sketcher, designer, relations, notes, calendarTemplates,
     exhibitor, modulePresets, diviner,
@@ -658,7 +664,7 @@ function collectModuleSubtreeIds(nexusId, moduleId) {
 // vaults), so children are re-keyed through in-memory old→new Maps.
 // ---------------------------------------------------------------------------
 function validateSnapshot(p) {
-  if (!p || p.format !== SNAPSHOT_FORMAT || p.version !== SNAPSHOT_VERSION) return false;
+  if (!p || p.format !== SNAPSHOT_FORMAT || !READABLE_VERSIONS.has(p.version)) return false;
   return Array.isArray(p.modules) && p.nexus && typeof p.nexus === 'object';
 }
 
@@ -794,9 +800,10 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     const mod = (oldId) => modMap.get(oldId);
 
     // 5. Per-kind children, dependency order, each building its own map.
+    // A v1 snapshot's module attributes are property blocks now (§12).
     for (const a of arr(payload.moduleAttrs)) {
       if (mod(a.moduleId) == null) continue;
-      db.prepare(`INSERT INTO module_attribute (module_ref, attr_name, attr_value, display_order) VALUES (?,?,?,?)`)
+      db.prepare(`INSERT INTO page_block (module_ref, block_type, prop_name, prop_type, content, block_order) VALUES (?,'property',?,'text',?,?)`)
         .run(mod(a.moduleId), a.name, a.value ?? null, a.displayOrder ?? 0);
     }
     for (const tg of arr(payload.moduleTags)) {
@@ -1063,6 +1070,33 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
              rel.directed === 0 ? 0 : 1, rel.moduleId != null ? (mod(rel.moduleId) ?? null) : null,
              rel.validFrom ? (dateMap.get(rel.validFrom) ?? null) : null,
              rel.validTo ? (dateMap.get(rel.validTo) ?? null) : null);
+    }
+
+    // Page blocks (§12): item_key and source_key are entity keys, so they
+    // wait for every map. '*' (the shared element layout) is not a key. An
+    // element page whose element did not come across is dropped; a borrowed
+    // component whose source did not is kept, pointing at nothing. Parents
+    // first — a columns block before the blocks inside it.
+    const blockMap = new Map();
+    let pendingBlocks = arr(payload.pageBlocks);
+    while (pendingBlocks.length) {
+      const next = [];
+      let progressed = false;
+      for (const b of pendingBlocks) {
+        if (mod(b.moduleId) == null) continue;
+        if (b.parentId != null && !blockMap.has(b.parentId)) { next.push(b); continue; }
+        const itemKey = b.itemKey == null || b.itemKey === '*' ? (b.itemKey ?? null) : remapEntityKey(b.itemKey, keyMaps);
+        if (b.itemKey != null && itemKey == null) continue;
+        const r = db.prepare(`INSERT INTO page_block (module_ref, item_key, parent_id, block_type, component, source_key, config, content, prop_name, prop_type, block_order)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+          .run(mod(b.moduleId), itemKey, b.parentId != null ? blockMap.get(b.parentId) : null, b.type || 'component',
+               b.component ?? null, b.sourceKey ? remapEntityKey(b.sourceKey, keyMaps) : null,
+               b.config ?? null, b.content ?? null, b.propName ?? null, b.propType ?? null, b.order ?? 0);
+        blockMap.set(b.id, r.lastInsertRowid);
+        progressed = true;
+      }
+      if (!progressed) break;
+      pendingBlocks = next;
     }
 
     // v5 Exhibitor scenes — after every key map exists (note_ included).

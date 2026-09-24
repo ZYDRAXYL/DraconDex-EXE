@@ -2,7 +2,7 @@
 // GENERATED FILE — do not hand-edit, in this repo or in the repo that vendors it.
 // Source: ZYDRAXYL/DraconDex-SDB schema/vault.sql (+ schema/version.json).
 // Regenerate with: npm run generate
-const VAULT_SCHEMA_VERSION = 5;
+const VAULT_SCHEMA_VERSION = 6;
 const VAULT_DDL_SQL = `
 -- src/schema/vault.sql — the CANONICAL, shared vault-level SQLite schema.
 --
@@ -762,16 +762,9 @@ const VAULT_DDL_SQL = `
       update_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    -- Module Inspector (Phase 4): free-form attributes, per-kind UI spec
-    -- (active view etc., populated from Phase 5 onward) and tag links.
-    CREATE TABLE IF NOT EXISTS module_attribute (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      module_ref INTEGER NOT NULL REFERENCES module(id) ON DELETE CASCADE,
-      attr_name TEXT NOT NULL,
-      attr_value TEXT,
-      display_order INTEGER NOT NULL DEFAULT 0,
-      update_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
+    -- Per-kind UI spec (active view etc., populated from Phase 5 onward) and
+    -- tag links. module_attribute (the Inspector's free-form attributes) was
+    -- removed in v5 Part 8: its rows became property blocks in page_block.
 
     CREATE TABLE IF NOT EXISTS module_ui (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1273,6 +1266,40 @@ const VAULT_DDL_SQL = `
       entry_ref INTEGER REFERENCES diviner_entry(id) ON DELETE SET NULL,
       result_text TEXT,
       create_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Pages made of components (v5 Part 8, APP docs/V5.md §12). A page is an
+    -- ordered stack of blocks. Which page a row belongs to:
+    --   item_key NULL        the module's own page
+    --   item_key '*'         the shared layout every element page of the
+    --                        module uses (a Classifier's objects, …)
+    --   item_key 'cobj_12'   one element's own page, split off the shared one
+    -- block_type: component | text | property | heading | columns.
+    --   component  component names it (e.g. 'classifier.table'); config
+    --              is JSON (preset + options); source_key is set when it
+    --              shows ANOTHER module or element than the page's own
+    --              (a Manager borrowing a Classifier's table)
+    --   text       content is Markdown
+    --   property   prop_name / prop_type, value in content (was
+    --              module_attribute)
+    --   columns    a container; its children point at it with parent_id
+    -- item_key and source_key are entity keys, remapped on import like every
+    -- other key column. Its index lives with each app's other indexes.
+    CREATE TABLE IF NOT EXISTS page_block (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      module_ref INTEGER NOT NULL REFERENCES module(id) ON DELETE CASCADE,
+      item_key TEXT,
+      parent_id INTEGER REFERENCES page_block(id) ON DELETE CASCADE,
+      block_type TEXT NOT NULL DEFAULT 'component' CHECK(block_type IN ('component','text','property','heading','columns')),
+      component TEXT,
+      source_key TEXT,
+      config TEXT,
+      content TEXT,
+      prop_name TEXT,
+      prop_type TEXT,
+      block_order INTEGER NOT NULL DEFAULT 0,
+      create_at TEXT NOT NULL DEFAULT (datetime('now')),
+      update_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     -- Trash (v5, APP docs/V5.md §11.4). A deleted module subtree is kept as a

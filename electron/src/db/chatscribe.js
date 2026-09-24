@@ -42,6 +42,7 @@ const renameChatSession = (id, name) => {
 };
 
 const deleteChatSession = (id) => {
+  require('./page-block').clearItemBlocks(`chss_${id}`); // its page goes with it (§12)
   const r = getDB().prepare(`DELETE FROM chat_session WHERE id=?`).run(id);
   getDB().prepare(`DELETE FROM wiki_link WHERE src_key=?`).run(`chss_${id}`);
   return r;

@@ -184,6 +184,29 @@ function migrateInlineColumns(db) {
   // v5 Part 4 (§8.8): a module's parent must be a collector. Wrap the
   // children an old vault keeps under any other kind — move, never delete.
   normalizeModuleParents(db);
+  // v5 Part 8 (§12): module_attribute's rows become property blocks.
+  migratePageBlockV6(db);
+}
+
+// v5 Part 8 (APP docs/V5.md §12): the Inspector's free-form attributes are
+// property blocks on the module's page now, and the table is gone from the
+// shared schema. Copy, then drop, in one transaction — a crash in between
+// leaves the table for the next open. APK does the same in its _onOpen.
+function migratePageBlockV6(db) {
+  if (!hasTable(db, 'module_attribute') || !hasTable(db, 'page_block')) return;
+  try {
+    db.transaction(() => {
+      db.exec(`
+        INSERT INTO page_block (module_ref, block_type, prop_name, prop_type, content, block_order, update_at)
+        SELECT module_ref, 'property', attr_name, 'text', attr_value, display_order, update_at
+        FROM module_attribute ORDER BY module_ref, display_order, id;
+        DROP INDEX IF EXISTS idx_module_attribute_module;
+        DROP TABLE module_attribute;
+      `);
+    })();
+  } catch (e) {
+    console.error('page_block v6 migration error:', e);
+  }
 }
 
 // ── v5 table rebuilds (APP docs/V5.md §4.2) ────────────────────────────────
@@ -595,7 +618,7 @@ function migratePluginV42(db) {
 }
 
 module.exports = {
-  migrateModuleKindV5, migrateEntityRelationV5, takeRelationDedupeReport, vendoredTableDdl,
+  migrateModuleKindV5, migrateEntityRelationV5, migratePageBlockV6, takeRelationDedupeReport, vendoredTableDdl,
   migrateInlineColumns, NEXUS_PROJECT_TABLES, migrateNexusV28, migrateMapV3,
   migrateTimelineV3, migrateWriterV27, ensureIndexes, migrateHeroV26,
   migratePluginV42, migrateClassifierLevels, migrateDesignNodeShapes,

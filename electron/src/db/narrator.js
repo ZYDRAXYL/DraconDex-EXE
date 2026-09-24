@@ -52,6 +52,7 @@ const updateDialoguePos = (id, xPos, yPos) =>
 
 const deleteDialogue = (id) => {
   getDB().prepare(`DELETE FROM wiki_link WHERE src_key=?`).run(`sdlg_${id}`);
+  require('./page-block').clearItemBlocks(`sdlg_${id}`); // its page goes with it (§12)
   return getDB().prepare(`DELETE FROM story_dialogue WHERE id=?`).run(id);
 };
 

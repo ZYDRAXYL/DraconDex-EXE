@@ -98,6 +98,7 @@ function updateDivinerTable(id, name, dice, mode) {
 }
 
 function deleteDivinerTable(id) {
+  require('./page-block').clearItemBlocks(`divt_${id}`); // its page goes with it (§12)
   getDB().prepare(`DELETE FROM diviner_table WHERE id=?`).run(id);
   // An entry elsewhere that rolled this table now rolls nothing: clear it,
   // so it reads as plain text rather than a dangling key.

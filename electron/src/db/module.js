@@ -151,7 +151,8 @@ function duplicateModule(id) {
 function updateModuleDescription(id, description) {
   const prev = getDB().prepare(`SELECT description FROM module WHERE id=?`).get(id)?.description ?? '';
   getDB().prepare(`UPDATE module SET description=?, update_at=datetime('now') WHERE id=?`).run(description, id);
-  wiki.reindexWikiLinks(`module_${id}`, description, nexusOfModule(id));
+  // The whole page's text — description plus text/property blocks (§12).
+  wiki.reindexSource('module', id);
   if (prev !== (description ?? '')) {
     versions.recordVersion(id, 'note', String(prev).slice(0, 60),
       { op: 'moduleDescription', args: { id, value: prev } });
@@ -262,35 +263,9 @@ function getNestItems(nexusRef) {
   })();
 }
 
-// ═══ Module Inspector (Phase 4) ═══════════════════════════════════════
-const getModuleAttrs = (moduleId) =>
-  getDB().prepare(`SELECT * FROM module_attribute WHERE module_ref=? ORDER BY display_order, id`).all(moduleId);
-
-function upsertModuleAttr(moduleId, attrId, name, value) {
-  const d = getDB();
-  if (attrId) {
-    const prev = d.prepare(`SELECT * FROM module_attribute WHERE id=?`).get(attrId);
-    d.prepare(`UPDATE module_attribute SET attr_name=?, attr_value=?, update_at=datetime('now') WHERE id=?`).run(name, value, attrId);
-    if (prev) versions.recordVersion(moduleId, 'attr', `${prev.attr_name}: ${prev.attr_value ?? ''} → ${value ?? ''}`,
-      { op: 'moduleAttr', args: { moduleId, attrId, name: prev.attr_name, value: prev.attr_value } });
-    return attrId;
-  }
-  const maxOrder = d.prepare(`SELECT COALESCE(MAX(display_order),-1) AS m FROM module_attribute WHERE module_ref=?`).get(moduleId).m;
-  const newId = d.prepare(`INSERT INTO module_attribute (module_ref, attr_name, attr_value, display_order) VALUES (?,?,?,?)`)
-    .run(moduleId, name, value, maxOrder + 1).lastInsertRowid;
-  versions.recordVersion(moduleId, 'attr', `+ ${name}`,
-    { op: 'moduleAttrDelete', args: { attrId: newId } });
-  return newId;
-}
-
-function deleteModuleAttr(id) {
-  const prev = getDB().prepare(`SELECT * FROM module_attribute WHERE id=?`).get(id);
-  const r = getDB().prepare(`DELETE FROM module_attribute WHERE id=?`).run(id);
-  if (prev) versions.recordVersion(prev.module_ref, 'attrDel', prev.attr_name,
-    { op: 'moduleAttr', args: { moduleId: prev.module_ref, attrId: null, name: prev.attr_name, value: prev.attr_value } });
-  return r;
-}
-
+// ═══ Module UI spec, tags, links ══════════════════════════════════════
+// (module_attribute is gone — v5 Part 8 made its rows property blocks;
+// db/page-block.js owns them now.)
 function getModuleUi(moduleId) {
   const rows = getDB().prepare(`SELECT ui_key, ui_value FROM module_ui WHERE module_ref=?`).all(moduleId);
   return rows.reduce((m, r) => (m[r.ui_key] = r.ui_value, m), {});
@@ -332,23 +307,11 @@ const getModuleLinks = (moduleId) => ({
   backlinks: wiki.getBacklinks(`module_${moduleId}`),
 });
 
-// Everything inspector.js's loadInspectorData needs, in one round-trip
-// instead of four (Plan part2 #2.1). Key names are load-bearing — hub.js,
-// mod/classifier.js and mod/manager.js all read S.inspectorData.{attrs,
-// tags,links,ui} directly, and two of them patch .ui in place.
-const getModuleInspector = (moduleId) => getDB().readTx(() => ({
-  attrs: getModuleAttrs(moduleId),
-  tags: getModuleTags(moduleId),
-  links: getModuleLinks(moduleId),
-  ui: getModuleUi(moduleId),
-}))();
-
 module.exports = {
   getTree, getModule, createModule, updateModule, updateModuleDescription, deleteModule,
   duplicateModule, moveModule, countModules, nexusOfModule, getNestItems,
-  getModuleAttrs, upsertModuleAttr, deleteModuleAttr,
   getModuleUi, setModuleUi,
   getModuleTags, setModuleTags,
-  getModuleLinks, getModuleInspector,
+  getModuleLinks,
   takeParentNormalizeReport,
 };
