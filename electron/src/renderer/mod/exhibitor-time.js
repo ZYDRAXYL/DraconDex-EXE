@@ -78,7 +78,7 @@ function exhSpanFieldsHtml(rel) {
 }
 
 function readExhSpan(id) {
-  const y = q(`#${id}-y`)?.value.trim();
+  const y = pbQOr(`#${id}-y`)?.value.trim();
   if (!y) return null;
-  return { years: Number(y), month: Number(q(`#${id}-m`)?.value) || 1, day: Number(q(`#${id}-d`)?.value) || 1 };
+  return { years: Number(y), month: Number(pbQOr(`#${id}-m`)?.value) || 1, day: Number(pbQOr(`#${id}-d`)?.value) || 1 };
 }

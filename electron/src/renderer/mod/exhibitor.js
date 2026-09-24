@@ -16,6 +16,16 @@
 
 const EXH_VIEWS = ['scene', 'graph', 'table', 'cards', 'board', 'edges'];
 const EXH_VIEW_LABEL = { scene: 'Scene', graph: 'Graph', table: 'Table', cards: 'Cards', board: 'Board', edges: 'Edges' };
+// v5 Part 8 (§12.3): a scoped page component — data per module, view per
+// instance, S.exhibitorData = the current instance (page/kind-state.js).
+const EXH = kindState({ prop: 'exhibitorData', kind: 'exhibitor', component: 'exhibitor.view', views: EXH_VIEWS });
+registerComponent('exhibitor.view', {
+  kind: 'exhibitor', label: () => kindLabel('exhibitor'), borrow: true, canvas: true,
+  presets: () => EXH_VIEWS, presetLabel: (p) => EXH_VIEW_LABEL[p],
+  load: (m) => loadExhibitorData(m),
+  render: (c) => buildExhibitorMainHtml(c.source, c),
+  mount: () => mountExhibitor(),
+});
 // Locale-invariant item badges, like KIND_LABEL (A.3 #7).
 const VIEWER_KIND_LABEL = { object: 'Object', event: 'Event', dialogue: 'Dialogue', chapter: 'Chapter', chat: 'Chat', module: 'Module', file: 'Asset', page: 'Page' };
 
@@ -62,21 +72,20 @@ async function loadExhibitorData(m) {
   if (ui.seedScene === '1') await api.module.setUi(m.id, 'seedScene', '0');
   const cls = await loadExhibitorClassifierValues(nodes, byKey);
   const fieldNames = await loadExhibitorFieldNames(relations); // mod/exhibitor-time.js
-  const prev = S.exhibitorData?.moduleId === m.id ? S.exhibitorData : null;
+  const prev = EXH.M[m.id] || null;
   const focusNode = focus ? nodes.find(n => n.linker_key === focus)
     : nodes.find(n => n.id === S.pendingExhibitNode) || null;
   S.exhibitorFocusKey = null;
   S.pendingExhibitNode = null;
-  S.exhibitorData = {
-    moduleId: m.id, def, items, index: byKey, relations, wikiPairs, relTypes, cls, fieldNames,
+  EXH.setModule(m.id, {
+    moduleId: m.id, ui, def, items, index: byKey, relations, wikiPairs, relTypes, cls, fieldNames,
     asOf: ui.relAsOf ? ui.relAsOf : null,
     treeRel: ui.treeRel || null, treeDir: ui.treeDir || null, // mod/exhibitor-tree.js
-    view: EXH_VIEWS.includes(ui.activeView) ? ui.activeView : 'scene',
     groupBy: ui.boardGroupBy || 'module',
     nodes, camera: scene.view,
     sel: focusNode ? focusNode.id : (prev?.sel ?? null),
     linkFrom: null,
-  };
+  });
 }
 
 // §7.9 cards and tables read live values: one getObjectsFull per category
@@ -98,11 +107,7 @@ async function loadExhibitorClassifierValues(nodes, byKey) {
 }
 
 async function setExhibitorView(view) {
-  const d = S.exhibitorData;
-  d.view = view;
-  await api.module.setUi(d.moduleId, 'activeView', view);
-  if (S.inspectorData?.moduleId === d.moduleId) S.inspectorData.ui = { ...S.inspectorData.ui, activeView: view };
-  renderNexusHome();
+  await EXH.setView(view); // the instance's preset (page/kind-state.js)
 }
 
 async function setExhibitorGroupBy(g) {
@@ -114,10 +119,8 @@ async function setExhibitorGroupBy(g) {
 
 // Reload in place after a write (relation, scene edit) without leaving the page.
 async function refreshExhibitor() {
-  const m = S.activeModuleNode;
-  if (!m || m.kind !== 'exhibitor') return;
-  await loadExhibitorData(m);
-  renderNexusHome();
+  const mid = S.exhibitorData?.moduleId;
+  if (mid != null) await reloadSource(mid);
 }
 
 function openViewerItem(key, moduleId) {
@@ -143,8 +146,8 @@ function exhibitorEdgesAmong(keys) {
   return [...rels, ...wiki];
 }
 
-function buildExhibitorMainHtml(m) {
-  const d = (S.exhibitorData && S.exhibitorData.moduleId === m.id) ? S.exhibitorData : null;
+function buildExhibitorMainHtml(m, c) {
+  const d = EXH.instance(c);
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
   const viewBar = viewBarHtml(EXH_VIEWS, d.view, v => `setExhibitorView('${v}')`, v => EXH_VIEW_LABEL[v], { noI18n: true });
   const toolbar = `<div class="classifier-toolbar">
@@ -169,7 +172,7 @@ function buildExhibitorMainHtml(m) {
 // Called from core/views.js runBuilderMounts after every render.
 function mountExhibitor() {
   const d = S.exhibitorData;
-  if (!d || S.activeModuleNode?.id !== d.moduleId) return;
+  if (!d) return;
   if (d.view === 'scene') mountExhibitorScene();
   else if (d.view === 'graph') mountExhibitorGraph();
 }
@@ -245,18 +248,18 @@ function openExhibitorRelationModal(relId = null, fromKey = null, toKey = null) 
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" onclick="submitExhibitorRelation(${relId ?? 'null'})">${rel ? t('save') : t('create')}</button>
     </div>`);
-  setTimeout(() => q('#xr-label')?.focus(), 0);
+  setTimeout(() => pbQOr('#xr-label')?.focus(), 0);
 }
 
 async function submitExhibitorRelation(relId) {
   const d = S.exhibitorData;
-  const label = q('#xr-label').value.trim();
-  const opts = { directed: q('#xr-dir').checked, validFrom: readExhSpan('xr-vf'), validTo: readExhSpan('xr-vt') };
-  if (q('#xr-type')) opts.relType = q('#xr-type').value.trim() || null; // a field's row keeps its type
+  const label = pbQOr('#xr-label').value.trim();
+  const opts = { directed: pbQOr('#xr-dir').checked, validFrom: readExhSpan('xr-vf'), validTo: readExhSpan('xr-vt') };
+  if (pbQOr('#xr-type')) opts.relType = pbQOr('#xr-type').value.trim() || null; // a field's row keeps its type
   if (relId) {
     await api.viewer.updateRelation(relId, label, undefined, opts);
   } else {
-    const from = q('#xr-from').value, to = q('#xr-to').value;
+    const from = pbQOr('#xr-from').value, to = pbQOr('#xr-to').value;
     // §7.5 bug #8 applies here too: same-endpoint used to be a silent no-op.
     if (!from || !to || from === to) { toast(t('relationSameEnds'), 'err'); return; }
     await api.viewer.createRelation(S.nexus.id, from, to, label, null, { ...opts, moduleRef: d.moduleId });

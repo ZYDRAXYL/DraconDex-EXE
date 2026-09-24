@@ -59,7 +59,7 @@ function pbQ(sel) {
 // The same, falling back to the window — for markup that is drawn both on
 // a page and in a modal or on an element page (a date row, an inspector).
 const pbQOr = (sel) => pbQ(sel) || q(sel);
-for (const ev of ['pointerdown', 'contextmenu', 'focusin', 'keydown']) {
+for (const ev of ['pointerdown', 'contextmenu', 'focusin', 'keydown', 'wheel']) {
   document.addEventListener(ev, (e) => {
     const s = e.target?.closest?.('.pblock[data-iid]');
     if (s) PB_CUR = s.dataset.iid;

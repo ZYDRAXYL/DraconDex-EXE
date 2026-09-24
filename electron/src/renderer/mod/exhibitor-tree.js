@@ -84,7 +84,7 @@ function openExhibitorTreeModal() {
 
 async function applyExhibitorTree() {
   const d = S.exhibitorData;
-  const rel = q('#ext-rel')?.value, dir = q('#ext-dir')?.value || 'toParent';
+  const rel = pbQOr('#ext-rel')?.value, dir = pbQOr('#ext-dir')?.value || 'toParent';
   closeModal();
   if (!d || !rel) return;
   d.treeRel = rel; d.treeDir = dir;

@@ -32,15 +32,15 @@ const KIND_PAGE = {
     load: 'loadManagerData', main: 'buildManagerMainHtml', start: 'manager.pick',
     mount: () => { if (S.managerData?.view === 'graph') kpCall('mountManagerGraph'); },
   },
-  inspector: { main: 'buildDetailMainHtml', mount: (m) => kpCall('mountDetailEditor', m) },
+  inspector: {}, // scoped: mod/detail.js registers inspector.view
   locator: { start: 'locator.addArea' }, // scoped: mod/locator.js registers locator.view
   chronicler: { start: 'chronicler.addLine' }, // scoped: mod/chronicler.js registers chronicler.view
   wanderer: { start: 'wanderer.place' }, // scoped: mod/wanderer.js registers wanderer.view
   narrator: { start: 'narrator.addDialogue' }, // scoped: mod/ registers narrator.view
   author: { start: 'author.newChapter' }, // scoped: mod/ registers author.view
   scribe: { start: 'scribe.newSession' }, // scoped: mod/ registers scribe.view
-  drafter: { main: 'buildDrafterMainHtml', mount: (m) => kpCall('mountDrafterEditor', m) },
-  exhibitor: { load: 'loadExhibitorData', main: 'buildExhibitorMainHtml', mount: 'mountExhibitor', start: 'exhibitor.editFilter' },
+  drafter: {}, // scoped: mod/drafter.js registers drafter.view
+  exhibitor: { start: 'exhibitor.editFilter' }, // scoped: mod/exhibitor.js registers exhibitor.view
   sketcher: { start: 'sketcher.newPage' }, // scoped: mod/ registers sketcher.view
   designer: { start: 'designer.addShape' }, // scoped: mod/ registers designer.view
   diviner: { start: 'diviner.newTable' }, // scoped: mod/diviner.js registers diviner.view

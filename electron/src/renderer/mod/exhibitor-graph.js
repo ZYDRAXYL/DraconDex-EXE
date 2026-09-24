@@ -28,8 +28,8 @@ function buildExhibitorGraphHtml(d) {
 
 function mountExhibitorGraph() {
   const d = S.exhibitorData;
-  if (!d || S.activeModuleNode?.id !== d.moduleId || d.view !== 'graph') return;
-  const board = q('#cn-board'), graphEl = q('#cn-graph'), svg = q('#cn-edges');
+  if (!d || d.view !== 'graph') return;
+  const board = pbQOr('#cn-board'), graphEl = pbQOr('#cn-graph'), svg = pbQOr('#cn-edges');
   if (!board || !graphEl || !svg) return;
   const nodes = d.items;
   const edges = exhibitorEdgesAmong(new Set(nodes.map(n => n.key)));
@@ -114,7 +114,7 @@ function mountExhibitorGraph() {
     const z = exhibitorGraphZoom[d.moduleId] || 1;
     graphEl.style.transform = `scale(${z})`;
     graphEl.style.transformOrigin = '0 0';
-    const lbl = q('#cn-zoom-label');
+    const lbl = pbQOr('#cn-zoom-label');
     if (lbl) lbl.textContent = `${Math.round(z * 100)}%`;
   };
   applyZoom();
@@ -146,11 +146,11 @@ function exhibitorGraphZoomBy(dz) {
   if (!d) return;
   const z = Math.min(2.5, Math.max(0.3, (exhibitorGraphZoom[d.moduleId] || 1) + dz));
   exhibitorGraphZoom[d.moduleId] = z;
-  const graphEl = q('#cn-graph');
+  const graphEl = pbQOr('#cn-graph');
   if (graphEl) {
     graphEl.style.transform = `scale(${z})`;
     graphEl.style.transformOrigin = '0 0';
   }
-  const lbl = q('#cn-zoom-label');
+  const lbl = pbQOr('#cn-zoom-label');
   if (lbl) lbl.textContent = `${Math.round(z * 100)}%`;
 }

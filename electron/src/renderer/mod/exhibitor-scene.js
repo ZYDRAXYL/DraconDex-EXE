@@ -15,7 +15,11 @@
 // directed); wiki links are dashed and read-only (§3.7). Nest asset rows
 // (mod/importdock.js) can be dropped straight onto the canvas too.
 
-let exhStage = null;
+// One Konva stage per page instance (v5 Part 8) — the current instance's
+// is exhStageNow().
+const EXH_STAGE = {};
+const exhStageNow = () => EXH_STAGE[pbCurrent()] || null;
+PB_DISPOSERS.push((iid) => { try { EXH_STAGE[iid]?.destroy(); } catch (_) {} delete EXH_STAGE[iid]; });
 let exhViewSaveTimer = null;
 const EXH_BOX = { w: 168, h: 46 };
 const EXH_NOTE = { w: 170, h: 90 };
@@ -91,14 +95,17 @@ function buildExhibitorSceneHtml(d) {
 // ── Canvas ──────────────────────────────────────────────────────────────
 async function mountExhibitorScene() {
   const d = S.exhibitorData;
-  const host = q('#exh-konva');
-  const wrap = q('#exh-stage-wrap');
+  const iid = pbCurrent();
+  const host = pbQ('#exh-konva');
+  const wrap = pbQ('#exh-stage-wrap');
   if (!d || !host || !wrap) return;
   await ensureKonva();
+  pbUse(iid);
   if (S.exhibitorData !== d || !document.body.contains(host)) return; // re-rendered while loading
-  if (exhStage) { try { exhStage.destroy(); } catch (_) {} }
+  try { EXH_STAGE[iid]?.destroy(); } catch (_) {}
   const stage = new Konva.Stage({ container: host, width: wrap.clientWidth, height: Math.max(360, wrap.clientHeight) });
-  exhStage = stage;
+  EXH_STAGE[iid] = stage;
+  canvasEngage(wrap);
   const cam = d.camera || {};
   const fresh = !cam.tx && !cam.ty;
   stage.scale({ x: cam.scale || 1, y: cam.scale || 1 });
@@ -187,6 +194,7 @@ async function mountExhibitorScene() {
     window.addEventListener('mouseup', up);
   });
   stage.on('wheel', (ev) => {
+    if (!canvasWheelTakes(wrap, ev.evt)) return; // the page scrolls past it (§12.3)
     ev.evt.preventDefault();
     zoomExhibitorScene(ev.evt.deltaY < 0 ? 1.1 : 0.9, stage.getPointerPosition());
   });
@@ -295,10 +303,10 @@ function exhWireNode(g, n, d, shapes, redrawEdges) {
 // ── Camera ──────────────────────────────────────────────────────────────
 function saveExhibitorCamera() {
   const d = S.exhibitorData;
-  if (!d || !exhStage) return;
-  d.camera = { ...d.camera, scale: exhStage.scaleX(), tx: exhStage.x(), ty: exhStage.y() };
-  const lbl = q('#exh-zoom-label');
-  if (lbl) lbl.textContent = `${Math.round(exhStage.scaleX() * 100)}%`;
+  if (!d || !exhStageNow()) return;
+  d.camera = { ...d.camera, scale: exhStageNow().scaleX(), tx: exhStageNow().x(), ty: exhStageNow().y() };
+  const lbl = pbQOr('#exh-zoom-label');
+  if (lbl) lbl.textContent = `${Math.round(exhStageNow().scaleX() * 100)}%`;
   clearTimeout(exhViewSaveTimer);
   const { moduleId } = d;
   const patch = { scale: d.camera.scale, tx: d.camera.tx, ty: d.camera.ty };
@@ -306,7 +314,7 @@ function saveExhibitorCamera() {
 }
 
 function zoomExhibitorScene(factor, pointer) {
-  const stage = exhStage;
+  const stage = exhStageNow();
   if (!stage) return;
   const old = stage.scaleX();
   const next = Math.min(4, Math.max(0.2, old * factor));
@@ -320,7 +328,7 @@ function zoomExhibitorScene(factor, pointer) {
 
 function fitExhibitorScene() {
   const d = S.exhibitorData;
-  const stage = exhStage;
+  const stage = exhStageNow();
   const shown = d?.nodes.filter(n => !n.hidden) || [];
   if (!stage || !shown.length) return;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -339,7 +347,7 @@ function fitExhibitorScene() {
 
 // World coordinates of the visible centre, for "+" adds.
 function exhViewCenter() {
-  const s = exhStage;
+  const s = exhStageNow();
   if (!s) return { x: 0, y: 0 };
   return { x: (s.width() / 2 - s.x()) / s.scaleX(), y: (s.height() / 2 - s.y()) / s.scaleX() };
 }
@@ -379,8 +387,8 @@ function dropOnExhibitorScene(ev) {
   S.dragExhKey = null;
   S.dragAsset = null;
   exhHighlightDrop(null);
-  if (!key || !exhStage) return;
-  exhStage.setPointersPositions(ev);
+  if (!key || !exhStageNow()) return;
+  exhStageNow().setPointersPositions(ev);
   const w = exhPointerWorld();
   const intent = exhDropIntent(key, w);
   if (intent.kind === 'none') return;
