@@ -112,3 +112,8 @@
   border-radius:var(--r);box-shadow:var(--shadow-menu);padding:4px}
 .addr-sugg .kind-list-item{cursor:pointer}
 .addr-row .navbar-acts{display:flex;align-items:center;gap:4px;flex-shrink:0}
+/* A borrowed view's caption: whose it is (page/page.js pbSourceCaptionHtml). */
+.pb-src-cap{display:inline-flex;align-items:center;gap:6px;margin:4px 0 6px;font-size:calc(12px * var(--fsc,1));
+  font-weight:600;color:var(--t2);cursor:pointer}
+.pb-src-cap:hover{color:var(--accentH)}
+.pb-src-cap .kicon .icon{width:14px;height:14px}

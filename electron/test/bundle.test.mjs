@@ -96,3 +96,26 @@ test('a guide naming a kind this app does not have is refused whole', () => {
 });
 
 test.after(() => rmSync(tmp, { recursive: true, force: true }));
+
+// v5 Part 8 (§12.13): the Manager's page is the project page — laid out at
+// creation, so ensurePage (db/page-block.js) never replaces it with the
+// kind default on the first open.
+test('a bundle Manager opens on a project page of borrowed views', () => {
+  freshVault();
+  const r = bundle.createBundle(1, null, { name: 'P', modules: [
+    { ref: 'a', kind: 'classifier', name: 'Cast' },
+    { ref: 'b', kind: 'chronicler', name: 'When' },
+    { ref: 'c', kind: 'wanderer', name: 'Walk' },
+  ] });
+  assert.equal(r.ok, true, r.message);
+  const pb = require('../src/db/page-block.js');
+  assert.equal(pb.ensurePage(r.managerId, null, [{ component: 'manager.view' }]), false, 'already laid out');
+  const { blocks } = pb.listBlocks(r.managerId, null);
+  assert.deepEqual(blocks.map((b) => [b.component, b.source_key]), [
+    ['core.properties', null],
+    ['manager.view', null],
+    ['classifier.view', `module_${r.moduleIds[0]}`],
+    ['chronicler.view', `module_${r.moduleIds[1]}`],
+    ['core.related', null],
+  ]);
+});

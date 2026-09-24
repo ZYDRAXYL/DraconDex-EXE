@@ -47,6 +47,31 @@ function colorId(d, code) {
   return hit ? hit.id : d.prepare(`INSERT INTO use_color (color_code) VALUES (?)`).run(code).lastInsertRowid;
 }
 
+// v5 Part 8 (§12.13): a bundle's Manager page is the PROJECT page — its
+// selection, then the bundle's modules as borrowed views (§12.12, a
+// component whose source_key is another module), laid out here so the
+// first open finds it instead of the kind's default layout. The renderer
+// owns the component registry; these are its `<kind>.view` ids, for the
+// kinds whose view reads well on another page (not a Manager in a Manager,
+// not Wanderer's full-page map).
+const PROJECT_VIEWS = new Set(['classifier', 'chronicler', 'author', 'narrator', 'scribe', 'diviner', 'locator',
+  'sketcher', 'designer', 'exhibitor', 'inspector', 'drafter']);
+const PROJECT_MAX_VIEWS = 8;
+function projectPage(d, managerId, moduleIds, mods) {
+  const ins = d.prepare(`INSERT INTO page_block (module_ref, item_key, block_type, component, source_key, config, block_order)
+    VALUES (?,NULL,'component',?,?,?,?)`);
+  let order = 0, shown = 0;
+  ins.run(managerId, 'core.properties', null, null, order++);
+  ins.run(managerId, 'manager.view', null, JSON.stringify({ preset: 'cards' }), order++);
+  moduleIds.forEach((id, i) => {
+    if (!PROJECT_VIEWS.has(mods[i].kind) || shown >= PROJECT_MAX_VIEWS) return;
+    ins.run(managerId, `${mods[i].kind}.view`, `module_${id}`, null, order++);
+    shown++;
+  });
+  ins.run(managerId, 'core.related', null, null, order++);
+  d.prepare(`INSERT OR IGNORE INTO module_ui (module_ref, ui_key, ui_value) VALUES (?, 'pageInit', '1')`).run(managerId);
+}
+
 function createBundle(nexusId, parentId, spec) {
   const d = getDB();
   const mods = arr(spec?.modules).filter((m) => KINDS.has(m?.kind) && str(m.name, 200).trim()).slice(0, MAX_MODULES);
@@ -174,6 +199,7 @@ function createBundle(nexusId, parentId, spec) {
     if (spec.manager !== false && !bare) {
       managerId = moduleDb.createModule({ nexus_ref: nexusId, parent_id: folderId, name, kind: 'manager', color: col, icon_color: col }, { logHistory: false });
       setUi.run(managerId, 'filterDef', JSON.stringify({ groups: [{ rules: [{ field: 'childOf', moduleId: folderId }] }] }));
+      projectPage(d, managerId, created, mods);
     }
     return { folderId: bare ? null : folderId, managerId, moduleIds: created, modules: mods.length };
   });

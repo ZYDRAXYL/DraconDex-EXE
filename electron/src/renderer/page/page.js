@@ -151,8 +151,15 @@ function pbBlockHtml(page, b, seen) {
   return `<section class="${x(cls)}"
       data-iid="${x(c.iid)}" data-block="${b.id}"${arranging ? ` draggable="true" ondragstart="pbDragStart(event,${b.id})"
       ondragover="pbDragOver(event,this)" ondragleave="this.classList.remove('drop-before','drop-after')" ondrop="pbDrop(event,${b.id})"` : ''}>
-    ${arranging ? pbArrangeBarHtml(c) : ''}${inner}
+    ${arranging ? pbArrangeBarHtml(c) : pbSourceCaptionHtml(c)}${inner}
   </section>`;
+}
+
+// A borrowed view (§12.12) says whose it is, and leads there.
+function pbSourceCaptionHtml(c) {
+  const src = c.source;
+  if (!c.block.source_key || !src || src.id === c.page.moduleId) return '';
+  return `<div class="pb-src-cap" onclick="openModuleNode(${src.id})"><span class="kicon">${moduleIconHtml(src)}</span><span data-no-i18n>${x(src.name)}</span>↗</div>`;
 }
 
 function pbInnerHtml(c, seen) {
