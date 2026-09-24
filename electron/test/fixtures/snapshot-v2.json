@@ -1,0 +1,851 @@
+{
+  "format": "dracondex-vault-snapshot",
+  "version": 2,
+  "app": "5.0.0-8",
+  "exportedAt": "2026-09-24T00:00:00.000Z",
+  "nexus": {
+    "name": "Fixture",
+    "memo": null,
+    "colorCode": null
+  },
+  "lookups": {
+    "colors": [],
+    "hashtags": [],
+    "dates": [
+      {
+        "key": "1|2|1021|0|0",
+        "day": 1,
+        "month": 2,
+        "years": 1021,
+        "hour": 0,
+        "minute": 0
+      }
+    ]
+  },
+  "modules": [
+    {
+      "id": 1,
+      "parentId": null,
+      "name": "World",
+      "kind": "collector",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 08:52:34",
+      "updateAt": "2026-09-24 08:52:34"
+    },
+    {
+      "id": 2,
+      "parentId": 1,
+      "name": "Cast",
+      "kind": "classifier",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 08:52:34",
+      "updateAt": "2026-09-24 08:52:34"
+    },
+    {
+      "id": 3,
+      "parentId": 1,
+      "name": "Notes",
+      "kind": "drafter",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 08:52:34",
+      "updateAt": "2026-09-24 08:52:34"
+    },
+    {
+      "id": 4,
+      "parentId": 1,
+      "name": "Book",
+      "kind": "author",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 08:52:34",
+      "updateAt": "2026-09-24 08:52:34"
+    },
+    {
+      "id": 5,
+      "parentId": 1,
+      "name": "Chat",
+      "kind": "scribe",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 08:52:34",
+      "updateAt": "2026-09-24 08:52:34"
+    },
+    {
+      "id": 6,
+      "parentId": 1,
+      "name": "History",
+      "kind": "chronicler",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 08:52:34",
+      "updateAt": "2026-09-24 08:52:34"
+    },
+    {
+      "id": 7,
+      "parentId": 1,
+      "name": "Story",
+      "kind": "narrator",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 08:52:34",
+      "updateAt": "2026-09-24 08:52:34"
+    },
+    {
+      "id": 8,
+      "parentId": 1,
+      "name": "Sketch",
+      "kind": "sketcher",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 08:52:34",
+      "updateAt": "2026-09-24 08:52:34"
+    },
+    {
+      "id": 9,
+      "parentId": 1,
+      "name": "Rumors",
+      "kind": "diviner",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 08:52:34",
+      "updateAt": "2026-09-24 08:52:34"
+    },
+    {
+      "id": 10,
+      "parentId": 1,
+      "name": "Pinboard",
+      "kind": "sketcher",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 08:52:34",
+      "updateAt": "2026-09-24 08:52:34"
+    },
+    {
+      "id": 11,
+      "parentId": 1,
+      "name": "Plan",
+      "kind": "designer",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 08:52:34",
+      "updateAt": "2026-09-24 08:52:34"
+    },
+    {
+      "id": 12,
+      "parentId": 1,
+      "name": "Links",
+      "kind": "diviner",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 08:52:34",
+      "updateAt": "2026-09-24 08:52:34"
+    }
+  ],
+  "pageBlocks": [
+    {
+      "id": 1,
+      "moduleId": 2,
+      "itemKey": null,
+      "parentId": null,
+      "type": "component",
+      "component": "classifier.view",
+      "sourceKey": null,
+      "config": "{\"preset\":\"table\"}",
+      "content": null,
+      "propName": null,
+      "propType": null,
+      "order": 0
+    },
+    {
+      "id": 2,
+      "moduleId": 2,
+      "itemKey": null,
+      "parentId": null,
+      "type": "property",
+      "component": null,
+      "sourceKey": null,
+      "config": null,
+      "content": "Third age",
+      "propName": "Era",
+      "propType": "text",
+      "order": 0
+    },
+    {
+      "id": 3,
+      "moduleId": 2,
+      "itemKey": null,
+      "parentId": null,
+      "type": "text",
+      "component": null,
+      "sourceKey": null,
+      "config": null,
+      "content": "About [[Mira]]",
+      "propName": null,
+      "propType": null,
+      "order": 1
+    },
+    {
+      "id": 4,
+      "moduleId": 2,
+      "itemKey": "*",
+      "parentId": null,
+      "type": "component",
+      "component": "item.body",
+      "sourceKey": null,
+      "config": null,
+      "content": null,
+      "propName": null,
+      "propType": null,
+      "order": 0
+    },
+    {
+      "id": 5,
+      "moduleId": 2,
+      "itemKey": "cobj_1",
+      "parentId": null,
+      "type": "heading",
+      "component": null,
+      "sourceKey": null,
+      "config": null,
+      "content": "Mira alone",
+      "propName": null,
+      "propType": null,
+      "order": 0
+    },
+    {
+      "id": 6,
+      "moduleId": 2,
+      "itemKey": null,
+      "parentId": null,
+      "type": "component",
+      "component": "diviner.view",
+      "sourceKey": "module_3",
+      "config": null,
+      "content": null,
+      "propName": null,
+      "propType": null,
+      "order": 2
+    }
+  ],
+  "moduleUi": [],
+  "moduleTags": [],
+  "classifier": {
+    "objects": [
+      {
+        "id": 1,
+        "moduleId": 2,
+        "name": "Mira",
+        "colorCode": null,
+        "note": null,
+        "displayOrder": 0
+      }
+    ],
+    "templates": [
+      {
+        "id": 1,
+        "moduleId": 2,
+        "objectId": null,
+        "description": "Friend",
+        "attributeType": "relation",
+        "levelable": 0,
+        "hasCondition": 0,
+        "displayOrder": 0,
+        "options": null
+      }
+    ],
+    "attributes": []
+  },
+  "locator": {
+    "maps": [],
+    "areas": [],
+    "points": []
+  },
+  "chronicler": {
+    "timelines": [
+      {
+        "id": 1,
+        "moduleId": 6,
+        "name": "Main",
+        "colorCode": null
+      }
+    ],
+    "events": [
+      {
+        "id": 1,
+        "timelineId": 1,
+        "name": "The storm",
+        "startKey": "1|2|1021|0|0",
+        "endKey": null,
+        "colorCode": null,
+        "story": null
+      }
+    ]
+  },
+  "wanderer": {
+    "mapEvents": []
+  },
+  "narrator": {
+    "dialogues": [
+      {
+        "id": 1,
+        "moduleId": 7,
+        "name": "The meeting",
+        "colorCode": null,
+        "posX": 0,
+        "posY": 0
+      }
+    ],
+    "edges": [],
+    "talks": [],
+    "choiceOptions": []
+  },
+  "author": {
+    "chapters": [
+      {
+        "id": 1,
+        "moduleId": 4,
+        "name": "Chapter 1",
+        "content": "Once",
+        "order": 0,
+        "synopsis": null,
+        "status": null,
+        "povKey": null
+      }
+    ]
+  },
+  "chatscribe": {
+    "sessions": [
+      {
+        "id": 1,
+        "moduleId": 5,
+        "name": "Session 1",
+        "order": 0,
+        "createAt": "2026-09-24 08:52:34"
+      }
+    ],
+    "messages": []
+  },
+  "sketcher": {
+    "pages": [
+      {
+        "id": 1,
+        "moduleId": 8,
+        "name": "Page 1",
+        "order": 0
+      },
+      {
+        "id": 2,
+        "moduleId": 10,
+        "name": "Pins",
+        "order": 0
+      }
+    ],
+    "strokes": [],
+    "pins": [
+      {
+        "pageId": 2,
+        "linkerKey": "note_1",
+        "x": 1,
+        "y": 2
+      },
+      {
+        "pageId": 2,
+        "linkerKey": "module_3",
+        "x": 1,
+        "y": 2
+      },
+      {
+        "pageId": 2,
+        "linkerKey": "bchp_1",
+        "x": 1,
+        "y": 2
+      },
+      {
+        "pageId": 2,
+        "linkerKey": "chss_1",
+        "x": 1,
+        "y": 2
+      },
+      {
+        "pageId": 2,
+        "linkerKey": "cobj_1",
+        "x": 1,
+        "y": 2
+      },
+      {
+        "pageId": 2,
+        "linkerKey": "tlev_1",
+        "x": 1,
+        "y": 2
+      },
+      {
+        "pageId": 2,
+        "linkerKey": "sdlg_1",
+        "x": 1,
+        "y": 2
+      },
+      {
+        "pageId": 2,
+        "linkerKey": "skpg_1",
+        "x": 1,
+        "y": 2
+      },
+      {
+        "pageId": 2,
+        "linkerKey": "divt_1",
+        "x": 1,
+        "y": 2
+      },
+      {
+        "pageId": 2,
+        "linkerKey": "ctpl_1",
+        "x": 1,
+        "y": 2
+      }
+    ]
+  },
+  "designer": {
+    "nodes": [
+      {
+        "id": 1,
+        "moduleId": 11,
+        "shape": "box",
+        "x": 3,
+        "y": 4,
+        "text": null,
+        "color": null,
+        "linkerKey": "note_1",
+        "w": null,
+        "h": null,
+        "readOrder": null
+      },
+      {
+        "id": 2,
+        "moduleId": 11,
+        "shape": "box",
+        "x": 3,
+        "y": 4,
+        "text": null,
+        "color": null,
+        "linkerKey": "module_3",
+        "w": null,
+        "h": null,
+        "readOrder": null
+      },
+      {
+        "id": 3,
+        "moduleId": 11,
+        "shape": "box",
+        "x": 3,
+        "y": 4,
+        "text": null,
+        "color": null,
+        "linkerKey": "bchp_1",
+        "w": null,
+        "h": null,
+        "readOrder": null
+      },
+      {
+        "id": 4,
+        "moduleId": 11,
+        "shape": "box",
+        "x": 3,
+        "y": 4,
+        "text": null,
+        "color": null,
+        "linkerKey": "chss_1",
+        "w": null,
+        "h": null,
+        "readOrder": null
+      },
+      {
+        "id": 5,
+        "moduleId": 11,
+        "shape": "box",
+        "x": 3,
+        "y": 4,
+        "text": null,
+        "color": null,
+        "linkerKey": "cobj_1",
+        "w": null,
+        "h": null,
+        "readOrder": null
+      },
+      {
+        "id": 6,
+        "moduleId": 11,
+        "shape": "box",
+        "x": 3,
+        "y": 4,
+        "text": null,
+        "color": null,
+        "linkerKey": "tlev_1",
+        "w": null,
+        "h": null,
+        "readOrder": null
+      },
+      {
+        "id": 7,
+        "moduleId": 11,
+        "shape": "box",
+        "x": 3,
+        "y": 4,
+        "text": null,
+        "color": null,
+        "linkerKey": "sdlg_1",
+        "w": null,
+        "h": null,
+        "readOrder": null
+      },
+      {
+        "id": 8,
+        "moduleId": 11,
+        "shape": "box",
+        "x": 3,
+        "y": 4,
+        "text": null,
+        "color": null,
+        "linkerKey": "skpg_1",
+        "w": null,
+        "h": null,
+        "readOrder": null
+      },
+      {
+        "id": 9,
+        "moduleId": 11,
+        "shape": "box",
+        "x": 3,
+        "y": 4,
+        "text": null,
+        "color": null,
+        "linkerKey": "divt_1",
+        "w": null,
+        "h": null,
+        "readOrder": null
+      },
+      {
+        "id": 10,
+        "moduleId": 11,
+        "shape": "box",
+        "x": 3,
+        "y": 4,
+        "text": null,
+        "color": null,
+        "linkerKey": "ctpl_1",
+        "w": null,
+        "h": null,
+        "readOrder": null
+      }
+    ],
+    "edges": []
+  },
+  "relations": [
+    {
+      "fromKey": "note_1",
+      "toKey": "module_3",
+      "label": "next",
+      "relType": "t",
+      "directed": 1,
+      "moduleId": null,
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "fromKey": "module_3",
+      "toKey": "bchp_1",
+      "label": "next",
+      "relType": "t",
+      "directed": 1,
+      "moduleId": null,
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "fromKey": "bchp_1",
+      "toKey": "chss_1",
+      "label": "next",
+      "relType": "t",
+      "directed": 1,
+      "moduleId": null,
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "fromKey": "chss_1",
+      "toKey": "cobj_1",
+      "label": "next",
+      "relType": "t",
+      "directed": 1,
+      "moduleId": null,
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "fromKey": "cobj_1",
+      "toKey": "tlev_1",
+      "label": "next",
+      "relType": "t",
+      "directed": 1,
+      "moduleId": null,
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "fromKey": "tlev_1",
+      "toKey": "sdlg_1",
+      "label": "next",
+      "relType": "t",
+      "directed": 1,
+      "moduleId": null,
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "fromKey": "sdlg_1",
+      "toKey": "skpg_1",
+      "label": "next",
+      "relType": "t",
+      "directed": 1,
+      "moduleId": null,
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "fromKey": "skpg_1",
+      "toKey": "divt_1",
+      "label": "next",
+      "relType": "t",
+      "directed": 1,
+      "moduleId": null,
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "fromKey": "divt_1",
+      "toKey": "ctpl_1",
+      "label": "next",
+      "relType": "t",
+      "directed": 1,
+      "moduleId": null,
+      "validFrom": null,
+      "validTo": null
+    }
+  ],
+  "notes": {
+    "folders": [],
+    "notes": [
+      {
+        "id": 1,
+        "folderId": null,
+        "title": "Old note",
+        "content": "text",
+        "colorCode": null,
+        "pinned": 0
+      }
+    ]
+  },
+  "calendarTemplates": [],
+  "exhibitor": {
+    "nodes": [],
+    "views": []
+  },
+  "modulePresets": [],
+  "diviner": {
+    "tables": [
+      {
+        "id": 1,
+        "moduleId": 9,
+        "name": "Rumors",
+        "dice": "1d6",
+        "mode": "pick",
+        "order": 0
+      },
+      {
+        "id": 2,
+        "moduleId": 12,
+        "name": "Links",
+        "dice": null,
+        "mode": "pick",
+        "order": 0
+      }
+    ],
+    "entries": [
+      {
+        "id": 1,
+        "tableId": 2,
+        "weight": 1,
+        "lo": null,
+        "hi": null,
+        "text": null,
+        "linkerKey": "note_1",
+        "order": 0
+      },
+      {
+        "id": 2,
+        "tableId": 2,
+        "weight": 1,
+        "lo": null,
+        "hi": null,
+        "text": null,
+        "linkerKey": "module_3",
+        "order": 0
+      },
+      {
+        "id": 3,
+        "tableId": 2,
+        "weight": 1,
+        "lo": null,
+        "hi": null,
+        "text": null,
+        "linkerKey": "bchp_1",
+        "order": 0
+      },
+      {
+        "id": 4,
+        "tableId": 2,
+        "weight": 1,
+        "lo": null,
+        "hi": null,
+        "text": null,
+        "linkerKey": "chss_1",
+        "order": 0
+      },
+      {
+        "id": 5,
+        "tableId": 2,
+        "weight": 1,
+        "lo": null,
+        "hi": null,
+        "text": null,
+        "linkerKey": "cobj_1",
+        "order": 0
+      },
+      {
+        "id": 6,
+        "tableId": 2,
+        "weight": 1,
+        "lo": null,
+        "hi": null,
+        "text": null,
+        "linkerKey": "tlev_1",
+        "order": 0
+      },
+      {
+        "id": 7,
+        "tableId": 2,
+        "weight": 1,
+        "lo": null,
+        "hi": null,
+        "text": null,
+        "linkerKey": "sdlg_1",
+        "order": 0
+      },
+      {
+        "id": 8,
+        "tableId": 2,
+        "weight": 1,
+        "lo": null,
+        "hi": null,
+        "text": null,
+        "linkerKey": "skpg_1",
+        "order": 0
+      },
+      {
+        "id": 9,
+        "tableId": 2,
+        "weight": 1,
+        "lo": null,
+        "hi": null,
+        "text": null,
+        "linkerKey": "divt_1",
+        "order": 0
+      },
+      {
+        "id": 10,
+        "tableId": 2,
+        "weight": 1,
+        "lo": null,
+        "hi": null,
+        "text": null,
+        "linkerKey": "ctpl_1",
+        "order": 0
+      }
+    ],
+    "rolls": []
+  }
+}
