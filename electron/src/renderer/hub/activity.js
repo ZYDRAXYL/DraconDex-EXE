@@ -141,7 +141,7 @@ async function runLeftSearch(v) {
 }
 
 // ── tools ───────────────────────────────────────────────────────────────
-const LEFT_TOOLS = ['tools.problems', 'tools.csvImport', 'app.colors', 'app.exportMarkdown', 'app.createGuide', 'app.newProject'];
+const LEFT_TOOLS = ['tools.problems', 'tools.csvImport', 'app.colors', 'app.exportMarkdown', 'app.exportHtml', 'app.createGuide', 'app.newProject'];
 
 function leftToolsHtml() {
   return leftPanelHead(t('leftTools')) + `<div class="left-dest-body">${LEFT_TOOLS.filter(id => COMMANDS[id] && cmdVisible(COMMANDS[id], {})).map(id => `

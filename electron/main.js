@@ -776,6 +776,19 @@ h('nexus:exportMarkdown', async (id) => {
   if (result.canceled || !result.filePath) return { ok: false, canceled: true };
   return db.exportNexusMarkdown(id, result.filePath);
 });
+// v5 Part 8 (§12.13): a website of pages — the walk, then the zip.
+h('htmlExport:collect', (nx,key,depth) => db.collectPages(nx,key,depth));
+h('htmlExport:write', async (nx, payload) => {
+  const n = db.getNexus(nx);
+  if (!n) return { ok: false, code: 'not_found' };
+  const safe = String(n.name || 'nexus').replace(/[\\/:*?"<>|]/g, '_');
+  const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'Export HTML', defaultPath: path.join(app.getPath('documents'), `${safe}-site.zip`),
+    filters: [{ name: 'Website (.zip)', extensions: ['zip'] }],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  return db.exportHtmlSite(result.filePath, payload);
+});
 h('module:duplicate',   (id)          => db.duplicateModule(id));
 h('module:move',        (nx,id,parentId,ids) => db.moveModule(nx,id,parentId,ids));
 h('module:normalizeReport', ()        => db.takeParentNormalizeReport());

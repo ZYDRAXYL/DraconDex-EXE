@@ -28,6 +28,7 @@ function openNexusOptionsPopup(anchor, nexusId) {
     ${row(`nexusDuplicate(${n.id})`, t('nexusDuplicate'))}
     ${row(`nexusExportFile(${n.id})`, t('nexusExport'))}
     ${row(`runCommand('app.exportMarkdown',{nexusId:${n.id}})`, t('exportMarkdown'))}
+    ${row(`runCommand('app.exportHtml',{nexusId:${n.id}})`, t('htmlExport'))}
     ${row(`nexusShare(${n.id})`, t('nexusShare'))}
     ${row(`nexusRevealFile(${n.id})`, t('nexusRevealFile'))}
     <div class="ctx-sep"></div>

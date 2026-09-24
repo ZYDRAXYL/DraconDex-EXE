@@ -93,6 +93,7 @@ const COMMANDS = {
   // Moved off the rail (§11.9): the Setting "Data" page and Ctrl+P.
   'db.import': { label: 'importDb', icon: 'import', scope: 'app', run: () => importDatabaseFile(), surfaces: ['setting.data'] },
   'db.export': { label: 'exportDb', icon: 'export', scope: 'app', run: () => exportDatabaseFile(), surfaces: ['setting.data'] },
+  'app.exportHtml': { label: 'htmlExport', icon: 'export', scope: 'app', when: (c) => !!(c?.nexusId || S.nexus), run: (c) => openHtmlExportModal(c?.nexusId || S.nexus.id), surfaces: ['nexus.options', 'left.panel'] },
   'app.exportMarkdown': { label: 'exportMarkdown', icon: 'export', scope: 'app', when: (c) => !!(c?.nexusId || S.nexus), run: (c) => nexusExportMarkdown(c?.nexusId || S.nexus.id), surfaces: ['nexus.options', 'left.panel'] },
   'app.createGuide': { label: 'guideCreate', icon: 'info', scope: 'app', when: () => !!S.nexus, run: () => createGuideBundle(), surfaces: ['bundle.picker', 'left.panel'] },
   'app.newProject': { label: 'bundleTitle', icon: 'artisan', scope: 'app', when: () => !!S.nexus, run: (c) => openBundlePicker(c?.parentId ?? null), surfaces: ['kind.picker', 'left.panel'] },

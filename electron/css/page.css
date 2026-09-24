@@ -125,3 +125,10 @@ body.focus-mode #status-bar{display:none !important}
 body.focus-mode #title-left-zone{width:44px}
 /* Readable width: a measure for long text, centred. */
 .module-page.page-readable > *:not(.page-navbar){box-sizing:border-box;width:100%;max-width:46rem;margin-left:auto;margin-right:auto}
+
+/* HTML export (hub/html-export.js): the hidden pane pages render in, and the modal. */
+#main-inner .bpane.hx-host{position:fixed;left:-20000px;top:0;width:1000px;height:auto;min-height:600px;pointer-events:none}
+.hx-list{max-height:40vh;overflow:auto;display:flex;flex-direction:column;gap:2px;margin:6px 0}
+.hx-row{display:flex;align-items:center;gap:6px}
+.hx-warn{margin:8px 0 0;padding:8px 10px;border-radius:6px;background:var(--raised);color:var(--t2);font-size:calc(12px * var(--fsc,1))}
+.hx-host .site-title{font-size:1.5em;margin:8px 0 16px}
