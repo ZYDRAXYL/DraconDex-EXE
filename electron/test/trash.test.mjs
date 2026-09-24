@@ -50,6 +50,10 @@ test('trash → restore brings back the subtree, its content and every relation 
   const cast = mkModule('Cast', 'classifier', folder);
   const aria = one(`INSERT INTO classifier_object (module_ref, name) VALUES (?, 'Aria')`, cast);
   const field = one(`INSERT INTO classifier_template (module_ref, description, attribute_type) VALUES (?, 'Rival', 'relation')`, cast);
+  const rank = one(`INSERT INTO classifier_template (module_ref, description, levelable) VALUES (?, 'Rank', 1)`, cast);
+  for (const [i, lv] of ['I', 'II'].entries()) {
+    one(`INSERT INTO classifier_level (object_ref, template_ref, level_label, display_order) VALUES (?,?,?,?)`, aria, rank, lv, i);
+  }
   const outside = mkModule('Places', 'classifier');
   const keep = one(`INSERT INTO classifier_object (module_ref, name) VALUES (?, 'Keep')`, outside);
   one(`INSERT INTO entity_relation (nexus_ref, from_key, to_key, label) VALUES (1, ?, ?, 'lives in')`, `cobj_${aria}`, `cobj_${keep}`);
@@ -77,6 +81,10 @@ test('trash → restore brings back the subtree, its content and every relation 
     [`cobj_${aria2}`, `cobj_${keep}`, `ctpl_${field2}`],
     [`module_${outside}`, `cobj_${keep}`, 'unrelated'],
   ].sort());
+  // A levelled field's rows come back on the new object and the new field.
+  const levels = db.prepare(`SELECT l.level_label FROM classifier_level l JOIN classifier_template t ON t.id=l.template_ref
+    WHERE l.object_ref=? AND t.description='Rank' ORDER BY l.display_order`).all(aria2).map((x) => x.level_label);
+  assert.deepEqual(levels, ['I', 'II']);
   assert.deepEqual(trash.listTrash(1), [], 'a restored item leaves the trash');
 });
 

@@ -388,6 +388,17 @@ function serializeVault(nexusId, moduleIds = null) {
       FROM classifier_attribute a
       JOIN classifier_object o ON a.object_ref=o.id
       JOIN module m ON o.module_ref=m.id WHERE m.nexus_ref=?`),
+    // A levelable / conditioned field keeps its value here, not in
+    // classifier_attribute — without these rows a synced, transferred,
+    // exported or trashed-and-restored object came back with empty tables.
+    // Older readers ignore the key; a missing key reads as no rows.
+    levels: all(`
+      SELECT l.object_ref AS objectId, l.template_ref AS templateId,
+             l.level_label AS levelLabel, l.condition_value AS conditionValue,
+             l.info_value AS infoValue, l.display_order AS displayOrder
+      FROM classifier_level l
+      JOIN classifier_object o ON l.object_ref=o.id
+      JOIN module m ON o.module_ref=m.id WHERE m.nexus_ref=? ORDER BY l.display_order, l.id`),
   };
 
   // v3 Locator/Chronicler rows have module_ref set (project_id NULL) — select
@@ -840,6 +851,13 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       if (!cobjMap.has(a.objectId) || !ctplMap.has(a.templateId)) continue;
       db.prepare(`INSERT OR IGNORE INTO classifier_attribute (object_ref, template_ref, attribute_value) VALUES (?,?,?)`)
         .run(cobjMap.get(a.objectId), ctplMap.get(a.templateId), a.value ?? null);
+    }
+    for (const l of arr(cls.levels)) {
+      if (!cobjMap.has(l.objectId) || !ctplMap.has(l.templateId)) continue;
+      db.prepare(`INSERT INTO classifier_level (object_ref, template_ref, level_label, condition_value, info_value, display_order)
+        VALUES (?,?,?,?,?,?)`)
+        .run(cobjMap.get(l.objectId), ctplMap.get(l.templateId), l.levelLabel ?? null,
+             l.conditionValue ?? null, l.infoValue ?? null, l.displayOrder ?? 0);
     }
 
     const loc = sect(payload.locator);

@@ -60,6 +60,13 @@ test('the shared fixture imports whole into an empty vault', () => {
     assert.equal(keys.length, 10, `${t} links`);
     for (const { linker_key } of keys) assert.ok(exists(linker_key), `${t}: ${linker_key}`);
   }
+  // A levelled field keeps its value in classifier_level, not an attribute.
+  assert.ok(fixture.classifier.levels.length > 0, 'the fixture carries level rows');
+  assert.deepEqual(
+    db.prepare(`SELECT l.level_label, l.condition_value, l.info_value FROM classifier_level l
+      JOIN classifier_object o ON o.id=l.object_ref JOIN classifier_template t ON t.id=l.template_ref
+      WHERE o.name='Mira' AND t.description='Rank' ORDER BY l.display_order`).all().map((x) => [x.level_label, x.condition_value, x.info_value]),
+    fixture.classifier.levels.map((x) => [x.levelLabel, x.conditionValue, x.infoValue]));
   const items = db.prepare(`SELECT item_key, source_key FROM page_block WHERE item_key IS NOT NULL OR source_key IS NOT NULL`).all();
   assert.ok(items.some((b) => b.item_key === '*'), 'the shared element layout');
   for (const b of items) {

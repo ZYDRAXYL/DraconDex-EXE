@@ -1,7 +1,7 @@
 {
   "format": "dracondex-vault-snapshot",
   "version": 2,
-  "app": "5.0.0-8",
+  "app": "5.0.0-9",
   "exportedAt": "2026-09-24T00:00:00.000Z",
   "nexus": {
     "name": "Fixture",
@@ -36,8 +36,8 @@
       "pinned": 0,
       "catType": null,
       "handle": null,
-      "createAt": "2026-09-24 08:52:34",
-      "updateAt": "2026-09-24 08:52:34"
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
     },
     {
       "id": 2,
@@ -52,8 +52,8 @@
       "pinned": 0,
       "catType": null,
       "handle": null,
-      "createAt": "2026-09-24 08:52:34",
-      "updateAt": "2026-09-24 08:52:34"
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
     },
     {
       "id": 3,
@@ -68,8 +68,8 @@
       "pinned": 0,
       "catType": null,
       "handle": null,
-      "createAt": "2026-09-24 08:52:34",
-      "updateAt": "2026-09-24 08:52:34"
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
     },
     {
       "id": 4,
@@ -84,8 +84,8 @@
       "pinned": 0,
       "catType": null,
       "handle": null,
-      "createAt": "2026-09-24 08:52:34",
-      "updateAt": "2026-09-24 08:52:34"
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
     },
     {
       "id": 5,
@@ -100,8 +100,8 @@
       "pinned": 0,
       "catType": null,
       "handle": null,
-      "createAt": "2026-09-24 08:52:34",
-      "updateAt": "2026-09-24 08:52:34"
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
     },
     {
       "id": 6,
@@ -116,8 +116,8 @@
       "pinned": 0,
       "catType": null,
       "handle": null,
-      "createAt": "2026-09-24 08:52:34",
-      "updateAt": "2026-09-24 08:52:34"
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
     },
     {
       "id": 7,
@@ -132,8 +132,8 @@
       "pinned": 0,
       "catType": null,
       "handle": null,
-      "createAt": "2026-09-24 08:52:34",
-      "updateAt": "2026-09-24 08:52:34"
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
     },
     {
       "id": 8,
@@ -148,8 +148,8 @@
       "pinned": 0,
       "catType": null,
       "handle": null,
-      "createAt": "2026-09-24 08:52:34",
-      "updateAt": "2026-09-24 08:52:34"
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
     },
     {
       "id": 9,
@@ -164,8 +164,8 @@
       "pinned": 0,
       "catType": null,
       "handle": null,
-      "createAt": "2026-09-24 08:52:34",
-      "updateAt": "2026-09-24 08:52:34"
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
     },
     {
       "id": 10,
@@ -180,8 +180,8 @@
       "pinned": 0,
       "catType": null,
       "handle": null,
-      "createAt": "2026-09-24 08:52:34",
-      "updateAt": "2026-09-24 08:52:34"
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
     },
     {
       "id": 11,
@@ -196,8 +196,8 @@
       "pinned": 0,
       "catType": null,
       "handle": null,
-      "createAt": "2026-09-24 08:52:34",
-      "updateAt": "2026-09-24 08:52:34"
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
     },
     {
       "id": 12,
@@ -212,8 +212,8 @@
       "pinned": 0,
       "catType": null,
       "handle": null,
-      "createAt": "2026-09-24 08:52:34",
-      "updateAt": "2026-09-24 08:52:34"
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
     }
   ],
   "pageBlocks": [
@@ -326,9 +326,38 @@
         "hasCondition": 0,
         "displayOrder": 0,
         "options": null
+      },
+      {
+        "id": 2,
+        "moduleId": 2,
+        "objectId": null,
+        "description": "Rank",
+        "attributeType": "text",
+        "levelable": 1,
+        "hasCondition": 1,
+        "displayOrder": 0,
+        "options": null
       }
     ],
-    "attributes": []
+    "attributes": [],
+    "levels": [
+      {
+        "objectId": 1,
+        "templateId": 2,
+        "levelLabel": "Novice",
+        "conditionValue": null,
+        "infoValue": "First stage",
+        "displayOrder": 0
+      },
+      {
+        "objectId": 1,
+        "templateId": 2,
+        "levelLabel": "Adept",
+        "conditionValue": "After the storm",
+        "infoValue": "Second stage",
+        "displayOrder": 1
+      }
+    ]
   },
   "locator": {
     "maps": [],
@@ -395,7 +424,7 @@
         "moduleId": 5,
         "name": "Session 1",
         "order": 0,
-        "createAt": "2026-09-24 08:52:34"
+        "createAt": "2026-09-24 00:00:00"
       }
     ],
     "messages": []

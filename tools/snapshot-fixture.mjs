@@ -81,6 +81,12 @@ const cobj = keys.find((k) => k.startsWith('cobj_'));
 const block = (m, item, type, extra = {}) => one(`INSERT INTO page_block (module_ref, item_key, block_type, component, source_key, config, content, prop_name, prop_type, block_order)
   VALUES (?,?,?,?,?,?,?,?,?,?)`, m, item, type, extra.component ?? null, extra.source ?? null, extra.config ? JSON.stringify(extra.config) : null,
   extra.content ?? null, extra.prop ?? null, extra.prop ? 'text' : null, extra.order ?? 0);
+// A levelled + conditioned field: its value lives in classifier_level rows,
+// not in classifier_attribute — both importers must bring the rows back.
+const rank = one(`INSERT INTO classifier_template (module_ref, description, attribute_type, levelable, has_condition) VALUES (?, 'Rank', 'text', 1, 1)`, cls);
+[['Novice', null, 'First stage'], ['Adept', 'After the storm', 'Second stage']].forEach(([lv, cond, info], i) =>
+  one(`INSERT INTO classifier_level (object_ref, template_ref, level_label, condition_value, info_value, display_order) VALUES (?,?,?,?,?,?)`,
+    Number(cobj.slice(5)), rank, lv, cond, info, i));
 block(cls, null, 'component', { component: 'classifier.view', config: { preset: 'table' } });
 block(cls, null, 'property', { prop: 'Era', content: 'Third age' });
 block(cls, null, 'text', { content: 'About [[Mira]]', order: 1 });
@@ -90,6 +96,8 @@ block(cls, null, 'component', { component: 'diviner.view', source: keys.find((k)
 
 const snap = JSON.parse(JSON.stringify(sync.serializeVault(1)));
 snap.exportedAt = '2026-09-24T00:00:00.000Z'; // stable: the fixture is compared, not timestamped
-writeFileSync(resolve(out), JSON.stringify(snap, null, 2) + '\n');
+// Row timestamps are pinned too, so regenerating the fixture diffs only what changed.
+const STAMP = /^(create|update)(At|_at)$/;
+writeFileSync(resolve(out), JSON.stringify(snap, (k, v) => (STAMP.test(k) && typeof v === 'string' ? '2026-09-24 00:00:00' : v), 2) + '\n');
 rmSync(tmp, { recursive: true, force: true });
 console.log(`wrote ${out}: version ${snap.version}, ${keys.length} key families, ${snap.pageBlocks?.length} page blocks`);
