@@ -13,7 +13,7 @@
 // The theme's tokens, read from the running app, head the site's style.css.
 
 const HX_PANE = 9999;
-const HX_ITEM_PREFIX = { classifier: 'cobj', chronicler: 'tlev', author: 'bchp', scribe: 'chss' };
+const HX_ITEM_PREFIX = { classifier: 'cobj', chronicler: 'tlev', author: 'bchp', scribe: 'chss', narrator: 'sdlg', diviner: 'divt', sketcher: 'skpg', wanderer: 'mevt' };
 const HX_KIND_OF = Object.fromEntries(Object.entries(HX_ITEM_PREFIX).map(([k, p]) => [p, k]));
 let _hx = null; // { nexusId, pages: [{key, name, depth, moduleId}], ticked: Set }
 

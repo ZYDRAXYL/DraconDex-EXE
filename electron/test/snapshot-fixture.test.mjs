@@ -55,9 +55,12 @@ test('the shared fixture imports whole into an empty vault', () => {
     return !!m && !!db.prepare(`SELECT 1 FROM ${ENTITY_KINDS[m[1]].table} WHERE id=?`).get(Number(m[2]));
   };
   for (const row of db.prepare(`SELECT from_key, to_key FROM entity_relation`).all()) assert.ok(exists(row.from_key) && exists(row.to_key), `${row.from_key} -> ${row.to_key}`);
-  for (const t of ['sketch_pin', 'design_node', 'diviner_entry']) {
+  // One linked row per synced key family, in each table that links (the
+  // Wanderer's map pins since SDB 2.0.3 — before it their links were dropped).
+  const families = Object.values(ENTITY_KINDS).filter((k) => k.sync).length;
+  for (const t of ['sketch_pin', 'design_node', 'diviner_entry', 'map_event']) {
     const keys = db.prepare(`SELECT linker_key FROM ${t} WHERE linker_key IS NOT NULL`).all();
-    assert.equal(keys.length, 10, `${t} links`);
+    assert.equal(keys.length, families, `${t} links`);
     for (const { linker_key } of keys) assert.ok(exists(linker_key), `${t}: ${linker_key}`);
   }
   // A levelled field keeps its value in classifier_level, not an attribute.

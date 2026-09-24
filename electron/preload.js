@@ -158,6 +158,7 @@ contextBridge.exposeInMainWorld('api', {
     list:   (mref)                  => inv('wanderer:list', mref),
     create: (mref,ev,key,px,py,ar)  => inv('wanderer:create', mref,ev,key,px,py,ar),
     update: (id,ev,key,px,py,ar)    => inv('wanderer:update', id,ev,key,px,py,ar),
+    setLabel: (id,label)            => inv('wanderer:setLabel', id, label),
     delete: (id)                    => inv('wanderer:delete', id),
   },
   narrator: {

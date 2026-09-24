@@ -846,6 +846,7 @@ h('classifier:moveLevels',        (oid,tid,ids)         => db.moveLevels(oid,tid
 h('wanderer:list',   (mref)                     => db.getMapEvents(mref));
 h('wanderer:create', (mref,ev,key,px,py,ar)     => db.createMapEvent(mref,ev,key,px,py,ar));
 h('wanderer:update', (id,ev,key,px,py,ar)       => db.updateMapEvent(id,ev,key,px,py,ar));
+h('wanderer:setLabel', (id,label)               => db.setMapEventLabel(id,label));
 h('wanderer:delete', (id)                       => db.deleteMapEvent(id));
 
 // Story "Narrator" (v3 Phase 10) — Dialogue route board

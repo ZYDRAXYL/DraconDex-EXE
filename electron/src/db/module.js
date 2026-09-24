@@ -203,7 +203,7 @@ const countModules = (nexusRef) => getDB().prepare(`SELECT COUNT(*) AS c FROM mo
 // through that kind's own list-getter — 1 IPC per module, and chronicler
 // was 1+M since it walked its timelines — with a full re-render firing
 // per resolved fetch. This returns every content module's items for a
-// whole nexus in one call, over the five content tables, so the tree loads
+// whole nexus in one call, over the content tables, so the tree loads
 // together with the module tree and renders once. It also replaces the old
 // module:getItemCounts chevron gate — the count is just the array length.
 //
@@ -258,6 +258,28 @@ function getNestItems(nexusRef) {
       SELECT n.module_ref, n.id, SUBSTR(n.node_text,1,64) AS node_text, n.shape FROM design_node n
       JOIN module m ON n.module_ref=m.id WHERE m.nexus_ref=?
       ORDER BY n.module_ref, n.id
+    `).all(nexusRef));
+    // The four element families that got pages in Procress 11's last item
+    // (V5.md §12.4): dialogues, Diviner tables, Sketcher pages, map pins.
+    add(d.prepare(`
+      SELECT sd.module_ref, sd.id, sd.name FROM story_dialogue sd
+      JOIN module m ON sd.module_ref=m.id WHERE m.nexus_ref=?
+      ORDER BY sd.module_ref, sd.id
+    `).all(nexusRef));
+    add(d.prepare(`
+      SELECT t.module_ref, t.id, t.name FROM diviner_table t
+      JOIN module m ON t.module_ref=m.id WHERE m.nexus_ref=?
+      ORDER BY t.module_ref, t.display_order, t.id
+    `).all(nexusRef));
+    add(d.prepare(`
+      SELECT p.module_ref, p.id, p.name FROM sketch_page p
+      JOIN module m ON p.module_ref=m.id WHERE m.nexus_ref=?
+      ORDER BY p.module_ref, p.page_order, p.id
+    `).all(nexusRef));
+    add(d.prepare(`
+      SELECT me.module_ref, me.id, me.label, me.linker_key, te.event_name FROM map_event me
+      JOIN module m ON me.module_ref=m.id LEFT JOIN timeline_event te ON te.id=me.event_ref
+      WHERE m.nexus_ref=? ORDER BY me.module_ref, me.id
     `).all(nexusRef));
     return items;
   })();

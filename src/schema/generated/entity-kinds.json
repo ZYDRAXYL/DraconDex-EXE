@@ -188,6 +188,25 @@
       ]
     },
     {
+      "prefix": "mevt",
+      "table": "map_event",
+      "owner": "SELECT id FROM map_event WHERE module_ref=?",
+      "lookup": {
+        "sql": "SELECT id, COALESCE(NULLIF(label,''), (SELECT event_name FROM timeline_event WHERE id=map_event.event_ref), 'Pin ' || id) AS name FROM map_event WHERE id=?",
+        "type": "pin",
+        "module": "wanderer"
+      },
+      "wiki": null,
+      "sync": "mevtMap",
+      "index": null,
+      "search": null,
+      "why": {
+        "wiki": "a pin label is an optional caption and repeats freely; a pin is reached from its map, not linked to by name",
+        "index": "a pin stands for what it links to (linker_key / event_ref) — filters and the Exhibitor list that element, not the pin",
+        "search": "the same: the linked element is what a search finds"
+      }
+    },
+    {
       "prefix": "ctpl",
       "table": "classifier_template",
       "owner": "SELECT id FROM classifier_template WHERE module_ref=?",
@@ -307,6 +326,12 @@
     },
     {
       "table": "diviner_entry",
+      "cols": [
+        "linker_key"
+      ]
+    },
+    {
+      "table": "map_event",
       "cols": [
         "linker_key"
       ]

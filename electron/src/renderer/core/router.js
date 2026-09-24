@@ -34,6 +34,10 @@ async function openEntityByKey(key) {
     if (p.kind === 'skpg') await api.module.setUi(p.moduleId, 'activePage', String(p.pageId)); // v5 Part 7
     if (p.kind === 'divt') await api.module.setUi(p.moduleId, 'activeTable', String(p.tableId));
     await openModuleNode(p.moduleId);
+  } else if (p.kind === 'mevt') {
+    // A pin has no selected state in the Wanderer to land on — its page is
+    // where it is shown (mod/item.js).
+    await openItemNode('wanderer', p.moduleId, p.pinId);
   } else if (p.kind === 'file') {
     // v5 Asset Nest — assets open in the file viewer wherever they're filed.
     S.activeModule = null; S.view = 'nexus';

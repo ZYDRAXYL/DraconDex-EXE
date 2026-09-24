@@ -144,8 +144,11 @@ async function openAddrHit(it) {
   const key = String(it.key || '');
   const m = /^module_(\d+)$/.exec(key);
   if (m) { await openModuleNode(Number(m[1])); return; }
-  const item = /^(cobj|tlev|bchp|chss)_(\d+)$/.exec(key);
+  // Any family whose owning kind gives its elements pages (ITEM_KIND with a
+  // keyOf) — derived, so a new family is not a second list to keep in step.
+  const item = /^([a-z]+)_(\d+)$/.exec(key);
   const owner = it.moduleId != null ? findModuleNode(it.moduleId) : null;
-  if (item && owner && ITEM_KIND[owner.kind]) { await openItemNode(owner.kind, owner.id, Number(item[2])); return; }
+  const reg = owner && ITEM_KIND[owner.kind];
+  if (item && reg?.keyOf && reg.keyOf({ id: Number(item[2]) }) === key) { await openItemNode(owner.kind, owner.id, Number(item[2])); return; }
   await openEntityByKey(key);
 }

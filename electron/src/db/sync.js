@@ -452,8 +452,8 @@ function serializeVault(nexusId, moduleIds = null) {
 
   const wanderer = {
     mapEvents: all(`
-      SELECT me.module_ref AS moduleId, me.event_ref AS eventId, me.area_ref AS areaId,
-             me.label, me.x, me.y
+      SELECT me.id, me.module_ref AS moduleId, me.event_ref AS eventId, me.area_ref AS areaId,
+             me.label, me.linker_key AS linkerKey, me.x, me.y
       FROM map_event me JOIN module m ON me.module_ref=m.id
       WHERE m.nexus_ref=? ORDER BY me.id`),
   };
@@ -901,13 +901,20 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       evtMap.set(e.id, r.lastInsertRowid);
     }
 
+    // A pin is an entity (mevt_) with its own page, and its linker_key points
+    // at any element — remapped with the other key columns once every map is
+    // full. Before SDB 2.0.3 neither travelled, so a synced pin lost its link.
+    const mevtMap = new Map();
+    const pinLinks = [];
     for (const me of arr(sect(payload.wanderer).mapEvents)) {
       if (mod(me.moduleId) == null) continue;
-      db.prepare(`INSERT INTO map_event (module_ref, event_ref, area_ref, label, x, y) VALUES (?,?,?,?,?,?)`)
+      const r = db.prepare(`INSERT INTO map_event (module_ref, event_ref, area_ref, label, x, y) VALUES (?,?,?,?,?,?)`)
         .run(mod(me.moduleId),
              me.eventId != null && evtMap.has(me.eventId) ? evtMap.get(me.eventId) : null,
              me.areaId != null && areaMap.has(me.areaId) ? areaMap.get(me.areaId) : null,
              me.label ?? null, me.x ?? 0, me.y ?? 0);
+      if (me.id != null) mevtMap.set(me.id, r.lastInsertRowid);
+      if (me.linkerKey) pinLinks.push(['map_event', 'linker_key', r.lastInsertRowid, me.linkerKey]);
     }
 
     const nar = sect(payload.narrator);
@@ -944,7 +951,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     }
 
     const bchpMap = new Map();
-    const pendingKeys = []; // [table, col, id, key] — single-key columns, remapped below
+    const pendingKeys = [...pinLinks]; // [table, col, id, key] — single-key columns, remapped below
     for (const ch of arr(sect(payload.author).chapters)) {
       if (mod(ch.moduleId) == null) continue;
       const r = db.prepare(`INSERT INTO book_chapter (module_ref, name, chapter_content, chapter_order, synopsis, status) VALUES (?,?,?,?,?,?)`)
@@ -1036,7 +1043,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     // v5 Part 7 (§11.1/§11.2): the key maps come from db/entity-kinds.js —
     // every family that declares `sync` gets its map, by name. Registering
     // them by hand here is what dropped tlev_/sdlg_ endpoints on every pull.
-    const keyMaps = entityKeyMaps({ modMap, cobjMap, ctplMap, bchpMap, chssMap, evtMap, dlgMap, noteMap, pageMap, divtMap });
+    const keyMaps = entityKeyMaps({ modMap, cobjMap, ctplMap, bchpMap, chssMap, evtMap, dlgMap, noteMap, pageMap, divtMap, mevtMap });
     // Key columns written before the maps were complete (KEY_COLUMNS in
     // db/entity-kinds.js): a single key that cannot be mapped is cleared; an
     // entry of a JSON list that cannot be mapped is left out.

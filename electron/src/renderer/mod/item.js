@@ -99,6 +99,78 @@ const ITEM_KIND = {
       bindChatBubbleDrag('item-chs-stream');
     },
   },
+  // Procress 11's last item (V5.md §12.4): the four element families that
+  // had keys but no page. Each page shows the element and its blocks; the
+  // full editor stays in the module (the board, the table list, the canvas,
+  // the map), one click away through itemOpenInModuleHtml.
+  narrator: {
+    badgeKey: 'itemBadgeDialogue',
+    icon: () => I.narrator,
+    keyOf: (d) => `sdlg_${d.id}`,
+    async list(moduleId) { return api.narrator.getDialogues(moduleId); },
+    nameOf: (d) => d.name,
+    async renderBody(dl) {
+      const [talks, options] = await Promise.all([api.narrator.getTalks(dl.id), api.narrator.getChoiceOptions(dl.id)]);
+      const rows = talks.map((tk) => (tk.row_type === 'choice'
+        ? `<li class="item-choice"><ul>${options.filter((o) => o.talk_ref === tk.id)
+          .map((o) => `<li>${x(o.option_text || '…')}</li>`).join('')}</ul></li>`
+        : `<li>${tk.speaker ? `<b>${x(tk.speaker)}</b> ` : ''}${x(tk.talk_sentence || '')}</li>`)).join('');
+      return `${dl.description ? `<div class="md-preview">${mdRender(dl.description)}</div>` : ''}
+        <ol class="item-lines" data-no-i18n>${rows || ''}</ol>
+        ${rows ? '' : `<div class="empty"><p>${t('nestEmpty')}</p></div>`}
+        ${itemOpenInModuleHtml(`sdlg_${dl.id}`)}`;
+    },
+  },
+  diviner: {
+    badgeKey: 'itemBadgeDivinerTable',
+    icon: () => I.list,
+    keyOf: (tb) => `divt_${tb.id}`,
+    async list(moduleId) { return api.diviner.getTables(moduleId); },
+    nameOf: (tb) => tb.name,
+    async renderBody(tb) {
+      const entries = await api.diviner.getEntries(tb.id);
+      const rows = entries.map((e) => `<li>${x(e.entry_text || e.linker_key || '…')}</li>`).join('');
+      return `${tb.dice ? `<p class="drafter-hint" data-no-i18n>${x(tb.dice)}</p>` : ''}
+        ${rows ? `<ol class="item-lines" data-no-i18n>${rows}</ol>` : `<div class="empty"><p>${t('divNoEntries')}</p></div>`}
+        <div class="mfoot">
+          <span id="item-div-result" class="item-roll" data-no-i18n></span>
+          <button class="btn btn-p" onclick="rollItemDivinerTable(${tb.id})">${t('divRoll')}</button>
+        </div>
+        ${itemOpenInModuleHtml(`divt_${tb.id}`)}`;
+    },
+  },
+  sketcher: {
+    badgeKey: 'itemBadgeSketchPage',
+    icon: () => I.sketcher,
+    keyOf: (p) => `skpg_${p.id}`,
+    async list(moduleId) { return api.sketcher.getPages(moduleId); },
+    nameOf: (p) => p.name,
+    // Drawn to a PNG up front rather than on mount, so the HTML export
+    // (hub/html-export.js), which never mounts an element body, has it too.
+    async renderBody(p) {
+      return `<img class="item-sketch" src="${await sketchPageDataUrl(p.id, 0.5)}" alt="${x(p.name)}">
+        ${itemOpenInModuleHtml(`skpg_${p.id}`)}`;
+    },
+  },
+  wanderer: {
+    badgeKey: 'itemBadgeMapPin',
+    icon: () => I.wanderer,
+    keyOf: (p) => `mevt_${p.id}`,
+    async list(moduleId) { return api.wanderer.list(moduleId); },
+    // A pin's own caption, else the event it marks, else its number.
+    nameOf: (p) => p.label || p.event_name || `${t('itemBadgeMapPin')} #${p.id}`,
+    async renderBody(p) {
+      const [linked] = p.linker_key ? await api.wiki.resolveKeys([p.linker_key]) : [];
+      return `<div class="fg"><label>${t('pinCaption')}</label>
+          <input id="item-pin-label" value="${x(p.label || '')}" data-no-i18n
+            onchange="saveItemPinLabel(${p.id}, this.value)"></div>
+        ${p.event_name ? `<div class="fg"><label>${t('itemBadgeChroniclerEvent')}</label>
+          <a class="wikilink" data-key="tlev_${p.event_ref}" data-no-i18n>${x(p.event_name)}</a></div>` : ''}
+        ${linked ? `<div class="fg"><label>${t('pinLinkedTo')}</label>
+          <a class="wikilink" data-key="${x(p.linker_key)}" data-no-i18n>${x(linked.name || p.linker_key)}</a></div>` : ''}
+        ${itemOpenInModuleHtml(`module_${p.module_ref}`)}`;
+    },
+  },
   designer: {
     badgeKey: 'itemBadgeDesignNode',
     icon: () => I.relation,
@@ -112,6 +184,24 @@ const ITEM_KIND = {
     },
   },
 };
+
+// The way from an element's page to the element in its module's own view:
+// openEntityByKey (core/router.js) opens the module with it selected.
+function itemOpenInModuleHtml(key) {
+  return `<div class="mfoot"><button class="btn btn-g" onclick="openEntityByKey('${x(key)}')">${t('itemOpenInModule')}</button></div>`;
+}
+
+async function rollItemDivinerTable(tableId) {
+  const r = await api.diviner.roll(tableId);
+  const el = fq('#item-div-result');
+  if (el && r?.ok) el.textContent = r.text;
+}
+
+async function saveItemPinLabel(id, value) {
+  await api.wanderer.setLabel(id, value.trim());
+  invalidateNestItems(S.activeItemNode.moduleId);
+  toast(t('saved'), 'ok');
+}
 
 async function fetchOneItem(itemKind, moduleId, id) {
   const items = await ITEM_KIND[itemKind].list(moduleId);

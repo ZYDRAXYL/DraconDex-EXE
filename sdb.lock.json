@@ -3,8 +3,8 @@
   "self": "EXE",
   "source": {
     "repo": "ZYDRAXYL/DraconDex-SDB",
-    "ref": "6ef1866",
-    "version": "2.0.2"
+    "ref": "400dd41",
+    "version": "2.0.3"
   },
   "expect": {
     "vaultSchemaVersion": 6,
@@ -21,7 +21,7 @@
     },
     "src/schema/generated/entity-kinds.json": {
       "artifact": "generated/electron/entity-kinds.json",
-      "sha256": "7d08f759c57e60e3c2271a6c481f5abb7982ad043a5739ec6b60769f15dedc5a"
+      "sha256": "29fdd294651e2f0e61c8971e335a49de81797075f74171cb8d1810756b4a4913"
     },
     "src/assets/brand/DraconDex_BlackIn.png": {
       "artifact": "assets/brand/DraconDex_BlackIn.png",
@@ -57,7 +57,7 @@
     },
     "electron/test/fixtures/snapshot-v2.json": {
       "artifact": "fixtures/snapshot-v2.json",
-      "sha256": "3043214935a0ba2a80bcbbc66251ecf1f3337d76ca2086b7a4c8cfdee6b8dfe7"
+      "sha256": "468eee3ad95e58a56404b81d65d0eb7a0ff21292540ecb6ca534268103f0d9e2"
     },
     "electron/guide/en.json": {
       "artifact": "templates/guide/en.json",

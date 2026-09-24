@@ -62,6 +62,7 @@ const seed = {
   skpg: () => one(`INSERT INTO sketch_page (module_ref, name) VALUES (?, 'Page 1')`, mod('Sketch', 'sketcher', folder)),
   ctpl: () => one(`INSERT INTO classifier_template (module_ref, description, attribute_type) VALUES (?, 'Friend', 'relation')`, cls),
   divt: () => one(`INSERT INTO diviner_table (module_ref, name, dice) VALUES (?, 'Rumors', '1d6')`, mod('Rumors', 'diviner', folder)),
+  mevt: () => one(`INSERT INTO map_event (module_ref, label, x, y) VALUES (?, 'The harbor', 5, 6)`, mod('Travels', 'wanderer', folder)),
 };
 const families = Object.keys(ENTITY_KINDS).filter((p) => ENTITY_KINDS[p].sync);
 const missing = families.filter((p) => !seed[p]);
@@ -71,7 +72,9 @@ keys.forEach((k, i) => { if (i) one(`INSERT INTO entity_relation (nexus_ref, fro
 const page = one(`INSERT INTO sketch_page (module_ref, name) VALUES (?, 'Pins')`, mod('Pinboard', 'sketcher', folder));
 const dg = mod('Plan', 'designer', folder);
 const dtab = one(`INSERT INTO diviner_table (module_ref, name) VALUES (?, 'Links')`, mod('Links', 'diviner', folder));
+const trip = mod('Trip', 'wanderer', folder);
 for (const k of keys) {
+  one(`INSERT INTO map_event (module_ref, linker_key, x, y) VALUES (?,?,7,8)`, trip, k); // a pin linked to every family
   one(`INSERT INTO sketch_pin (page_ref, linker_key, x, y) VALUES (?,?,1,2)`, page, k);
   one(`INSERT INTO design_node (module_ref, shape, x, y, linker_key) VALUES (?, 'box', 3, 4, ?)`, dg, k);
   one(`INSERT INTO diviner_entry (table_ref, linker_key) VALUES (?,?)`, dtab, k);

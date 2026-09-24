@@ -170,6 +170,22 @@
     {
       "id": 10,
       "parentId": 1,
+      "name": "Travels",
+      "kind": "wanderer",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
+    },
+    {
+      "id": 11,
+      "parentId": 1,
       "name": "Pinboard",
       "kind": "sketcher",
       "icon": null,
@@ -184,7 +200,7 @@
       "updateAt": "2026-09-24 00:00:00"
     },
     {
-      "id": 11,
+      "id": 12,
       "parentId": 1,
       "name": "Plan",
       "kind": "designer",
@@ -200,10 +216,26 @@
       "updateAt": "2026-09-24 00:00:00"
     },
     {
-      "id": 12,
+      "id": 13,
       "parentId": 1,
       "name": "Links",
       "kind": "diviner",
+      "icon": null,
+      "iconColorCode": null,
+      "colorCode": null,
+      "description": null,
+      "displayOrder": 0,
+      "pinned": 0,
+      "catType": null,
+      "handle": null,
+      "createAt": "2026-09-24 00:00:00",
+      "updateAt": "2026-09-24 00:00:00"
+    },
+    {
+      "id": 14,
+      "parentId": 1,
+      "name": "Trip",
+      "kind": "wanderer",
       "icon": null,
       "iconColorCode": null,
       "colorCode": null,
@@ -386,7 +418,128 @@
     ]
   },
   "wanderer": {
-    "mapEvents": []
+    "mapEvents": [
+      {
+        "id": 1,
+        "moduleId": 10,
+        "eventId": null,
+        "areaId": null,
+        "label": "The harbor",
+        "linkerKey": null,
+        "x": 5,
+        "y": 6
+      },
+      {
+        "id": 2,
+        "moduleId": 14,
+        "eventId": null,
+        "areaId": null,
+        "label": null,
+        "linkerKey": "note_1",
+        "x": 7,
+        "y": 8
+      },
+      {
+        "id": 3,
+        "moduleId": 14,
+        "eventId": null,
+        "areaId": null,
+        "label": null,
+        "linkerKey": "module_3",
+        "x": 7,
+        "y": 8
+      },
+      {
+        "id": 4,
+        "moduleId": 14,
+        "eventId": null,
+        "areaId": null,
+        "label": null,
+        "linkerKey": "bchp_1",
+        "x": 7,
+        "y": 8
+      },
+      {
+        "id": 5,
+        "moduleId": 14,
+        "eventId": null,
+        "areaId": null,
+        "label": null,
+        "linkerKey": "chss_1",
+        "x": 7,
+        "y": 8
+      },
+      {
+        "id": 6,
+        "moduleId": 14,
+        "eventId": null,
+        "areaId": null,
+        "label": null,
+        "linkerKey": "cobj_1",
+        "x": 7,
+        "y": 8
+      },
+      {
+        "id": 7,
+        "moduleId": 14,
+        "eventId": null,
+        "areaId": null,
+        "label": null,
+        "linkerKey": "tlev_1",
+        "x": 7,
+        "y": 8
+      },
+      {
+        "id": 8,
+        "moduleId": 14,
+        "eventId": null,
+        "areaId": null,
+        "label": null,
+        "linkerKey": "sdlg_1",
+        "x": 7,
+        "y": 8
+      },
+      {
+        "id": 9,
+        "moduleId": 14,
+        "eventId": null,
+        "areaId": null,
+        "label": null,
+        "linkerKey": "skpg_1",
+        "x": 7,
+        "y": 8
+      },
+      {
+        "id": 10,
+        "moduleId": 14,
+        "eventId": null,
+        "areaId": null,
+        "label": null,
+        "linkerKey": "divt_1",
+        "x": 7,
+        "y": 8
+      },
+      {
+        "id": 11,
+        "moduleId": 14,
+        "eventId": null,
+        "areaId": null,
+        "label": null,
+        "linkerKey": "mevt_1",
+        "x": 7,
+        "y": 8
+      },
+      {
+        "id": 12,
+        "moduleId": 14,
+        "eventId": null,
+        "areaId": null,
+        "label": null,
+        "linkerKey": "ctpl_1",
+        "x": 7,
+        "y": 8
+      }
+    ]
   },
   "narrator": {
     "dialogues": [
@@ -439,7 +592,7 @@
       },
       {
         "id": 2,
-        "moduleId": 10,
+        "moduleId": 11,
         "name": "Pins",
         "order": 0
       }
@@ -502,6 +655,12 @@
       },
       {
         "pageId": 2,
+        "linkerKey": "mevt_1",
+        "x": 1,
+        "y": 2
+      },
+      {
+        "pageId": 2,
         "linkerKey": "ctpl_1",
         "x": 1,
         "y": 2
@@ -512,7 +671,7 @@
     "nodes": [
       {
         "id": 1,
-        "moduleId": 11,
+        "moduleId": 12,
         "shape": "box",
         "x": 3,
         "y": 4,
@@ -525,7 +684,7 @@
       },
       {
         "id": 2,
-        "moduleId": 11,
+        "moduleId": 12,
         "shape": "box",
         "x": 3,
         "y": 4,
@@ -538,7 +697,7 @@
       },
       {
         "id": 3,
-        "moduleId": 11,
+        "moduleId": 12,
         "shape": "box",
         "x": 3,
         "y": 4,
@@ -551,7 +710,7 @@
       },
       {
         "id": 4,
-        "moduleId": 11,
+        "moduleId": 12,
         "shape": "box",
         "x": 3,
         "y": 4,
@@ -564,7 +723,7 @@
       },
       {
         "id": 5,
-        "moduleId": 11,
+        "moduleId": 12,
         "shape": "box",
         "x": 3,
         "y": 4,
@@ -577,7 +736,7 @@
       },
       {
         "id": 6,
-        "moduleId": 11,
+        "moduleId": 12,
         "shape": "box",
         "x": 3,
         "y": 4,
@@ -590,7 +749,7 @@
       },
       {
         "id": 7,
-        "moduleId": 11,
+        "moduleId": 12,
         "shape": "box",
         "x": 3,
         "y": 4,
@@ -603,7 +762,7 @@
       },
       {
         "id": 8,
-        "moduleId": 11,
+        "moduleId": 12,
         "shape": "box",
         "x": 3,
         "y": 4,
@@ -616,7 +775,7 @@
       },
       {
         "id": 9,
-        "moduleId": 11,
+        "moduleId": 12,
         "shape": "box",
         "x": 3,
         "y": 4,
@@ -629,7 +788,20 @@
       },
       {
         "id": 10,
-        "moduleId": 11,
+        "moduleId": 12,
+        "shape": "box",
+        "x": 3,
+        "y": 4,
+        "text": null,
+        "color": null,
+        "linkerKey": "mevt_1",
+        "w": null,
+        "h": null,
+        "readOrder": null
+      },
+      {
+        "id": 11,
+        "moduleId": 12,
         "shape": "box",
         "x": 3,
         "y": 4,
@@ -726,6 +898,16 @@
     },
     {
       "fromKey": "divt_1",
+      "toKey": "mevt_1",
+      "label": "next",
+      "relType": "t",
+      "directed": 1,
+      "moduleId": null,
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "fromKey": "mevt_1",
       "toKey": "ctpl_1",
       "label": "next",
       "relType": "t",
@@ -766,7 +948,7 @@
       },
       {
         "id": 2,
-        "moduleId": 12,
+        "moduleId": 13,
         "name": "Links",
         "dice": null,
         "mode": "pick",
@@ -866,6 +1048,16 @@
       },
       {
         "id": 10,
+        "tableId": 2,
+        "weight": 1,
+        "lo": null,
+        "hi": null,
+        "text": null,
+        "linkerKey": "mevt_1",
+        "order": 0
+      },
+      {
+        "id": 11,
         "tableId": 2,
         "weight": 1,
         "lo": null,

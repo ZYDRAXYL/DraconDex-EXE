@@ -444,6 +444,11 @@ function getEntityPath(key) {
         const r = d.prepare(`SELECT module_ref FROM diviner_table WHERE id=?`).get(id);
         return r && { kind: 'divt', moduleId: r.module_ref, tableId: id };
       }
+      // A Wanderer map pin (mevt_, SDB 2.0.3) opens its own page.
+      case 'mevt': {
+        const r = d.prepare(`SELECT module_ref FROM map_event WHERE id=?`).get(id);
+        return r && { kind: 'mevt', moduleId: r.module_ref, pinId: id };
+      }
       // v5 Part 4: a link written in an Exhibitor note leads back to that
       // note, selected, in its own Exhibitor.
       case 'exn': {
