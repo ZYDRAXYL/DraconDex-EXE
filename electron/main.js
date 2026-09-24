@@ -763,6 +763,8 @@ h('tools:csvPick', async () => {
 });
 // §11.8: the guide's spec for a locale (installed PKG guide › bundled › English).
 h('bundle:guide',  (locale)          => db.guideSpec(locale));
+// The genre bundles, vendored from DraconDex-SDB and resolved in the UI language.
+h('bundle:catalog', (locale)         => db.bundleCatalog(locale));
 
 // v5 Part 7 (§11.4): the whole Nexus as .md files in a .zip — export only.
 h('nexus:exportMarkdown', async (id) => {

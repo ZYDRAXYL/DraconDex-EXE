@@ -119,3 +119,29 @@ test('a bundle Manager opens on a project page of borrowed views', () => {
     ['core.related', null],
   ]);
 });
+
+// Procress 12 part 0: the genre bundles are vendored from DraconDex-SDB
+// (templates/bundles.json) and resolved per UI language. Every one must come
+// out fully named in every locale — no { t } left, no raw key — and build.
+test('every genre bundle resolves and builds in every locale', () => {
+  const { bundleCatalog } = require('../src/db/bundle-catalog.js');
+  const { locales } = JSON.parse(readFileSync(new URL('../templates/bundles.json', import.meta.url), 'utf8'));
+  assert.equal(locales.length, 18);
+  for (const loc of locales) {
+    const cat = bundleCatalog(loc);
+    assert.deepEqual(cat.map((b) => b.id), ['fantasy', 'ttrpg', 'rpg', 'mystery']);
+    for (const b of cat) {
+      const flat = JSON.stringify(b);
+      assert.doesNotMatch(flat, /"t":/, `${loc}/${b.id} left a string key unresolved`);
+      assert.ok(b.name && b.description, `${loc}/${b.id} name`);
+      freshVault();
+      const r = bundle.createBundle(1, null, { name: b.name, icon: b.icon, ...b.spec });
+      assert.equal(r.ok, true, `${loc}/${b.id}: ${r.message || r.code}`);
+      assert.equal(r.moduleIds.length, b.spec.modules.length);
+    }
+  }
+  const th = bundleCatalog('th').find((b) => b.id === 'fantasy');
+  const en = bundleCatalog('en').find((b) => b.id === 'fantasy');
+  assert.notEqual(th.spec.modules[0].name, en.spec.modules[0].name, 'names follow the language');
+  assert.equal(bundleCatalog('xx')[0].name, bundleCatalog('en')[0].name, 'an unknown locale falls back to English');
+});

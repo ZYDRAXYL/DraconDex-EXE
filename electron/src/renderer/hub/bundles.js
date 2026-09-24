@@ -6,80 +6,38 @@
 // as the thing a new user starts from. ARTISAN_TARGETS (hub/kinds.js) is left
 // alone because Legacy Import's MIGRATE_TARGETS is built from it.
 //
-// A bundle is DATA (db/bundle.js has the shape), built here with every name
-// through t() — the rows become the user's own, in their language. Module
-// shapes reuse the Classifier presets (hub/presets.js) where one fits, so a
-// preset and a bundle cannot drift apart. "Adjust first" is the old step
-// wizard folded into one form: tick modules, rename them, rename or drop
-// fields — then the same single create call.
+// A bundle is DATA (db/bundle.js has the shape). Since Procress 12 part 0
+// the four live in DraconDex-SDB (templates/), vendored to
+// electron/templates/bundles.json — the phone makes the same projects from
+// the same file. The main side resolves every name in the UI language
+// (db/bundle-catalog.js), so the rows become the user's own, in their
+// language. "Adjust first" is the old step wizard folded into one form: tick
+// modules, rename them, rename or drop fields — then the same single create
+// call.
 
-const bF = (key, type = 'text', extra = {}) => ({ name: t(key), type, ...extra });
-const bStat = (nm) => ({ name: nm, type: 'number', levelable: true });
-// A built-in Classifier preset's fields, translated (hub/presets.js).
-const bPresetFields = (id) => presetSpec('classifier', `b:${id}`)?.fields || [];
+// [{ id, icon, name, description, spec }] in the UI language, fetched once
+// per language.
+let _bundleCat = null;
+async function bundleCatalog() {
+  const loc = S.settings?.language || 'en';
+  if (!_bundleCat || _bundleCat.loc !== loc) _bundleCat = { loc, list: (await api.bundle.catalog(loc)) || [] };
+  return _bundleCat.list;
+}
+const bundleById = async (id) => (await bundleCatalog()).find((b) => b.id === id) || null;
 
-const BUNDLES = [
-  { id: 'fantasy', icon: 'sword', nameKey: 'bundleFantasy', descKey: 'bundleFantasyD',
-    spec: () => ({ modules: [
-      { ref: 'chars', kind: 'classifier', catType: 'character', name: t('worldChars'),
-        fields: [bF('artFldRole'), bF('artFldAge'), bF('artFldPersonality', 'textarea'), bF('artFldGoal'), bF('pfWeapon', 'relation', { relTo: 'items' })] },
-      { ref: 'items', kind: 'classifier', name: t('gameItems'), fields: [bF('artFldDescription', 'textarea'), bF('artFldOwner')] },
-      { ref: 'places', kind: 'classifier', name: t('artLocations'), fields: [bF('artFldDescription', 'textarea'), bF('artFldHistory', 'textarea')] },
-      { ref: 'factions', kind: 'classifier', name: t('artFactions'), fields: [bF('artFldDescription', 'textarea'), bF('artFldGoal')] },
-      { ref: 'magic', kind: 'classifier', catType: 'element', name: t('artMagic'), fields: [bF('artFldRules', 'textarea'), bF('pfCost')] },
-      { kind: 'locator', name: t('kcMap') },
-      { kind: 'chronicler', name: t('artMainTimeline') },
-      { kind: 'author', name: t('artBook'), chapters: [1, 2, 3].map(n => ({ name: `${t('artChapter')} ${n}` })) },
-    ] }) },
-  { id: 'ttrpg', icon: 'dice', nameKey: 'bundleTtrpg', descKey: 'bundleTtrpgD',
-    spec: () => ({ modules: [
-      { ref: 'npcs', kind: 'classifier', catType: 'character', name: t('bdNpcs'),
-        fields: [bF('artFldRole'), bF('artFldPersonality', 'textarea'), bF('pfHome', 'relation', { relTo: 'places' })] },
-      { ref: 'monsters', kind: 'classifier', name: t('artCreatures'),
-        fields: [{ name: 'HP', type: 'number' }, { name: 'AC', type: 'number' }, { name: 'CR', type: 'number' }, bF('artFldDescription', 'textarea')] },
-      { ref: 'places', kind: 'classifier', name: t('artLocations'), fields: [bF('artFldDescription', 'textarea')] },
-      { kind: 'locator', name: t('kcMap') },
-      { kind: 'diviner', name: t('bdEncounters'), tables: [
-        { name: t('bdEncounters'), dice: '1d20', entries: [[1, 8], [9, 14], [15, 19], [20, 20]].map(([lo, hi]) => ({ lo, hi })) },
-        { name: t('bdLoot'), entries: [{ weight: 5 }, { weight: 3 }, { weight: 1 }] },
-      ] },
-      { kind: 'scribe', name: t('bdSessions'), sessions: [{ name: `${t('bdSession')} 1`, messages: [] }] },
-    ] }) },
-  { id: 'rpg', icon: 'hero', nameKey: 'bundleRpg', descKey: 'bundleRpgD',
-    spec: () => ({ modules: [
-      { ref: 'chars', kind: 'classifier', catType: 'character', name: t('gameChars'),
-        fields: [bStat('HP'), bStat('MP'), bStat('ATK'), bStat('DEF'), bF('artFldRole'), bF('artFldBackstory', 'textarea')] },
-      { ref: 'skills', kind: 'classifier', catType: 'element', name: t('artSkills'), fields: bPresetFields('skills').map(f => (f.type === 'relation' ? { ...f, relTo: 'chars' } : f)) },
-      { ref: 'items', kind: 'classifier', name: t('gameItems'), fields: [bF('artFldDescription', 'textarea'), bF('artFldEffect')] },
-      { ref: 'quests', kind: 'classifier', catType: 'element', name: t('artQuests'),
-        fields: bPresetFields('quests').map(f => (f.name === t('pfQuestGiver') ? { ...f, relTo: 'chars' } : f)) },
-      { kind: 'narrator', name: t('artMainStory') },
-      { kind: 'diviner', name: t('bdDrops'), tables: [{ name: t('bdDrops'), entries: [{ weight: 6 }, { weight: 3 }, { weight: 1 }] }] },
-    ] }) },
-  { id: 'mystery', icon: 'search', nameKey: 'bundleMystery', descKey: 'bundleMysteryD',
-    spec: () => ({ modules: [
-      { ref: 'chars', kind: 'classifier', catType: 'character', name: t('worldChars'), fields: [bF('artFldRole'), bF('artFldPersonality', 'textarea')] },
-      { ref: 'clues', kind: 'classifier', name: t('artClues'),
-        fields: [bF('artFldDescription', 'textarea'), bF('pfInChapter', 'relation', { options: { targetKinds: ['chapter'] } }), bF('pfPointsTo', 'relation', { relTo: 'suspects' })] },
-      { ref: 'suspects', kind: 'classifier', catType: 'character', name: t('bdSuspects'), fields: [bF('artFldMotive'), bF('pfMeans'), bF('pfAlibi', 'textarea')] },
-      { kind: 'author', name: t('artBook'), chapters: [1, 2, 3].map(n => ({ name: `${t('artChapter')} ${n}` })) },
-      { kind: 'chronicler', name: t('artMainTimeline') },
-      { kind: 'drafter', name: t('artIdeas') },
-    ] }) },
-];
-
-function openBundlePicker(parentId = null) {
+async function openBundlePicker(parentId = null) {
   closeAllPopups();
+  const bundles = await bundleCatalog();
   const guideCard = `<div class="bundle-card bundle-guide">
       <div class="bundle-head"><span class="kicon">${I.info}</span><b>${t('guideBundle')}</b></div>
       <p class="drafter-hint">${t('guideBundleD')}</p>
       <div class="bundle-acts">${cmdBtn('app.createGuide', {}, { cls: 'btn-p btn-sm' })}</div>
     </div>`;
-  openModal(t('bundleTitle'), `<div class="bundle-grid">${guideCard}${BUNDLES.map(b => {
-    const mods = b.spec().modules;
+  openModal(t('bundleTitle'), `<div class="bundle-grid">${guideCard}${bundles.map(b => {
+    const mods = b.spec.modules;
     return `<div class="bundle-card">
-      <div class="bundle-head"><span class="kicon">${I[b.icon] || I.folder}</span><b>${t(b.nameKey)}</b></div>
-      <p class="drafter-hint">${t(b.descKey)}</p>
+      <div class="bundle-head"><span class="kicon">${I[b.icon] || I.folder}</span><b>${x(b.name)}</b></div>
+      <p class="drafter-hint">${x(b.description)}</p>
       <div class="bundle-mods">${mods.map(m => `<span class="bundle-mod">${I[KIND_ICON[m.kind]] || ''} ${x(m.name)}</span>`).join('')}</div>
       <div class="bundle-acts">
         <button class="btn btn-s btn-sm" onclick="openBundleAdjust('${b.id}',${parentId ?? 'null'})">${t('bundleAdjust')}</button>
@@ -90,9 +48,9 @@ function openBundlePicker(parentId = null) {
 }
 
 async function createBundleNow(id, parentId, spec = null) {
-  const b = BUNDLES.find(bb => bb.id === id);
+  const b = await bundleById(id);
   if (!b || !S.nexus) return;
-  const full = spec || { name: t(b.nameKey), icon: b.icon, ...b.spec() };
+  const full = spec || { name: b.name, icon: b.icon, ...b.spec };
   const r = await api.bundle.create(S.nexus.id, parentId, full);
   if (!r?.ok) { toast(t(r?.code === 'name_required' ? 'nameRequired' : 'driveErrServer'), 'err'); return; }
   closeModal();
@@ -122,12 +80,12 @@ async function createGuideBundle({ quiet = false } = {}) {
 }
 
 // ── Adjust first ────────────────────────────────────────────────────────
-function openBundleAdjust(id, parentId) {
-  const b = BUNDLES.find(bb => bb.id === id);
+async function openBundleAdjust(id, parentId) {
+  const b = await bundleById(id);
   if (!b) return;
-  const mods = b.spec().modules;
-  openModal(`${t(b.nameKey)} · ${t('bundleAdjust')}`, `
-    <div class="fg"><label>${t('bundleProjectName')} *</label><input id="bd-name" value="${x(t(b.nameKey))}"></div>
+  const mods = b.spec.modules;
+  openModal(`${x(b.name)} · ${t('bundleAdjust')}`, `
+    <div class="fg"><label>${t('bundleProjectName')} *</label><input id="bd-name" value="${x(b.name)}"></div>
     <div class="fg"><label>${t('bundleIncludes')}</label>
       ${mods.map((m, i) => `<div class="bundle-adj-row">
         <label class="bundle-adj-mod"><input type="checkbox" data-bd-on="${i}" checked> ${I[KIND_ICON[m.kind]] || ''}</label>
@@ -144,10 +102,10 @@ function openBundleAdjust(id, parentId) {
 }
 
 async function submitBundleAdjust(id, parentId) {
-  const b = BUNDLES.find(bb => bb.id === id);
+  const b = await bundleById(id);
   const name = q('#bd-name')?.value.trim();
   if (!b || !name) { toast(t('nameRequired'), 'err'); return; }
-  const mods = b.spec().modules;
+  const mods = b.spec.modules;
   const kept = new Set();
   const out = [];
   mods.forEach((m, i) => {

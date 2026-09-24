@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld('api', {
   bundle: {
     create:        (nx,parent,spec) => inv('bundle:create', nx, parent, spec),
     guide:         (locale)         => inv('bundle:guide', locale),
+    catalog:       (locale)         => inv('bundle:catalog', locale),
   },
   diviner: {
     getTables:     (mref)          => inv('diviner:getTables', mref),

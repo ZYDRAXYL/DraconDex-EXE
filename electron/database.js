@@ -13,6 +13,7 @@ const problems  = require('./src/db/problems');
 const csvImport = require('./src/db/csv-import');
 const pageBlock = require('./src/db/page-block');
 const htmlExport = require('./src/db/html-export');
+const bundleCatalog = require('./src/db/bundle-catalog');
 const scribe    = require('./src/db/scribe');
 const wiki      = require('./src/db/wiki');
 const color     = require('./src/db/color');
@@ -63,6 +64,7 @@ module.exports = {
   ...csvImport,
   ...pageBlock,
   ...htmlExport,
+  ...bundleCatalog,
   ...scribe,
   ...wiki,
   ...color,

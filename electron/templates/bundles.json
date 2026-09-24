@@ -1,0 +1,1928 @@
+{
+  "format": "ddx-bundles",
+  "version": 1,
+  "locales": [
+    "en",
+    "ja",
+    "ko",
+    "th",
+    "zh",
+    "vi",
+    "id",
+    "es",
+    "pt",
+    "fr",
+    "de",
+    "ru",
+    "it",
+    "nl",
+    "pl",
+    "uk",
+    "tr",
+    "qd"
+  ],
+  "bundles": [
+    {
+      "id": "fantasy",
+      "order": 1,
+      "icon": "sword",
+      "name": {
+        "t": "bundleFantasy"
+      },
+      "description": {
+        "t": "bundleFantasyD"
+      },
+      "spec": {
+        "modules": [
+          {
+            "ref": "chars",
+            "kind": "classifier",
+            "catType": "character",
+            "name": {
+              "t": "worldChars"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "artFldRole"
+                },
+                "type": "text"
+              },
+              {
+                "name": {
+                  "t": "artFldAge"
+                },
+                "type": "text"
+              },
+              {
+                "name": {
+                  "t": "artFldPersonality"
+                },
+                "type": "textarea"
+              },
+              {
+                "name": {
+                  "t": "artFldGoal"
+                },
+                "type": "text"
+              },
+              {
+                "name": {
+                  "t": "pfWeapon"
+                },
+                "type": "relation",
+                "relTo": "items"
+              }
+            ]
+          },
+          {
+            "ref": "items",
+            "kind": "classifier",
+            "name": {
+              "t": "gameItems"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "artFldDescription"
+                },
+                "type": "textarea"
+              },
+              {
+                "name": {
+                  "t": "artFldOwner"
+                },
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "ref": "places",
+            "kind": "classifier",
+            "name": {
+              "t": "artLocations"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "artFldDescription"
+                },
+                "type": "textarea"
+              },
+              {
+                "name": {
+                  "t": "artFldHistory"
+                },
+                "type": "textarea"
+              }
+            ]
+          },
+          {
+            "ref": "factions",
+            "kind": "classifier",
+            "name": {
+              "t": "artFactions"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "artFldDescription"
+                },
+                "type": "textarea"
+              },
+              {
+                "name": {
+                  "t": "artFldGoal"
+                },
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "ref": "magic",
+            "kind": "classifier",
+            "catType": "element",
+            "name": {
+              "t": "artMagic"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "artFldRules"
+                },
+                "type": "textarea"
+              },
+              {
+                "name": {
+                  "t": "pfCost"
+                },
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "kind": "locator",
+            "name": {
+              "t": "kcMap"
+            }
+          },
+          {
+            "kind": "chronicler",
+            "name": {
+              "t": "artMainTimeline"
+            }
+          },
+          {
+            "kind": "author",
+            "name": {
+              "t": "artBook"
+            },
+            "chapters": [
+              {
+                "name": {
+                  "t": "artChapter",
+                  "suffix": " 1"
+                }
+              },
+              {
+                "name": {
+                  "t": "artChapter",
+                  "suffix": " 2"
+                }
+              },
+              {
+                "name": {
+                  "t": "artChapter",
+                  "suffix": " 3"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ttrpg",
+      "order": 2,
+      "icon": "dice",
+      "name": {
+        "t": "bundleTtrpg"
+      },
+      "description": {
+        "t": "bundleTtrpgD"
+      },
+      "spec": {
+        "modules": [
+          {
+            "ref": "npcs",
+            "kind": "classifier",
+            "catType": "character",
+            "name": {
+              "t": "bdNpcs"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "artFldRole"
+                },
+                "type": "text"
+              },
+              {
+                "name": {
+                  "t": "artFldPersonality"
+                },
+                "type": "textarea"
+              },
+              {
+                "name": {
+                  "t": "pfHome"
+                },
+                "type": "relation",
+                "relTo": "places"
+              }
+            ]
+          },
+          {
+            "ref": "monsters",
+            "kind": "classifier",
+            "name": {
+              "t": "artCreatures"
+            },
+            "fields": [
+              {
+                "name": "HP",
+                "type": "number"
+              },
+              {
+                "name": "AC",
+                "type": "number"
+              },
+              {
+                "name": "CR",
+                "type": "number"
+              },
+              {
+                "name": {
+                  "t": "artFldDescription"
+                },
+                "type": "textarea"
+              }
+            ]
+          },
+          {
+            "ref": "places",
+            "kind": "classifier",
+            "name": {
+              "t": "artLocations"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "artFldDescription"
+                },
+                "type": "textarea"
+              }
+            ]
+          },
+          {
+            "kind": "locator",
+            "name": {
+              "t": "kcMap"
+            }
+          },
+          {
+            "kind": "diviner",
+            "name": {
+              "t": "bdEncounters"
+            },
+            "tables": [
+              {
+                "name": {
+                  "t": "bdEncounters"
+                },
+                "dice": "1d20",
+                "entries": [
+                  {
+                    "lo": 1,
+                    "hi": 8
+                  },
+                  {
+                    "lo": 9,
+                    "hi": 14
+                  },
+                  {
+                    "lo": 15,
+                    "hi": 19
+                  },
+                  {
+                    "lo": 20,
+                    "hi": 20
+                  }
+                ]
+              },
+              {
+                "name": {
+                  "t": "bdLoot"
+                },
+                "entries": [
+                  {
+                    "weight": 5
+                  },
+                  {
+                    "weight": 3
+                  },
+                  {
+                    "weight": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "kind": "scribe",
+            "name": {
+              "t": "bdSessions"
+            },
+            "sessions": [
+              {
+                "name": {
+                  "t": "bdSession",
+                  "suffix": " 1"
+                },
+                "messages": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "rpg",
+      "order": 3,
+      "icon": "hero",
+      "name": {
+        "t": "bundleRpg"
+      },
+      "description": {
+        "t": "bundleRpgD"
+      },
+      "spec": {
+        "modules": [
+          {
+            "ref": "chars",
+            "kind": "classifier",
+            "catType": "character",
+            "name": {
+              "t": "gameChars"
+            },
+            "fields": [
+              {
+                "name": "HP",
+                "type": "number",
+                "levelable": true
+              },
+              {
+                "name": "MP",
+                "type": "number",
+                "levelable": true
+              },
+              {
+                "name": "ATK",
+                "type": "number",
+                "levelable": true
+              },
+              {
+                "name": "DEF",
+                "type": "number",
+                "levelable": true
+              },
+              {
+                "name": {
+                  "t": "artFldRole"
+                },
+                "type": "text"
+              },
+              {
+                "name": {
+                  "t": "artFldBackstory"
+                },
+                "type": "textarea"
+              }
+            ]
+          },
+          {
+            "ref": "skills",
+            "kind": "classifier",
+            "catType": "element",
+            "name": {
+              "t": "artSkills"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "pfDescription"
+                },
+                "type": "textarea",
+                "levelable": false,
+                "hasCondition": false,
+                "options": null
+              },
+              {
+                "name": {
+                  "t": "pfSkillEffect"
+                },
+                "type": "text",
+                "levelable": true,
+                "hasCondition": true,
+                "options": null
+              },
+              {
+                "name": {
+                  "t": "pfUsableBy"
+                },
+                "type": "relation",
+                "levelable": false,
+                "hasCondition": false,
+                "options": {
+                  "targetKinds": [
+                    "object"
+                  ]
+                },
+                "relTo": "chars"
+              }
+            ]
+          },
+          {
+            "ref": "items",
+            "kind": "classifier",
+            "name": {
+              "t": "gameItems"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "artFldDescription"
+                },
+                "type": "textarea"
+              },
+              {
+                "name": {
+                  "t": "artFldEffect"
+                },
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "ref": "quests",
+            "kind": "classifier",
+            "catType": "element",
+            "name": {
+              "t": "artQuests"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "pfQuestStatus"
+                },
+                "type": "select",
+                "levelable": false,
+                "hasCondition": false,
+                "options": {
+                  "choices": [
+                    {
+                      "t": "questNotStarted"
+                    },
+                    {
+                      "t": "questActive"
+                    },
+                    {
+                      "t": "questDone"
+                    },
+                    {
+                      "t": "questFailed"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": {
+                  "t": "pfQuestGiver"
+                },
+                "type": "relation",
+                "levelable": false,
+                "hasCondition": false,
+                "options": {
+                  "targetKinds": [
+                    "object"
+                  ]
+                },
+                "relTo": "chars"
+              },
+              {
+                "name": {
+                  "t": "pfObjectives"
+                },
+                "type": "textarea",
+                "levelable": false,
+                "hasCondition": false,
+                "options": null
+              },
+              {
+                "name": {
+                  "t": "pfReward"
+                },
+                "type": "text",
+                "levelable": false,
+                "hasCondition": false,
+                "options": null
+              },
+              {
+                "name": {
+                  "t": "pfInChapter"
+                },
+                "type": "relation",
+                "levelable": false,
+                "hasCondition": false,
+                "options": {
+                  "targetKinds": [
+                    "chapter",
+                    "event"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "kind": "narrator",
+            "name": {
+              "t": "artMainStory"
+            }
+          },
+          {
+            "kind": "diviner",
+            "name": {
+              "t": "bdDrops"
+            },
+            "tables": [
+              {
+                "name": {
+                  "t": "bdDrops"
+                },
+                "entries": [
+                  {
+                    "weight": 6
+                  },
+                  {
+                    "weight": 3
+                  },
+                  {
+                    "weight": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "mystery",
+      "order": 4,
+      "icon": "search",
+      "name": {
+        "t": "bundleMystery"
+      },
+      "description": {
+        "t": "bundleMysteryD"
+      },
+      "spec": {
+        "modules": [
+          {
+            "ref": "chars",
+            "kind": "classifier",
+            "catType": "character",
+            "name": {
+              "t": "worldChars"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "artFldRole"
+                },
+                "type": "text"
+              },
+              {
+                "name": {
+                  "t": "artFldPersonality"
+                },
+                "type": "textarea"
+              }
+            ]
+          },
+          {
+            "ref": "clues",
+            "kind": "classifier",
+            "name": {
+              "t": "artClues"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "artFldDescription"
+                },
+                "type": "textarea"
+              },
+              {
+                "name": {
+                  "t": "pfInChapter"
+                },
+                "type": "relation",
+                "options": {
+                  "targetKinds": [
+                    "chapter"
+                  ]
+                }
+              },
+              {
+                "name": {
+                  "t": "pfPointsTo"
+                },
+                "type": "relation",
+                "relTo": "suspects"
+              }
+            ]
+          },
+          {
+            "ref": "suspects",
+            "kind": "classifier",
+            "catType": "character",
+            "name": {
+              "t": "bdSuspects"
+            },
+            "fields": [
+              {
+                "name": {
+                  "t": "artFldMotive"
+                },
+                "type": "text"
+              },
+              {
+                "name": {
+                  "t": "pfMeans"
+                },
+                "type": "text"
+              },
+              {
+                "name": {
+                  "t": "pfAlibi"
+                },
+                "type": "textarea"
+              }
+            ]
+          },
+          {
+            "kind": "author",
+            "name": {
+              "t": "artBook"
+            },
+            "chapters": [
+              {
+                "name": {
+                  "t": "artChapter",
+                  "suffix": " 1"
+                }
+              },
+              {
+                "name": {
+                  "t": "artChapter",
+                  "suffix": " 2"
+                }
+              },
+              {
+                "name": {
+                  "t": "artChapter",
+                  "suffix": " 3"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "chronicler",
+            "name": {
+              "t": "artMainTimeline"
+            }
+          },
+          {
+            "kind": "drafter",
+            "name": {
+              "t": "artIdeas"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "strings": {
+    "artBook": {
+      "en": "Book",
+      "ja": "ブック",
+      "ko": "책",
+      "th": "เล่มที่",
+      "zh": "卷",
+      "vi": "Quyển",
+      "id": "Buku",
+      "es": "Libro",
+      "pt": "Livro",
+      "fr": "Livre",
+      "de": "Band",
+      "ru": "Книга",
+      "it": "Libro",
+      "nl": "Boek",
+      "pl": "Książka",
+      "uk": "Книга",
+      "tr": "Kitap",
+      "qd": "Tomyx"
+    },
+    "artChapter": {
+      "en": "Chapter",
+      "ja": "チャプター",
+      "ko": "챕터",
+      "th": "ตอนที่",
+      "zh": "章节",
+      "vi": "Chương",
+      "id": "Bab",
+      "es": "Capítulo",
+      "pt": "Capítulo",
+      "fr": "Chapitre",
+      "de": "Kapitel",
+      "ru": "Глава",
+      "it": "Capitolo",
+      "nl": "Hoofdstuk",
+      "pl": "Rozdział",
+      "uk": "Розділ",
+      "tr": "Bölüm",
+      "qd": "Versethra"
+    },
+    "artClues": {
+      "en": "Clues & Evidence",
+      "ja": "手がかりと証拠",
+      "ko": "단서와 증거",
+      "th": "เบาะแสและหลักฐาน",
+      "zh": "线索与证据",
+      "vi": "Manh mối & Bằng chứng",
+      "id": "Petunjuk & Bukti",
+      "es": "Pistas y pruebas",
+      "pt": "Pistas e evidências",
+      "fr": "Indices et preuves",
+      "de": "Hinweise & Beweise",
+      "ru": "Улики и доказательства",
+      "it": "Indizi e prove",
+      "nl": "Aanwijzingen en bewijs",
+      "pl": "Poszlaki i dowody",
+      "uk": "Підказки та докази",
+      "tr": "İpuçları ve kanıtlar",
+      "qd": "Cluyxae & Proofyxae"
+    },
+    "artCreatures": {
+      "en": "Creatures",
+      "ja": "魔物",
+      "ko": "괴수",
+      "th": "สัตว์อสูร",
+      "zh": "生物",
+      "vi": "Sinh vật",
+      "id": "Makhluk",
+      "es": "Criaturas",
+      "pt": "Criaturas",
+      "fr": "Créatures",
+      "de": "Kreaturen",
+      "ru": "Существа",
+      "it": "Creature",
+      "nl": "Wezens",
+      "pl": "Stworzenia",
+      "uk": "Істоти",
+      "tr": "Yaratıklar",
+      "qd": "Bestyxae"
+    },
+    "artFactions": {
+      "en": "Factions",
+      "ja": "勢力",
+      "ko": "세력",
+      "th": "ฝ่าย/องค์กร",
+      "zh": "势力",
+      "vi": "Phe phái",
+      "id": "Faksi",
+      "es": "Facciones",
+      "pt": "Facções",
+      "fr": "Factions",
+      "de": "Fraktionen",
+      "ru": "Фракции",
+      "it": "Fazioni",
+      "nl": "Facties",
+      "pl": "Frakcje",
+      "uk": "Фракції",
+      "tr": "Hizipler",
+      "qd": "Klanyxae"
+    },
+    "artFldAge": {
+      "en": "Age",
+      "ja": "年齢",
+      "ko": "나이",
+      "th": "อายุ",
+      "zh": "年龄",
+      "vi": "Tuổi",
+      "id": "Usia",
+      "es": "Edad",
+      "pt": "Idade",
+      "fr": "Âge",
+      "de": "Alter",
+      "ru": "Возраст",
+      "it": "Età",
+      "nl": "Leeftijd",
+      "pl": "Wiek",
+      "uk": "Вік",
+      "tr": "Yaş",
+      "qd": "Agyx"
+    },
+    "artFldBackstory": {
+      "en": "Backstory",
+      "ja": "背景",
+      "ko": "배경 이야기",
+      "th": "ปูมหลัง",
+      "zh": "背景故事",
+      "vi": "Tiền truyện",
+      "id": "Latar belakang",
+      "es": "Trasfondo",
+      "pt": "História de fundo",
+      "fr": "Passé",
+      "de": "Hintergrund",
+      "ru": "Предыстория",
+      "it": "Retroscena",
+      "nl": "Achtergrondverhaal",
+      "pl": "Historia postaci",
+      "uk": "Передісторія",
+      "tr": "Geçmiş hikâye",
+      "qd": "Backsagaal"
+    },
+    "artFldDescription": {
+      "en": "Description",
+      "ja": "説明",
+      "ko": "설명",
+      "th": "รายละเอียด",
+      "zh": "描述",
+      "vi": "Mô tả",
+      "id": "Deskripsi",
+      "es": "Descripción",
+      "pt": "Descrição",
+      "fr": "Description",
+      "de": "Beschreibung",
+      "ru": "Описание",
+      "it": "Descrizione",
+      "nl": "Beschrijving",
+      "pl": "Opis",
+      "uk": "Опис",
+      "tr": "Açıklama",
+      "qd": "Descryx"
+    },
+    "artFldEffect": {
+      "en": "Effect",
+      "ja": "効果",
+      "ko": "효과",
+      "th": "ผลลัพธ์",
+      "zh": "效果",
+      "vi": "Hiệu ứng",
+      "id": "Efek",
+      "es": "Efecto",
+      "pt": "Efeito",
+      "fr": "Effet",
+      "de": "Effekt",
+      "ru": "Эффект",
+      "it": "Effetto",
+      "nl": "Effect",
+      "pl": "Efekt",
+      "uk": "Ефект",
+      "tr": "Etki",
+      "qd": "Emberyx"
+    },
+    "artFldGoal": {
+      "en": "Goal",
+      "ja": "目標",
+      "ko": "목표",
+      "th": "เป้าหมาย",
+      "zh": "目标",
+      "vi": "Mục tiêu",
+      "id": "Tujuan",
+      "es": "Objetivo",
+      "pt": "Objetivo",
+      "fr": "Objectif",
+      "de": "Ziel",
+      "ru": "Цель",
+      "it": "Obiettivo",
+      "nl": "Doel",
+      "pl": "Cel",
+      "uk": "Мета",
+      "tr": "Hedef",
+      "qd": "Goalyx"
+    },
+    "artFldHistory": {
+      "en": "History",
+      "ja": "歴史",
+      "ko": "역사",
+      "th": "ประวัติศาสตร์",
+      "zh": "历史",
+      "vi": "Lịch sử",
+      "id": "Sejarah",
+      "es": "Historia",
+      "pt": "História",
+      "fr": "Histoire",
+      "de": "Geschichte",
+      "ru": "История",
+      "it": "Storia",
+      "nl": "Geschiedenis",
+      "pl": "Historia",
+      "uk": "Історія",
+      "tr": "Tarih",
+      "qd": "Historyx"
+    },
+    "artFldMotive": {
+      "en": "Motive",
+      "ja": "動機",
+      "ko": "동기",
+      "th": "แรงจูงใจ",
+      "zh": "动机",
+      "vi": "Động cơ",
+      "id": "Motif",
+      "es": "Motivo",
+      "pt": "Motivo",
+      "fr": "Mobile",
+      "de": "Motiv",
+      "ru": "Мотив",
+      "it": "Movente",
+      "nl": "Motief",
+      "pl": "Motyw",
+      "uk": "Мотив",
+      "tr": "Güdü",
+      "qd": "Motyva"
+    },
+    "artFldOwner": {
+      "en": "Owner",
+      "ja": "所有者",
+      "ko": "소유자",
+      "th": "เจ้าของ",
+      "zh": "持有者",
+      "vi": "Chủ sở hữu",
+      "id": "Pemilik",
+      "es": "Dueño",
+      "pt": "Dono",
+      "fr": "Propriétaire",
+      "de": "Besitzer",
+      "ru": "Владелец",
+      "it": "Proprietario",
+      "nl": "Eigenaar",
+      "pl": "Właściciel",
+      "uk": "Власник",
+      "tr": "Sahip",
+      "qd": "Hoardyr"
+    },
+    "artFldPersonality": {
+      "en": "Personality",
+      "ja": "性格",
+      "ko": "성격",
+      "th": "นิสัย",
+      "zh": "性格",
+      "vi": "Tính cách",
+      "id": "Kepribadian",
+      "es": "Personalidad",
+      "pt": "Personalidade",
+      "fr": "Personnalité",
+      "de": "Persönlichkeit",
+      "ru": "Характер",
+      "it": "Personalità",
+      "nl": "Persoonlijkheid",
+      "pl": "Osobowość",
+      "uk": "Особистість",
+      "tr": "Kişilik",
+      "qd": "Soulyx"
+    },
+    "artFldRole": {
+      "en": "Role",
+      "ja": "役割",
+      "ko": "역할",
+      "th": "บทบาท",
+      "zh": "角色定位",
+      "vi": "Vai trò",
+      "id": "Peran",
+      "es": "Rol",
+      "pt": "Papel",
+      "fr": "Rôle",
+      "de": "Rolle",
+      "ru": "Роль",
+      "it": "Ruolo",
+      "nl": "Rol",
+      "pl": "Rola",
+      "uk": "Роль",
+      "tr": "Rol",
+      "qd": "Rolyx"
+    },
+    "artFldRules": {
+      "en": "Rules",
+      "ja": "ルール",
+      "ko": "규칙",
+      "th": "กฎ",
+      "zh": "规则",
+      "vi": "Quy tắc",
+      "id": "Aturan",
+      "es": "Reglas",
+      "pt": "Regras",
+      "fr": "Règles",
+      "de": "Regeln",
+      "ru": "Правила",
+      "it": "Regole",
+      "nl": "Regels",
+      "pl": "Zasady",
+      "uk": "Правила",
+      "tr": "Kurallar",
+      "qd": "Rulyxae"
+    },
+    "artIdeas": {
+      "en": "Ideas",
+      "ja": "アイデア",
+      "ko": "아이디어",
+      "th": "ไอเดีย",
+      "zh": "灵感",
+      "vi": "Ý tưởng",
+      "id": "Ide",
+      "es": "Ideas",
+      "pt": "Ideias",
+      "fr": "Idées",
+      "de": "Ideen",
+      "ru": "Идеи",
+      "it": "Idee",
+      "nl": "Ideeën",
+      "pl": "Pomysły",
+      "uk": "Ідеї",
+      "tr": "Fikirler",
+      "qd": "Ideyxae"
+    },
+    "artLocations": {
+      "en": "Locations",
+      "ja": "場所",
+      "ko": "장소",
+      "th": "สถานที่",
+      "zh": "地点",
+      "vi": "Địa điểm",
+      "id": "Lokasi",
+      "es": "Lugares",
+      "pt": "Locais",
+      "fr": "Lieux",
+      "de": "Orte",
+      "ru": "Локации",
+      "it": "Luoghi",
+      "nl": "Locaties",
+      "pl": "Miejsca",
+      "uk": "Локації",
+      "tr": "Mekânlar",
+      "qd": "Placyxae"
+    },
+    "artMagic": {
+      "en": "Magic & Powers",
+      "ja": "魔法と力",
+      "ko": "마법과 힘",
+      "th": "เวทมนตร์และพลัง",
+      "zh": "魔法与力量",
+      "vi": "Phép thuật & Sức mạnh",
+      "id": "Sihir & Kekuatan",
+      "es": "Magia y poderes",
+      "pt": "Magia e poderes",
+      "fr": "Magie et pouvoirs",
+      "de": "Magie & Kräfte",
+      "ru": "Магия и силы",
+      "it": "Magia e poteri",
+      "nl": "Magie en krachten",
+      "pl": "Magia i moce",
+      "uk": "Магія та сили",
+      "tr": "Büyü ve güçler",
+      "qd": "Magyx & Powyrae"
+    },
+    "artMainStory": {
+      "en": "Main Story",
+      "ja": "メインストーリー",
+      "ko": "메인 스토리",
+      "th": "เนื้อเรื่องหลัก",
+      "zh": "主线剧情",
+      "vi": "Cốt truyện chính",
+      "id": "Cerita Utama",
+      "es": "Historia principal",
+      "pt": "História principal",
+      "fr": "Histoire principale",
+      "de": "Hauptstory",
+      "ru": "Основной сюжет",
+      "it": "Storia principale",
+      "nl": "Hoofdverhaal",
+      "pl": "Główna fabuła",
+      "uk": "Головна історія",
+      "tr": "Ana hikâye",
+      "qd": "Sagaal Primyx"
+    },
+    "artMainTimeline": {
+      "en": "Main Timeline",
+      "ja": "メインタイムライン",
+      "ko": "메인 타임라인",
+      "th": "ไทม์ไลน์หลัก",
+      "zh": "主时间线",
+      "vi": "Dòng thời gian chính",
+      "id": "Linimasa Utama",
+      "es": "Línea de tiempo principal",
+      "pt": "Linha do tempo principal",
+      "fr": "Chronologie principale",
+      "de": "Haupt-Zeitleiste",
+      "ru": "Основная хронология",
+      "it": "Timeline principale",
+      "nl": "Hoofdtijdlijn",
+      "pl": "Główna oś czasu",
+      "uk": "Головна хронологія",
+      "tr": "Ana zaman çizelgesi",
+      "qd": "Khronofang Primyx"
+    },
+    "artQuests": {
+      "en": "Quests",
+      "ja": "クエスト",
+      "ko": "퀘스트",
+      "th": "เควสต์",
+      "zh": "任务",
+      "vi": "Nhiệm vụ",
+      "id": "Quest",
+      "es": "Misiones",
+      "pt": "Missões",
+      "fr": "Quêtes",
+      "de": "Quests",
+      "ru": "Задания",
+      "it": "Missioni",
+      "nl": "Quests",
+      "pl": "Zadania",
+      "uk": "Квести",
+      "tr": "Görevler",
+      "qd": "Questyxae"
+    },
+    "artSkills": {
+      "en": "Skills",
+      "ja": "スキル",
+      "ko": "스킬",
+      "th": "สกิล",
+      "zh": "技能",
+      "vi": "Kỹ năng",
+      "id": "Skill",
+      "es": "Habilidades",
+      "pt": "Habilidades",
+      "fr": "Compétences",
+      "de": "Fähigkeiten",
+      "ru": "Навыки",
+      "it": "Abilità",
+      "nl": "Vaardigheden",
+      "pl": "Umiejętności",
+      "uk": "Навички",
+      "tr": "Yetenekler",
+      "qd": "Skillyxae"
+    },
+    "bdDrops": {
+      "en": "Drop table",
+      "ja": "ドロップ表",
+      "ko": "드롭 표",
+      "th": "ตารางดรอป",
+      "zh": "掉落表",
+      "vi": "Bảng rơi đồ",
+      "id": "Tabel drop",
+      "es": "Tabla de botín",
+      "pt": "Tabela de drops",
+      "fr": "Table de butin",
+      "de": "Drop-Tabelle",
+      "ru": "Таблица дропа",
+      "it": "Tabella drop",
+      "nl": "Droptabel",
+      "pl": "Tabela dropu",
+      "uk": "Таблиця дропу",
+      "tr": "Düşme tablosu",
+      "qd": "Tabyl of Spoyle"
+    },
+    "bdEncounters": {
+      "en": "Encounters",
+      "ja": "遭遇",
+      "ko": "조우",
+      "th": "Encounter",
+      "zh": "遭遇",
+      "vi": "Chạm trán",
+      "id": "Pertemuan",
+      "es": "Encuentros",
+      "pt": "Encontros",
+      "fr": "Rencontres",
+      "de": "Begegnungen",
+      "ru": "Встречи",
+      "it": "Incontri",
+      "nl": "Ontmoetingen",
+      "pl": "Spotkania",
+      "uk": "Зустрічі",
+      "tr": "Karşılaşmalar",
+      "qd": "Meetyngs"
+    },
+    "bdLoot": {
+      "en": "Loot",
+      "ja": "戦利品",
+      "ko": "전리품",
+      "th": "ของที่ได้",
+      "zh": "战利品",
+      "vi": "Chiến lợi phẩm",
+      "id": "Jarahan",
+      "es": "Botín",
+      "pt": "Saque",
+      "fr": "Butin",
+      "de": "Beute",
+      "ru": "Добыча",
+      "it": "Bottino",
+      "nl": "Buit",
+      "pl": "Łupy",
+      "uk": "Здобич",
+      "tr": "Ganimet",
+      "qd": "Spoyle"
+    },
+    "bdNpcs": {
+      "en": "NPCs",
+      "ja": "NPC",
+      "ko": "NPC",
+      "th": "NPC",
+      "zh": "NPC",
+      "vi": "NPC",
+      "id": "NPC",
+      "es": "PNJ",
+      "pt": "NPCs",
+      "fr": "PNJ",
+      "de": "NSCs",
+      "ru": "NPC",
+      "it": "PNG",
+      "nl": "NPC’s",
+      "pl": "NPC",
+      "uk": "NPC",
+      "tr": "NPC’ler",
+      "qd": "Straungers"
+    },
+    "bdSession": {
+      "en": "Session",
+      "ja": "セッション",
+      "ko": "세션",
+      "th": "เซสชัน",
+      "zh": "场次",
+      "vi": "Buổi",
+      "id": "Sesi",
+      "es": "Sesión",
+      "pt": "Sessão",
+      "fr": "Séance",
+      "de": "Sitzung",
+      "ru": "Сессия",
+      "it": "Sessione",
+      "nl": "Sessie",
+      "pl": "Sesja",
+      "uk": "Сесія",
+      "tr": "Oturum",
+      "qd": "Sessyon"
+    },
+    "bdSessions": {
+      "en": "Session log",
+      "ja": "セッション記録",
+      "ko": "세션 기록",
+      "th": "บันทึกเซสชัน",
+      "zh": "团务记录",
+      "vi": "Nhật ký buổi chơi",
+      "id": "Log sesi",
+      "es": "Registro de sesiones",
+      "pt": "Registro de sessões",
+      "fr": "Journal de séances",
+      "de": "Sitzungsprotokoll",
+      "ru": "Журнал сессий",
+      "it": "Registro sessioni",
+      "nl": "Sessielogboek",
+      "pl": "Dziennik sesji",
+      "uk": "Журнал сесій",
+      "tr": "Oturum günlüğü",
+      "qd": "Rolle of Sessyons"
+    },
+    "bdSuspects": {
+      "en": "Suspects",
+      "ja": "容疑者",
+      "ko": "용의자",
+      "th": "ผู้ต้องสงสัย",
+      "zh": "嫌疑人",
+      "vi": "Nghi phạm",
+      "id": "Tersangka",
+      "es": "Sospechosos",
+      "pt": "Suspeitos",
+      "fr": "Suspects",
+      "de": "Verdächtige",
+      "ru": "Подозреваемые",
+      "it": "Sospettati",
+      "nl": "Verdachten",
+      "pl": "Podejrzani",
+      "uk": "Підозрювані",
+      "tr": "Şüpheliler",
+      "qd": "Suspectys"
+    },
+    "bundleFantasy": {
+      "en": "Fantasy novel",
+      "ja": "ファンタジー小説",
+      "ko": "판타지 소설",
+      "th": "นิยายแฟนตาซี",
+      "zh": "奇幻小说",
+      "vi": "Tiểu thuyết kỳ ảo",
+      "id": "Novel fantasi",
+      "es": "Novela de fantasía",
+      "pt": "Romance de fantasia",
+      "fr": "Roman de fantasy",
+      "de": "Fantasy-Roman",
+      "ru": "Фэнтези-роман",
+      "it": "Romanzo fantasy",
+      "nl": "Fantasyroman",
+      "pl": "Powieść fantasy",
+      "uk": "Фентезі-роман",
+      "tr": "Fantastik roman",
+      "qd": "Tale of Faerye"
+    },
+    "bundleFantasyD": {
+      "en": "Characters, items, places, factions and magic, with a map, a timeline and a book.",
+      "ja": "キャラクター、アイテム、場所、勢力、魔法に、地図・年表・本。",
+      "ko": "캐릭터, 아이템, 장소, 세력, 마법과 지도·연표·책.",
+      "th": "ตัวละคร ไอเทม สถานที่ ฝ่าย และระบบเวท พร้อมแผนที่ ไทม์ไลน์ และหนังสือ",
+      "zh": "角色、物品、地点、势力和魔法，外加地图、时间线和书。",
+      "vi": "Nhân vật, vật phẩm, địa điểm, phe phái và phép thuật, kèm bản đồ, dòng thời gian và sách.",
+      "id": "Tokoh, item, tempat, faksi, dan sihir, dengan peta, linimasa, dan buku.",
+      "es": "Personajes, objetos, lugares, facciones y magia, con mapa, línea temporal y libro.",
+      "pt": "Personagens, itens, lugares, facções e magia, com mapa, linha do tempo e livro.",
+      "fr": "Personnages, objets, lieux, factions et magie, avec carte, chronologie et livre.",
+      "de": "Figuren, Gegenstände, Orte, Fraktionen und Magie, mit Karte, Zeitleiste und Buch.",
+      "ru": "Персонажи, предметы, места, фракции и магия, с картой, хронологией и книгой.",
+      "it": "Personaggi, oggetti, luoghi, fazioni e magia, con mappa, cronologia e libro.",
+      "nl": "Personages, voorwerpen, plaatsen, facties en magie, met kaart, tijdlijn en boek.",
+      "pl": "Postacie, przedmioty, miejsca, frakcje i magia, z mapą, osią czasu i książką.",
+      "uk": "Персонажі, предмети, місця, фракції та магія, з мапою, хронологією та книгою.",
+      "tr": "Karakterler, eşyalar, yerler, gruplar ve büyü; harita, zaman çizelgesi ve kitapla.",
+      "qd": "Folke, thyngs, placys, fellowshyps and wychcrafte, wyth a mappe, a chronykle and a boke."
+    },
+    "bundleMystery": {
+      "en": "Novel / mystery",
+      "ja": "小説 / ミステリー",
+      "ko": "소설 / 미스터리",
+      "th": "นิยายทั่วไป / สืบสวน",
+      "zh": "小说 / 推理",
+      "vi": "Tiểu thuyết / trinh thám",
+      "id": "Novel / misteri",
+      "es": "Novela / misterio",
+      "pt": "Romance / mistério",
+      "fr": "Roman / policier",
+      "de": "Roman / Krimi",
+      "ru": "Роман / детектив",
+      "it": "Romanzo / giallo",
+      "nl": "Roman / detective",
+      "pl": "Powieść / kryminał",
+      "uk": "Роман / детектив",
+      "tr": "Roman / polisiye",
+      "qd": "Tale / Mysterye"
+    },
+    "bundleMysteryD": {
+      "en": "Characters, clues and suspects, a book, a timeline of events and an ideas page.",
+      "ja": "キャラクター、手がかり、容疑者、本、出来事の年表、アイデアページ。",
+      "ko": "캐릭터, 단서, 용의자, 책, 사건 연표, 아이디어 페이지.",
+      "th": "ตัวละคร เบาะแส และผู้ต้องสงสัย หนังสือ ไทม์ไลน์เหตุการณ์ และหน้าไอเดีย",
+      "zh": "角色、线索和嫌疑人，书、事件时间线和灵感页。",
+      "vi": "Nhân vật, manh mối và nghi phạm, sách, dòng thời gian sự kiện và trang ý tưởng.",
+      "id": "Tokoh, petunjuk, dan tersangka, buku, linimasa kejadian, dan halaman ide.",
+      "es": "Personajes, pistas y sospechosos, un libro, una línea de sucesos y una página de ideas.",
+      "pt": "Personagens, pistas e suspeitos, um livro, uma linha de eventos e uma página de ideias.",
+      "fr": "Personnages, indices et suspects, un livre, une chronologie des faits et une page d’idées.",
+      "de": "Figuren, Hinweise und Verdächtige, ein Buch, eine Ereigniszeitleiste und eine Ideenseite.",
+      "ru": "Персонажи, улики и подозреваемые, книга, хронология событий и страница идей.",
+      "it": "Personaggi, indizi e sospettati, un libro, una cronologia degli eventi e una pagina di idee.",
+      "nl": "Personages, aanwijzingen en verdachten, een boek, een tijdlijn van gebeurtenissen en een ideeënpagina.",
+      "pl": "Postacie, poszlaki i podejrzani, książka, oś zdarzeń i strona pomysłów.",
+      "uk": "Персонажі, докази й підозрювані, книга, хронологія подій і сторінка ідей.",
+      "tr": "Karakterler, ipuçları ve şüpheliler, bir kitap, olay zaman çizelgesi ve fikir sayfası.",
+      "qd": "Folke, tokenys and suspectys, a boke, a chronykle of dedys and a leef of notyons."
+    },
+    "bundleRpg": {
+      "en": "RPG game",
+      "ja": "RPGゲーム",
+      "ko": "RPG 게임",
+      "th": "เกม RPG",
+      "zh": "RPG 游戏",
+      "vi": "Game RPG",
+      "id": "Game RPG",
+      "es": "Juego RPG",
+      "pt": "Jogo de RPG",
+      "fr": "Jeu de rôle vidéo",
+      "de": "RPG-Spiel",
+      "ru": "RPG-игра",
+      "it": "Gioco RPG",
+      "nl": "RPG-game",
+      "pl": "Gra RPG",
+      "uk": "RPG-гра",
+      "tr": "RPG oyunu",
+      "qd": "Game of Questyng"
+    },
+    "bundleRpgD": {
+      "en": "Characters with stats, skills, items and quests, a dialogue board and a drop table.",
+      "ja": "ステータス付きキャラクター、スキル、アイテム、クエスト、会話ボード、ドロップ表。",
+      "ko": "스탯 있는 캐릭터, 스킬, 아이템, 퀘스트, 대화 보드, 드롭 표.",
+      "th": "ตัวละครพร้อม stat สกิล ไอเทม และเควสต์ บอร์ดบทสนทนา และตารางดรอป",
+      "zh": "带属性的角色、技能、物品和任务，对话板和掉落表。",
+      "vi": "Nhân vật có chỉ số, kỹ năng, vật phẩm và nhiệm vụ, bảng hội thoại và bảng rơi đồ.",
+      "id": "Tokoh dengan stat, keahlian, item, dan misi, papan dialog, dan tabel drop.",
+      "es": "Personajes con estadísticas, habilidades, objetos y misiones, tablero de diálogos y tabla de botín.",
+      "pt": "Personagens com atributos, habilidades, itens e missões, quadro de diálogos e tabela de drops.",
+      "fr": "Personnages avec stats, compétences, objets et quêtes, tableau de dialogues et table de butin.",
+      "de": "Figuren mit Werten, Fähigkeiten, Gegenstände und Quests, Dialogbrett und Drop-Tabelle.",
+      "ru": "Персонажи с характеристиками, навыки, предметы и квесты, доска диалогов и таблица дропа.",
+      "it": "Personaggi con statistiche, abilità, oggetti e missioni, bacheca dialoghi e tabella drop.",
+      "nl": "Personages met stats, vaardigheden, voorwerpen en quests, dialoogbord en droptabel.",
+      "pl": "Postacie ze statystykami, umiejętności, przedmioty i zadania, tablica dialogów i tabela dropu.",
+      "uk": "Персонажі з характеристиками, навички, предмети й квести, дошка діалогів і таблиця дропу.",
+      "tr": "İstatistikli karakterler, yetenekler, eşyalar ve görevler, diyalog panosu ve düşme tablosu.",
+      "qd": "Folke wyth myghts, craftys, thyngs and questys, a boorde of speche and a tabyl of spoyle."
+    },
+    "bundleTtrpg": {
+      "en": "TTRPG campaign",
+      "ja": "TTRPGキャンペーン",
+      "ko": "TTRPG 캠페인",
+      "th": "แคมเปญ TTRPG",
+      "zh": "TTRPG 战役",
+      "vi": "Chiến dịch TTRPG",
+      "id": "Kampanye TTRPG",
+      "es": "Campaña de rol (TTRPG)",
+      "pt": "Campanha de RPG de mesa",
+      "fr": "Campagne de JdR",
+      "de": "Pen-&-Paper-Kampagne",
+      "ru": "Кампания НРИ",
+      "it": "Campagna GdR",
+      "nl": "TTRPG-campagne",
+      "pl": "Kampania RPG",
+      "uk": "Кампанія НРІ",
+      "tr": "FRP kampanyası",
+      "qd": "Campayne of Chaunce"
+    },
+    "bundleTtrpgD": {
+      "en": "NPCs, monsters and places, a map, encounter and loot tables, and session notes.",
+      "ja": "NPC、モンスター、場所、地図、遭遇表と戦利品表、セッション記録。",
+      "ko": "NPC, 몬스터, 장소, 지도, 조우·전리품 표, 세션 기록.",
+      "th": "NPC มอนสเตอร์ และสถานที่ แผนที่ ตาราง encounter และ loot และบันทึกเซสชัน",
+      "zh": "NPC、怪物和地点，地图、遭遇与战利品表，以及团务记录。",
+      "vi": "NPC, quái vật và địa điểm, bản đồ, bảng chạm trán và chiến lợi phẩm, ghi chép buổi chơi.",
+      "id": "NPC, monster, dan tempat, peta, tabel pertemuan dan jarahan, serta catatan sesi.",
+      "es": "PNJ, monstruos y lugares, mapa, tablas de encuentros y botín, y notas de sesión.",
+      "pt": "NPCs, monstros e lugares, mapa, tabelas de encontros e saque, e notas de sessão.",
+      "fr": "PNJ, monstres et lieux, carte, tables de rencontres et de butin, et notes de séance.",
+      "de": "NSCs, Monster und Orte, Karte, Begegnungs- und Beutetabellen und Sitzungsnotizen.",
+      "ru": "NPC, монстры и места, карта, таблицы встреч и добычи, заметки сессий.",
+      "it": "PNG, mostri e luoghi, mappa, tabelle di incontri e bottino, note di sessione.",
+      "nl": "NPC’s, monsters en plaatsen, kaart, ontmoetings- en buittabellen, sessienotities.",
+      "pl": "NPC, potwory i miejsca, mapa, tabele spotkań i łupów oraz notatki z sesji.",
+      "uk": "NPC, монстри й місця, мапа, таблиці зустрічей і здобичі, нотатки сесій.",
+      "tr": "NPC’ler, canavarlar ve yerler, harita, karşılaşma ve ganimet tabloları, oturum notları.",
+      "qd": "Straungers, beastys and placys, a mappe, tablys of meetyngs and spoyle, and notys of sessyons."
+    },
+    "gameChars": {
+      "en": "Characters",
+      "ja": "キャラクター",
+      "ko": "캐릭터",
+      "th": "ตัวละคร",
+      "zh": "角色",
+      "vi": "Nhân vật",
+      "id": "Karakter",
+      "es": "Personajes",
+      "pt": "Personagens",
+      "fr": "Personnages",
+      "de": "Charaktere",
+      "ru": "Персонажи",
+      "it": "Personaggi",
+      "nl": "Personages",
+      "pl": "Postacie",
+      "uk": "Персонажі",
+      "tr": "Karakterler",
+      "qd": "Beingraxae"
+    },
+    "gameItems": {
+      "en": "Items",
+      "ja": "アイテム",
+      "ko": "아이템",
+      "th": "ไอเทม",
+      "zh": "物品",
+      "vi": "Vật phẩm",
+      "id": "Item",
+      "es": "Objetos",
+      "pt": "Itens",
+      "fr": "Objets",
+      "de": "Gegenstände",
+      "ru": "Предметы",
+      "it": "Oggetti",
+      "nl": "Items",
+      "pl": "Przedmioty",
+      "uk": "Предмети",
+      "tr": "Eşyalar",
+      "qd": "Trinkyx"
+    },
+    "kcMap": {
+      "en": "Map",
+      "ja": "マップ",
+      "ko": "지도",
+      "th": "แผนที่",
+      "zh": "地图",
+      "vi": "Bản đồ",
+      "id": "Peta",
+      "es": "Mapa",
+      "pt": "Mapa",
+      "fr": "Carte",
+      "de": "Karte",
+      "ru": "Карта",
+      "it": "Mappa",
+      "nl": "Kaart",
+      "pl": "Mapa",
+      "uk": "Мапа",
+      "tr": "Harita",
+      "qd": "Mappe"
+    },
+    "pfAlibi": {
+      "en": "Alibi",
+      "ja": "アリバイ",
+      "ko": "알리바이",
+      "th": "ข้อแก้ตัว",
+      "zh": "不在场证明",
+      "vi": "Chứng cứ ngoại phạm",
+      "id": "Alibi",
+      "es": "Coartada",
+      "pt": "Álibi",
+      "fr": "Alibi",
+      "de": "Alibi",
+      "ru": "Алиби",
+      "it": "Alibi",
+      "nl": "Alibi",
+      "pl": "Alibi",
+      "uk": "Алібі",
+      "tr": "Alibi",
+      "qd": "Alibi"
+    },
+    "pfCost": {
+      "en": "Cost",
+      "ja": "コスト",
+      "ko": "비용",
+      "th": "ราคา",
+      "zh": "代价",
+      "vi": "Cái giá",
+      "id": "Harga",
+      "es": "Coste",
+      "pt": "Custo",
+      "fr": "Coût",
+      "de": "Kosten",
+      "ru": "Цена",
+      "it": "Costo",
+      "nl": "Kosten",
+      "pl": "Koszt",
+      "uk": "Ціна",
+      "tr": "Bedel",
+      "qd": "Coste"
+    },
+    "pfDescription": {
+      "en": "Description",
+      "ja": "説明",
+      "ko": "설명",
+      "th": "คำอธิบาย",
+      "zh": "描述",
+      "vi": "Mô tả",
+      "id": "Deskripsi",
+      "es": "Descripción",
+      "pt": "Descrição",
+      "fr": "Description",
+      "de": "Beschreibung",
+      "ru": "Описание",
+      "it": "Descrizione",
+      "nl": "Beschrijving",
+      "pl": "Opis",
+      "uk": "Опис",
+      "tr": "Açıklama",
+      "qd": "Account"
+    },
+    "pfHome": {
+      "en": "Home",
+      "ja": "住まい",
+      "ko": "거처",
+      "th": "บ้าน",
+      "zh": "住所",
+      "vi": "Nơi ở",
+      "id": "Tempat tinggal",
+      "es": "Hogar",
+      "pt": "Lar",
+      "fr": "Foyer",
+      "de": "Zuhause",
+      "ru": "Дом",
+      "it": "Casa",
+      "nl": "Thuis",
+      "pl": "Dom",
+      "uk": "Дім",
+      "tr": "Ev",
+      "qd": "Dwellyng"
+    },
+    "pfInChapter": {
+      "en": "In chapter",
+      "ja": "章",
+      "ko": "장",
+      "th": "อยู่ในบท",
+      "zh": "所在章节",
+      "vi": "Ở chương",
+      "id": "Di bab",
+      "es": "En el capítulo",
+      "pt": "No capítulo",
+      "fr": "Au chapitre",
+      "de": "Im Kapitel",
+      "ru": "В главе",
+      "it": "Nel capitolo",
+      "nl": "In hoofdstuk",
+      "pl": "W rozdziale",
+      "uk": "У розділі",
+      "tr": "Bölümde",
+      "qd": "In Chaptyr"
+    },
+    "pfMeans": {
+      "en": "Means",
+      "ja": "手段",
+      "ko": "수단",
+      "th": "วิธีการ",
+      "zh": "手段",
+      "vi": "Phương tiện",
+      "id": "Cara",
+      "es": "Medios",
+      "pt": "Meios",
+      "fr": "Moyens",
+      "de": "Mittel",
+      "ru": "Средства",
+      "it": "Mezzi",
+      "nl": "Middelen",
+      "pl": "Środki",
+      "uk": "Засоби",
+      "tr": "Araç",
+      "qd": "Meanys"
+    },
+    "pfObjectives": {
+      "en": "Objectives",
+      "ja": "目標",
+      "ko": "목표",
+      "th": "เป้าหมาย",
+      "zh": "目标",
+      "vi": "Mục tiêu",
+      "id": "Tujuan",
+      "es": "Objetivos",
+      "pt": "Objetivos",
+      "fr": "Objectifs",
+      "de": "Ziele",
+      "ru": "Цели",
+      "it": "Obiettivi",
+      "nl": "Doelen",
+      "pl": "Cele",
+      "uk": "Цілі",
+      "tr": "Hedefler",
+      "qd": "Endys Soughte"
+    },
+    "pfPointsTo": {
+      "en": "Points to",
+      "ja": "示す相手",
+      "ko": "가리키는 대상",
+      "th": "ชี้ไปที่",
+      "zh": "指向",
+      "vi": "Chỉ tới",
+      "id": "Menunjuk ke",
+      "es": "Apunta a",
+      "pt": "Aponta para",
+      "fr": "Désigne",
+      "de": "Deutet auf",
+      "ru": "Указывает на",
+      "it": "Indica",
+      "nl": "Wijst naar",
+      "pl": "Wskazuje na",
+      "uk": "Вказує на",
+      "tr": "İşaret ettiği",
+      "qd": "Poyntyth to"
+    },
+    "pfQuestGiver": {
+      "en": "Given by",
+      "ja": "依頼者",
+      "ko": "의뢰인",
+      "th": "ผู้ให้",
+      "zh": "发布者",
+      "vi": "Người giao",
+      "id": "Pemberi",
+      "es": "Dada por",
+      "pt": "Dada por",
+      "fr": "Donnée par",
+      "de": "Auftraggeber",
+      "ru": "Выдал",
+      "it": "Data da",
+      "nl": "Gegeven door",
+      "pl": "Zlecający",
+      "uk": "Видав",
+      "tr": "Veren",
+      "qd": "Gyvyn bye"
+    },
+    "pfQuestStatus": {
+      "en": "Status",
+      "ja": "状態",
+      "ko": "상태",
+      "th": "สถานะ",
+      "zh": "状态",
+      "vi": "Trạng thái",
+      "id": "Status",
+      "es": "Estado",
+      "pt": "Estado",
+      "fr": "Statut",
+      "de": "Status",
+      "ru": "Статус",
+      "it": "Stato",
+      "nl": "Status",
+      "pl": "Status",
+      "uk": "Статус",
+      "tr": "Durum",
+      "qd": "Estate"
+    },
+    "pfReward": {
+      "en": "Reward",
+      "ja": "報酬",
+      "ko": "보상",
+      "th": "รางวัล",
+      "zh": "奖励",
+      "vi": "Phần thưởng",
+      "id": "Hadiah",
+      "es": "Recompensa",
+      "pt": "Recompensa",
+      "fr": "Récompense",
+      "de": "Belohnung",
+      "ru": "Награда",
+      "it": "Ricompensa",
+      "nl": "Beloning",
+      "pl": "Nagroda",
+      "uk": "Нагорода",
+      "tr": "Ödül",
+      "qd": "Guerdon"
+    },
+    "pfSkillEffect": {
+      "en": "Effect",
+      "ja": "効果",
+      "ko": "효과",
+      "th": "ผล",
+      "zh": "效果",
+      "vi": "Hiệu ứng",
+      "id": "Efek",
+      "es": "Efecto",
+      "pt": "Efeito",
+      "fr": "Effet",
+      "de": "Wirkung",
+      "ru": "Эффект",
+      "it": "Effetto",
+      "nl": "Effect",
+      "pl": "Efekt",
+      "uk": "Ефект",
+      "tr": "Etki",
+      "qd": "Effecte"
+    },
+    "pfUsableBy": {
+      "en": "Usable by",
+      "ja": "使用者",
+      "ko": "사용 가능",
+      "th": "ใช้ได้โดย",
+      "zh": "可使用者",
+      "vi": "Dùng được bởi",
+      "id": "Bisa dipakai oleh",
+      "es": "Usable por",
+      "pt": "Usável por",
+      "fr": "Utilisable par",
+      "de": "Nutzbar von",
+      "ru": "Кто может",
+      "it": "Usabile da",
+      "nl": "Te gebruiken door",
+      "pl": "Może użyć",
+      "uk": "Хто може",
+      "tr": "Kullanabilen",
+      "qd": "Wieldyd bye"
+    },
+    "pfWeapon": {
+      "en": "Signature weapon",
+      "ja": "愛用の武器",
+      "ko": "주무기",
+      "th": "อาวุธประจำตัว",
+      "zh": "标志武器",
+      "vi": "Vũ khí đặc trưng",
+      "id": "Senjata khas",
+      "es": "Arma insignia",
+      "pt": "Arma característica",
+      "fr": "Arme fétiche",
+      "de": "Markenwaffe",
+      "ru": "Именное оружие",
+      "it": "Arma distintiva",
+      "nl": "Kenmerkend wapen",
+      "pl": "Charakterystyczna broń",
+      "uk": "Іменна зброя",
+      "tr": "İmza silahı",
+      "qd": "Chosyn Wepyn"
+    },
+    "questActive": {
+      "en": "Active",
+      "ja": "進行中",
+      "ko": "진행 중",
+      "th": "กำลังทำ",
+      "zh": "进行中",
+      "vi": "Đang làm",
+      "id": "Aktif",
+      "es": "Activa",
+      "pt": "Ativa",
+      "fr": "En cours",
+      "de": "Aktiv",
+      "ru": "Активен",
+      "it": "Attiva",
+      "nl": "Actief",
+      "pl": "Aktywne",
+      "uk": "Активний",
+      "tr": "Aktif",
+      "qd": "Undirwaye"
+    },
+    "questDone": {
+      "en": "Done",
+      "ja": "完了",
+      "ko": "완료",
+      "th": "สำเร็จ",
+      "zh": "完成",
+      "vi": "Xong",
+      "id": "Selesai",
+      "es": "Hecha",
+      "pt": "Concluída",
+      "fr": "Terminée",
+      "de": "Erledigt",
+      "ru": "Выполнен",
+      "it": "Completata",
+      "nl": "Klaar",
+      "pl": "Ukończone",
+      "uk": "Виконано",
+      "tr": "Tamamlandı",
+      "qd": "Fulfyllyd"
+    },
+    "questFailed": {
+      "en": "Failed",
+      "ja": "失敗",
+      "ko": "실패",
+      "th": "ล้มเหลว",
+      "zh": "失败",
+      "vi": "Thất bại",
+      "id": "Gagal",
+      "es": "Fallida",
+      "pt": "Falhou",
+      "fr": "Échouée",
+      "de": "Gescheitert",
+      "ru": "Провален",
+      "it": "Fallita",
+      "nl": "Mislukt",
+      "pl": "Nieudane",
+      "uk": "Провалено",
+      "tr": "Başarısız",
+      "qd": "Faylyd"
+    },
+    "questNotStarted": {
+      "en": "Not started",
+      "ja": "未着手",
+      "ko": "시작 전",
+      "th": "ยังไม่เริ่ม",
+      "zh": "未开始",
+      "vi": "Chưa bắt đầu",
+      "id": "Belum mulai",
+      "es": "Sin empezar",
+      "pt": "Não iniciada",
+      "fr": "Pas commencée",
+      "de": "Nicht begonnen",
+      "ru": "Не начат",
+      "it": "Non iniziata",
+      "nl": "Niet begonnen",
+      "pl": "Nierozpoczęte",
+      "uk": "Не почато",
+      "tr": "Başlamadı",
+      "qd": "Noth Begunne"
+    },
+    "worldChars": {
+      "en": "Characters",
+      "ja": "キャラクター",
+      "ko": "캐릭터",
+      "th": "ตัวละคร",
+      "zh": "角色",
+      "vi": "Nhân vật",
+      "id": "Karakter",
+      "es": "Personajes",
+      "pt": "Personagens",
+      "fr": "Personnages",
+      "de": "Charaktere",
+      "ru": "Персонажи",
+      "it": "Personaggi",
+      "nl": "Personages",
+      "pl": "Postacie",
+      "uk": "Персонажі",
+      "tr": "Karakterler",
+      "qd": "Beingraxae"
+    }
+  }
+}
