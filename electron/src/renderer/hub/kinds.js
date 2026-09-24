@@ -206,11 +206,17 @@ function renderModuleRail() {
   // rail's home button and stays out of that toggle list.
   const hqt = S.settings.hubQuickToggles || {};
   const hqtHidden = (key) => hqt[key] === false ? ' tool-toggle-hidden' : '';
-  let html = `<button class="nav-btn module-rail-tool${atHubHome ? ' active' : ''}" title="${t('nexusNest')}" data-cmd="app.nest" onclick="runCommand('app.nest')">${I.home}<span class="nav-label">${t('nexusNest')}</span></button>
-    <button class="nav-btn module-rail-tool${hqtHidden('kinds')}" title="${t('kindBrowser')}" data-cmd="app.kindBrowser" onclick="runCommand('app.kindBrowser')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.layer}<span class="nav-label">${t('kindBrowser')}</span></button>
-    <button class="nav-btn module-rail-tool${hqtHidden('sage')}" title="${t('sageHut')}" data-cmd="app.sageHut" onclick="runCommand('app.sageHut')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.sage}<span class="nav-label">${t('sageHut')}</span></button>
-    <button class="nav-btn module-rail-tool${hqtHidden('dock')}" title="${t('importDock')}" data-cmd="app.importDock" onclick="runCommand('app.importDock')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.import}<span class="nav-label">${t('importDock')}</span></button>
-    <button class="nav-btn module-rail-tool${hqtHidden('trash')}" title="${t('trashTitle')}" data-cmd="app.trash" onclick="runCommand('app.trash')" oncontextmenu="openHubQuickMenuContextMenu(event)">${I.delete}<span class="nav-label">${t('trashTitle')}</span></button>`;
+  // v5 Part 7 (§11.9): the Activity Bar — each button is a destination of
+  // the left panel (hub/activity.js); the open one again folds the panel.
+  // Labels keeps its own view. Every one is a `rail` command, so Ctrl+P too.
+  const dest = (id, key, icon, labelKey, on) => `<button class="nav-btn module-rail-tool${on ? ' active' : ''}${key ? hqtHidden(key) : ''}"
+      title="${t(labelKey)}" data-cmd="${id}"${key ? ` data-dest="${key}"` : ''} onclick="runCommand(${x(xj(id))},{rail:true})"${key ? ' oncontextmenu="openHubQuickMenuContextMenu(event)"' : ''}>${I[icon]}<span class="nav-label">${t(labelKey)}</span></button>`;
+  let html = dest('app.nest', null, 'home', 'nexusNest', railDestActive('nest') && atHubHome)
+    + dest('app.searchPanel', 'search', 'search', 'leftSearch', railDestActive('search'))
+    + dest('app.labels', 'labels', 'hashtag', 'hashtag', S.view === 'hashtag')
+    + dest('app.sageHut', 'sage', 'sage', 'sageHut', railDestActive('insight'))
+    + dest('app.tools', 'tools', 'fields', 'leftTools', railDestActive('tools'))
+    + dest('app.trash', 'trash', 'delete', 'trashTitle', railDestActive('trash'));
   if (pinned.length) html += `<div class="rail-sep module-rail-tool"></div>`;
   for (const m of pinned) {
     const active = S.activeModuleNode?.id === m.id ? ' active' : '';

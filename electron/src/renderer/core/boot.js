@@ -127,7 +127,6 @@ async function init() {
   q('#nav-toolbar-h-resize')?.setAttribute('title', t('resizePanel'));
   observeUiLanguage();
   renderModuleRail();
-  applyNavToggles();
   applyAreaScales();
   renderSettingsMenu();
   translateStaticChrome();

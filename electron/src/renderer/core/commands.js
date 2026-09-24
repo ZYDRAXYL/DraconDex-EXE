@@ -78,14 +78,25 @@ const settingCmd = (group, page) => ({
 
 const COMMANDS = {
   // ── App ──────────────────────────────────────────────────────────────
-  'app.nest': { label: 'nexusNest', icon: 'home', scope: 'app', run: () => goToNexusNestHub(), surfaces: ['rail'] },
-  'app.kindBrowser': { label: 'kindBrowser', icon: 'layer', scope: 'app', run: () => goToKindBrowserHub(), surfaces: ['rail'] },
-  'app.sageHut': { label: 'sageHut', icon: 'sage', scope: 'app', run: () => openSageTab('dataSize'), surfaces: ['rail'] },
-  'app.importDock': { label: 'importDock', icon: 'import', scope: 'app', run: () => goToImportDockPage(), surfaces: ['rail'] },
-  'app.exportMarkdown': { label: 'exportMarkdown', icon: 'export', scope: 'app', when: (c) => !!(c?.nexusId || S.nexus), run: (c) => nexusExportMarkdown(c?.nexusId || S.nexus.id), surfaces: ['nexus.options'] },
-  'app.createGuide': { label: 'guideCreate', icon: 'info', scope: 'app', when: () => !!S.nexus, run: () => createGuideBundle(), surfaces: ['bundle.picker'] },
-  'app.newProject': { label: 'bundleTitle', icon: 'artisan', scope: 'app', when: () => !!S.nexus, run: (c) => openBundlePicker(c?.parentId ?? null), surfaces: ['kind.picker'] },
-  'app.trash': { label: 'trashTitle', icon: 'delete', scope: 'app', when: () => !!S.nexus, run: () => openTrashPanel(), surfaces: ['rail'] },
+  // v5 Part 7 (§11.9): Activity Bar destinations (hub/activity.js). From the
+  // rail ({rail:true}) the open one folds the panel; from Ctrl+P it opens.
+  'app.nest': { label: 'nexusNest', icon: 'home', scope: 'app', run: (c) => (c?.rail ? railDest('nest') : (showLeftDest('nest'), goToNexusNestHub())), surfaces: ['rail'] },
+  'app.searchPanel': { label: 'leftSearch', icon: 'search', scope: 'app', when: () => !!S.nexus, run: (c) => (c?.rail ? railDest('search') : showLeftDest('search')), surfaces: ['rail'] },
+  'app.labels': { label: 'hashtag', icon: 'hashtag', scope: 'app', run: () => { S.view = 'hashtag'; updateTopNavButton(); switchView('hashtag'); renderModuleRail(); }, surfaces: ['rail'] },
+  'app.sageHut': { label: 'sageHut', icon: 'sage', scope: 'app', run: (c) => (c?.rail ? railDest('insight') : openSageTab('dataSize')), surfaces: ['rail'] },
+  'app.tools': { label: 'leftTools', icon: 'fields', scope: 'app', when: () => !!S.nexus, run: (c) => { S.leftTool = null; return c?.rail ? railDest('tools') : showLeftDest('tools'); }, surfaces: ['rail'] },
+  'tools.problems': { label: 'probTitle', icon: 'info', scope: 'app', when: () => !!S.nexus, run: () => openProblemsPanel(), surfaces: ['left.panel'] },
+  'tools.csvImport': { label: 'csvImport', icon: 'import', scope: 'app', when: () => !!S.nexus, run: () => openCsvImport(), surfaces: ['left.panel'] },
+  'app.kindBrowser': { label: 'kindBrowser', icon: 'layer', scope: 'app', run: () => goToKindBrowserHub(), surfaces: ['nest.ctx'] },
+  'app.importDock': { label: 'importDock', icon: 'import', scope: 'app', run: () => goToImportDockPage(), surfaces: ['nest.head'] },
+  'app.colors': { label: 'colorPanel', icon: 'colors', scope: 'app', run: () => { S.view = 'colors'; updateTopNavButton(); switchView('colors'); renderModuleRail(); }, surfaces: ['left.panel'] },
+  // Moved off the rail (§11.9): the Setting "Data" page and Ctrl+P.
+  'db.import': { label: 'importDb', icon: 'import', scope: 'app', run: () => importDatabaseFile(), surfaces: ['setting.data'] },
+  'db.export': { label: 'exportDb', icon: 'export', scope: 'app', run: () => exportDatabaseFile(), surfaces: ['setting.data'] },
+  'app.exportMarkdown': { label: 'exportMarkdown', icon: 'export', scope: 'app', when: (c) => !!(c?.nexusId || S.nexus), run: (c) => nexusExportMarkdown(c?.nexusId || S.nexus.id), surfaces: ['nexus.options', 'left.panel'] },
+  'app.createGuide': { label: 'guideCreate', icon: 'info', scope: 'app', when: () => !!S.nexus, run: () => createGuideBundle(), surfaces: ['bundle.picker', 'left.panel'] },
+  'app.newProject': { label: 'bundleTitle', icon: 'artisan', scope: 'app', when: () => !!S.nexus, run: (c) => openBundlePicker(c?.parentId ?? null), surfaces: ['kind.picker', 'left.panel'] },
+  'app.trash': { label: 'trashTitle', icon: 'delete', scope: 'app', when: () => !!S.nexus, run: (c) => (c?.rail ? railDest('trash') : showLeftDest('trash')), surfaces: ['rail'] },
   'app.newModule': { label: 'createMajorModule', icon: 'plus', scope: 'app', run: (c, el) => openKindPopup(null, el || paletteAnchor()), surfaces: ['nest.head'] },
   'app.settings': { label: 'settingOpenWindow', icon: 'settings', scope: 'app', run: () => openSettingWindow(), surfaces: ['settings.menu'] },
   'dock.importFolder': { label: 'importFolder', icon: 'import', scope: 'app', run: () => importDockPickFolder(null), surfaces: ['dock'] },

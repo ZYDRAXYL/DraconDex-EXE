@@ -188,11 +188,14 @@ async function toggleNavPinAndRefresh(id) {
 // off, so it's left out of this list entirely. Scoped to those buttons
 // (not the whole #nav-sidebar, which openNavSidebarContextMenu already owns
 // for module pinning) via stopPropagation so the two menus never collide.
+// v5 Part 7 (§11.9): the Activity Bar's destinations (hub/activity.js);
+// Nest is the rail's first button and stays out of the list.
 const HUB_QUICK_MENU_ITEMS = [
-  ['kinds', 'kindBrowser', 'layer'],
+  ['search', 'leftSearch', 'search'],
+  ['labels', 'hashtag', 'hashtag'],
   ['sage', 'sageHut', 'sage'],
-  ['dock', 'importDock', 'import'],
-  ['trash', 'trashTitle', 'delete'], // v5 Part 7 (§11.4)
+  ['tools', 'leftTools', 'fields'],
+  ['trash', 'trashTitle', 'delete'],
 ];
 function openHubQuickMenuContextMenu(ev) {
   ev.preventDefault();
@@ -249,6 +252,8 @@ function buildNestOptionsPopupHtml() {
     row("toggleNestOption('nestShowItems')", s.nestShowItems !== false, 'nestOptShowItems'),
     row("toggleNestOption('nestShowMajorIcon')", s.nestShowMajorIcon !== false, 'nestOptShowMajorIcon'),
     row("toggleNestOption('nestShowMinorIcon')", !!s.nestShowMinorIcon, 'nestOptShowMinorIcon'),
+    // v5 Part 7 (§11.9): what the Kind Browser section was (app.kindBrowser).
+    `<div class="togglerow nest-opt-row" data-cmd="app.kindBrowser" onclick="toggleNestByKind()"><span class="tg${nestByKind() ? ' on' : ''}"></span>${t('nestOptByKind')}</div>`,
     // 3-way, so a segmented row rather than a 4th toggle switch — the other
     // three rows above are genuine booleans and stay as they are.
     `<div class="nest-opt-row nest-sig-row"><div class="nest-sig-label">${t('nestOptSignature')}</div>

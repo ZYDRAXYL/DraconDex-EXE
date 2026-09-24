@@ -38,6 +38,10 @@ contextBridge.exposeInMainWorld('api', {
     rebuild: (nx)          => inv('search:rebuild', nx),
     query:   (nx,qy)       => inv('search:query', nx, qy),
   },
+  tools: {
+    problems:      (nx)             => inv('tools:problems', nx),
+    csvPick:       ()               => inv('tools:csvPick'),
+  },
   bundle: {
     create:        (nx,parent,spec) => inv('bundle:create', nx, parent, spec),
     guide:         (locale)         => inv('bundle:guide', locale),

@@ -746,6 +746,18 @@ h('diviner:wouldCycle',  (tref,target)   => db.divinerWouldCycle(tref,target));
 
 // v5 Part 7 (§11.7): a whole project from one spec, in one transaction.
 h('bundle:create', (nx, parent, spec) => db.createBundle(nx, parent, spec));
+// v5 Part 7 (§11.10): the Problems panel.
+h('tools:problems', (nx) => db.listProblems(nx));
+// CSV → Classifier: pick and read here (the renderer cannot touch files);
+// the Classifier itself is made through bundle:create.
+h('tools:csvPick', async () => {
+  const r = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'CSV', properties: ['openFile'], filters: [{ name: 'CSV', extensions: ['csv', 'tsv', 'txt'] }],
+  });
+  if (r.canceled || !r.filePaths?.[0]) return { ok: false, canceled: true };
+  const out = db.readCsvFile(r.filePaths[0]);
+  return { ...out, name: path.basename(r.filePaths[0]).replace(/\.(csv|tsv|txt)$/i, '') };
+});
 // §11.8: the guide's spec for a locale (installed PKG guide › bundled › English).
 h('bundle:guide',  (locale)          => db.guideSpec(locale));
 

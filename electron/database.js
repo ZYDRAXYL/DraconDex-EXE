@@ -9,6 +9,8 @@ const mdExport  = require('./src/db/md-export');
 const diviner   = require('./src/db/diviner');
 const bundle    = require('./src/db/bundle');
 const guide     = require('./src/db/guide');
+const problems  = require('./src/db/problems');
+const csvImport = require('./src/db/csv-import');
 const scribe    = require('./src/db/scribe');
 const wiki      = require('./src/db/wiki');
 const color     = require('./src/db/color');
@@ -55,6 +57,8 @@ module.exports = {
   ...diviner,
   ...bundle,
   ...guide,
+  ...problems,
+  ...csvImport,
   ...scribe,
   ...wiki,
   ...color,

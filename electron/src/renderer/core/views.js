@@ -21,8 +21,6 @@ function bindNav() {
       switchView(S.view);
     });
   });
-  q('#btn-import-db')?.addEventListener('click', importDatabaseFile);
-  q('#btn-export-db')?.addEventListener('click', exportDatabaseFile);
   q('#modal-close').addEventListener('click', closeModal);
   q('#modal-overlay').addEventListener('click', e=>{ if(e.target===q('#modal-overlay')) closeModal(); });
   bindModalEscape();
@@ -238,10 +236,12 @@ function renderNexusHome() {
   // its top. Carry each section's scrollTop across the rebuild by data-key.
   const hubScroll = {};
   q('#left-panel-inner')?.querySelectorAll('.acc-body[data-key]').forEach(el => { hubScroll[el.dataset.key] = el.scrollTop; });
-  q('#left-panel-inner').innerHTML = buildHubHtml();
+  // v5 Part 7 (§11.9): one Activity Bar destination at a time (hub/activity.js).
+  q('#left-panel-inner').innerHTML = buildLeftPanelHtml();
   q('#left-panel-inner')?.querySelectorAll('.acc-body[data-key]').forEach(el => {
     if (hubScroll[el.dataset.key] != null) el.scrollTop = hubScroll[el.dataset.key];
   });
+  mountLeftPanel();
   // Plan process1 part3 #2: the separate "switch nexus" ⇄ button was
   // removed — clicking the nexus name itself already opens the same
   // switcher (toggleNexusSwitcher, core/nexus.js), whose "more…" row

@@ -8,7 +8,9 @@
 // createBundle builds it in ONE transaction, so a failure leaves nothing
 // half-made (the old wizard committed a module per step).
 //
-// spec = { name, icon?, color?, manager?: bool, modules: [ {
+// spec = { name, icon?, color?, manager?: bool, folder?: bool, modules: [ {
+//   (folder: false — the modules go straight under parentId, with no folder
+//   and no Manager: one Classifier from a CSV file, §11.10)
 //   ref           a name for this module inside the spec
 //   kind, name, icon?, description?, catType?
 //   fields        Classifier: [{ name, type, options, levelable, hasCondition, relTo }]
@@ -53,7 +55,10 @@ function createBundle(nexusId, parentId, spec) {
   const reindex = []; // [key, text] — after the rows exist, so a [[link]] finds its target
   const run = d.transaction(() => {
     const col = colorId(d, spec.color);
-    const folderId = moduleDb.createModule({ nexus_ref: nexusId, parent_id: parentId ?? null, name, kind: 'collector', icon: spec.icon || null, color: col, icon_color: col });
+    const bare = spec.folder === false;
+    const folderId = bare ? (parentId ?? null)
+      : moduleDb.createModule({ nexus_ref: nexusId, parent_id: parentId ?? null, name, kind: 'collector', icon: spec.icon || null, color: col, icon_color: col });
+    const created = [];
     const modByRef = new Map();
     const objByRef = new Map();
     const pendingFieldRel = []; // [templateId, relTo]
@@ -65,6 +70,7 @@ function createBundle(nexusId, parentId, spec) {
         icon: m.icon || null, color: col, icon_color: col,
         cat_type: m.kind === 'classifier' ? (['object', 'character', 'element'].includes(m.catType) ? m.catType : 'object') : null,
       }, { logHistory: false });
+      created.push(id);
       if (m.ref) modByRef.set(m.ref, id);
       if (m.description) {
         d.prepare(`UPDATE module SET description=? WHERE id=?`).run(str(m.description, 20000), id);
@@ -165,11 +171,11 @@ function createBundle(nexusId, parentId, spec) {
       if (groups.length) setUi.run(mid, 'filterDef', JSON.stringify({ groups }));
     }
     let managerId = null;
-    if (spec.manager !== false) {
+    if (spec.manager !== false && !bare) {
       managerId = moduleDb.createModule({ nexus_ref: nexusId, parent_id: folderId, name, kind: 'manager', color: col, icon_color: col }, { logHistory: false });
       setUi.run(managerId, 'filterDef', JSON.stringify({ groups: [{ rules: [{ field: 'childOf', moduleId: folderId }] }] }));
     }
-    return { folderId, managerId, modules: mods.length };
+    return { folderId: bare ? null : folderId, managerId, moduleIds: created, modules: mods.length };
   });
   let out;
   try { out = run(); } catch (e) { return { ok: false, code: 'failed', message: String(e?.message || e) }; }
@@ -181,7 +187,7 @@ function createBundle(nexusId, parentId, spec) {
     const body = text ?? CONTENT_SOURCES[prefix]?.content(d, Number(key.split('_')[1])) ?? '';
     try { wiki.reindexWikiLinks(key, body, nexusId); } catch (_) {}
   }
-  try { require('./versions').recordNexusHistory(nexusId, 'create', out.folderId, name, null); } catch (_) {}
+  try { require('./versions').recordNexusHistory(nexusId, 'create', out.folderId ?? out.moduleIds[0], name, null); } catch (_) {}
   return { ok: true, ...out };
 }
 

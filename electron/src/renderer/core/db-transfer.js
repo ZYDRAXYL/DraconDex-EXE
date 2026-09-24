@@ -10,7 +10,10 @@
 function settingDatabasePageHtml(){
   settingRefreshDatabaseSection();
   settingRefreshHistorySection();
-  return `<div id="setting-db-legacy"></div><div class="settings-label">${t('settingDbNexusList')}</div><div id="setting-db-body">${t('syncWorking')}</div>
+  // v5 Part 7 (§11.9): Import / Export DB moved here off the rail (and are in Ctrl+P).
+  return `<div class="settings-label">${t('settingDbWhole')}</div>
+    <div class="setting-db-io">${cmdBtn('db.import', {}, { cls: 'btn-s' })}${cmdBtn('db.export', {}, { cls: 'btn-s' })}</div>
+    <div id="setting-db-legacy"></div><div class="settings-label">${t('settingDbNexusList')}</div><div id="setting-db-body">${t('syncWorking')}</div>
     <div class="settings-label" style="margin-top:18px">${t('settingHistoryLimit')}</div>
     <div id="setting-history-body">${t('syncWorking')}</div>`;
 }
