@@ -36,23 +36,14 @@ const KIND_PAGE = {
   locator: { start: 'locator.addArea' }, // scoped: mod/locator.js registers locator.view
   chronicler: { start: 'chronicler.addLine' }, // scoped: mod/chronicler.js registers chronicler.view
   wanderer: { start: 'wanderer.place' }, // scoped: mod/wanderer.js registers wanderer.view
-  narrator: {
-    load: 'loadNarratorData', main: 'buildNarratorMainHtml', start: 'narrator.addDialogue',
-    mount: () => { if (!kpFn('mountNarratorBoard')) return; kpCall('mountNarratorBoard'); if (S.narratorData?.view === 'reader') kpCall('mountNarratorReader'); },
-  },
-  author: {
-    load: 'loadAuthorData', main: 'buildAuthorMainHtml', start: 'author.newChapter',
-    mount: () => { if (!kpFn('mountAuthorEditor')) return; kpCall('mountAuthorEditor'); if (S.authorData?.view === 'book') kpCall('mountAuthorBook'); },
-  },
-  scribe: { load: 'loadChatScribeData', main: 'buildChatScribeMainHtml', mount: 'mountChatScribe', start: 'scribe.newSession' },
+  narrator: { start: 'narrator.addDialogue' }, // scoped: mod/ registers narrator.view
+  author: { start: 'author.newChapter' }, // scoped: mod/ registers author.view
+  scribe: { start: 'scribe.newSession' }, // scoped: mod/ registers scribe.view
   drafter: { main: 'buildDrafterMainHtml', mount: (m) => kpCall('mountDrafterEditor', m) },
   exhibitor: { load: 'loadExhibitorData', main: 'buildExhibitorMainHtml', mount: 'mountExhibitor', start: 'exhibitor.editFilter' },
-  sketcher: {
-    load: 'loadSketcherData', main: 'buildSketcherMainHtml', start: 'sketcher.newPage',
-    mount: () => { if (!kpFn('mountSketcherBoard')) return; kpCall('mountSketcherBoard'); kpCall('mountSketcherExtras'); },
-  },
-  designer: { load: 'loadDesignerData', main: 'buildDesignerMainHtml', mount: 'mountDesignerBoard', start: 'designer.addShape' },
-  diviner: { load: 'loadDivinerData', main: 'buildDivinerMainHtml', start: 'diviner.newTable' }, // v5 Part 7 (§11.5)
+  sketcher: { start: 'sketcher.newPage' }, // scoped: mod/ registers sketcher.view
+  designer: { start: 'designer.addShape' }, // scoped: mod/ registers designer.view
+  diviner: { start: 'diviner.newTable' }, // scoped: mod/diviner.js registers diviner.view
 };
 
 // One part of a kind's page as a callable, or null. A string part names a

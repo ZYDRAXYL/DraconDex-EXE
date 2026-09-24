@@ -12,9 +12,18 @@
 // at the 500-line band); every reader looks icons up at render time.
 I.dice = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></svg>`;
 
+// v5 Part 8 (§12.3): a scoped page component — data per module, the
+// current instance's through S.divinerData (page/kind-state.js).
+const DIV = kindState({ prop: 'divinerData', kind: 'diviner', component: 'diviner.view' });
+registerComponent('diviner.view', {
+  kind: 'diviner', label: () => kindLabel('diviner'), borrow: true,
+  load: (m) => loadDivinerData(m),
+  render: (c) => buildDivinerMainHtml(c.source, c),
+});
+
 async function loadDivinerData(m) {
   const [tables, ui] = await Promise.all([api.diviner.getTables(m.id), api.module.getUi(m.id)]);
-  const prev = S.divinerData?.moduleId === m.id ? S.divinerData : null;
+  const prev = DIV.M[m.id] || null;
   let selectedId = Number(ui.activeTable) || prev?.selectedId || null;
   if (selectedId && !tables.some(tb => tb.id === selectedId)) selectedId = null;
   if (!selectedId && tables.length) selectedId = tables[0].id;
@@ -25,14 +34,12 @@ async function loadDivinerData(m) {
   // Diviner as much as an object in a Classifier (divt_ resolves like any key).
   const keys = [...new Set(entries.map(e => e.linker_key).filter(Boolean))];
   const linkNames = new Map(keys.length ? (await api.wiki.resolveKeys(keys)).map(r => [r.key, r.name]) : []);
-  S.divinerData = { moduleId: m.id, tables, selectedId, entries, rolls, linkNames, last: prev?.selectedId === selectedId ? prev.last : null };
+  DIV.setModule(m.id, { moduleId: m.id, ui, tables, selectedId, entries, rolls, linkNames, last: prev?.selectedId === selectedId ? prev.last : null });
 }
 
 async function refreshDiviner() {
-  const m = findModuleNode(S.divinerData?.moduleId);
-  if (!m) return;
-  await loadDivinerData(m);
-  renderNexusHome();
+  const mid = S.divinerData?.moduleId;
+  if (mid != null) await reloadSource(mid);
 }
 
 async function selectDivinerTable(id) {
@@ -45,8 +52,8 @@ async function selectDivinerTable(id) {
 
 const divTable = () => S.divinerData?.tables.find(tb => tb.id === S.divinerData.selectedId) || null;
 
-function buildDivinerMainHtml(m) {
-  const d = S.divinerData?.moduleId === m.id ? S.divinerData : null;
+function buildDivinerMainHtml(m, ic) {
+  const d = DIV.instance(ic);
   if (!d) return '';
   const c = { moduleId: m.id };
   const toolbar = `<div class="classifier-toolbar">
@@ -143,9 +150,9 @@ async function rollDiviner() {
 }
 
 async function rollDivinerDiceOnly() {
-  const expr = q('#div-dice-expr')?.value || '1d20';
+  const expr = pbQOr('#div-dice-expr')?.value || '1d20';
   const r = await api.diviner.rollDice(expr);
-  const out = q('#div-dice-out');
+  const out = pbQOr('#div-dice-out');
   if (!r?.ok) { toast(t('divBadDice'), 'error'); return; }
   if (out) out.textContent = r.text;
 }

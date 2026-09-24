@@ -10,29 +10,34 @@
 
 const CHATSCRIBE_VIEWS = ['chat', 'transcript'];
 const CHATSCRIBE_VIEW_LABEL = { chat: 'Chat', transcript: 'Log' };
+// v5 Part 8 (§12.3): a scoped page component — data per module, view per
+// instance, S.chatScribeData = the current instance (page/kind-state.js).
+const CHS = kindState({ prop: 'chatScribeData', kind: 'scribe', component: 'scribe.view', views: CHATSCRIBE_VIEWS });
+registerComponent('scribe.view', {
+  kind: 'scribe', label: () => kindLabel('scribe'), borrow: true,
+  presets: () => CHATSCRIBE_VIEWS, presetLabel: (p) => CHATSCRIBE_VIEW_LABEL[p],
+  load: (m) => loadChatScribeData(m),
+  render: (c) => buildChatScribeMainHtml(c.source, c),
+  mount: () => mountChatScribe(),
+});
 
 async function loadChatScribeData(m) {
   const [sessions, ui] = await Promise.all([
     api.chatscribe.getSessions(m.id),
     api.module.getUi(m.id),
   ]);
-  const prev = (S.chatScribeData && S.chatScribeData.moduleId === m.id) ? S.chatScribeData : null;
+  const prev = CHS.M[m.id] || null;
   // A [[chss]] wikilink jump (openEntityByKey) pre-selects its session.
   let selectedId = S.pendingChatSession || prev?.selectedId || Number(ui.activeSession) || null;
   S.pendingChatSession = null;
   if (selectedId && !sessions.find(s => s.id === selectedId)) selectedId = null;
   if (!selectedId && sessions.length) selectedId = sessions[0].id;
   const messages = selectedId ? await api.chatscribe.getMessages(selectedId) : [];
-  const view = CHATSCRIBE_VIEWS.includes(ui.activeView) ? ui.activeView : 'chat';
-  S.chatScribeData = { moduleId: m.id, sessions, selectedId, messages, view };
+  CHS.setModule(m.id, { moduleId: m.id, ui, sessions, selectedId, messages });
 }
 
 async function setChatScribeView(view) {
-  const d = S.chatScribeData;
-  d.view = view;
-  await api.module.setUi(d.moduleId, 'activeView', view);
-  if (S.inspectorData?.moduleId === d.moduleId) S.inspectorData.ui = { ...S.inspectorData.ui, activeView: view };
-  renderNexusHome();
+  await CHS.setView(view); // the instance's preset (page/kind-state.js)
 }
 
 async function selectChatSession(id) {
@@ -60,8 +65,8 @@ function chsDayLabel(createAt) {
   return dt.toLocaleDateString();
 }
 
-function buildChatScribeMainHtml(m) {
-  const d = (S.chatScribeData && S.chatScribeData.moduleId === m.id) ? S.chatScribeData : null;
+function buildChatScribeMainHtml(m, c) {
+  const d = CHS.instance(c);
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
   const viewBar = viewBarHtml(CHATSCRIBE_VIEWS, d.view, v => `setChatScribeView('${v}')`, v => CHATSCRIBE_VIEW_LABEL[v], { noI18n: true });
   const toolbar = `<div class="classifier-toolbar">
@@ -151,10 +156,10 @@ function openChatLinkPicker(inputId) {
 }
 
 function submitChatLinkInsert() {
-  const name = q('#chs-link-pick')?.value;
+  const name = pbQOr('#chs-link-pick')?.value;
   closeModal();
   if (!name) return;
-  const input = q(`#${_chsLinkInputId}`);
+  const input = pbQOr(`#${_chsLinkInputId}`);
   if (!input) return;
   const linkText = `[[${name}]]`;
   const start = input.selectionStart ?? input.value.length;
@@ -187,7 +192,7 @@ async function openChatBubbleColorPopup(msgId, anchor) {
 }
 
 async function saveChatBubbleColorLive(msgId) {
-  const color = q('#sel-color')?.value || null;
+  const color = pbQOr('#sel-color')?.value || null;
   const sessionId = chatScribeActiveSessionId();
   const messages = sessionId ? await api.chatscribe.getMessages(sessionId) : [];
   const g = messages.find(m => m.id === msgId);
@@ -203,7 +208,7 @@ async function saveChatBubbleColorLive(msgId) {
 let _chsDragCleanup = null;
 function bindChatBubbleDrag(streamId) {
   if (_chsDragCleanup) _chsDragCleanup();
-  const stream = q(`#${streamId}`);
+  const stream = pbQOr(`#${streamId}`);
   if (!stream) return;
   const controller = new AbortController();
   _chsDragCleanup = () => controller.abort();
@@ -250,15 +255,15 @@ function bindChatBubbleDrag(streamId) {
 // the newest bubble and the input ready.
 function mountChatScribe() {
   const d = S.chatScribeData;
-  if (!d || S.activeModuleNode?.id !== d.moduleId || d.view !== 'chat') return;
-  const stream = q('#chs-stream');
+  if (!d || d.view !== 'chat') return;
+  const stream = pbQOr('#chs-stream');
   if (stream) stream.scrollTop = stream.scrollHeight;
   bindChatBubbleDrag('chs-stream');
 }
 
 async function sendChatMessage() {
   const d = S.chatScribeData;
-  const el = q('#chs-input');
+  const el = pbQOr('#chs-input');
   const text = el?.value.trim();
   if (!text || !d?.selectedId) return;
   await api.chatscribe.createMessage(d.selectedId, text);
@@ -266,7 +271,7 @@ async function sendChatMessage() {
   const ses = d.sessions.find(s => s.id === d.selectedId);
   if (ses) { ses.message_count = d.messages.length; ses.last_message = text; }
   renderNexusHome();
-  const input = q('#chs-input');
+  const input = pbQOr('#chs-input');
   if (input) input.focus();
 }
 
@@ -296,11 +301,11 @@ function openChatSessionModal(moduleId, id = null) {
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" onclick="submitChatSession(${moduleId},${ses ? ses.id : 'null'})">${ses ? t('save') : t('create')}</button>
     </div>`);
-  setTimeout(() => q('#cs-name').focus(), 60);
+  setTimeout(() => pbQOr('#cs-name').focus(), 60);
 }
 
 async function submitChatSession(moduleId, id) {
-  const name = q('#cs-name').value.trim();
+  const name = pbQOr('#cs-name').value.trim();
   if (!name) return;
   if (id) await api.chatscribe.renameSession(id, name);
   else {
@@ -308,7 +313,7 @@ async function submitChatSession(moduleId, id) {
     S.chatScribeData.selectedId = newId;
   }
   closeModal();
-  await openModuleNode(moduleId);
+  await reloadSource(moduleId);
   invalidateNestItems(moduleId, id ? 0 : 1);
   toast(id ? t('saved') : t('created'), 'ok');
 }
@@ -319,7 +324,7 @@ async function deleteChatSessionRow(id) {
   closeModal();
   const d = S.chatScribeData;
   if (d.selectedId === id) d.selectedId = null;
-  await openModuleNode(d.moduleId);
+  await reloadSource(d.moduleId);
   invalidateNestItems(d.moduleId, -1);
   toast(t('deleted'), 'ok');
 }
@@ -357,11 +362,11 @@ async function openChatMessageModal(id) {
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" onclick="submitChatMessage(${id})">${t('save')}</button>
     </div>`);
-  setTimeout(() => q('#cm-text').focus(), 60);
+  setTimeout(() => pbQOr('#cm-text').focus(), 60);
 }
 
 async function submitChatMessage(id) {
-  const text = q('#cm-text').value.trim();
+  const text = pbQOr('#cm-text').value.trim();
   if (!text) return;
   await api.chatscribe.updateMessage(id, text);
   closeModal();

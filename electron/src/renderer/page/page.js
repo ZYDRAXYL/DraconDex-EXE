@@ -225,6 +225,19 @@ function rerenderPageBlocks(pred) {
   });
 }
 
+// A write changed a module's data: repaint wherever it shows. On its own
+// page this is the old openModuleNode; shown elsewhere (borrowed onto another
+// page, §12.12) it reloads that module's data and repaints in place, instead
+// of navigating away from the page the user is on.
+async function reloadSource(moduleId) {
+  const m = findModuleNode(moduleId);
+  if (!m) return;
+  if (S.activeModuleNode?.id === moduleId && !S.activeItemNode) { await openModuleNode(moduleId); return; }
+  const comp = COMPONENTS[`${m.kind}.view`];
+  if (comp?.load) await comp.load(m);
+  renderNexusHome();
+}
+
 // The page's properties changed on disk (a tag, a link): refetch just those.
 async function refreshPageProps(moduleId, itemKey = null) {
   const page = pageOf(moduleId, itemKey);

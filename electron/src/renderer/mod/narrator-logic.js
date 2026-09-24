@@ -90,7 +90,7 @@ async function saveNarratorLogic() {
   await api.narrator.setChoiceLogic(L2.optId, L2.cond, L2.set);
   _narLogic = null;
   closeModal();
-  await openModuleNode(S.narratorData.moduleId);
+  await reloadSource(S.narratorData.moduleId);
   toast(t('saved'), 'ok');
 }
 

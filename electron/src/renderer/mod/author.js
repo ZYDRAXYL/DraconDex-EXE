@@ -9,31 +9,36 @@
 
 const AUTHOR_VIEWS = ['editor', 'board', 'outline', 'reading', 'book'];
 const AUTHOR_VIEW_LABEL = { editor: 'Editor', board: 'Board', outline: 'Outline', reading: 'Reading', book: 'Book' };
+// v5 Part 8 (§12.3): a scoped page component — data per module, view per
+// instance, S.authorData = the current instance (page/kind-state.js).
+const AUT = kindState({ prop: 'authorData', kind: 'author', component: 'author.view', views: AUTHOR_VIEWS });
+registerComponent('author.view', {
+  kind: 'author', label: () => kindLabel('author'), borrow: true,
+  presets: () => AUTHOR_VIEWS, presetLabel: (p) => AUTHOR_VIEW_LABEL[p],
+  load: (m) => loadAuthorData(m),
+  render: (c) => buildAuthorMainHtml(c.source, c),
+  mount: () => { mountAuthorEditor(); if (S.authorData?.view === 'book') mountAuthorBook(); },
+});
 
 async function loadAuthorData(m) {
   const [chapters, ui] = await Promise.all([
     api.author.getChapters(m.id),
     api.module.getUi(m.id),
   ]);
-  const prev = (S.authorData && S.authorData.moduleId === m.id) ? S.authorData : null;
+  const prev = AUT.M[m.id] || null;
   // A [[bchp]] wikilink jump (openEntityByKey) pre-selects its chapter.
   let selectedId = S.pendingAuthorChapter || prev?.selectedId || Number(ui.activeChapter) || null;
   S.pendingAuthorChapter = null;
   if (selectedId && !chapters.find(c => c.id === selectedId)) selectedId = null;
   if (!selectedId && chapters.length) selectedId = chapters[0].id;
-  const view = AUTHOR_VIEWS.includes(ui.activeView) ? ui.activeView : 'editor';
   // POV names for the corkboard (v5 Part 7, §11.6) — one round trip.
   const povKeys = [...new Set(chapters.map(c => c.pov_key).filter(Boolean))];
   const povNames = new Map(povKeys.length ? (await api.wiki.resolveKeys(povKeys)).map(r => [r.key, r.name]) : []);
-  S.authorData = { moduleId: m.id, chapters, selectedId, view, povNames };
+  AUT.setModule(m.id, { moduleId: m.id, ui, chapters, selectedId, povNames });
 }
 
 async function setAuthorView(view) {
-  const d = S.authorData;
-  d.view = view;
-  await api.module.setUi(d.moduleId, 'activeView', view);
-  if (S.inspectorData?.moduleId === d.moduleId) S.inspectorData.ui = { ...S.inspectorData.ui, activeView: view };
-  renderNexusHome();
+  await AUT.setView(view); // the instance's preset (page/kind-state.js)
 }
 
 async function selectAuthorChapter(id) {
@@ -75,11 +80,11 @@ async function onAuthorChapterDrop(ev, moduleId, targetId) {
   const idx = ids.indexOf(targetId);
   ids.splice(before ? idx : idx + 1, 0, dragId);
   await api.author.moveChapter(moduleId, ids);
-  await openModuleNode(moduleId);
+  await reloadSource(moduleId);
 }
 
-function buildAuthorMainHtml(m) {
-  const d = (S.authorData && S.authorData.moduleId === m.id) ? S.authorData : null;
+function buildAuthorMainHtml(m, c) {
+  const d = AUT.instance(c);
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
   const viewBar = viewBarHtml(AUTHOR_VIEWS, d.view, v => `setAuthorView('${v}')`, v => AUTHOR_VIEW_LABEL[v]);
   const toolbar = `<div class="classifier-toolbar">
@@ -121,8 +126,8 @@ function buildAuthorMainHtml(m) {
 // rich-text (contenteditable) editor for the selected chapter.
 function mountAuthorEditor() {
   const d = S.authorData;
-  if (!d || S.activeModuleNode?.id !== d.moduleId || d.view !== 'editor') return;
-  const el = q('#author-editor');
+  if (!d || d.view !== 'editor') return;
+  const el = pbQOr('#author-editor');
   const ch = d.chapters.find(c => c.id === d.selectedId);
   if (!el || !ch) return;
   mountAuthorRichEditor(el, ch);
@@ -249,7 +254,7 @@ function buildAuthorBookHtml(m, d) {
 }
 
 function scrollToAuthorBookChapter(chapterId) {
-  q(`#au-book-ch-${chapterId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  pbQOr(`#au-book-ch-${chapterId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // Paginates every chapter's (looksHtml-aware) content into fixed-height
@@ -259,7 +264,7 @@ function scrollToAuthorBookChapter(chapterId) {
 // page box (checked via scrollHeight against the box's fixed height).
 async function mountAuthorBook() {
   const d = S.authorData;
-  const host = q('#au-book-host');
+  const host = pbQOr('#au-book-host');
   if (!d || !host) return;
 
   const measure = document.createElement('div');
@@ -329,15 +334,15 @@ async function openAuthorChapterModal(moduleId, id = null) {
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" onclick="submitAuthorChapter(${moduleId},${ch ? ch.id : 'null'})">${ch ? t('save') : t('create')}</button>
     </div>`);
-  setTimeout(() => q('#ac-name').focus(), 60);
+  setTimeout(() => pbQOr('#ac-name').focus(), 60);
 }
 
 async function submitAuthorChapter(moduleId, id) {
-  const name = q('#ac-name').value.trim();
+  const name = pbQOr('#ac-name').value.trim();
   if (!name) return;
   if (id) {
     await api.author.renameChapter(id, name);
-    const label = q('#ac-label')?.value.trim() || '';
+    const label = pbQOr('#ac-label')?.value.trim() || '';
     const ch = S.authorData?.chapters.find(c => c.id === id);
     if (label !== (ch?.chapter_label || '')) {
       await api.author.setChapterLabel(id, label);
@@ -349,7 +354,7 @@ async function submitAuthorChapter(moduleId, id) {
     S.authorData.selectedId = newId;
   }
   closeModal();
-  await openModuleNode(moduleId);
+  await reloadSource(moduleId);
   invalidateNestItems(moduleId, id ? 0 : 1);
   toast(id ? t('saved') : t('created'), 'ok');
 }
@@ -360,7 +365,7 @@ async function deleteAuthorChapter(id) {
   closeModal();
   const d = S.authorData;
   if (d.selectedId === id) d.selectedId = null;
-  await openModuleNode(d.moduleId);
+  await reloadSource(d.moduleId);
   invalidateNestItems(d.moduleId, -1);
   toast(t('deleted'), 'ok');
 }

@@ -9,6 +9,16 @@
 
 const DESIGNER_VIEWS = ['canvas', 'outline', 'matrix'];
 const DESIGNER_VIEW_LABEL = { canvas: 'Canvas', outline: 'Outline', matrix: 'Matrix' };
+// v5 Part 8 (§12.3): a scoped page component — data per module, view per
+// instance, S.designerData = the current instance (page/kind-state.js).
+const DSG = kindState({ prop: 'designerData', kind: 'designer', component: 'designer.view', views: DESIGNER_VIEWS });
+registerComponent('designer.view', {
+  kind: 'designer', label: () => kindLabel('designer'), borrow: true, canvas: true,
+  presets: () => DESIGNER_VIEWS, presetLabel: (p) => DESIGNER_VIEW_LABEL[p],
+  load: (m) => loadDesignerData(m),
+  render: (c) => buildDesignerMainHtml(c.source, c),
+  mount: () => mountDesignerBoard(),
+});
 const DG_W = 2000, DG_H = 1400;
 const DG_COLORS = ['#2dd4bf', '#38bdf8', '#facc15', '#f87171', '#a78bfa', '#f8fafc'];
 // Process 8 part 2: the shape vocabulary. This list IS the allowlist now —
@@ -47,23 +57,18 @@ async function loadDesignerData(m) {
   const ents = pinKeys.length ? await api.wiki.resolveKeys(pinKeys) : [];
   const byKey = new Map(ents.map(e2 => [e2.key, e2]));
   for (const n of nodes) n.entity = n.linker_key ? (byKey.get(n.linker_key) || null) : null;
-  const view = DESIGNER_VIEWS.includes(ui.activeView) ? ui.activeView : 'canvas';
-  S.designerData = { moduleId: m.id, nodes, edges, view, showOrder: ui.showReadOrder === '1' };
+  DSG.setModule(m.id, { moduleId: m.id, ui, nodes, edges, showOrder: ui.showReadOrder === '1' });
 }
 
 async function setDesignerView(view) {
-  const d = S.designerData;
-  d.view = view;
   dgState.edgeFrom = null;
-  await api.module.setUi(d.moduleId, 'activeView', view);
-  if (S.inspectorData?.moduleId === d.moduleId) S.inspectorData.ui = { ...S.inspectorData.ui, activeView: view };
-  renderNexusHome();
+  await DSG.setView(view); // the instance's preset (page/kind-state.js)
 }
 
 const dgNodeName = (n) => n.entity ? n.entity.name : (n.node_text || '—');
 
-function buildDesignerMainHtml(m) {
-  const d = (S.designerData && S.designerData.moduleId === m.id) ? S.designerData : null;
+function buildDesignerMainHtml(m, c) {
+  const d = DSG.instance(c);
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
   const viewBar = viewBarHtml(DESIGNER_VIEWS, d.view, v => `setDesignerView('${v}')`, v => DESIGNER_VIEW_LABEL[v], { noI18n: true });
   const toolbar = `<div class="classifier-toolbar">${viewBar}</div>`;
@@ -100,13 +105,13 @@ function buildDesignerMainHtml(m) {
 // ── Canvas mounting ─────────────────────────────────────────────────────
 function mountDesignerBoard() {
   const d = S.designerData;
-  if (!d || S.activeModuleNode?.id !== d.moduleId || d.view !== 'canvas') return;
-  const board = q('#dg-board'), stage = q('#dg-stage'), svg = q('#dg-edges');
+  if (!d || d.view !== 'canvas') return;
+  const board = pbQOr('#dg-board'), stage = pbQOr('#dg-stage'), svg = pbQOr('#dg-edges');
   if (!board || !stage || !svg) return;
 
   const zoomOf = () => dgState.zoom[d.moduleId] || 1;
   stage.style.transform = `scale(${zoomOf()})`;
-  const lbl = q('#dg-zoom-label');
+  const lbl = pbQOr('#dg-zoom-label');
   if (lbl) lbl.textContent = `${Math.round(zoomOf() * 100)}%`;
 
   const byId = new Map(d.nodes.map(n => [n.id, n]));
@@ -262,16 +267,16 @@ function designerZoomBy(dz) {
   if (!d) return;
   const z = Math.min(2.5, Math.max(0.3, (dgState.zoom[d.moduleId] || 1) + dz));
   dgState.zoom[d.moduleId] = z;
-  const stage = q('#dg-stage');
+  const stage = pbQOr('#dg-stage');
   if (stage) stage.style.transform = `scale(${z})`;
-  const lbl = q('#dg-zoom-label');
+  const lbl = pbQOr('#dg-zoom-label');
   if (lbl) lbl.textContent = `${Math.round(z * 100)}%`;
 }
 
 // ── Palette actions ─────────────────────────────────────────────────────
 function designViewportCenter() {
   const d = S.designerData;
-  const board = q('#dg-board');
+  const board = pbQOr('#dg-board');
   const zoom = dgState.zoom[d.moduleId] || 1;
   return {
     x: board ? (board.scrollLeft + board.clientWidth / 2) / zoom : DG_W / 2,
@@ -285,7 +290,7 @@ async function addDesignNode(shape) {
   const jitter = () => (Math.random() - 0.5) * 60;
   const color = DG_COLORS[(d.nodes.length) % (DG_COLORS.length - 1)];
   const id = await api.designer.createNode(d.moduleId, shape, c.x + jitter(), c.y + jitter(), '', color, null);
-  await openModuleNode(d.moduleId);
+  await reloadSource(d.moduleId);
   invalidateNestItems(d.moduleId, 1);
   openDesignNodeModal(id);
 }
@@ -306,7 +311,7 @@ function startDesignEdge() {
 // First node clicked becomes the edge source (the node pointerdown handler
 // completes the pair on the second click).
 function dgArmEdgePick() {
-  const stage = q('#dg-stage');
+  const stage = pbQOr('#dg-stage');
   if (!stage) return;
   const once = (ev) => {
     const el = ev.target.closest('.dg-node');
@@ -376,21 +381,21 @@ async function openDesignNodeModal(id) {
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" onclick="submitDesignNode(${n.id})">${t('save')}</button>
     </div>`);
-  setTimeout(() => q('#dn-text')?.focus(), 60);
+  setTimeout(() => pbQOr('#dn-text')?.focus(), 60);
 }
 
 async function submitDesignNode(id) {
   const d = S.designerData;
   const n = d.nodes.find(nn => nn.id === id);
   if (!n) return;
-  const text = q('#dn-text')?.value ?? n.node_text;
-  const shape = q('#dn-shape')?.value || n.shape;
+  const text = pbQOr('#dn-text')?.value ?? n.node_text;
+  const shape = pbQOr('#dn-shape')?.value || n.shape;
   const colorEl = document.querySelector('#dn-colors .sk-swatch.act');
   const color = colorEl ? colorEl.dataset.color : n.color;
   await api.designer.updateNode(id, shape, text, color);
   if (dgIsComic(shape)) await dgComicSubmit(id);
   closeModal();
-  await openModuleNode(d.moduleId);
+  await reloadSource(d.moduleId);
   invalidateNestItems(d.moduleId);
   toast(t('saved'), 'ok');
 }
@@ -400,7 +405,7 @@ async function deleteDesignNodeRow(id) {
   const moduleId = S.designerData.moduleId;
   await api.designer.deleteNode(id);
   closeModal();
-  await openModuleNode(moduleId);
+  await reloadSource(moduleId);
   invalidateNestItems(moduleId, -1);
   toast(t('deleted'), 'ok');
 }
@@ -415,23 +420,23 @@ function openDesignEdgeModal(edgeId, fromId = null, toId = null) {
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" onclick="submitDesignEdge(${edgeId ?? 'null'},${fromId ?? 'null'},${toId ?? 'null'})">${e2 ? t('save') : t('create')}</button>
     </div>`);
-  setTimeout(() => q('#de-label').focus(), 60);
+  setTimeout(() => pbQOr('#de-label').focus(), 60);
 }
 
 async function submitDesignEdge(edgeId, fromId, toId) {
   const d = S.designerData;
-  const label = q('#de-label').value.trim();
+  const label = pbQOr('#de-label').value.trim();
   if (edgeId) await api.designer.updateEdge(edgeId, label);
   else if (fromId && toId) await api.designer.createEdge(d.moduleId, fromId, toId, label);
   closeModal();
-  await openModuleNode(d.moduleId);
+  await reloadSource(d.moduleId);
   toast(edgeId ? t('saved') : t('created'), 'ok');
 }
 
 async function deleteDesignEdgeRow(id) {
   await api.designer.deleteEdge(id);
   closeModal();
-  await openModuleNode(S.designerData.moduleId);
+  await reloadSource(S.designerData.moduleId);
   toast(t('deleted'), 'ok');
 }
 
@@ -489,12 +494,12 @@ async function saveDesignerLinkFilter(moduleId) {
 
 async function submitDesignPin() {
   const d = S.designerData;
-  const key = q('#dgp-key').value;
+  const key = pbQOr('#dgp-key').value;
   if (!key) return;
   const c = designViewportCenter();
   await api.designer.createNode(d.moduleId, 'box', c.x, c.y + 80, '', DG_COLORS[1], key);
   closeModal();
-  await openModuleNode(d.moduleId);
+  await reloadSource(d.moduleId);
   toast(t('created'), 'ok');
 }
 

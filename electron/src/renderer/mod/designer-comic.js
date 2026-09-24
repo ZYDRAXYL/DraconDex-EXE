@@ -114,6 +114,6 @@ async function renumberDesignerReadOrder() {
   const r = await api.designer.renumber(d.moduleId, false);
   d.showOrder = true;
   await api.module.setUi(d.moduleId, 'showReadOrder', '1');
-  await openModuleNode(d.moduleId);
+  await reloadSource(d.moduleId);
   toast(`${t('dgRenumbered')} · ${r.count}`, 'ok');
 }
