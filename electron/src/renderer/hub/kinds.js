@@ -98,12 +98,10 @@ const ARTISAN_TARGETS = [
   { id: 'writer',    icon: 'writer',    labelKey: 'writer' },
 ];
 
-// Plan part2 §2: the 5 sources the new import-choice modal's "Nexus Nest"
-// path can migrate — ARTISAN_TARGETS' 4 plus Scribe, which has no legacy
-// "project" table (src/db/migrate_v3.js's scribe target keys off the
-// nexus's un-migrated notes instead) and was never part of Artisan's
-// create-wizard, so it stays out of ARTISAN_TARGETS itself.
-const MIGRATE_TARGETS = [...ARTISAN_TARGETS, { id: 'scribe', icon: 'story', labelKey: 'scribe' }];
+// The sources Legacy Import can migrate. Scribe notes used to be a fifth;
+// since v5 Part 8 they are converted silently whenever a tree is read
+// (db/migrate_v3.js autoMigrateNotes), so there is nothing left to offer.
+const MIGRATE_TARGETS = [...ARTISAN_TARGETS];
 
 // Selection made in the Icon Collection picker (Phase 5): `svg:<I-key>` or
 // `sym:<glyph>`, stored verbatim in module.icon. Falls back to the kind's

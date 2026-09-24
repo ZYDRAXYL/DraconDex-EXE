@@ -201,7 +201,6 @@ async function switchView(v) {
   if      (v==='nexus')           renderNexusHome();
   else if (v==='hashtag')         { await loadModule('src/renderer/hashtag.js'); renderHashtagView(); }
   else if (v==='colors')          { await loadModule('src/renderer/hashtag.js'); q('#left-panel-inner').innerHTML=`<div class="ph"><h4>${t('colorPanel')}</h4></div>`; renderColorSettings(); }
-  else if (v==='scribe')          { await loadModule('src/renderer/scribe.js'); renderScribeView(); }
 }
 
 // ═══ NEXUS HUB ═════════════════════════════════════════

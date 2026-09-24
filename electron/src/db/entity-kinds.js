@@ -35,10 +35,13 @@ const ENTITY_KINDS = {
     table: 'note',
     owner: false, // nexus-level, not inside any module
     lookup: { sql: `SELECT id, title AS name FROM note WHERE id=?`, type: 'note', module: 'scribe' },
-    wiki: { sql: `SELECT id FROM note WHERE (? IS NULL OR nexus_ref=?) AND title=? COLLATE NOCASE` },
+    // v5 Part 8 (§12): every note is converted to a module on open, and a
+    // converted note resolves to nothing — its name resolves to the module
+    // it became, further down the resolver list.
+    wiki: { sql: `SELECT id FROM note WHERE (? IS NULL OR nexus_ref=?) AND migrated_v3=0 AND title=? COLLATE NOCASE` },
     sync: 'noteMap',
     index: false, // legacy Scribe notes: linkable, but not v3 content a filter or Exhibitor lists
-    search: ['title', 'content'],
+    search: false, // the module it became is what a search finds
   },
   module: {
     table: 'module',

@@ -366,7 +366,12 @@ function getEntityPath(key) {
   const id = Number(m[2]);
   try {
     switch (m[1]) {
-      case 'note': return { kind: 'note', noteId: id };
+      // Notes are modules now (v5 Part 8): a stale note_ key opens the
+      // module the note became.
+      case 'note': {
+        const mid = require('./migrate_v3').moduleOfNote(id);
+        return mid ? { kind: 'module', moduleId: mid } : null;
+      }
       case 'obj': {
         const r = d.prepare(`SELECT id, project_id, category_id FROM object WHERE id=?`).get(id);
         return r && { kind: 'obj', projectId: r.project_id, categoryId: r.category_id, objectId: id };

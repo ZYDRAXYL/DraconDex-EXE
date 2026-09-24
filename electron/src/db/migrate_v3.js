@@ -430,6 +430,9 @@ function migrateLegacy(nexusId, target, legacyId, batchCtx) {
         const parentId = n.folder_ref ? (folderModMap.get(n.folder_ref) || majorId) : majorId;
         const mid = mkModule(parentId, n.title, 'inspector');
         if (n.content) module_.updateModuleDescription(mid, n.content);
+        // v5 Part 8 (§12): where this note went, so a stale note_<id> key
+        // (a link, a relation, a recent entry) still opens it.
+        d.prepare(`INSERT OR REPLACE INTO module_ui (module_ref, ui_key, ui_value) VALUES (?, 'legacyNote', ?)`).run(mid, String(n.id));
       }
 
       d.prepare(`UPDATE note SET migrated_v3=1 WHERE nexus_ref=? AND migrated_v3=0`).run(nexusId);
@@ -552,4 +555,24 @@ function setLegacyPromptSeen(nexusId) {
   return { ok: true };
 }
 
-module.exports = { migrateLegacy, listLegacyProjects, previewLegacyMigration, getLegacyPromptSeen, setLegacyPromptSeen };
+// v5 Part 8 (§12): legacy Scribe is gone, so its notes are converted as
+// soon as a vault shows any — no prompt, nothing to choose. Cheap when there
+// is nothing to do (one COUNT), which is every call after the first.
+function autoMigrateNotes(nexusId) {
+  if (!nexusId) return 0;
+  const d = getDB();
+  let n = 0;
+  try { n = d.prepare(`SELECT COUNT(*) AS n FROM note WHERE nexus_ref=? AND migrated_v3=0`).get(nexusId)?.n || 0; } catch (_) { return 0; }
+  if (!n) return 0;
+  try { migrateLegacy(nexusId, 'scribe', nexusId); } catch (e) { console.error('legacy note migration failed:', e); return 0; }
+  return n;
+}
+
+// The module a migrated note became, or null.
+function moduleOfNote(noteId) {
+  try {
+    return getDB().prepare(`SELECT module_ref FROM module_ui WHERE ui_key='legacyNote' AND ui_value=?`).get(String(noteId))?.module_ref ?? null;
+  } catch (_) { return null; }
+}
+
+module.exports = { autoMigrateNotes, moduleOfNote, migrateLegacy, listLegacyProjects, previewLegacyMigration, getLegacyPromptSeen, setLegacyPromptSeen };

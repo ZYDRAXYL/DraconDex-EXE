@@ -710,7 +710,10 @@ h('note:updateContent',(id,content)    => db.updateNoteContent(id,content));
 h('note:delete',       (id)            => db.deleteNote(id));
 
 // Module system (v3 Nexus nest)
-h('module:getTree',     (nx)          => db.getTree(nx));
+// Legacy Scribe notes become modules the first time a tree is read (v5 Part
+// 8, §12) — boot, a vault switch, and the reload after an import merge all
+// pass through here, so none of them can show a tree with notes left out.
+h('module:getTree',     (nx)          => { db.autoMigrateNotes(nx); return db.getTree(nx); });
 h('module:getNestItems', (nx)         => db.getNestItems(nx));
 h('module:get',         (id)          => db.getModule(id));
 h('module:create',      (data)        => db.createModule(data));

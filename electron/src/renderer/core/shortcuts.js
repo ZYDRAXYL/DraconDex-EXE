@@ -20,20 +20,11 @@ function bindGlobalShortcuts() {
     if (key === 'w') { // close active tab (builder pane tab in nexus view)
       e.preventDefault();
       if (!S.activeModule && S.view === 'nexus' && typeof builderCloseActiveTab === 'function') await builderCloseActiveTab();
-      else if (S.activeEntityTabKey) await closeEntityTab(S.activeEntityTabKey);
       return;
     }
-    if (key === 'tab') { // cycle tabs (focused pane in nexus view, else legacy)
+    if (key === 'tab') { // cycle the focused pane's tabs
       e.preventDefault();
-      if (!S.activeModule && S.view === 'nexus' && typeof builderCycleTab === 'function') {
-        await builderCycleTab(e.shiftKey ? -1 : 1);
-        return;
-      }
-      const ring = S.entityTabs.map(tb => tb.key);
-      if (!ring.length) return;
-      const cur = ring.indexOf(S.activeEntityTabKey);
-      const next = ring[(cur + (e.shiftKey ? -1 : 1) + ring.length) % ring.length];
-      await switchEntityTab(next);
+      if (!S.activeModule && S.view === 'nexus' && typeof builderCycleTab === 'function') await builderCycleTab(e.shiftKey ? -1 : 1);
       return;
     }
     if (inInput && !['e', 'n'].includes(key)) return;

@@ -2,14 +2,14 @@
 // renderer (Plan part2 #2: the legacy nav-rail Sage page that used to live
 // in this file was removed — its analytics reused the Hub's own Sage Hut
 // section, and this file's own page never had any nexus/vault scoping at
-// all). Kept alive here because src/renderer/scribe.js's own vault-graph
-// view independently lazy-loads this exact file to reuse this function.
+// all). Kept alive for Classifier's relation graph (mod/classifier.js),
+// which lazy-loads this file for this one function.
 
 // opts (all optional):
 //   container   — selector of the wrap element ('#sage-graph-wrap')
 //   colors      — module → fill color map (caller must always pass this now
 //                 that the old default module→color map was removed with
-//                 the legacy Sage page — Scribe's own caller always does)
+//                 the legacy Sage page — every caller does)
 //   onNodeClick — fn(node) fired on a click that wasn't a drag
 //   onNodeContext — fn(node, event) on right-click (v5 Part 3 context menus)
 // Edges flagged {wiki:true} render dashed in the accent color. A node may

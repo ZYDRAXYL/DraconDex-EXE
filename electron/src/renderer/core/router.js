@@ -1,20 +1,7 @@
-// Module routing: selectModule() for the remaining always-on legacy module
-// (Scribe — Director/Navigator/Hero/Writer were physically deleted, Process
-// 2 Part 2), openEntityByKey() (wikilink + quick-switch target resolution),
-// recent-entity tracking and the IDE status bar.
-function selectModule(name) {
-  if (!S.nexus) { toast(t('nexusSelectFirst'), 'error'); renderNexusHome(); return; }
-  leaveBuilderGrid();
-  S.activeModule = name;
-  if (name === 'scribe') {
-    S.view = 'scribe';
-    S.scribeNote = null; S.scribeTab = 'notes';
-    document.querySelectorAll('.nav-btn[data-panel]').forEach(b => b.classList.remove('active'));
-    q('.nav-btn[data-panel="scribe"]')?.classList.add('active');
-    updateTopNavButton();
-    loadModule('src/renderer/scribe.js').then(() => renderScribeView());
-  }
-}
+// Entity routing: openEntityByKey() (wikilink + quick-switch target
+// resolution), recent-entity tracking and the IDE status bar. Legacy Scribe
+// and its selectModule('scribe') went in v5 Part 8 (§12): its notes are
+// modules now, and a note_ key resolves to the module it became.
 
 // ═══ ENTITY NAVIGATION ════════════════════════════════════
 // Central dispatcher: open any entity from its wiki key ('note_3', 'obj_12',
@@ -23,14 +10,7 @@ async function openEntityByKey(key) {
   if (!key) return;
   const p = await api.wiki.entityPath(key);
   if (!p) { toast(t('unresolvedLink'), 'error'); return; }
-  if (p.kind === 'note') {
-    S.activeModule = 'scribe'; S.view = 'scribe';
-    document.querySelectorAll('.nav-btn[data-panel]').forEach(b => b.classList.remove('active'));
-    q('.nav-btn[data-panel="scribe"]')?.classList.add('active');
-    updateTopNavButton();
-    await loadModule('src/renderer/scribe.js');
-    await selectNote(p.noteId);
-  } else if (p.kind === 'obj' || p.kind === 'proj' || p.kind === 'world' || p.kind === 'game' || p.kind === 'write' || p.kind === 'wchp') {
+  if (p.kind === 'obj' || p.kind === 'proj' || p.kind === 'world' || p.kind === 'game' || p.kind === 'write' || p.kind === 'wchp') {
     // Director/Navigator/Hero/Writer's own views are gone (Process 2 Part 2)
     // — a link into one of these kinds means the underlying legacy data was
     // never converted to a Nexus module. The tables + migrate_v3.js are
@@ -83,8 +63,10 @@ function bindWikilinkClicks() {
     const name = a.dataset.name;
     if (!name || !S.nexus) return;
     if (!await uiConfirm(t('createNoteFromLink') + ` "${name}"?`, { danger: false })) return;
-    const newId = await api.note.create(S.nexus.id, name, null, null);
-    await openEntityByKey(`note_${newId}`);
+    // A new page (Drafter) at the top level — what a note is now (§12).
+    const newId = await api.module.create({ nexus_ref: S.nexus.id, parent_id: null, name, kind: 'drafter' });
+    await reloadModuleTree();
+    await openModuleNode(newId);
   });
 }
 

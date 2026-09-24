@@ -389,8 +389,6 @@ const S = {
   // of a Director project's map list).
   map:null, mapAreaId:null, mapTool:'move',
   view:'nexus',
-  entityTabs:[],
-  activeEntityTabKey:null,
   settings:loadUiSettings(),
   relListHeight:null,
   leftPanelCollapsed:localStorage.getItem(LEFT_PANEL_COLLAPSED_KEY) === '1',
@@ -404,13 +402,10 @@ const S = {
   sageTab:'dataSize',
   // Artisan module state
   artisanTarget:null,
-  // Scribe module state
-  scribeNote:null, scribeFolders:[], scribeNotes:[], scribeOpenFolders:new Set(), scribeTab:'notes',
   // Wiki navigation state
   recentEntities:[],
   // Kind-browser accordion state (Plan part2 #1, replaces legacy Explorer —
-  // session-only, not persisted, consistent with other in-session accordion
-  // Sets like scribeOpenFolders above).
+  // session-only, not persisted).
   kindBrowserOpen:new Set(),
   // Plan part2 #New Workspace: Import Dock promoted to its own full page
   // for Wyvern's View-set menu — mutually exclusive with
