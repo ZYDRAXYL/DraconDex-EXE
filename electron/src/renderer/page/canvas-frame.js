@@ -22,11 +22,19 @@ function canvasFrameChromeHtml(c) {
 }
 
 // Wire one board: engagement for the wheel, the grip, and a resize hook.
+// Engagement alone, for a canvas without the frame's chrome (a timeline
+// strip): pressing on it lets the wheel zoom it until the pointer leaves.
+function canvasEngage(board) {
+  if (!board || board._cfEngage) return;
+  board._cfEngage = true;
+  board.addEventListener('pointerdown', () => board.classList.add('cf-engaged'));
+  board.addEventListener('pointerleave', () => board.classList.remove('cf-engaged'));
+}
+
 function mountCanvasFrame(c, board, onResize) {
   if (!board || board.dataset.cf) return;
   board.dataset.cf = '1';
-  board.addEventListener('pointerdown', () => board.classList.add('cf-engaged'));
-  board.addEventListener('pointerleave', () => board.classList.remove('cf-engaged'));
+  canvasEngage(board);
   const grip = board.querySelector('.cf-grip');
   grip?.addEventListener('pointerdown', (ev) => {
     ev.preventDefault(); ev.stopPropagation();

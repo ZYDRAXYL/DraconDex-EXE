@@ -467,7 +467,6 @@ const S = {
   dragTab:null,   // { key, paneIdx } — tab currently mid-drag in the Builder's split panes
 };
 const timelineGraphState = {};
-let timelineGraphCleanup = null;
 const mapState = { viewByMap:{}, pointsByArea:{} };
 
 // Walks the full module tree (arbitrary nesting depth) for every node of a

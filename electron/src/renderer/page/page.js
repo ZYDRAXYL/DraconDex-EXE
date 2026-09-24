@@ -40,6 +40,36 @@ function pbRoot(iid) {
   return (pane || document).querySelector(`.pblock[data-iid="${CSS.escape(iid)}"]`);
 }
 
+// ── The current instance ────────────────────────────────────────────────
+// A kind whose code reads its state from one place (Chronicler's, with a
+// hundred readers) keeps that shape: its state object is per instance, and
+// "the" one is whichever instance is current. Current means: the one being
+// rendered or mounted, else the last one the user pointed at, focused or
+// typed in (a capture listener below — so inline handlers, bound listeners,
+// context menus and the palette all see the instance they act on).
+let PB_CUR = null;
+const pbCurrent = () => PB_CUR;
+function pbUse(iid) { if (iid) PB_CUR = iid; return iid; }
+// An element of the current instance, by selector — a kind that still names
+// its elements by id looks them up here, never in the whole window.
+function pbQ(sel) {
+  const r = PB_CUR ? pbRoot(PB_CUR) : null;
+  return r ? r.querySelector(sel) : null;
+}
+// The same, falling back to the window — for markup that is drawn both on
+// a page and in a modal or on an element page (a date row, an inspector).
+const pbQOr = (sel) => pbQ(sel) || q(sel);
+for (const ev of ['pointerdown', 'contextmenu', 'focusin', 'keydown']) {
+  document.addEventListener(ev, (e) => {
+    const s = e.target?.closest?.('.pblock[data-iid]');
+    if (s) PB_CUR = s.dataset.iid;
+  }, true);
+}
+// The first live instance of a component for a module — the target of a
+// command run from the palette when no instance of it is current.
+const pbFirstInstance = (component, moduleId) => Object.values(PB_INST)
+  .find((i) => i.component === component && (i.sourceId ?? i.moduleId) === moduleId)?.iid || null;
+
 // ── load ────────────────────────────────────────────────────────────────
 async function loadModulePage(m, itemKey = null) {
   if (!m || m.kind === 'collector') return null;
@@ -136,6 +166,7 @@ function pbInnerHtml(c, seen) {
       seen.add(k);
     }
     if (comp.kind !== 'core' && !c.source) return `<p class="drafter-hint">${t('pbSourceGone')}</p>`;
+    pbUse(c.iid);
     return comp.render(c);
   }
   return typeof pbBasicHtml === 'function' ? pbBasicHtml(c, seen) : '';
@@ -154,6 +185,7 @@ function mountPageBlocks(paneIdx) {
     if (!b) return;
     const c = withRenderPane(inst.pane, () => pbCtx(page, b));
     c.root = root;
+    pbUse(c.iid);
     try {
       if (b.block_type === 'component') { const comp = componentOf(b); if (comp?.mount && (comp.kind === 'core' || c.source)) comp.mount(c); }
       else if (typeof pbBasicMount === 'function') pbBasicMount(c);

@@ -34,8 +34,8 @@ const KIND_PAGE = {
   },
   inspector: { main: 'buildDetailMainHtml', mount: (m) => kpCall('mountDetailEditor', m) },
   locator: { start: 'locator.addArea' }, // scoped: mod/locator.js registers locator.view
-  chronicler: { load: 'loadChroniclerData', main: 'buildChroniclerMainHtml', mount: 'mountChroniclerGraph', start: 'chronicler.addLine' },
-  wanderer: { load: 'loadWandererData', main: 'buildWandererMainHtml', mount: 'mountWandererBoard', start: 'wanderer.place' },
+  chronicler: { start: 'chronicler.addLine' }, // scoped: mod/chronicler.js registers chronicler.view
+  wanderer: { start: 'wanderer.place' }, // scoped: mod/wanderer.js registers wanderer.view
   narrator: {
     load: 'loadNarratorData', main: 'buildNarratorMainHtml', start: 'narrator.addDialogue',
     mount: () => { if (!kpFn('mountNarratorBoard')) return; kpCall('mountNarratorBoard'); if (S.narratorData?.view === 'reader') kpCall('mountNarratorReader'); },
