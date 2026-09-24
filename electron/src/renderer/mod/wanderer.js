@@ -5,8 +5,8 @@
 // module_ui as mapModule/timelineModule); MapEvent "Link" pins live in the
 // map_event table (src/db/wanderer.js) — each pin sits at (x,y) on the
 // Locator's map and displays the start time of its bound Chronicler event.
-// The map pane reuses map.js's renderMapBoard wholesale (S.map is set to
-// the Locator's map row, same as loadLocatorData); the timeline pane
+// The map pane reuses map.js's renderMapBoard wholesale on the Locator's
+// map row (a board instance of its own, v5 Part 8); the timeline pane
 // reuses chronicler.js's one-line strip + shared pan/zoom interactions.
 
 const WANDERER_VIEWS = ['area', 'map', 'timeline'];
@@ -62,7 +62,6 @@ async function loadWandererData(m) {
   const links = await resolveWandererLinks(await api.wanderer.list(m.id));
   let openAreaId = prev?.openAreaId ?? null;
   if (openAreaId && !areas.find(a => a.id === openAreaId)) openAreaId = null;
-  S.map = map;
   S.wandererData = { moduleId: m.id, locators, chroniclers, mapModuleId, timelineModuleId, map, areas, timeline, events, links, view, openAreaId, calendarSpec };
 }
 
@@ -147,7 +146,7 @@ async function submitWandererAreaAdd(areaId) {
   toast(t('saved'), 'ok');
 }
 
-function buildWandererMainHtml(m) {
+function buildWandererMainHtml(m, c) {
   const d = (S.wandererData && S.wandererData.moduleId === m.id) ? S.wandererData : null;
   if (!d) return `<div class="empty" style="margin-top:40px"><div class="ei">${moduleIconHtml(m)}</div><h3>${x(m.name)}</h3></div>`;
   const opt = (list, sel, none) => `<option value="">${none}</option>` +
@@ -164,16 +163,8 @@ function buildWandererMainHtml(m) {
       <h3>${t('wandererNeedsRefs')}</h3><p data-no-i18n>Locator + Chronicler</p></div>`;
   }
   const refLine = `<div class="wnd-refline" data-no-i18n>${t('wandererRefs')}: ${x(d.locators.find(l => l.id === d.mapModuleId)?.name || '')} (Locator) + ${x(d.chroniclers.find(c => c.id === d.timelineModuleId)?.name || '')} (Chronicler)</div>`;
-  const mapPane = `
-    <div id="map-board" class="map-whiteboard locator-board wnd-map-pane">
-      <div id="map-konva-container" style="width:100%;height:100%"></div>
-      <div class="chint">${t('locatorPanHint')}</div>
-      <div class="czoom">
-        <span class="zbtn" onclick="zoomLocator(-1)">−</span>
-        <span class="zlvl" id="locator-zoom-lvl">100%</span>
-        <span class="zbtn" onclick="zoomLocator(1)">+</span>
-      </div>
-    </div>`;
+  // The map board is map.js's, per instance (v5 Part 8).
+  const mapPane = mapBoardHtml(c, { tools: false, cls: 'wnd-map-pane', height: 380 });
   const tlPane = `<div class="wnd-tl-pane" id="wanderer-tl-host"></div>`;
   if (d.view === 'map') return `${toolbar}${refLine}<div class="wanderer-split">${mapPane}</div>`;
   if (d.view === 'timeline') return `${toolbar}${refLine}<div class="wanderer-split">${tlPane}</div>`;
@@ -185,19 +176,26 @@ function buildWandererMainHtml(m) {
   </div>`;
 }
 
-// Post-DOM hook (registered in renderNexusHome beside mountLocatorBoard):
+// Post-DOM hook (the legacy page adapter passes its instance, c):
 // draws the base map, overlays the Link pins on the same Konva layer so
 // pan/zoom applies, and renders the one-line timeline strip with linked
 // events ringed.
-async function mountWandererBoard() {
+async function mountWandererBoard(m, c) {
   const d = S.wandererData;
   if (!d || S.activeModuleNode?.id !== d.moduleId) return;
-  if (d.view !== 'timeline' && d.map) {
-    S.map = d.map;
-    await renderMapBoard();
-    addWandererPins();
-    bindWandererStageClick();
-    if (typeof updateLocatorZoomLabel === 'function') updateLocatorZoomLabel();
+  if (c) S.wandererInst = c;
+  c = c || S.wandererInst;
+  if (d.view !== 'timeline' && d.map && c?.root?.isConnected) {
+    const mi = mapInstance(c, {
+      kind: 'wanderer', map: d.map, refresh: () => mountWandererBoard(m, c),
+      // Area view (W5): while one area's dropdown is open, only it shows.
+      areaVisible: (a) => !d.openAreaId || a.id === d.openAreaId,
+    });
+    await renderMapBoard(mi);
+    addWandererPins(mi);
+    bindWandererStageClick(mi);
+    updateMapZoomLabel(mi);
+    mountCanvasFrame(c, mapEl(mi, 'board'), () => mountWandererBoard(m, c));
   }
   if (d.view !== 'map' && d.timeline) {
     const host = q('#wanderer-tl-host');
@@ -232,12 +230,13 @@ async function wandererSelectEvent(evId) {
   await mountWandererBoard();
 }
 
-function addWandererPins() {
+function addWandererPins(mi) {
   const d = S.wandererData;
-  if (!konvaStage) return;
-  const layer = konvaStage.getLayers()[0];
+  const stage = mi?.stage;
+  if (!stage) return;
+  const layer = stage.getLayers()[0];
   if (!layer) return;
-  const scale = konvaStage.scaleX() || 1;
+  const scale = stage.scaleX() || 1;
   // Area view (W5): when one area's dropdown is open, only its own links show.
   const pinLinks = d.openAreaId ? d.links.filter(l => l.area_ref === d.openAreaId) : d.links;
   for (const link of pinLinks) {
@@ -277,14 +276,15 @@ function addWandererPins() {
 // (Plan part5 W2 — areas are inert terrain here, not a select/edit target)
 // drops the new pin there; only an existing pin itself is excluded so its
 // own click handler (open-for-edit) isn't hijacked.
-function bindWandererStageClick() {
-  if (!konvaStage) return;
-  konvaStage.on('click.wanderer', (e) => {
+function bindWandererStageClick(mi) {
+  const stage = mi?.stage;
+  if (!stage) return;
+  stage.on('click.wanderer', (e) => {
     const d = S.wandererData;
     if (!d?.placing || e.evt.button !== 0 || e.target?.attrs?.wandererPin) return;
-    const pointer = konvaStage.getPointerPosition();
-    const wx = (pointer.x - konvaStage.x()) / konvaStage.scaleX();
-    const wy = (pointer.y - konvaStage.y()) / konvaStage.scaleY();
+    const pointer = stage.getPointerPosition();
+    const wx = (pointer.x - stage.x()) / stage.scaleX();
+    const wy = (pointer.y - stage.y()) / stage.scaleY();
     const areaId = e.target?.attrs?.areaId ?? null;
     d.placing = false;
     openMapEventModal(null, { x: wx, y: wy, areaId });

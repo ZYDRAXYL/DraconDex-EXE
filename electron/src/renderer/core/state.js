@@ -385,10 +385,6 @@ const S = {
   colors:[],
   recentColors:[],
   activeModule:null,
-  // map/mapAreaId/mapTool are shared with Locator (mod/locator.js reuses
-  // map.js's board/area-list rendering against a module-owned map instead
-  // of a Director project's map list).
-  map:null, mapAreaId:null, mapTool:'move',
   view:'nexus',
   settings:loadUiSettings(),
   relListHeight:null,
@@ -472,7 +468,6 @@ const S = {
 };
 const timelineGraphState = {};
 let timelineGraphCleanup = null;
-let konvaStage = null;
 const mapState = { viewByMap:{}, pointsByArea:{} };
 
 // Walks the full module tree (arbitrary nesting depth) for every node of a

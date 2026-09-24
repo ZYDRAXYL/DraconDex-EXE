@@ -33,7 +33,7 @@ const KIND_PAGE = {
     mount: () => { if (S.managerData?.view === 'graph') kpCall('mountManagerGraph'); },
   },
   inspector: { main: 'buildDetailMainHtml', mount: (m) => kpCall('mountDetailEditor', m) },
-  locator: { load: 'loadLocatorData', main: 'buildLocatorMainHtml', mount: 'mountLocatorBoard', start: 'locator.addArea' },
+  locator: { start: 'locator.addArea' }, // scoped: mod/locator.js registers locator.view
   chronicler: { load: 'loadChroniclerData', main: 'buildChroniclerMainHtml', mount: 'mountChroniclerGraph', start: 'chronicler.addLine' },
   wanderer: { load: 'loadWandererData', main: 'buildWandererMainHtml', mount: 'mountWandererBoard', start: 'wanderer.place' },
   narrator: {

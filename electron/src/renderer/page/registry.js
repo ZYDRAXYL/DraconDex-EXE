@@ -56,9 +56,11 @@ function legacyKindComponent(kind) {
     render: (c) => {
       if (c.source.id !== c.page.moduleId) return `<p class="drafter-hint">${t('pbNotBorrowable')}</p>`;
       const main = kindPagePart(kind, 'main');
-      return main ? main(c.source) : '';
+      return main ? main(c.source, c) : '';
     },
-    mount: (c) => { if (c.source.id === c.page.moduleId) kindPagePart(kind, 'mount')?.(c.source); },
+    // The instance rides along as a second argument: a kind half-way to
+    // scoping (Wanderer's map board) can already use its root.
+    mount: (c) => { if (c.source.id === c.page.moduleId) kindPagePart(kind, 'mount')?.(c.source, c); },
   });
 }
 const LEGACY_KINDS = ['classifier', 'manager', 'inspector', 'locator', 'chronicler', 'wanderer', 'narrator',

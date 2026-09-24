@@ -75,3 +75,11 @@
 
 /* Classifier relation graph — its slot in the instance (mod/classifier.js) */
 .cls-rel-graph{position:relative;overflow:hidden;min-height:340px;border:1px solid var(--border);border-radius:var(--r)}
+
+/* Canvas frame (page/canvas-frame.js) */
+.cf-grip{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:row-resize;z-index:4}
+.cf-grip:hover{background:var(--accent);opacity:.5}
+.cf-full{position:absolute;top:10px;right:10px;z-index:4}
+.pblock.pb-canvas-full{position:fixed;inset:48px 12px 12px;z-index:60;background:var(--bg);border-radius:var(--r);
+	box-shadow:0 10px 40px rgba(0,0,0,.45);padding:10px;overflow:auto}
+.pblock.pb-canvas-full .map-whiteboard,.pblock.pb-canvas-full [data-cf]{height:calc(100vh - 150px) !important}

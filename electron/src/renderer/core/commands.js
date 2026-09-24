@@ -64,7 +64,7 @@ function canvasZoom(dir) {
   if (k === 'sketcher') return sketchZoomBy(d ? 0.15 : -0.15);
   if (k === 'narrator') return zoomNarrator(d ? 1 : -1);
   if (k === 'manager') return managerZoomBy(d ? 0.15 : -0.15);
-  if (k === 'locator') return zoomLocator(d ? 1 : -1);
+  if (k === 'locator') { const iid = locatorIidOf(S.activeModuleNode?.id); return iid && zoomMap(iid, d ? 1 : -1); }
   if (k === 'exhibitor') return S.exhibitorData?.view === 'scene' ? zoomExhibitorScene(d ? 1.1 : 0.9) : exhibitorGraphZoomBy(d ? 0.1 : -0.1);
 }
 const ZOOM_KINDS = ['designer', 'sketcher', 'narrator', 'manager', 'locator', 'exhibitor'];
@@ -218,7 +218,7 @@ const COMMANDS = {
   'manager.pick': { label: 'managerPick', icon: 'plus', scope: 'kind:manager', run: (c) => openManagerPickModal(c.moduleId), surfaces: ['manager.toolbar'] },
 
   // ── Locator / Wanderer ───────────────────────────────────────────────
-  'locator.addArea': { label: 'locatorAddArea', icon: 'plus', scope: 'kind:locator', when: () => !!S.map, run: () => openMapAreaModal(), surfaces: ['locator.page'] },
+  'locator.addArea': { label: 'locatorAddArea', icon: 'plus', scope: 'kind:locator', when: (c) => !!LOC[c?.moduleId]?.map, run: (c) => locatorAddArea(c.moduleId, c.iid), surfaces: ['locator.page'] },
   'wanderer.place': { label: 'addMapEvent', icon: 'pin', scope: 'kind:wanderer', when: () => !!(S.wandererData?.map && S.wandererData?.timeline), run: () => toggleWandererPlacing(), surfaces: ['wanderer.toolbar'] },
 
   // ── Chronicler (§10.6 measures the floating strip on it) ─────────────

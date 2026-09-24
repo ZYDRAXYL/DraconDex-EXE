@@ -192,10 +192,6 @@ function loadGroup(name) {
 }
 
 async function switchView(v) {
-  if (konvaStage) {
-    try { konvaStage.destroy(); } catch(e){}
-    konvaStage = null;
-  }
   if (v !== 'nexus') { leaveBuilderGrid(); const foot = q('#left-panel-foot'); if (foot) foot.innerHTML = ''; }
   updateTopNavButton();
   if      (v==='nexus')           renderNexusHome();
@@ -222,7 +218,6 @@ function renderNexusHome() {
   // edited, suppress hover highlighting across the whole app so nothing
   // else visually competes with the active rename box.
   document.body.classList.toggle('renaming-lock', S.renamingModuleId != null);
-  if (konvaStage) { try { konvaStage.destroy(); } catch(e){} konvaStage = null; }
   document.querySelectorAll('.nav-btn[data-panel]').forEach(b => b.classList.remove('active'));
   updateTopNavButton();
   q('#main-inner')?.classList.remove('relation-main');

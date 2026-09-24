@@ -163,9 +163,16 @@ function mountPageBlocks(paneIdx) {
 }
 
 // Instances whose section left the document (a closed tab, a re-render).
+// A component that holds something beyond its DOM (a Konva stage) pushes a
+// disposer here.
+const PB_DISPOSERS = [];
 function pbPruneInstances() {
   const live = new Set([...document.querySelectorAll('.pblock[data-iid]')].map((el) => el.dataset.iid));
-  for (const iid of Object.keys(PB_INST)) if (!live.has(iid)) delete PB_INST[iid];
+  for (const iid of Object.keys(PB_INST)) {
+    if (live.has(iid)) continue;
+    delete PB_INST[iid];
+    for (const fn of PB_DISPOSERS) { try { fn(iid); } catch (_) {} }
+  }
 }
 
 // Re-render the instances matching `pred(inst, block)` in place — for a save

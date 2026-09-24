@@ -125,7 +125,6 @@ async function reloadNexuses() {
 }
 
 function clearWorkspaceTabs() {
-  S.map = null; S.mapAreaId = null;
   S.moduleTree = []; S.activeModuleNode = null; S.moduleTabs = [];
   S.builder = null; S.filePreview = null; S.sageHut = null; S.sageHutCache = null; S.importDockPage = false; S.importFiles = undefined;
   S.wyvernBrowsePath = [];
