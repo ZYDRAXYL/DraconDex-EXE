@@ -48,16 +48,14 @@ const clsFieldRels = (oid, tid) => (typeof _clsLinks !== 'undefined' ? _clsLinks
   .filter(l => l.from_key === `cobj_${oid}` && l.rel_type === `ctpl_${tid}`);
 // A field's name by id — for a relation row whose rel_type is ctpl_<id>.
 function clsFieldNameOf(tid) {
-  const d = S.classifierData;
-  const all = [...(d?.templates || []), ...((d?.objects || []).flatMap(o => o.privateTemplates || []))];
-  return all.find(tp => tp.id === tid)?.description || t('dispTypeRelation');
+  return clsFindTemplate(tid)?.description || t('dispTypeRelation');
 }
 const clsKeyName = (key) => (typeof _clsLinkIndex !== 'undefined' && _clsLinkIndex[key]?.name) || key;
 
 // The fields an object's formulas can read: its category's shared fields
 // plus its own private ones.
 function clsFormulaText(o, c) {
-  const fields = [...(S.classifierData?.moduleId === o.module_ref ? S.classifierData.templates : []), ...(o.privateTemplates || [])];
+  const fields = [...clsData(o.module_ref).templates, ...(o.privateTemplates || [])];
   if (!fields.some(f => f.id === c.id)) fields.push(c);
   const vals = { ...(o.attrMap || {}) };
   for (const pt of o.privateTemplates || []) vals[pt.id] = pt.value;
@@ -138,7 +136,7 @@ function clsFieldCellHtml(m, o, c) {
 // ── Saving ──────────────────────────────────────────────────────────────
 async function clsStoreValue(oid, tid, value) {
   await api.classifier.upsertAttr(oid, tid, value);
-  const obj = S.classifierData?.objects.find(o => o.id === oid);
+  const obj = clsFindObject(oid);
   if (obj) obj.attrMap[tid] = value;
 }
 
@@ -153,7 +151,7 @@ async function toggleClsCheckbox(oid, tid, el) {
   el.classList.toggle('on', on);
   el.setAttribute('aria-checked', String(on));
   await clsStoreValue(oid, tid, on ? '1' : '0');
-  if (S.classifierData?.templates.some(tp => tp.attribute_type === 'formula')) refreshClassifier();
+  if (clsData(clsModuleOfObject(oid)).templates.some(tp => tp.attribute_type === 'formula')) refreshClassifier();
 }
 
 async function saveClsUrl(el) {
@@ -165,8 +163,7 @@ async function saveClsUrl(el) {
 
 // ── Relation field: pick a target ──────────────────────────────────────
 async function openClsRelationPicker(moduleId, oid, tid) {
-  const c = [...(S.classifierData?.templates || []), ...(S.classifierData?.objects.find(o => o.id === oid)?.privateTemplates || [])]
-    .find(tp => tp.id === tid) || { options: null };
+  const c = clsFindTemplate(tid) || { options: null };
   const kinds = clsFieldOpts(c).targetKinds;
   const allow = Array.isArray(kinds) && kinds.length ? new Set(kinds) : null;
   // A bundle's field can point into one category ("Weapon" → the Weapons

@@ -190,7 +190,7 @@ const COMMANDS = {
   'canvas.zoomOut': { label: 'ctxZoomOut', icon: 'minus', scope: 'app', when: () => ZOOM_KINDS.includes(activeKind()), run: () => canvasZoom(-1), surfaces: ['canvas.ctx', 'exhibitor.ctx'] },
 
   // ── Classifier ───────────────────────────────────────────────────────
-  'classifier.quickStart': { label: 'clsQuickStart', icon: 'plus', scope: 'kind:classifier', when: (c) => !S.classifierData?.objects?.length || c.always, run: (c) => classifierQuickStart(c.moduleId), surfaces: ['empty.state'] },
+  'classifier.quickStart': { label: 'clsQuickStart', icon: 'plus', scope: 'kind:classifier', when: (c) => !clsData(c?.moduleId).objects.length || c.always, run: (c) => classifierQuickStart(c.moduleId), surfaces: ['empty.state'] },
   'classifier.addObject': { label: 'addObject', icon: 'plus', scope: 'kind:classifier', run: (c) => openClassifierObjectModal(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
   'classifier.fields': { label: 'clsFieldsOfCategory', icon: 'edit', scope: 'kind:classifier', run: (c) => openClassifierFieldsModal(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
   'classifier.openObject': { label: 'open', icon: 'eye', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openItemNode('classifier', c.moduleId, c.objectId), surfaces: ['classifier.ctx'] },

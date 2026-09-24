@@ -16,7 +16,7 @@ const TEACH_TIPS = [
   // filter bar, so the tip opens the module's Exhibitor with the filter up.
   {
     id: 'filter', textKey: 'teachFilter', actionKey: 'teachFilterAction',
-    when: (m) => m.kind === 'classifier' && S.classifierData?.moduleId === m.id && S.classifierData.objects.length > 30,
+    when: (m) => m.kind === 'classifier' && clsData(m.id).objects.length > 30,
     action: async (m) => {
       await openExhibitorFor(m.id);
       const ex = S.activeModuleNode;
@@ -29,7 +29,7 @@ const TEACH_TIPS = [
     id: 'exhibitor', textKey: 'teachExhibitor', actionKey: 'openInExhibitor',
     when: (m) => {
       if (m.kind === 'exhibitor' || modulesOfKind('exhibitor').length) return false;
-      const rel = S.classifierData?.moduleId === m.id ? (S.classifierData.relations || []).length : 0;
+      const rel = (clsData(m.id).relations || []).length;
       const d = S.inspectorData?.moduleId === m.id ? S.inspectorData : null;
       const links = d ? d.links.outgoing.length + d.links.backlinks.length : 0;
       return rel + links >= 5;

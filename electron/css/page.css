@@ -72,3 +72,6 @@
 #side-panel-body .hidden{display:none}
 #side-panel .sp-plugin-view{flex:1;min-height:0;border:0}
 #side-panel.is-resizing .sp-plugin-view{pointer-events:none}
+
+/* Classifier relation graph — its slot in the instance (mod/classifier.js) */
+.cls-rel-graph{position:relative;overflow:hidden;min-height:340px;border:1px solid var(--border);border-radius:var(--r)}

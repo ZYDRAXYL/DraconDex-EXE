@@ -32,22 +32,26 @@ function clsDateInputsHtml(o, c) {
   const p = CLS_DATE_PREFIX(o.id, c.id);
   const v = clsParseDateValue(o.attrMap[c.id]);
   const ev = v ? { d: v.d, mo: v.mo, y: v.y, h: v.h, mi: v.mi } : null;
-  const save = `saveClassifierAttrDate(${o.id},${c.id})`;
+  const save = `saveClassifierAttrDate(${o.id},${c.id},this)`;
   return dateInputsHTML(p, ev, 'd', 'mo', 'y', 'h', 'mi', save);
 }
 
 // Day/month/year are required together — a partial date saves as empty rather
 // than as a half-written string no reader could parse back.
-async function saveClassifierAttrDate(oid, tid) {
+// `el` is the input that changed: the five are read from ITS row, so the
+// same object shown twice (two panes, a borrowed view) cannot read the
+// other copy's boxes (v5 Part 8 — no window-global ids on a page).
+async function saveClassifierAttrDate(oid, tid, el) {
   const p = CLS_DATE_PREFIX(oid, tid);
-  const num = (sfx) => parseInt(q(`#${p}-${sfx}`)?.value, 10) || 0;
+  const row = el?.closest('.date-row-inline');
+  const num = (sfx) => parseInt(row?.querySelector(`[id="${p}-${sfx}"]`)?.value, 10) || 0;
   // V5.md §7.5 bug #2: dateInputsHTML (timeline.js) names the month input
   // `${prefix}-m`; this read `-mo`, which never exists, so every date field
   // saved as ''. The 'mo' passed to dateInputsHTML above is a VALUE key only.
   const d = num('d'), mo = num('m'), y = num('y');
   const value = (d && mo && y) ? fmtDate(d, mo, y, num('h'), num('min')) : '';
   await api.classifier.upsertAttr(oid, tid, value);
-  const obj = S.classifierData?.objects.find(v => v.id === oid);
+  const obj = clsFindObject(oid);
   if (obj) obj.attrMap[tid] = value;
 }
 
@@ -152,10 +156,9 @@ async function onClassifierLevelRowDrop(ev, objectId, templateId, targetId) {
   const dragId = S.dragClassifierLevelRow;
   S.dragClassifierLevelRow = null;
   if (dragId == null || dragId === targetId) return;
-  // Read the current order straight off the table rather than off
-  // S.classifierData: the element-detail page (item.js's openItemNode path)
-  // hydrates its own local levelMap instead of populating S.classifierData,
-  // so the DOM is the one place this row set is reliably found either way.
+  // Read the current order straight off the table rather than off the
+  // cache: the element page (item.js's openItemNode path) hydrates its own
+  // levelMap, so the DOM is the one place this row set is reliably found.
   const ids = Array.from(row.closest('tbody').querySelectorAll('tr[data-lid]'))
     .map(tr => Number(tr.dataset.lid)).filter(id => id !== dragId);
   const idx = ids.indexOf(targetId);
@@ -177,13 +180,16 @@ async function addClassifierLevel(oid, tid) {
 // onClassifierLevelRowDrop for why the DOM, not a cache).
 async function insertClassifierLevel(oid, tid, refId, where, copyFrom = null) {
   const newId = await api.classifier.createLevel(oid, tid);
+  // The row the menu was opened on (hub/ctxmenu.js keeps it) — not the first
+  // row with that id in the window, which may be another pane's copy.
+  const scope = S.ctxTarget?.closest?.('tbody') || document;
   if (copyFrom) {
-    const src = document.querySelector(`tr[data-lid="${copyFrom}"]`);
+    const src = scope.querySelector(`tr[data-lid="${copyFrom}"]`);
     for (const inp of src ? src.querySelectorAll('input[data-field]') : []) {
       if (inp.value) await api.classifier.updateLevelField(newId, inp.dataset.field, inp.value);
     }
   }
-  const tbody = document.querySelector(`tr[data-lid="${refId}"]`)?.closest('tbody');
+  const tbody = scope.querySelector(`tr[data-lid="${refId}"]`)?.closest('tbody');
   if (tbody) {
     const ids = [...tbody.querySelectorAll('tr[data-lid]')].map(tr => Number(tr.dataset.lid));
     const idx = ids.indexOf(refId);
@@ -198,7 +204,7 @@ async function saveClassifierLevelField(el) {
   // Deliberately no re-render: the user may be tabbing straight into the next
   // cell, and rebuilding the table would blow away their focus mid-row. The
   // local cache is patched instead so the next real render is still correct.
-  const rows = Object.values(S.classifierData?.objects || {})
+  const rows = clsAllData().flatMap(d => d.objects)
     .flatMap(o => Object.values(o.levelMap || {}).flat());
   const row = rows.find(r => r.id === Number(el.dataset.lid));
   if (row) row[el.dataset.field] = el.value.trim();
@@ -211,9 +217,8 @@ async function deleteClassifierLevelRow(id) {
   await reloadClassifierDetail();
 }
 
-// The detail body renders in two places and only one of them has
-// S.classifierData loaded — refresh whichever is live, same split as
-// Chronicler's saveChroniclerInspectorField.
+// The detail body renders in a Classifier instance and on the element's own
+// page — refresh whichever is live.
 async function reloadClassifierDetail() {
   await refreshClassifier(); // mod/classifier.js — module view or element page, whichever is live
 }
@@ -284,19 +289,18 @@ function renderClassifierAttrRowHtml(o, c) {
   return `<div class="prop"><span class="pk">${x(c.description)}</span>${clsFieldValueHtml(o, c)}</div>`;
 }
 
-// `templates` defaults to the ambient module-view cache — the item page
-// (src/renderer/mod/item.js) passes its own freshly-fetched templates instead,
-// since it can be opened without the module's own view ever having loaded
-// S.classifierData.
-function renderClassifierObjectDetail(m, o, templates = S.classifierData?.templates || []) {
+// `templates` defaults to the module's cache — the item page
+// (src/renderer/mod/item.js) passes its own freshly-fetched templates, since
+// it can be opened without the module's data ever having loaded.
+function renderClassifierObjectDetail(m, o, templates = clsData(m.id).templates) {
   let html = `<h3 style="margin-bottom:8px" oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})">${x(o.name)}</h3>`;
   for (const c of templates) html += renderClassifierAttrRowHtml(o, c);
   // §7.4: a field is reachable where it is missing — no trip to the fields
   // modal to add one more.
   html += `<div class="cls-addfield">
-    <input class="cls-addfield-inp" id="cls-addfield-${o.id}" placeholder="${x(t('clsAddFieldPlaceholder'))}"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();addClassifierFieldInline(${m.id},${o.id},false)}">
-    <button class="btn btn-g btn-sm" onclick="addClassifierFieldInline(${m.id},${o.id},false)" title="${x(t('clsAddFieldShared'))}">${I.plus} ${t('clsAddField')}</button>
+    <input class="cls-addfield-inp" data-r="addfield" placeholder="${x(t('clsAddFieldPlaceholder'))}"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();addClassifierFieldInline(${m.id},${o.id},this)}">
+    <button class="btn btn-g btn-sm" onclick="addClassifierFieldInline(${m.id},${o.id},this)" title="${x(t('clsAddFieldShared'))}">${I.plus} ${t('clsAddField')}</button>
   </div>`;
   // Private fields: any number, on every object (§7.4 — this used to be one
   // field, and only when the category's cat_type was 'character').

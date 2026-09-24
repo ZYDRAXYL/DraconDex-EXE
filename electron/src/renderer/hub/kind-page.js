@@ -24,10 +24,10 @@ const kpFn = (name) => (typeof window[name] === 'function' ? window[name] : null
 const kpCall = (name, ...args) => kpFn(name)?.(...args);
 
 const KIND_PAGE = {
-  classifier: {
-    load: 'loadClassifierData', main: 'buildClassifierMainHtml', start: 'classifier.quickStart',
-    mount: () => { if (S.classifierView === 'relationCat') kpCall('mountClassifierRelationGraph'); },
-  },
+  // v5 Part 8: a scoped page component (mod/classifier.js registers
+  // classifier.view, which loads through the page) — only the start command
+  // is read from here.
+  classifier: { start: 'classifier.quickStart' },
   manager: {
     load: 'loadManagerData', main: 'buildManagerMainHtml', start: 'manager.pick',
     mount: () => { if (S.managerData?.view === 'graph') kpCall('mountManagerGraph'); },

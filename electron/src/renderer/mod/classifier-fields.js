@@ -17,7 +17,7 @@
 
 // `editing` is a template id when the form is prefilled for an edit.
 async function openClassifierFieldsModal(moduleId, editing = null) {
-  const templates = S.classifierData?.moduleId === moduleId ? S.classifierData.templates : await api.classifier.getTemplates(moduleId);
+  const templates = CLS[moduleId] ? CLS[moduleId].templates : await api.classifier.getTemplates(moduleId);
   const cur = editing ? templates.find(tp => tp.id === editing) : null;
   const advancedOpen = !!(cur && (cur.levelable || cur.has_condition));
   openModal(t('clsFieldsOfCategory'), `
@@ -69,7 +69,7 @@ async function submitClassifierTemplateForm(moduleId, editing = null) {
   // Two settings are not in the form — a field's role (a story variable's
   // type / default, §11.6) and a bundle's target category (§11.7). Keep
   // them through an edit, or Narrator / the picker would stop seeing them.
-  const cur = editing ? S.classifierData?.templates?.find(tp => tp.id === editing) : null;
+  const cur = editing ? clsFindTemplate(editing) : null;
   const { role, targetModuleId } = cur ? clsFieldOpts(cur) : {};
   if (role) options = { ...(options || {}), role };
   if (targetModuleId && dispType === 'relation') options = { ...(options || {}), targetModuleId };
@@ -90,14 +90,18 @@ async function deleteClassifierTemplateRow(moduleId, id) {
 
 // Inline "+ field" under an element's field rows (§7.4) — a shared field,
 // so every object in the category gets it, exactly as from the modal.
-async function addClassifierFieldInline(moduleId, objectId) {
-  const inp = q(`#cls-addfield-${objectId}`);
+// `el` is the input or its button — the box is found beside it, so this
+// works in any instance, in any pane, and on the element's own page.
+async function addClassifierFieldInline(moduleId, objectId, el) {
+  const inp = el?.closest('.cls-addfield')?.querySelector('[data-r="addfield"]');
   const name = inp?.value.trim();
   if (!name) { toast(t('nameRequired'), 'err'); inp?.focus(); return; }
+  // Focus comes back to the same instance's box after the re-render.
+  const iid = el.closest('.pblock')?.dataset.iid;
   await api.classifier.createTemplate(moduleId, name, 'text', false, false, null);
   await refreshClassifier();
   toast(t('created'), 'ok');
-  setTimeout(() => q(`#cls-addfield-${objectId}`)?.focus(), 60);
+  setTimeout(() => (iid ? pbRoot(iid) : document)?.querySelector('[data-r="addfield"]')?.focus(), 60);
 }
 
 // ── Private fields: this object only, any number (§7.4) ─────────────────

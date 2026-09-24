@@ -17,6 +17,20 @@ const CLASSIFIER_VIEWS = ['table', 'listDetail', 'relationCat', 'grid'];
 // §7.5 bug #10: these rendered as raw English beside a translated toolbar.
 const CLASSIFIER_VIEW_KEY = { table: 'clsViewTable', listDetail: 'clsViewDetail', relationCat: 'clsViewRelation', grid: 'clsViewGrid' };
 
+// ── Data, per module (v5 Part 8, APP docs/V5.md §12.3) ──────────────────
+// Was one S.classifierData for "the" open Classifier. A page can now show
+// several — its own and borrowed ones (§12.12) — so data is cached per
+// module, and what differs per instance (the preset, the selected object)
+// lives on the instance (page/page.js pbState), never on a global.
+const CLS = {};
+const clsData = (moduleId) => CLS[moduleId] || { moduleId, objects: [], templates: [], relations: [], ui: {} };
+const clsAllData = () => Object.values(CLS);
+// An object or field wherever it is cached — handlers that get only an id.
+const clsFindObject = (oid) => clsAllData().flatMap((d) => d.objects).find((o) => o.id === oid) || null;
+const clsModuleOfObject = (oid) => clsAllData().find((d) => d.objects.some((o) => o.id === oid))?.moduleId ?? null;
+const clsFindTemplate = (tid) => clsAllData().flatMap((d) => [...d.templates, ...d.objects.flatMap((o) => o.privateTemplates || [])])
+  .find((tp) => tp.id === tid) || null;
+
 // Plan part2 #2.1: 3 round-trips, not 4 + 2N — getObjectsFull hydrates
 // attrMap / levelMap / privateTemplates server-side in one pass.
 async function loadClassifierData(m) {
@@ -32,35 +46,67 @@ async function loadClassifierData(m) {
   ]);
   const { objects, templates } = full;
   setClassifierLinkData(relations, index);
-  S.classifierData = { moduleId: m.id, objects, templates, relations };
-  S.classifierView = CLASSIFIER_VIEWS.includes(ui.activeView) ? ui.activeView : 'listDetail';
-  if (S.classifierSelectedObject && !objects.find(o => o.id === S.classifierSelectedObject)) S.classifierSelectedObject = null;
-  if (!S.classifierSelectedObject && objects.length) S.classifierSelectedObject = objects[0].id;
+  CLS[m.id] = { moduleId: m.id, objects, templates, relations, ui };
+  return CLS[m.id];
 }
 
-async function setClassifierView(moduleId, view) {
-  S.classifierView = view;
-  await api.module.setUi(moduleId, 'activeView', view);
-  if (S.inspectorData?.moduleId === moduleId) S.inspectorData.ui = { ...S.inspectorData.ui, activeView: view };
-  renderNexusHome();
+// The instance's view: its block's preset, else the module's saved one.
+function clsViewOf(c) {
+  const p = c.config?.preset || clsData(c.source.id).ui?.activeView;
+  return CLASSIFIER_VIEWS.includes(p) ? p : 'listDetail';
 }
 
-// Reload after any write, whichever surface is live (module view or the
-// element's own Builder page — same split as reloadClassifierDetail).
+// The instance's selected object: a link that just asked for one wins,
+// then what this instance had, then the first object.
+function clsSelectedOf(c, d) {
+  const st = c.state;
+  if (S.clsPendingSelect != null && d.objects.some((o) => o.id === S.clsPendingSelect)) {
+    st.sel = S.clsPendingSelect;
+    S.clsPendingSelect = null;
+  }
+  const sel = d.objects.find((o) => o.id === st.sel) || d.objects[0] || null;
+  st.sel = sel?.id ?? null;
+  return sel;
+}
+
+// A chip on the view bar: this instance's preset, and the module's default
+// for the next page that shows it.
+async function setClassifierView(iid, view) {
+  const i = pbInst(iid);
+  if (!i) return;
+  const mid = i.sourceId ?? i.moduleId;
+  await api.module.setUi(mid, 'activeView', view);
+  if (CLS[mid]) CLS[mid].ui = { ...CLS[mid].ui, activeView: view };
+  if (S.inspectorData?.moduleId === mid) S.inspectorData.ui = { ...S.inspectorData.ui, activeView: view };
+  await pbSetConfig(iid, { preset: view });
+}
+
+// Reload after any write, whichever surfaces are live: the element's own
+// page, and every Classifier instance on screen (a borrowed one included).
 async function refreshClassifier() {
   if (S.activeItemNode?.itemKind === 'classifier') {
     await openItemNode('classifier', S.activeItemNode.moduleId, S.activeItemNode.id);
     return;
   }
-  if (S.activeModuleNode?.kind !== 'classifier') return;
-  await loadClassifierData(S.activeModuleNode);
+  const ids = new Set(Object.values(PB_INST).filter((i) => i.component === 'classifier.view').map((i) => i.sourceId));
+  if (S.activeModuleNode?.kind === 'classifier') ids.add(S.activeModuleNode.id);
+  await Promise.all([...ids].map((id) => findModuleNode(id)).filter(Boolean).map(loadClassifierData));
   renderNexusHome();
 }
 
-function buildClassifierMainHtml(m) {
-  const d = (S.classifierData && S.classifierData.moduleId === m.id) ? S.classifierData : { objects: [], templates: [] };
-  const view = S.classifierView || 'listDetail';
-  const viewBar = viewBarHtml(CLASSIFIER_VIEWS, view, v => `setClassifierView(${m.id},'${v}')`, v => t(CLASSIFIER_VIEW_KEY[v]));
+registerComponent('classifier.view', {
+  kind: 'classifier', label: () => kindLabel('classifier'), borrow: true,
+  presets: () => CLASSIFIER_VIEWS, presetLabel: (p) => t(CLASSIFIER_VIEW_KEY[p]),
+  load: (m) => loadClassifierData(m),
+  render: (c) => buildClassifierMainHtml(c.source, c),
+  mount: (c) => { if (clsViewOf(c) === 'relationCat') mountClassifierRelationGraph(c); },
+});
+
+function buildClassifierMainHtml(m, c) {
+  const d = clsData(m.id);
+  const view = clsViewOf(c);
+  const iid = xj(c.iid);
+  const viewBar = viewBarHtml(CLASSIFIER_VIEWS, view, v => `setClassifierView(${iid},'${v}')`, v => t(CLASSIFIER_VIEW_KEY[v]));
   // §7.1: one primary action on the toolbar; fields are the advanced tier.
   const toolbar = `<div class="classifier-toolbar" oncontextmenu="openCtx('classifier.category',event,{moduleId:${m.id}})">
     ${cmdBtn('classifier.addObject', { moduleId: m.id }, { cls: 'btn-p' })}
@@ -75,7 +121,7 @@ function buildClassifierMainHtml(m) {
       attrs: `oncontextmenu="openCtx('classifier.category',event,{moduleId:${m.id}})"`,
       extra: `<p class="drafter-hint">${t('clsQuickStartHint')}</p>`,
     });
-  } else if (view === 'listDetail') body = renderClassifierListDetail(m, d);
+  } else if (view === 'listDetail') body = renderClassifierListDetail(m, d, c);
   else if (view === 'grid') body = renderClassifierGrid(m, d);
   else if (view === 'relationCat') body = renderClassifierRelation(m, d);
   else body = renderClassifierTable(m, d);
@@ -115,7 +161,7 @@ async function saveClassifierAttrCell(el) {
   const oid = Number(el.dataset.oid), tid = Number(el.dataset.tid);
   const value = el.textContent.trim();
   await api.classifier.upsertAttr(oid, tid, value);
-  const obj = S.classifierData?.objects.find(o => o.id === oid);
+  const obj = clsFindObject(oid);
   if (obj) obj.attrMap[tid] = value;
 }
 
@@ -142,17 +188,18 @@ function renderClassifierGrid(m, d) {
 }
 
 // ── Detail view (list + detail, default) ────────────────────────────────
-function renderClassifierListDetail(m, d) {
-  const sel = d.objects.find(o => o.id === S.classifierSelectedObject) || d.objects[0];
-  const list = d.objects.map(o => `<div class="li${sel && o.id === sel.id ? ' sel' : ''}" onclick="selectClassifierObject(${o.id})"
+function renderClassifierListDetail(m, d, c) {
+  const sel = clsSelectedOf(c, d);
+  const list = d.objects.map(o => `<div class="li${sel && o.id === sel.id ? ' sel' : ''}" onclick="selectClassifierObject(${xj(c.iid)},${o.id})"
       oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})">
     <span class="kicon" style="color:${x(o.color_code || 'var(--accent)')}">${classifierObjectIconHtml(o, m)}</span><span class="name">${x(o.name)}</span></div>`).join('');
-  const detail = sel ? renderClassifierObjectDetail(m, sel) : '';
+  const detail = sel ? renderClassifierObjectDetail(m, sel, d.templates) : '';
   return `<div class="cls-listdetail"><div class="cls-list" oncontextmenu="if(event.target===this)openCtx('classifier.category',event,{moduleId:${m.id}})">${list}</div><div class="cls-detail">${detail}</div></div>`;
 }
 
-function selectClassifierObject(id) {
-  S.classifierSelectedObject = id;
+function selectClassifierObject(iid, id) {
+  pbState(iid).sel = id;
+  S.classifierSelectedObject = id; // the palette's target (core/commands.js)
   renderNexusHome();
 }
 
@@ -160,7 +207,7 @@ async function saveClassifierAttrInput(el) {
   const oid = Number(el.dataset.oid), tid = Number(el.dataset.tid);
   const value = el.value.trim();
   await api.classifier.upsertAttr(oid, tid, value);
-  const obj = S.classifierData?.objects.find(o => o.id === oid);
+  const obj = clsFindObject(oid);
   if (obj) obj.attrMap[tid] = value;
 }
 
@@ -173,7 +220,7 @@ async function saveClassifierAttrInput(el) {
 function renderClassifierRelation(m, d) {
   const keys = new Set(d.objects.map(o => `cobj_${o.id}`));
   return `<div class="cls-rel-wrap">
-    <div id="cls-rel-graph" style="position:relative;overflow:hidden;min-height:340px;border:1px solid var(--border);border-radius:var(--r)"></div>
+    <div class="cls-rel-graph" data-r="rel-graph"></div>
     <button class="btn btn-p cls-rel-add" onclick="openExhibitorFor(${m.id})">${I.relation} ${t('openInExhibitor')}</button>
     <div class="cls-link-list">${classifierRelationRowsHtml(keys) || `<div class="cls-lv-empty">${t('noLinkedElements')}</div>`}</div>
   </div>`;
@@ -184,10 +231,11 @@ const classifierModuleRelations = (m, d) => {
   return (d.relations || []).filter(r => keys.has(r.from_key) && keys.has(r.to_key));
 };
 
-async function mountClassifierRelationGraph() {
-  const m = S.activeModuleNode;
-  const d = S.classifierData;
-  if (!d || d.moduleId !== m.id || !q('#cls-rel-graph')) return;
+async function mountClassifierRelationGraph(c) {
+  const m = c.source;
+  const d = clsData(m.id);
+  const box = c.root.querySelector('[data-r="rel-graph"]');
+  if (!box) return;
   await loadModule('src/renderer/sage.js'); // buildSageGraph lives there
   const nodes = d.objects.map(o => ({
     id: `cobj_${o.id}`, objId: o.id, module: 'obj', label: o.name,
@@ -195,7 +243,7 @@ async function mountClassifierRelationGraph() {
   }));
   const edges = classifierModuleRelations(m, d).map(r => ({ source: r.from_key, target: r.to_key, color: r.color_code }));
   buildSageGraph({ nodes, edges }, new Set(), {
-    container: '#cls-rel-graph',
+    container: box,
     colors: { obj: m.color_code || '#8b5cf6' },
     labels: { obj: x(m.name) },
     // §7.5 bug #9: a node opens the element, not the rename modal.

@@ -6,7 +6,7 @@
 // which lazy-loads this file for this one function.
 
 // opts (all optional):
-//   container   — selector of the wrap element ('#sage-graph-wrap')
+//   container   — the wrap element, or its selector ('#sage-graph-wrap')
 //   colors      — module → fill color map (caller must always pass this now
 //                 that the old default module→color map was removed with
 //                 the legacy Sage page — every caller does)
@@ -17,7 +17,8 @@
 // relation view does this for per-object coloring).
 function buildSageGraph(data, hiddenModules, opts = {}) {
   const moduleColors = opts.colors || {};
-  const wrap = q(opts.container || '#sage-graph-wrap');
+  // An element (a page block's own slot, v5 Part 8) or a selector.
+  const wrap = opts.container instanceof Element ? opts.container : q(opts.container || '#sage-graph-wrap');
   if (!wrap) return;
   wrap.innerHTML = '';
   const W = wrap.clientWidth || 800, H = wrap.clientHeight || 500;

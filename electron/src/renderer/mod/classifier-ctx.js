@@ -9,7 +9,7 @@
 //                        fields · colour/icon · delete
 //   classifier.level     a level row → insert above/below · duplicate · delete
 
-const clsObjectById = (id) => S.classifierData?.objects.find(o => o.id === id)
+const clsObjectById = (id) => clsFindObject(id)
   || (S.activeItemNode?.itemKind === 'classifier' && S.activeItemNode.id === id ? { id, name: S.activeItemNode.item?.name } : null);
 
 // v5 Part 6: rows are commands (core/commands.js). The selected object is
@@ -55,9 +55,10 @@ async function classifierQuickStart(moduleId) {
   const oid = await api.classifier.createObject(moduleId, t('clsFirstObjectName'), null, null);
   const templates = await api.classifier.getTemplates(moduleId);
   if (!templates.length) await api.classifier.createTemplate(moduleId, t('clsFirstFieldName'), 'text', false, false, null);
-  S.classifierSelectedObject = oid;
+  S.clsPendingSelect = oid;
   await api.module.setUi(moduleId, 'activeView', 'listDetail');
-  await loadClassifierData(S.activeModuleNode);
+  const m = findModuleNode(moduleId);
+  if (m) await loadClassifierData(m);
   invalidateNestItems(moduleId, 1);
   toast(t('created'), 'ok');
 }
@@ -65,7 +66,7 @@ async function classifierQuickStart(moduleId) {
 // ── Object CRUD ─────────────────────────────────────────────────────────
 async function openClassifierObjectModal(moduleId, objectId) {
   const m = findModuleNode(moduleId) || S.activeModuleNode;
-  const o = objectId ? S.classifierData?.objects.find(x2 => x2.id === objectId) : null;
+  const o = objectId ? clsFindObject(objectId) : null;
   openModal(o ? t('moduleEdit') : t('addObject'), `
     <div class="fg"><label>${t('name')} *</label><input id="co-name" value="${x(o?.name || '')}"
       onkeydown="if(event.key==='Enter'){event.preventDefault();submitClassifierObjectForm(${moduleId},${o ? o.id : 'null'})}"></div>
@@ -85,9 +86,10 @@ async function submitClassifierObjectForm(moduleId, objectId) {
   const colorId = q('#sel-color').value || null;
   const icon = typeof getIconPickerValue === 'function' ? getIconPickerValue() : null;
   if (objectId) await api.classifier.updateObject(objectId, name, colorId, icon);
-  else S.classifierSelectedObject = await api.classifier.createObject(moduleId, name, colorId, icon);
+  else S.clsPendingSelect = await api.classifier.createObject(moduleId, name, colorId, icon);
   closeModal();
-  if (S.activeModuleNode?.id === moduleId) await loadClassifierData(S.activeModuleNode);
+  const mod = findModuleNode(moduleId);
+  if (mod && CLS[moduleId]) await loadClassifierData(mod);
   // No renderNexusHome() here — invalidateNestItems schedules a coalesced
   // one (Plan part2 #2.5), so this path repaints once instead of twice.
   invalidateNestItems(moduleId, objectId ? 0 : 1);
@@ -97,14 +99,14 @@ async function submitClassifierObjectForm(moduleId, objectId) {
 async function deleteClassifierObjectRow(objectId) {
   // §7.5 bug #4: this said "Delete this module?".
   if (!await uiConfirm(t('confirmDeleteObject'))) return;
-  const moduleId = S.classifierData?.moduleId ?? S.activeItemNode?.moduleId ?? S.activeModuleNode?.id;
+  const moduleId = clsModuleOfObject(objectId) ?? S.activeItemNode?.moduleId ?? S.activeModuleNode?.id;
   await api.classifier.deleteObject(objectId);
   closeModal();
   if (S.classifierSelectedObject === objectId) S.classifierSelectedObject = null;
   if (S.activeItemNode?.itemKind === 'classifier' && S.activeItemNode.id === objectId && moduleId != null) {
     await openModuleNode(moduleId);
-  } else if (S.activeModuleNode?.kind === 'classifier') {
-    await loadClassifierData(S.activeModuleNode);
+  } else if (moduleId != null && CLS[moduleId]) {
+    await loadClassifierData(findModuleNode(moduleId));
   }
   if (moduleId != null) invalidateNestItems(moduleId, -1);
   else renderNexusHome();
@@ -114,15 +116,15 @@ async function deleteClassifierObjectRow(objectId) {
 async function duplicateClassifierObject(objectId) {
   const src = clsObjectById(objectId);
   const nid = await api.classifier.duplicateObject(objectId, src ? `${src.name} ${t('clsCopySuffix')}` : null);
-  const moduleId = S.classifierData?.moduleId ?? S.activeItemNode?.moduleId;
-  if (nid) S.classifierSelectedObject = nid;
+  const moduleId = clsModuleOfObject(objectId) ?? S.activeItemNode?.moduleId;
+  if (nid) S.clsPendingSelect = nid;
   await refreshClassifier();
   if (moduleId != null) invalidateNestItems(moduleId, 1);
   toast(t('created'), 'ok');
 }
 
 async function moveClassifierObject(objectId, targetModuleId) {
-  const from = S.classifierData?.moduleId ?? S.activeItemNode?.moduleId;
+  const from = clsModuleOfObject(objectId) ?? S.activeItemNode?.moduleId;
   const ok = await api.classifier.moveObject(objectId, targetModuleId);
   if (!ok) return;
   if (S.classifierSelectedObject === objectId) S.classifierSelectedObject = null;

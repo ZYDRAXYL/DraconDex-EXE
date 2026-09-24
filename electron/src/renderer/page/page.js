@@ -54,8 +54,28 @@ async function loadModulePage(m, itemKey = null) {
   }
   const r = await api.block.list(m.id, itemKey);
   S.pages ||= {};
-  S.pages[pageKey(m.id, itemKey)] = { moduleId: m.id, itemKey, blocks: r.blocks, from: r.from, props };
-  return S.pages[pageKey(m.id, itemKey)];
+  const page = { moduleId: m.id, itemKey, blocks: r.blocks, from: r.from, props };
+  S.pages[pageKey(m.id, itemKey)] = page;
+  await loadPageSources(page);
+  return page;
+}
+
+// Every scoped component on the page loads the data of what it shows —
+// its own module, or a borrowed one — once per (component, source).
+async function loadPageSources(page) {
+  const seen = new Set();
+  const jobs = [];
+  for (const b of page.blocks) {
+    const comp = componentOf(b);
+    if (!comp?.load) continue;
+    const m = /^module_(\d+)$/.exec(b.source_key || '');
+    const src = findModuleNode(m ? Number(m[1]) : page.moduleId);
+    const k = `${b.component}|${src?.id}`;
+    if (!src || seen.has(k)) continue;
+    seen.add(k);
+    jobs.push(Promise.resolve(comp.load(src)).catch((e) => console.error('component load error:', b.component, e)));
+  }
+  await Promise.all(jobs);
 }
 
 // Fresh blocks and properties for the open page, then a repaint.
@@ -73,7 +93,7 @@ function pbCtx(page, b) {
   let source = findModuleNode(page.moduleId);
   const m = /^module_(\d+)$/.exec(b.source_key || '');
   if (m) source = findModuleNode(Number(m[1])) || null;
-  PB_INST[iid] = { iid, pane: _pbPane, blockId: b.id, moduleId: page.moduleId, itemKey: page.itemKey, component: b.component };
+  PB_INST[iid] = { iid, pane: _pbPane, blockId: b.id, moduleId: page.moduleId, itemKey: page.itemKey, component: b.component, sourceId: source?.id ?? null };
   return { iid, block: b, page, source, config: b.config || {}, state: pbState(iid), itemKey: page.itemKey };
 }
 

@@ -27,7 +27,7 @@ async function openEntityByKey(key) {
     // module with that item selected (the kind's load fn consumes it).
     if (p.kind === 'bchp') S.pendingAuthorChapter = p.chapterId;
     if (p.kind === 'chss') S.pendingChatSession = p.sessionId;
-    if (p.kind === 'cobj') S.classifierSelectedObject = p.objectId;
+    if (p.kind === 'cobj') S.classifierSelectedObject = S.clsPendingSelect = p.objectId; // the next Classifier instance selects it
     if (p.kind === 'tlev') S.pendingChroniclerEvent = p.eventId;
     if (p.kind === 'sdlg') S.pendingNarratorDialogue = p.dialogueId;
     if (p.kind === 'exn') S.pendingExhibitNode = p.nodeId; // v5 Part 4: a note's [[link]] leads back to it
