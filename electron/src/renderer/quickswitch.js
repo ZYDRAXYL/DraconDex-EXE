@@ -60,7 +60,7 @@ const QS_ICON_BY_KIND = { object: 'person', event: 'timeline', dialogue: 'narrat
 
 function qsCommandItems() {
   return paletteCommands(_qsFocusEl).map(c => ({
-    key: `cmd:${c.id}`, cmd: c, name: c.name, alt: c.alt, color: 'var(--t3)',
+    key: `cmd:${c.id}`, cmd: c, name: c.name, alt: c.alt, color: 'var(--t3-aa,var(--t2))',
     badge: QS_BADGE.command, icon: (c.icon && I[c.icon]) || I[QS_ICON_BY_KIND.command],
     moduleId: null, crumb: c.crumb, hint: c.hint, count: 0,
   }));

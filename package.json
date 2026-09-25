@@ -17,7 +17,8 @@
     "electron/**/*",
     "!electron/test/**",
     "src/assets/brand/**/*",
-    "src/schema/generated/**/*"
+    "src/schema/generated/**/*",
+    "src/design/generated/**/*"
   ],
   "scripts": {
     "start": "node ./electron/start.js",
@@ -51,7 +52,8 @@
       "!electron/test/**",
       "!electron/scripts/**",
       "src/assets/brand/**/*",
-      "src/schema/generated/**/*"
+      "src/schema/generated/**/*",
+      "src/design/generated/**/*"
     ],
     "electronLanguages": [
       "en-US",

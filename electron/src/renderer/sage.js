@@ -233,7 +233,7 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
       <input type="checkbox" class="sage-graph-mod-cb" data-mod="${mod}" ${hiddenModules.has(mod)?'':'checked'}>
       <span style="width:10px;height:10px;border-radius:50%;background:${moduleColors[mod]};display:inline-block;flex-shrink:0"></span>
       <span style="flex:1">${moduleLabels[mod]}</span>
-      <span style="color:var(--t3)">${counts[mod]||0}</span>
+      <span style="color:var(--t3-aa,var(--t2))">${counts[mod]||0}</span>
     </label>`).join('');
   wrap.appendChild(panel);
   panel.querySelectorAll('.sage-graph-mod-cb').forEach(cb => {

@@ -125,7 +125,7 @@ function buildNestItemRow(item, itemKind, moduleId, depth) {
   const showIcon = !!S.settings.nestShowMinorIcon;
   return `<div class="li${indentCls}${active ? ' sel' : ''} nest-item-row" onclick="openItemNode('${itemKind}',${moduleId},${item.id})">
     <span class="tree-chev-spacer"></span>
-    ${showIcon ? `<span class="kicon" style="color:var(--t3)">${reg.icon()}</span>` : ''}
+    ${showIcon ? `<span class="kicon" style="color:var(--t3-aa,var(--t2))">${reg.icon()}</span>` : ''}
     <span class="name">${x(reg.nameOf(item))}</span>
   </div>`;
 }

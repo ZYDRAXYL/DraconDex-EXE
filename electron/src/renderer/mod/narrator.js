@@ -83,7 +83,7 @@ function buildNarratorDialogueListHtml(d) {
         <div class="odot" style="background:${x(dl.color_code || '#6366f1')}"></div>
         <div style="flex:1;min-width:0">
           <div class="oname">${x(dl.name)}</div>
-          <div style="font-size:calc(12px * var(--fsc,1));color:var(--t3);margin-top:2px" data-no-i18n>${dl.speaker_count || 0} ${t('speaker')} · ${dl.talk_count || 0} ${t('conversation')}${dl.choice_count ? ` · ${dl.choice_count} ${t('choice')}` : ''}</div>
+          <div style="font-size:calc(12px * var(--fsc,1));color:var(--t3-aa,var(--t2));margin-top:2px" data-no-i18n>${dl.speaker_count || 0} ${t('speaker')} · ${dl.talk_count || 0} ${t('conversation')}${dl.choice_count ? ` · ${dl.choice_count} ${t('choice')}` : ''}</div>
         </div>
         <svg class="icon tree-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="${open ? '6 9 12 15 18 9' : '9 18 15 12 9 6'}"/></svg>
       </div>
@@ -180,7 +180,7 @@ function drawNarratorEdges() {
         ${e.label
           ? `<text x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="central" font-size="10" fill="var(--t2)" paint-order="stroke" stroke="var(--bg)" stroke-width="5">${x(e.label)}</text>`
           : `<circle cx="${mx}" cy="${my}" r="7" fill="var(--surface)" stroke="var(--t3)" stroke-width="1.3"/>
-             <text x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="central" font-size="10" fill="var(--t3)">·</text>`}
+             <text x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="central" font-size="10" fill="var(--t3-aa,var(--t2))">·</text>`}
       </g>`;
   }
   svg.innerHTML = defs + body;

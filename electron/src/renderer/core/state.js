@@ -264,7 +264,7 @@ function autoUiSizeFromScreen(){
 // theme provides, so widening it is safe for existing 10-token custom themes:
 // the five new ones simply fall through to css/themes.css as they did before.
 const CUSTOM_THEME_TOKENS = ['--bg','--surface','--raised','--hover','--border',
-  '--t1','--t2','--t3','--accent','--accentH','--danger','--success',
+  '--t1','--t2','--t3','--t3-aa','--accent','--accentH','--danger','--success',
   '--button','--on-accent','--on-button'];
 // The 7 shape/elevation tokens an installed uistyle package may override —
 // the same 7 css/ui-style.css sets per body[data-ui-style="<name>"]. Same

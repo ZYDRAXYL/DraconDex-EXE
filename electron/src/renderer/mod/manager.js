@@ -160,7 +160,7 @@ function buildManagerListItemRow(item, kind, moduleId) {
   if (!reg) return '';
   return `<div class="li nest-item-row indent1" onclick="openItemNode('${kind}',${moduleId},${item.id})">
     <span class="tree-chev-spacer"></span>
-    <span class="kicon" style="color:var(--t3)">${reg.icon()}</span>
+    <span class="kicon" style="color:var(--t3-aa,var(--t2))">${reg.icon()}</span>
     <span class="name">${x(reg.nameOf(item))}</span>
   </div>`;
 }

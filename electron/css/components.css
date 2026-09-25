@@ -49,7 +49,7 @@
 
 /* FORMS */
 .fg{margin-bottom:14px}
-.fg label{display:block;font-size:calc(11px * var(--fsc,1));color:var(--t3);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.fg label{display:block;font-size:calc(11px * var(--fsc,1));color:var(--t3-aa,var(--t2));margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
 .fg input,.fg textarea,.fg select{
 	width:100%;background:var(--bg);border:1px solid var(--border);
 	border-radius:var(--r);color:var(--t1);padding:8px 11px;
@@ -111,7 +111,7 @@
 }
 #modal-title{flex:1;font-size:calc(14px * var(--fsc,1));font-weight:700}
 #modal-close{
-	background:none;border:none;color:var(--t3);cursor:pointer;
+	background:none;border:none;color:var(--t3-aa,var(--t2));cursor:pointer;
 	font-size:calc(15px * var(--fsc,1));padding:3px 6px;border-radius:var(--rs);line-height:1;
 }
 #modal-close:hover{color:var(--t1)}
@@ -131,7 +131,7 @@
 	border-bottom:1px solid var(--border);font-size:calc(14px * var(--fsc,1));font-weight:700;flex-shrink:0;
 }
 .fp-close{
-	background:none;border:none;color:var(--t3);cursor:pointer;
+	background:none;border:none;color:var(--t3-aa,var(--t2));cursor:pointer;
 	font-size:calc(15px * var(--fsc,1));padding:3px 6px;border-radius:var(--rs);line-height:1;
 }
 .fp-close:hover{color:var(--t1)}
@@ -206,20 +206,20 @@
 .prefs-theme-cell.locked.has-preview .prefs-theme-dl{position:absolute;top:10px;right:10px}
 .prefs-theme-cell.locked:hover{border-color:var(--border)}
 .prefs-theme-cell.locked .btn{opacity:1}
-.prefs-theme-cell-lockglyph{align-items:center;justify-content:center;color:var(--t3)}
+.prefs-theme-cell-lockglyph{align-items:center;justify-content:center;color:var(--t3-aa,var(--t2))}
 .prefs-theme-name{margin-top:6px;font-size:calc(11.5px * var(--fsc,1));font-weight:600;color:var(--t1);
 	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prefs-theme-tools{display:none;position:absolute;top:6px;right:6px;gap:4px;background:var(--surface);
 	border-radius:var(--rs);padding:2px 4px}
 .prefs-theme-cell:hover .prefs-theme-tools{display:flex}
-.prefs-theme-tools span{cursor:pointer;color:var(--t3);padding:0 2px;font-size:calc(11px * var(--fsc,1))}
+.prefs-theme-tools span{cursor:pointer;color:var(--t3-aa,var(--t2));padding:0 2px;font-size:calc(11px * var(--fsc,1))}
 .prefs-theme-tools span:hover{color:var(--accentH)}
 .prefs-theme-check{position:absolute;top:6px;left:6px;color:var(--accent);font-weight:700;
 	background:var(--surface);border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;
 	font-size:calc(10px * var(--fsc,1))}
 .prefs-theme-add{
 	display:flex;align-items:center;justify-content:center;min-height:112px;
-	border:1px dashed var(--border);color:var(--t3);font-size:28px;font-weight:300;
+	border:1px dashed var(--border);color:var(--t3-aa,var(--t2));font-size:28px;font-weight:300;
 }
 .prefs-theme-add:hover{border-color:var(--accentH);color:var(--accentH)}
 .prefs-lang-shell{display:flex;gap:16px;margin-top:4px}
@@ -303,7 +303,7 @@
 	background:var(--button, var(--accent));
 	transition:width .3s ease;
 }
-#splash-pct{font-size:var(--fs-xs);color:var(--t3);font-variant-numeric:tabular-nums}
+#splash-pct{font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:reduce){#splash,#splash-fill{transition:none}}
 
 /* uiPrompt() — the text-entry sibling of uiConfirm. Reuses the whole confirm
@@ -325,7 +325,7 @@
 .guide-pop-title{font-size:calc(14px * var(--fsc,1));font-weight:700;color:var(--t1);margin-bottom:6px}
 .guide-pop-text{font-size:calc(12.5px * var(--fsc,1));color:var(--t2);line-height:1.5}
 .guide-pop-foot{display:flex;gap:6px;align-items:center;margin-top:14px}
-.guide-step{font-size:calc(11px * var(--fsc,1));color:var(--t3)}
+.guide-step{font-size:calc(11px * var(--fsc,1));color:var(--t3-aa,var(--t2))}
 
 /* Modal: separate description (hint callout) from data (labeled sections) */
 .modal-hint{
@@ -338,7 +338,7 @@
 .modal-hint .icon{width:14px;height:14px;flex-shrink:0;margin-top:1px;color:var(--accent)}
 .modal-section-h{
 	display:flex;align-items:center;gap:8px;
-	font-size:calc(11px * var(--fsc,1));font-weight:700;color:var(--t3);
+	font-size:calc(11px * var(--fsc,1));font-weight:700;color:var(--t3-aa,var(--t2));
 	text-transform:uppercase;letter-spacing:.05em;
 	margin:16px 0 6px;
 }

@@ -223,7 +223,7 @@ console.log('=== packaged build (package.json build.files) ===');
   const pkg = JSON.parse(read('package.json'));
   const files = pkg.build?.files ?? [];
   const needed = [app('index.html'), app('main.js'), app('preload.js'), app('database.js'),
-                  app('src'), app('css'), 'src/assets/brand'];
+                  app('src'), app('css'), 'src/assets/brand', 'src/design/generated'];
   // build.files entries are globs ('electron/**/*') and exclusions ('!…/test/**').
   // Match on the literal prefix ahead of the first wildcard, in either
   // direction: a broad 'electron/**/*' covers a specific file, and a narrow

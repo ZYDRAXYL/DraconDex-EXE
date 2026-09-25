@@ -42,8 +42,10 @@ const KINDS = new Set(['theme', 'lang', 'view', 'uistyle', 'guide']);
 // shared because the app cannot read that repo at runtime — but the app is the
 // side that must not be fooled, so it re-validates everything the catalog says
 // rather than trusting it.
+// --t3-aa (Procress 13): muted TEXT lifted to 4.5:1 — optional, since a
+// theme without it falls back through var(--t3-aa, var(--t2)).
 const THEME_TOKENS = new Set(['--bg','--surface','--raised','--hover','--border',
-  '--t1','--t2','--t3','--accent','--accentH','--danger','--success',
+  '--t1','--t2','--t3','--t3-aa','--accent','--accentH','--danger','--success',
   '--button','--on-accent','--on-button']);
 const THEME_REQUIRED = ['--bg','--surface','--raised','--hover','--border',
   '--t1','--t2','--t3','--accent','--accentH','--danger','--success'];

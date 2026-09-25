@@ -21,10 +21,13 @@
    what seven tokens can express. */
 
 body[data-ui-style="fluent"]{
-  --r:10px; --rs:6px; --rl:16px;
-  --shadow-pop:   0 8px 32px rgba(0,0,0,.22);
-  --shadow-float: 0 10px 40px rgba(0,0,0,.26);
-  --shadow-menu:  0 16px 56px rgba(0,0,0,.3);
-  --shadow-modal: 0 24px 80px rgba(0,0,0,.38);
+  /* Procress 13 part 4: Fluent 2. Radius 4/4/8 and --elev-* come from the
+     SDB-generated tokens.css (loaded first), so this block only maps the
+     app's four shadow names onto Fluent's elevation ramp. Component-level
+     Fluent (Mica, pills, Acrylic) is css/fluent.css. */
+  --shadow-pop:   var(--elev-8);
+  --shadow-float: var(--elev-16);
+  --shadow-menu:  var(--elev-16);
+  --shadow-modal: var(--elev-28);
 }
 

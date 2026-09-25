@@ -33,6 +33,11 @@
        contiguous slices of the old file and the cascade depends on them staying
        in this sequence — tokens → themes → base → chrome → layout → components
        → legacy → v3. Adding a file? Put it where its rules used to live. -->
+  <!-- Design tokens VENDORED from DraconDex-SDB (design/tokens.json, APP
+       docs/REDESIGN.md C5). First on purpose: css/tokens.css still declares
+       most of the same names and wins while it does; each copy there is
+       retired once nothing depends on its own value. -->
+  <link rel="stylesheet" href="../src/design/generated/tokens.css">
   <link rel="stylesheet" href="css/tokens.css">
   <!-- Token-tier, not a component file: overrides tokens.css's own
        --r/--rs/--rl/--shadow-* per data-ui-style, so it belongs beside it. -->
@@ -51,6 +56,9 @@
   <link rel="stylesheet" href="css/builder.css">
   <link rel="stylesheet" href="css/page.css">
   <link rel="stylesheet" href="css/workspace.css">
+  <!-- Fluent 2 restyles components under data-ui-style="fluent", so it comes
+       after every component file. -->
+  <link rel="stylesheet" href="css/fluent.css">
   <!-- Last on purpose: welcome-mode strips the app chrome down to a bare
        two-column picker, so its hide rules must win over every layout file
        above without needing !important. -->
