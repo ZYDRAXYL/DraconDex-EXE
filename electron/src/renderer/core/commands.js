@@ -109,6 +109,8 @@ const COMMANDS = {
   'page.revert': { label: 'pbRevertPage', icon: 'return', scope: 'app', when: () => pageOf(S.activeItemNode?.moduleId, S.activeItemNode?.itemKey)?.from === 'own', run: () => revertItemPageNow(), surfaces: ['page.layout'] },
   'page.history': { label: 'versionHistory', icon: 'timeline', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode, run: () => toggleVersionPanel(S.activeModuleNode.id), surfaces: ['page.head'] },
   'app.focusMode': { label: 'focusMode', icon: 'eye', scope: 'app', hint: 'Ctrl+Shift+F', run: () => toggleFocusMode(), surfaces: ['shortcut'] },
+  // Procress 13 part 4 (REDESIGN.md C6): the title's own layout, per page.
+  'page.layout': { label: 'pageLayout', icon: 'fields', scope: 'app', when: () => !!(S.activeModuleNode || S.activeItemNode?.itemKey), run: (c, el) => openPageLayoutPopup(el), surfaces: ['page.head'] },
   'page.readable': { label: 'pageReadable', icon: 'document', scope: 'app', when: () => !!(S.activeModuleNode || S.activeItemNode?.itemKey), run: () => togglePageReadable(), surfaces: ['page.head'] },
   'history.undo': { label: 'scUndo', icon: 'return', scope: 'app', hint: 'Ctrl+Z', run: () => handleHistoryShortcut('undo'), surfaces: ['shortcut'] },
   'history.redo': { label: 'scRedo', icon: 'return', scope: 'app', hint: 'Ctrl+Shift+Z', run: () => handleHistoryShortcut('redo'), surfaces: ['shortcut'] },

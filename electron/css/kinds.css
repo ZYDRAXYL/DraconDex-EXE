@@ -526,6 +526,27 @@ select.fp-input[multiple]{padding:2px}
 .page-title{padding-left:12px}
 .page-title .navbar-row{display:flex;align-items:center;gap:8px}
 .page-title .navbar-h{margin:0;font-size:1.15em;display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap}
+/* Title layout per page (Procress 13 part 4, REDESIGN.md C6 — hub/page-head.js) */
+.page-title.ph--center,.page-title.ph--right{text-align:center}
+.page-title.ph--right{text-align:right}
+.page-title.ph--center .navbar-row,.page-title.ph--center .navbar-h,.page-title.ph--center .mtags{justify-content:center}
+.page-title.ph--right .navbar-row,.page-title.ph--right .navbar-h,.page-title.ph--right .mtags{justify-content:flex-end}
+.page-title.ph--center .navbar-h,.page-title.ph--right .navbar-h{flex:0 1 auto}
+.ph-icon{font-size:calc(40px * var(--fsc,1));line-height:1.1;margin:4px 0 6px}
+.ph-cover{height:150px;margin:0 0 10px;border-radius:var(--rl);background:var(--raised) center/cover no-repeat}
+.ph-cover[data-ph="gone"]{display:none}
+.ph-pop{width:300px;padding:10px 12px}
+.ph-pop-h{font-weight:600;margin-bottom:6px}
+.ph-pop-label{font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));margin:10px 0 4px}
+.ph-pop-hint{font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));margin-top:8px}
+.ph-seg{display:flex;gap:4px}
+.ph-seg .btn{flex:1;justify-content:center}
+.ph-pop .fg{margin:0}
+.ph-icon-inp{font-size:calc(16px * var(--fsc,1))}
+.ph-covers{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:180px;overflow-y:auto}
+.ph-cover-opt{aspect-ratio:16/10;border:2px solid transparent;border-radius:var(--rs);background:var(--raised) center/cover no-repeat;cursor:pointer;color:var(--t2)}
+.ph-cover-opt.active{border-color:var(--accent)}
+.ph-cover-none{display:grid;place-items:center}
 .module-handle-inp{width:160px;font-size:calc(12px * var(--fsc,1))}
 .module-handle-add{padding:1px 7px;opacity:.55;font-size:calc(11px * var(--fsc,1))}
 .module-handle-add:hover{opacity:1}
