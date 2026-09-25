@@ -194,7 +194,7 @@ function settingThemeSectionHtml(){
   const palettes = getThemePalettes();
   const shownBuiltins = expanded ? UI_THEME_OPTIONS : UI_THEME_OPTIONS_BUILTIN.slice(0, 3);
   const builtins = shownBuiltins.map(key =>
-    settingThemeGridCellHtml(key, t(key), palettes[key] || {}, {active: S.settings.theme === key})
+    settingThemeGridCellHtml(key, themeOptionLabel(key), palettes[key] || {}, {active: S.settings.theme === key})
   ).join('');
   const customs = (S.settings.customThemes || []).map(ct =>
     settingThemeGridCellHtml(`custom:${ct.id}`, ct.name, ct.vars || {}, {active: S.settings.theme === `custom:${ct.id}`, isCustom: true})
@@ -220,9 +220,10 @@ function toggleSettingThemeExpanded(){
 
 // UI style (Procress 10 part 1, new) — shape/elevation preset, see
 // state.js's UI_STYLE_OPTIONS and css/ui-style.css. Collapsed shows the
-// first 3 presets, expanded shows all 5 — there is no "basic vs. all" split
-// for this one the way built-in vs. PKG themes has, so this just mirrors the
-// Theme section's collapse shape for a consistent page.
+// first 3 options; expanded shows the rest plus, since the Procress 10 part 2
+// slim, the catalog's not-yet-downloaded presets as locked rows. The label
+// map still lists the three that became packages — pkgLocalName() reads it so
+// they keep their translated names.
 const UI_STYLE_LABEL_KEY = {
   roundedMinimal: 'uiStyleRoundedMinimal', cleanMinimal: 'uiStyleCleanMinimal',
   fluent: 'uiStyleFluent', hardBlock: 'uiStyleHardBlock', oldPlain: 'uiStyleOldPlain',

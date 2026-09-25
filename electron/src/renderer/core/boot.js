@@ -36,10 +36,16 @@ async function init() {
   if (installedPackages) {
     loadInstalledPackages(installedPackages);
     // applyUiSettings() already ran at the top of init() against the built-in
-    // registries. Re-run it only when the active theme actually came from a
-    // package, so the common case pays nothing.
-    if (String(S.settings.theme).startsWith('pkg:')) applyUiSettings();
+    // registries. Re-run it only when the active theme or UI style actually
+    // came from a package, so the common case pays nothing.
+    if (String(S.settings.theme).startsWith('pkg:') || String(S.settings.uiStyle).startsWith('pkg:')) applyUiSettings();
   }
+  // Procress 10 part 2: a saved theme/UI style that is a package this machine
+  // lacks (a former built-in carried over by loadUiSettings()) is downloaded in
+  // the background. Main window only — the Welcome window runs this same boot,
+  // and two windows installing at once would mean two toasts. Skipped when the
+  // active set couldn't be read, since then everything would look missing.
+  if (installedPackages && !S.isWelcome) pkgResolvePending().catch(() => {});
   // The DraconDex-PKG catalog (Procress 10 part 2 — locked "download this"
   // rows on the Theme/UI-style/Language pages). Deliberately NOT in the
   // Promise.all wave above: pkg.active() is a local DB read, but pkg.catalog()
@@ -48,7 +54,7 @@ async function init() {
   // offline connection. Fire-and-forget instead; a no-op renderSettingWindow()
   // call if no setting page happens to be open, same advisory posture every
   // other package call in this file already takes.
-  api.pkg.catalog().then(r => { if (r?.ok) { S.pkgCatalogCache = r; renderSettingWindow(); } }).catch(() => {});
+  api.pkg.catalog().then(r => { if (r?.ok) { S.pkgCatalogCache = r; pkgRerenderChoices(); } }).catch(() => {});
   // Longest single stall of the boot: that first await is what triggers
   // getDB() → open the SQLite file + run initDB() migrations in main.
   window.__splash?.set(80);

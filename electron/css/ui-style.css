@@ -13,23 +13,12 @@
    tokens.css, so writing it out a second time would just be the same seven
    values duplicated with a second place to go stale. Set via
    core/settings.js's applyUiSettings() as body[data-ui-style], applied
-   through core/state.js's UI_STYLE_OPTIONS the same way data-theme is. */
+   through core/state.js's UI_STYLE_OPTIONS the same way data-theme is.
 
-body[data-ui-style="roundedMinimal"]{
-  --r:14px; --rs:10px; --rl:20px;
-  --shadow-pop:   0 4px 16px rgba(0,0,0,.18);
-  --shadow-float: 0 6px 20px rgba(0,0,0,.22);
-  --shadow-menu:  0 10px 30px rgba(0,0,0,.24);
-  --shadow-modal: 0 16px 48px rgba(0,0,0,.3);
-}
-
-body[data-ui-style="cleanMinimal"]{
-  --r:4px; --rs:2px; --rl:6px;
-  --shadow-pop:   0 1px 2px rgba(0,0,0,.12);
-  --shadow-float: 0 1px 3px rgba(0,0,0,.14);
-  --shadow-menu:  0 2px 6px rgba(0,0,0,.16);
-  --shadow-modal: 0 2px 10px rgba(0,0,0,.18);
-}
+   Procress 10 part 2: roundedMinimal, cleanMinimal and hardBlock moved to
+   DraconDex-PKG as uistyle-<name> packages (same seven values) and arrive as
+   inline vars on <body>. fluent stays here because Procress 13 grows it past
+   what seven tokens can express. */
 
 body[data-ui-style="fluent"]{
   --r:10px; --rs:6px; --rl:16px;
@@ -39,12 +28,3 @@ body[data-ui-style="fluent"]{
   --shadow-modal: 0 24px 80px rgba(0,0,0,.38);
 }
 
-body[data-ui-style="hardBlock"]{
-  --r:0px; --rs:0px; --rl:0px;
-  /* Sharp, no-blur offset instead of dropping shadow entirely — a modal or
-     menu with zero depth cue reads as broken, not "hard-edged". */
-  --shadow-pop:   2px 2px 0 rgba(0,0,0,.35);
-  --shadow-float: 3px 3px 0 rgba(0,0,0,.4);
-  --shadow-menu:  4px 4px 0 rgba(0,0,0,.42);
-  --shadow-modal: 6px 6px 0 rgba(0,0,0,.5);
-}

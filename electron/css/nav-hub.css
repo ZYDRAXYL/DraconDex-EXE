@@ -32,35 +32,10 @@
 body[data-theme="daylight"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
 body[data-theme="moonlight"] .brand-img{content:url('../../src/assets/brand/DraconDex_Color.png')}
 body[data-theme="midnight"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="redEclipse"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="clearSky"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
-body[data-theme="clearStar"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="afterRain"] .brand-img{content:url('../../src/assets/brand/DraconDex_Color.png')}
 body[data-theme="rainbow"] .brand-img{content:url('../../src/assets/brand/DraconDex_Color.png')}
-body[data-theme="atDawn"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
-body[data-theme="atDusk"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="atDay"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
-body[data-theme="blueEclipse"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="clearAurora"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="atTwilight"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="atSunset"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="clearComet"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="atDaybreak"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
-body[data-theme="afterSunset"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="atSunrise"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
-body[data-theme="atNight"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="atNoon"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
-body[data-theme="clearDusk"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
-body[data-theme="atMidnight"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="clearMoon"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="clearGalaxy"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="clearNebula"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="afterStorm"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="afterSnow"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
-body[data-theme="atMorning"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
-body[data-theme="clearSun"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
-body[data-theme="atEvening"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="clearMeteor"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
+/* A custom or package theme is only a palette, so applyUiSettings() stamps
+   data-theme-tone from its --bg; the default above already covers dark. */
+body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
 .nav-btn{
 	position:relative;
 	width:70%;aspect-ratio:1;height:auto;border:none;
