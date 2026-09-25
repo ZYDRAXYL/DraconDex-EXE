@@ -303,9 +303,23 @@ function cmdVisible(def, c, palette = false) {
   try { return def.when ? !!def.when(c) : true; } catch (_) { return false; }
 }
 
+// G6 (APP docs/REDESIGN.md A6): the palette lists the commands you ran last
+// first. Per-viewer convenience, so browser storage; a blocked or cleared
+// store just means no recent list.
+const RECENT_CMDS_KEY = 'ddx.recentCommands';
+function recentCommandIds() {
+  try { const v = JSON.parse(localStorage.getItem(RECENT_CMDS_KEY) || '[]'); return Array.isArray(v) ? v.filter((x) => COMMANDS[x]) : []; }
+  catch (_) { return []; }
+}
+function noteRecentCommand(id) {
+  try { localStorage.setItem(RECENT_CMDS_KEY, JSON.stringify([id, ...recentCommandIds().filter((x) => x !== id)].slice(0, 8))); }
+  catch (_) {}
+}
+
 async function runCommand(id, c = {}, el = null) {
   const def = COMMANDS[id];
   if (!def) return;
+  noteRecentCommand(id);
   if (def.sub || def.subHtml) {
     if (def.palette) return def.palette(c, el);
     return ctxMenu(null, def.sub(c), { anchor: el || paletteAnchor() });

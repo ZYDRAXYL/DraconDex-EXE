@@ -80,6 +80,11 @@
 #qs-box .qs-inputrow{display:flex;align-items:center;gap:8px;padding:4px 12px;border-bottom:1px solid var(--border)}
 #qs-box .qs-inputrow .qs-glass{color:var(--t3-aa,var(--t2));display:flex}
 #qs-box .qs-inputrow input{flex:1;border:none;background:transparent}
+/* G6: a command's shortcut as keycaps, and the recent-run marker */
+.qs-keys{display:inline-flex;gap:3px;margin-left:6px}
+.qs-keys kbd{font:calc(10px * var(--fsc,1))/1 ui-monospace,Consolas,monospace;color:var(--t3-aa,var(--t2));border:1px solid var(--border);border-bottom-width:2px;border-radius:4px;padding:2px 5px;background:var(--surface)}
+.qs-recent{display:inline-flex;margin-left:6px;color:var(--t3-aa,var(--t2))}
+.qs-recent .icon{width:12px;height:12px}
 #qs-box .qs-kbd{font-size:calc(10px * var(--fsc,1));color:var(--t3-aa,var(--t2));border:1px solid var(--border);border-radius:6px;padding:2px 7px}
 .qs-filters{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
 .qs-flabel{font-size:calc(10.5px * var(--fsc,1));color:var(--t3-aa,var(--t2))}

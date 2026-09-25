@@ -122,10 +122,13 @@ function settingWindowNavHtml(){
 function settingWindowBodyHtml(){
   const parts = (SETTING_PAGE_MERGE[S.settingPage] || [S.settingPage])
     .map(p => SETTING_PAGE_RENDERERS[`${S.settingGroup}.${p}`]).filter(Boolean);
-  const content = parts.length
+  // G5 (core/setting-search.js): a query shows the results in place of the page.
+  const query = String(S.settingQuery || '').trim();
+  const content = query ? settingSearchResultsHtml(query) : parts.length
     ? parts.map(fn => fn()).join('<div class="setting-merge-sep"></div>')
     : `<div class="empty"><p>${t('syncWorking')}</p></div>`;
-  return `<div class="setting-shell"><div class="setting-sidebar">${settingWindowNavHtml()}</div><div class="setting-content">${content}</div></div>`;
+  const search = `<div class="fg setting-search"><input type="search" value="${x(S.settingQuery || '')}" placeholder="${x(t('settingSearch'))}" oninput="onSettingSearch(this.value)"></div>`;
+  return `<div class="setting-shell"><div class="setting-sidebar">${search}${settingWindowNavHtml()}</div><div class="setting-content">${content}</div></div>`;
 }
 
 // ═══ Workspace → Theme (moved from settings.js's old Preferences panel) ══

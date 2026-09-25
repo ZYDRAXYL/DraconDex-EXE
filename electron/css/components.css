@@ -389,3 +389,10 @@
 .bundle-adj-mod{display:inline-flex;align-items:center;gap:4px}
 .bundle-adj-fields{grid-column:2;font-size:calc(12px * var(--fsc,1))}
 .bundle-adj-fields input{display:block;width:100%;margin-top:4px}
+
+/* Setting window search (Procress 13 part 4, G5 — core/setting-search.js) */
+.setting-search{margin:0 0 10px}
+.setting-hit-group{margin-bottom:14px}
+.setting-hit-row{display:flex;width:100%;justify-content:flex-start;text-align:left;padding:7px 10px;color:var(--t1)}
+.setting-hit-row:hover{background:var(--hover)}
+.setting-hit{outline:2px solid var(--accent);outline-offset:3px;border-radius:var(--rs);transition:outline-color .6s}
