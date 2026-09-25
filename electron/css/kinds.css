@@ -334,6 +334,10 @@ select.fp-input[multiple]{padding:2px}
 .vw-kc{font-size:calc(12px * var(--fsc,1));color:var(--t2);display:flex;align-items:center;gap:4px}
 .vw-groupby{background:var(--raised);border:1px solid var(--border);border-radius:var(--rs);color:var(--t1);padding:3px 6px}
 .cn-wrap{position:relative}
+/* An empty Designer canvas: the kind's empty state floats over the board,
+   which stays usable around it — only the card takes clicks. */
+.cn-empty{position:absolute;left:0;right:0;top:40px;z-index:2;pointer-events:none}
+.cn-empty .kind-empty{pointer-events:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl,12px);padding:18px 20px}
 .cn-board{height:600px}
 /* v5 Exhibitor Scene (mod/exhibitor-scene.js): Hierarchy | canvas | Inspector */
 .exh-scene{display:flex;gap:10px;height:620px;min-height:0}

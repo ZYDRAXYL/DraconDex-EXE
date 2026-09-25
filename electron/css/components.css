@@ -44,7 +44,7 @@
    buttons still use their background-fill hover). .btn-d keeps its red
    warning fill — a destructive-action cue, not decorative hover chrome. */
 .btn-i:not(.btn-d):hover{background:transparent}
-.btn-i.btn-i-sm{width:20px;height:20px;padding:2px}
+.btn-i.btn-i-sm{width:24px;height:24px;padding:4px} /* 24px = WCAG 2.5.8 target minimum; the icon stays 11px */
 .btn-i.btn-i-sm .icon{width:11px;height:11px}
 
 /* FORMS */
@@ -58,6 +58,19 @@
 }
 .fg input:focus,.fg textarea:focus,.fg select:focus{border-color:var(--accent)}
 .fg textarea{resize:vertical;min-height:72px}
+/* The component contract (APP docs/redesign/COMPONENTS.md): help under a
+   field, and the same line turned error. aria-invalid marks the field
+   itself, so a screen reader hears what the colour shows. */
+.fg .help{display:block;margin-top:5px;font-size:calc(11.5px * var(--fsc,1));color:var(--t3-aa,var(--t2))}
+.fg .help.err{color:var(--danger)}
+.fg [aria-invalid="true"]{border-color:var(--danger)}
+
+/* Keyboard focus. base.css drops the browser outline on inputs and buttons
+   (a mouse click drew one), which left keyboard users with nothing but a
+   border tint. :focus-visible is only true for keyboard focus, so pointer
+   use looks exactly as before. */
+.btn:focus-visible,.li:focus-visible,select:focus-visible,
+.fg input:focus-visible,.fg textarea:focus-visible,.fg select:focus-visible{outline:2px solid var(--accentH);outline-offset:2px}
 .fg select option{background:var(--raised)}
 .fg input[type="checkbox"]{width:auto;padding:0}
 

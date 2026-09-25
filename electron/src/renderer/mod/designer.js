@@ -76,6 +76,7 @@ function buildDesignerMainHtml(m, c) {
   if (d.view === 'matrix') return toolbar + buildDesignerMatrixHtml(d);
   return `${toolbar}
     <div class="cn-wrap">
+      ${d.nodes.length ? '' : `<div class="cn-empty">${kindEmptyStateHtml(m)}</div>`}
       <div id="dg-board" class="nar-board sk-board">
         <div id="dg-stage" style="width:${DG_W}px;height:${DG_H}px;position:relative;transform-origin:0 0">
           <svg id="dg-edges" width="${DG_W}" height="${DG_H}" viewBox="0 0 ${DG_W} ${DG_H}"></svg>

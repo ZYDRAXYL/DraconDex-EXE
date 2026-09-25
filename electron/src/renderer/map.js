@@ -37,7 +37,7 @@ function setMapTool(iid, tool){ const mi = MAPS[iid]; if (!mi) return; mi.state.
 
 function renderAreaList(areas, mi){
   if(!areas.length){
-    return `<div class="empty" style="padding:18px 10px"><p>ยังไม่มี Area</p></div>`;
+    return `<div class="empty" style="padding:18px 10px"><p>${t('mapNoAreas')}</p></div>`;
   }
   const iid = xj(mi.iid);
   return areas.map(area => {

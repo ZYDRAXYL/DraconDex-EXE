@@ -14,7 +14,7 @@ relative to the repo root.
 - `electron/src/renderer/i18n.js` — i18n data: locale dict `const L` (13 languages),
   `LANGUAGE_LABELS`, `COMMON_UI_TEXT`. Loaded before core.js.
 - `electron/src/renderer/core.js` — app shell: nexus home, `selectModule()`, sidebar,
-  `t()`, `toast()`, `confirmBox()`, `openModal()`, icon
+  `t()`, `toast()`, `uiConfirm()`, `openModal()`, icon
   dict `I`, escape helper `x()`, `loadModule()`.
 - `electron/src/renderer/<module>.js` — one file per module (director, navigator, hero,
   writer, sage) + shared panels (modals, timeline, map, relation, hashtag, search).
@@ -117,7 +117,7 @@ Detail header — entity color as left border, tab label in `--t3`:
 - Every user-visible string goes through `t('key')`; the key must exist in all
   13 locales or `t()` renders the raw key.
 - Escape all data interpolation with `x()`.
-- `toast(msg, 'ok')` for feedback; `confirmBox()` for destructive confirms —
+- `toast(msg, 'ok')` for feedback; `uiConfirm()` for destructive confirms —
   **never** `alert()` / `window.confirm()` (broken in the frameless window).
 - Inline `style=""` for layout tweaks is house style (everyone does it), but
   colors inside them must be `var(--…)` or data-driven `${col}`.
