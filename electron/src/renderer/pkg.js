@@ -17,7 +17,7 @@ function settingPkgPageHtml() {
 }
 registerSettingPage('plugin', 'packages', settingPkgPageHtml);
 
-const PKG_KIND_LABEL_KEY = { theme: 'pkgKindTheme', lang: 'pkgKindLang', view: 'pkgKindView', uistyle: 'pkgKindUistyle' };
+const PKG_KIND_LABEL_KEY = { theme: 'pkgKindTheme', lang: 'pkgKindLang', view: 'pkgKindView', uistyle: 'pkgKindUistyle', guide: 'pkgKindGuide' };
 
 function pkgDisplayName(p) {
   const lang = S.settings?.language || 'th';
@@ -144,6 +144,8 @@ function pkgCatalogRowHtml(p) {
         <div class="sync-hint">${x(kind)}${desc ? ` · ${x(desc)}` : ''}</div>
       </div>
       <div class="sync-upload-actions">
+        ${p.kind === 'theme' && p.preview?.vars ? `<span class="theme-swatches" title="${t('pkgPreviewHint')}">${
+          THEME_SWATCH_VARS.map(v => `<i style="background:${x(p.preview.vars[v] || '')}"></i>`).join('')}</span>` : ''}
         <button class="btn btn-p btn-sm" id="pkg-install-${x(p.id)}" onclick="pkgInstallClick('${x(p.id)}')">
           ${p.updateAvailable ? t('pkgUpdate') : t('pkgInstall')}
         </button>

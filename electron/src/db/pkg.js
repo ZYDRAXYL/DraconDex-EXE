@@ -139,6 +139,21 @@ function validatePayload(kind, payload) {
   return null;
 }
 
+/**
+ * The `preview: { vars }` a theme / uistyle catalog entry carries so a locked
+ * row can show what it looks like before download (Procress 10 part 2). Remote
+ * content like the rest of the catalog, so it passes the same rules as a
+ * payload of its kind, or is dropped (the row just shows no preview). It is
+ * only ever drawn as swatches — never applied; what applies is the payload,
+ * after its hash has checked out.
+ */
+function catalogPreview(e) {
+  if (e.kind !== 'theme' && e.kind !== 'uistyle') return null;
+  const p = e.preview;
+  if (!p || typeof p !== 'object' || validatePayload(e.kind, { vars: p.vars })) return null;
+  return { vars: { ...p.vars } };
+}
+
 // ---------------------------------------------------------------------------
 // Public surface
 // ---------------------------------------------------------------------------
@@ -184,6 +199,7 @@ async function pkgCatalog(release) {
       id: e.id, kind: e.kind, version: e.version, displayName: e.displayName,
       description: e.description || null, minAppVersion: e.minAppVersion || null,
       bytes: e.bytes || null,
+      preview: catalogPreview(e),
       installedVersion: have ? have.version : null,
       updateAvailable: !!have && have.version !== e.version,
     });

@@ -199,6 +199,11 @@
    the cell itself carries no onclick; the Download button inside it stays
    at full opacity so it still reads as the one actionable thing in the row. */
 .prefs-theme-cell.locked{opacity:.55;cursor:default}
+/* With a catalog preview the colours ARE the point — keep them at full
+   strength and mark "not downloaded" with a dashed border + corner button. */
+.prefs-theme-cell.locked.has-preview{opacity:1;border-style:dashed;position:relative}
+.prefs-theme-cell.locked.has-preview .prefs-theme-name{color:var(--t2)}
+.prefs-theme-cell.locked.has-preview .prefs-theme-dl{position:absolute;top:10px;right:10px}
 .prefs-theme-cell.locked:hover{border-color:var(--border)}
 .prefs-theme-cell.locked .btn{opacity:1}
 .prefs-theme-cell-lockglyph{align-items:center;justify-content:center;color:var(--t3)}

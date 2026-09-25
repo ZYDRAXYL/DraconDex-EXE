@@ -145,6 +145,11 @@
 .theme-item.locked{cursor:default;opacity:.55}
 .theme-item.locked:hover{background:var(--bg);color:var(--t2)}
 .theme-item.locked .btn{opacity:1}
+/* Procress 10 part 2: a locked UI style's shape sample (catalog preview). */
+.theme-item.locked.has-preview{opacity:1;border-style:dashed}
+.theme-item.locked.has-preview .theme-name{color:var(--t2)}
+.uistyle-sample{flex:0 0 auto;width:40px;height:26px;margin-right:10px;background:var(--raised);border:1px solid var(--border);display:inline-flex;align-items:flex-end;padding:4px;box-sizing:border-box}
+.uistyle-sample i{display:block;width:16px;height:7px;background:var(--accent)}
 .theme-swatches{
 	display:inline-flex;flex-shrink:0;border-radius:4px;overflow:hidden;
 	border:1px solid var(--border);
