@@ -110,6 +110,8 @@ const COMMANDS = {
   'page.history': { label: 'versionHistory', icon: 'timeline', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode, run: () => toggleVersionPanel(S.activeModuleNode.id), surfaces: ['page.head'] },
   'app.focusMode': { label: 'focusMode', icon: 'eye', scope: 'app', hint: 'Ctrl+Shift+F', run: () => toggleFocusMode(), surfaces: ['shortcut'] },
   // Procress 13 part 4 (REDESIGN.md C6): the title's own layout, per page.
+  'page.useTemplate': { label: 'tplUse', icon: 'layer', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode?.itemKey, run: () => openTemplateGallery(S.activeModuleNode.id), surfaces: ['page.head'] },
+  'page.saveTemplate': { label: 'tplSave', icon: 'star', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode?.itemKey, run: () => openSavePresetModal(S.activeModuleNode.id), surfaces: ['page.head'] },
   'page.layout': { label: 'pageLayout', icon: 'fields', scope: 'app', when: () => !!(S.activeModuleNode || S.activeItemNode?.itemKey), run: (c, el) => openPageLayoutPopup(el), surfaces: ['page.head'] },
   'page.readable': { label: 'pageReadable', icon: 'document', scope: 'app', when: () => !!(S.activeModuleNode || S.activeItemNode?.itemKey), run: () => togglePageReadable(), surfaces: ['page.head'] },
   'history.undo': { label: 'scUndo', icon: 'return', scope: 'app', hint: 'Ctrl+Z', run: () => handleHistoryShortcut('undo'), surfaces: ['shortcut'] },
@@ -160,6 +162,7 @@ const COMMANDS = {
     palette: (c) => openHtmlPopup(buildMoveToListHtml(c.moduleId)),
     surfaces: ['nest.ctx'],
   },
+  'module.saveBundle': { label: 'bundleSaveMine', icon: 'star', scope: 'module', when: (c) => isFolderCtx(c), run: (c) => openSaveBundleModal(c.moduleId), surfaces: ['nest.ctx'] },
   'module.savePreset': { label: 'savePreset', icon: 'star', scope: 'module', when: (c) => cmdModule(c) && !isFolderCtx(c), run: (c) => openSavePresetModal(c.moduleId), surfaces: ['nest.ctx'] },
   'app.managePresets': { label: 'managePresets', icon: 'options', scope: 'app', when: () => !!S.nexus, run: () => openManagePresetsModal(), surfaces: ['kind.picker'] },
   'module.delete': { label: 'delete', icon: 'delete', danger: true, scope: 'module', run: (c) => deleteModuleNode(c.moduleId), surfaces: ['nest.ctx', 'classifier.ctx'] },

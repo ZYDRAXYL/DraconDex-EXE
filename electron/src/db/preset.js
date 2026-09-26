@@ -16,6 +16,9 @@
 //                            entries: [{ text, weight, lo, hi, table }] }] — an
 //                            entry's `table` is the INDEX of another table in the
 //                            same preset, rolled in its place (the name generator)
+//   page, itemPage           the module's page and its elements' shared page, as
+//                            template blocks (Procress 14, TEMPLATES.md §3.3) — a
+//                            preset IS a user's page template ("Mine" in the gallery)
 //
 // Only settings that are about the module's shape are captured. filterDef,
 // managerPicks, exhibitorFor and seedScene name other rows by id, so they
@@ -29,6 +32,25 @@ const CAT_TYPES = new Set(['object', 'character', 'element']);
 const FIELD_TYPES = new Set(['text', 'textarea', 'date', 'number', 'select', 'multi', 'checkbox', 'url', 'relation', 'formula']);
 const MAX_FIELDS = 40;
 const MAX_TABLES = 20, MAX_ENTRIES = 200;
+const MAX_BLOCKS = 60, MAX_BLOCK_JSON = 200000;
+
+// Template blocks as stored: plain JSON, bounded. The renderer skips a
+// component it does not know, so nothing here needs to know the registry.
+function cleanBlocks(v) {
+  if (!Array.isArray(v) || !v.length) return null;
+  const walk = (list, depth) => (Array.isArray(list) ? list : []).slice(0, MAX_BLOCKS).filter((b) => b && typeof b === 'object').map((b) => {
+    const o = {};
+    if (typeof b.type === 'string') o.type = b.type.slice(0, 20);
+    if (typeof b.component === 'string') o.component = b.component.slice(0, 60);
+    if (b.config && typeof b.config === 'object' && !Array.isArray(b.config)) o.config = b.config;
+    if (typeof b.content === 'string') o.content = b.content.slice(0, 20000);
+    if (b.borrow === true || typeof b.borrow === 'string') o.borrow = b.borrow;
+    if (Array.isArray(b.children) && depth < 2) o.children = b.children.slice(0, 3).map((c) => walk(c, depth + 1));
+    return o;
+  });
+  const out = walk(v, 0);
+  return JSON.stringify(out).length <= MAX_BLOCK_JSON ? out : null;
+}
 
 const colorCode = (d, id) => (id == null ? null : d.prepare(`SELECT color_code FROM use_color WHERE id=?`).get(id)?.color_code ?? null);
 function colorId(d, code) {
@@ -57,6 +79,7 @@ function cleanSpec(raw) {
   if (Array.isArray(s.fields)) {
     out.fields = s.fields.slice(0, MAX_FIELDS).filter((f) => str(f?.name)).map((f) => ({
       name: str(f.name), type: FIELD_TYPES.has(f.type) ? f.type : 'text',
+      ...(typeof f.key === 'string' && /^[a-z][a-zA-Z0-9]*$/.test(f.key) ? { key: f.key } : {}),
       ...(str(f.options, 4000) ? { options: str(f.options, 4000) } : {}),
       levelable: !!f.levelable, hasCondition: !!f.hasCondition,
     }));
@@ -72,6 +95,7 @@ function cleanSpec(raw) {
       })),
     }));
   }
+  for (const k of ['page', 'itemPage']) { const b = cleanBlocks(s[k]); if (b) out[k] = b; }
   return out;
 }
 
@@ -90,7 +114,8 @@ function capturePreset(moduleId) {
     // element of THIS category, not to the shape of a new one.
     spec.fields = d.prepare(`
       SELECT description AS name, attribute_type AS type, options, levelable, has_condition AS hasCondition
-      FROM classifier_template WHERE module_ref=? AND object_ref IS NULL ORDER BY display_order, id`).all(moduleId);
+      FROM classifier_template WHERE module_ref=? AND object_ref IS NULL ORDER BY display_order, id`).all(moduleId)
+      .map((f) => { let key; try { key = JSON.parse(f.options || '{}')?.key; } catch (_) {} return key ? { ...f, key } : f; });
   }
   if (m.kind === 'diviner') {
     // Links between this module's own tables become indexes; a link to
@@ -103,6 +128,7 @@ function capturePreset(moduleId) {
         .map((e) => ({ text: e.entry_text || '', weight: e.weight, lo: e.range_lo, hi: e.range_hi, table: idx.get(e.linker_key) ?? null })),
     }));
   }
+  Object.assign(spec, require('./page-template').captureTemplate(moduleId));
   return { kind: m.kind, spec: cleanSpec(spec) };
 }
 
@@ -130,9 +156,10 @@ function applyPreset(moduleId, rawSpec) {
       const have = new Set(d.prepare(`SELECT description FROM classifier_template WHERE module_ref=? AND object_ref IS NULL`).all(moduleId).map((r) => r.description));
       let order = d.prepare(`SELECT COALESCE(MAX(display_order),-1) AS m FROM classifier_template WHERE module_ref=?`).get(moduleId).m;
       const ins = d.prepare(`INSERT INTO classifier_template (module_ref, description, attribute_type, levelable, has_condition, display_order, options) VALUES (?,?,?,?,?,?,?)`);
+      const { optionsWithKey } = require('./page-template');
       for (const f of s.fields) {
         if (have.has(f.name)) continue;
-        ins.run(moduleId, f.name, f.type, f.levelable ? 1 : 0, f.hasCondition ? 1 : 0, ++order, f.options ?? null);
+        ins.run(moduleId, f.name, f.type, f.levelable ? 1 : 0, f.hasCondition ? 1 : 0, ++order, optionsWithKey(f.options, f.key));
         have.add(f.name);
         added++;
       }
@@ -147,7 +174,12 @@ function applyPreset(moduleId, rawSpec) {
         .run(ids[i], e.weight, e.lo, e.hi, e.text, e.table != null ? `divt_${ids[e.table]}` : null, k)));
       tables = ids.length;
     }
-    return { fields: added, tables };
+    // The preset's page, last — its blocks may name the fields just added.
+    let page = null;
+    if (s.page || s.itemPage) {
+      page = require('./page-template').applyTemplate(moduleId, { page: s.page, itemPage: s.itemPage }, { fields: false });
+    }
+    return { fields: added, tables, ...(page ? { page } : {}) };
   });
   return run();
 }

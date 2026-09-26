@@ -48,6 +48,8 @@ contextBridge.exposeInMainWorld('api', {
     create:        (nx,parent,spec) => inv('bundle:create', nx, parent, spec),
     guide:         (locale)         => inv('bundle:guide', locale),
     catalog:       (locale)         => inv('bundle:catalog', locale),
+    saveMine:      (nx,folder,name,opts) => inv('bundle:saveMine', nx, folder, name, opts),
+    listMine:      (nx)             => inv('bundle:listMine', nx),
   },
   diviner: {
     getTables:     (mref)          => inv('diviner:getTables', mref),
@@ -72,6 +74,11 @@ contextBridge.exposeInMainWorld('api', {
     restore: (nx,id)       => inv('trash:restore', nx, id),
     delete:  (nx,id)       => inv('trash:delete', nx, id),
     empty:   (nx)          => inv('trash:empty', nx),
+  },
+  template: {
+    catalog: (locale)          => inv('template:catalog', locale),
+    apply:   (mid,tpl,opts)    => inv('template:apply', mid, tpl, opts),
+    restore: (mid,old)         => inv('template:restore', mid, old),
   },
   preset: {
     list:   (nx,kind)      => inv('preset:list', nx, kind),

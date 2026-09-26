@@ -765,6 +765,12 @@ h('tools:csvPick', async () => {
 h('bundle:guide',  (locale)          => db.guideSpec(locale));
 // The genre bundles, vendored from DraconDex-SDB and resolved in the UI language.
 h('bundle:catalog', (locale)         => db.bundleCatalog(locale));
+// Procress 14 (APP docs/TEMPLATES.md §3–§4): page templates and the user's own bundles.
+h('bundle:saveMine', (nx, folderId, name, opts) => db.saveBundle(nx, folderId, name, opts));
+h('bundle:listMine', (nx)          => db.listBundles(nx));
+h('template:catalog', (locale)     => db.pageCatalog(locale));
+h('template:apply',  (mid, tpl, opts) => db.applyTemplate(mid, tpl, opts));
+h('template:restore', (mid, old)   => db.restorePageLayout(mid, old));
 
 // v5 Part 7 (§11.4): the whole Nexus as .md files in a .zip — export only.
 h('nexus:exportMarkdown', async (id) => {

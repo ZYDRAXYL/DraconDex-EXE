@@ -14,6 +14,8 @@ const csvImport = require('./src/db/csv-import');
 const pageBlock = require('./src/db/page-block');
 const htmlExport = require('./src/db/html-export');
 const bundleCatalog = require('./src/db/bundle-catalog');
+const pageTemplate = require('./src/db/page-template');
+const bundleCapture = require('./src/db/bundle-capture');
 const scribe    = require('./src/db/scribe');
 const wiki      = require('./src/db/wiki');
 const color     = require('./src/db/color');
@@ -64,7 +66,10 @@ module.exports = {
   ...csvImport,
   ...pageBlock,
   ...htmlExport,
-  ...bundleCatalog,
+  bundleCatalog: bundleCatalog.bundleCatalog,
+  pageCatalog: pageTemplate.pageCatalog, applyTemplate: pageTemplate.applyTemplate,
+  restorePageLayout: pageTemplate.restorePageLayout, captureTemplate: pageTemplate.captureTemplate,
+  ...bundleCapture,
   ...scribe,
   ...wiki,
   ...color,
