@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('api', {
     exportHtml:   (nx,payload)   => inv('htmlExport:write', nx,payload),
     exportTable:  (mid,format)   => inv('export:table', mid,format),
     exportPdf:    (nx,payload,opts) => inv('export:pdf', nx,payload,opts),
+    exportDoc:    (mid,format,opts) => inv('export:doc', mid,format,opts),
     shareFile:    (id)     => inv('nexus:shareFile', id),
     revealFile:   (id)     => inv('nexus:revealFile', id),
     taught:       (nx)     => inv('nexus:taught', nx),
@@ -202,7 +203,6 @@ contextBridge.exposeInMainWorld('api', {
     setChapterLabel: (id,lb) => inv('author:setChapterLabel', id,lb),
     moveChapter:   (mref,ids) => inv('author:moveChapter', mref,ids),
     setChapterMeta: (id,meta) => inv('author:setChapterMeta', id,meta),
-    exportDoc:     (n,html)  => inv('author:exportDoc', n,html),
   },
   drafter: {
     exportFile: (n,ext,c) => inv('drafter:exportFile', n,ext,c),

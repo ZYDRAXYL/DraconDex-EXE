@@ -829,6 +829,26 @@ h('export:pdf', async (nx, payload, opts) => {
     fs.rm(tmp, { force: true }, () => {});
   }
 });
+// Procress 14 (EXPORT-DECOR.md E2 / E5 / E3): a module as a Word document,
+// an Author book as an EPUB, a module (and what is inside it) as Markdown.
+// All built from the vault in main; the renderer names the module.
+const DOC_FORMATS = {
+  docx: { ext: 'docx', filter: { name: 'Word', extensions: ['docx'] }, run: (id, file) => db.exportDocx(id, file) },
+  epub: { ext: 'epub', filter: { name: 'EPUB', extensions: ['epub'] }, run: (id, file, o) => db.exportEpub(id, file, o) },
+  md:   { ext: 'zip', suffix: '-markdown', filter: { name: 'Markdown (.zip)', extensions: ['zip'] }, run: (id, file, o) => db.exportNexusMarkdown(o.nexusId, file, { moduleId: id }) },
+};
+h('export:doc', async (moduleId, format, opts) => {
+  const m = db.getModule(moduleId);
+  const f = DOC_FORMATS[format];
+  if (!m || !f) return { ok: false, code: 'not_found' };
+  const safe = String(m.name || 'export').replace(/[\\/:*?"<>|]/g, '_').slice(0, 120) || 'export';
+  const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'Export', defaultPath: path.join(app.getPath('documents'), `${safe}${f.suffix || ''}.${f.ext}`), filters: [f.filter],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  const r = f.run(moduleId, result.filePath, { lang: String(opts?.lang || 'en'), nexusId: m.nexus_ref });
+  return { ...r, saved: result.filePath };
+});
 // Procress 14 (EXPORT-DECOR.md E4): a Classifier / Chronicler as a table.
 // The renderer names the module and the format; main reads the vault.
 h('export:table', async (moduleId, format) => {
@@ -1602,18 +1622,6 @@ h('sketcher:exportPng', async (name, dataUrl) => {
 // Plan part5 Author #5: ".doc" export is plain HTML wrapped in a Word
 // namespace shell — Word opens this natively, no docx-generation library
 // needed (package.json has none, and this app is offline-first).
-h('author:exportDoc', async (name, html) => {
-  const win = BrowserWindow.getFocusedWindow();
-  const res = await dialog.showSaveDialog(win, {
-    defaultPath: `${name || 'book'}.doc`,
-    filters: [{ name: 'Word Document', extensions: ['doc'] }],
-  });
-  if (res.canceled || !res.filePath) return { canceled: true };
-  const shell = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset="utf-8"></head><body>${html}</body></html>`;
-  fs.writeFileSync(res.filePath, shell, 'utf8');
-  return { saved: res.filePath };
-});
-
 // Plan part5 Drafter #1: content is already raw markdown text — no HTML
 // shell needed, just write the string as-is. Both extensions are offered
 // as separate filter groups so the save dialog's own format dropdown lets

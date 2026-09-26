@@ -1,29 +1,33 @@
 'use strict';
 // ═══ One "Export…" window (Procress 14, APP docs/EXPORT-DECOR.md E8) ════
-// Every way out of the app for this page, as cards: PDF, CSV, Excel, the
-// HTML site, Markdown and the .mddx module file. A card that cannot do
+// Every way out of the app for this page, as cards: PDF, Word, EPUB, Excel,
+// CSV, the HTML site, Markdown and the .mddx module file. A card that cannot do
 // anything for this kind is shown dimmed with the reason, not hidden — so
 // the user learns where CSV lives instead of wondering where it went.
 //
 // PDF and the site draw pages the same way (hub/html-export.js hxRenderAll);
-// CSV / Excel are read from the vault in main (db/table-export.js). The
+// the others are read from the vault in main (db/table-export.js,
+// docx-export.js, epub-export.js, md-export.js). The
 // last choices are remembered per module in module_ui 'exportPrefs'.
 
+const DOC_KINDS = ['author', 'classifier', 'chronicler', 'drafter', 'inspector'];
 const EXPORT_FORMATS = [
   { id: 'pdf', icon: 'document', title: 'exportPdf', desc: 'exportPdfD' },
+  { id: 'docx', icon: 'writer', title: 'exportDocx', desc: 'exportDocxD', kinds: DOC_KINDS, why: 'exportOnlyDocs' },
+  { id: 'epub', icon: 'book', title: 'exportEpub', desc: 'exportEpubD', kinds: ['author'], why: 'exportOnlyBooks' },
   { id: 'xlsx', icon: 'table', title: 'exportXlsx', desc: 'exportXlsxD', kinds: ['classifier', 'chronicler'] },
   { id: 'csv', icon: 'list', title: 'exportCsv', desc: 'exportCsvD', kinds: ['classifier', 'chronicler'] },
   { id: 'html', icon: 'globe', title: 'htmlExport', desc: 'exportHtmlD' },
-  { id: 'md', icon: 'book', title: 'exportMarkdown', desc: 'exportMdD' },
+  { id: 'md', icon: 'edit', title: 'exportMarkdown', desc: 'exportMdAnyD' },
   { id: 'mddx', icon: 'export', title: 'settingDbExportModule', desc: 'exportMddxD' },
 ];
-const EXPORT_PREF_DEFAULT = { fmt: 'pdf', scope: 'page', paper: 'A4', orientation: 'portrait', theme: 'print', headerFooter: true, toc: true };
+const EXPORT_PREF_DEFAULT = { fmt: 'pdf', scope: 'page', mdScope: 'module', paper: 'A4', orientation: 'portrait', theme: 'print', headerFooter: true, toc: true };
 let _ex = null; // { moduleId, itemKey, kind, prefs }
 
 // Why a format cannot run here — null when it can.
 function exportBlocked(f, kind) {
   if (kind === 'collector' && ['pdf', 'html'].includes(f.id)) return t('exportNoPage');
-  if (f.kinds && !f.kinds.includes(kind)) return t('exportOnlyTables');
+  if (f.kinds && !f.kinds.includes(kind)) return t(f.why || 'exportOnlyTables');
   return null;
 }
 
@@ -81,7 +85,11 @@ function exportOptsHtml(fmt) {
       </div>
       <div class="ex-checks">${chk('ex-hf', 'headerFooter', t('exportHeaderFooter'))}${chk('ex-toc', 'toc', t('exportToc'))}</div>`;
   }
-  const hint = { csv: 'exportCsvHint', xlsx: 'exportXlsxHint', html: 'exportHtmlHint', md: 'exportMdHint', mddx: 'exportMddxHint' }[fmt];
+  if (fmt === 'md') {
+    return `<div class="ex-row"><div class="fg"><label>${t('exportScope')}</label>${sel('ex-mdscope', 'mdScope',
+      [['module', t('exportScopeInside')], ['nexus', t('exportScopeNexus')]])}</div></div><p class="drafter-hint">${t('exportMdAnyHint')}</p>`;
+  }
+  const hint = { csv: 'exportCsvHint', xlsx: 'exportXlsxHint', html: 'exportHtmlHint', mddx: 'exportMddxHint', docx: 'exportDocxHint', epub: 'exportEpubHint' }[fmt];
   return `<p class="drafter-hint">${t(hint)}</p>`;
 }
 
@@ -101,7 +109,8 @@ async function runExport() {
   const { moduleId, itemKey, prefs } = _ex;
   try { await api.module.setUi(moduleId, 'exportPrefs', JSON.stringify(prefs)); } catch (_) {}
   if (prefs.fmt === 'html') { closeModal(); openHtmlExportModal(S.nexus.id); return; }
-  if (prefs.fmt === 'md') { closeModal(); nexusExportMarkdown(S.nexus.id); return; }
+  if (prefs.fmt === 'md' && prefs.mdScope === 'nexus') { closeModal(); nexusExportMarkdown(S.nexus.id); return; }
+  if (['docx', 'epub', 'md'].includes(prefs.fmt)) { closeModal(); await exportDocNow(moduleId, prefs.fmt); return; }
   if (prefs.fmt === 'mddx') { closeModal(); ctxExportModule(moduleId); return; }
   if (prefs.fmt === 'csv' || prefs.fmt === 'xlsx') { closeModal(); await exportTableNow(moduleId, prefs.fmt); return; }
   await exportPdfNow(moduleId, itemKey, prefs);
@@ -116,6 +125,16 @@ async function exportTableNow(moduleId, fmt) {
   if (r.skipped?.length) notes.push(t('exportFormulaSkipped').replace('{names}', r.skipped.join(', ')));
   if (r.more) notes.push(t('exportMoreTimelines').replace('{n}', r.more));
   if (notes.length) setTimeout(() => toast(notes.join(' · '), 'warn'), 1600);
+}
+
+// Word, EPUB, Markdown of this module — built in main from the vault.
+async function exportDocNow(moduleId, fmt) {
+  const r = await api.nexus.exportDoc(moduleId, fmt, { lang: S.settings?.language || 'en' });
+  if (r?.canceled) return;
+  if (!r?.ok) { toast(t(r?.code === 'empty' ? 'exportMarkdownEmpty' : 'driveErrServer'), 'error'); return; }
+  const n = fmt === 'epub' ? r.chapters : fmt === 'md' ? r.files : r.sections;
+  toast(`${t('saved')}${n != null ? ` · ${n}` : ''}${r.pictures ? ` · ${r.pictures} ${t('exportPictures')}` : ''}`, 'ok');
+  if (r.missing) setTimeout(() => toast(t('exportMediaMissing').replace('{n}', r.missing), 'warn'), 1600);
 }
 
 async function exportPdfNow(moduleId, itemKey, prefs) {

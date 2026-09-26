@@ -245,7 +245,7 @@ function buildAuthorBookHtml(m, d) {
     <div class="author-chapters">
       <div class="au-col-label" data-no-i18n>CHAPTERS · ${x(m.name)}</div>
       ${navRows}
-      <button class="btn btn-s au-book-export" onclick="exportAuthorBookDoc(${m.id})">${I.document} ${t('exportDoc')}</button>
+      <button class="btn btn-s au-book-export" onclick="openExportModal(${m.id})">${I.export} ${t('exportTitle')}</button>
     </div>
     <div class="author-main au-book-pages" id="au-book-host">
       <div class="empty" style="padding:30px"><p>…</p></div>
@@ -310,16 +310,6 @@ async function mountAuthorBook() {
   host.innerHTML = pages.length
     ? pages.map(p => `<div class="au-book-page">${p.innerHTML}</div>`).join('')
     : `<div class="empty" style="padding:30px"><p>${t('nestEmpty')}</p></div>`;
-}
-
-async function exportAuthorBookDoc(moduleId) {
-  const d = S.authorData;
-  const m = findModuleNode(moduleId);
-  const html = d.chapters.map(ch =>
-    `<h2>${x(ch.chapter_label ? ch.chapter_label + '. ' : '')}${x(ch.name)}</h2>${authorContentAsHtml(ch.chapter_content)}`
-  ).join('<br clear="all" style="page-break-before:always">');
-  const res = await api.author.exportDoc(m?.name || 'book', html);
-  if (!res?.canceled) toast(t('saved'), 'ok');
 }
 
 // ── Chapter CRUD ────────────────────────────────────────────────────────

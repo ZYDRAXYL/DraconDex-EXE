@@ -94,9 +94,34 @@ function mediaInline(htmls, nexusId) {
   return { urls, missing };
 }
 
+// One picture's bytes, for a writer that embeds (DOCX, EPUB): the original
+// when it is there, not over the per-file cap and of a type the writer can
+// hold (accept: extensions, e.g. DOCX takes no WebP), else the proxy.
+// → { data, ext, mime } | null
+function mediaBytes(id, accept = null) {
+  const f = getImportFile(id);
+  const orig = originalOf(f);
+  const ok = (ext) => !accept || accept.includes(ext === 'jpeg' ? 'jpg' : ext);
+  if (orig && orig.size <= MAX_INLINE_FILE && ok(orig.ext)) {
+    try { return { data: fs.readFileSync(orig.file), ext: orig.ext === 'jpeg' ? 'jpg' : orig.ext, mime: mimeOf(orig.ext) }; } catch (_) { /* the proxy */ }
+  }
+  const px = f && proxyOf(id);
+  return px && ok(px.ext) ? { data: px.data, ext: px.ext, mime: px.type } : null;
+}
+
+// One picture as a zip entry source, streamed from disk when the original
+// is there: { path } or { data }, plus its extension and file name.
+function mediaSource(id) {
+  const f = getImportFile(id);
+  const orig = originalOf(f);
+  if (orig) return { path: orig.file, ext: orig.ext, fileName: f.file_name };
+  const px = f && proxyOf(id);
+  return px ? { data: px.data, ext: px.ext, fileName: f.file_name } : null;
+}
+
 function rewriteMedia(html, nexusId, urls) {
   return String(html || '').replace(URL_RE, (all, nx, id) =>
     (Number(nx) === Number(nexusId) && urls.has(Number(id)) ? urls.get(Number(id)) : all));
 }
 
-module.exports = { mediaIds, mediaForSite, mediaInline, rewriteMedia };
+module.exports = { mediaIds, mediaForSite, mediaInline, mediaBytes, mediaSource, rewriteMedia };
