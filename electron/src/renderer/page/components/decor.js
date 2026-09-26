@@ -95,8 +95,19 @@ function pbLightboxDraw() {
       <button class="btn btn-g btn-i pb-lb-next" onclick="pbLightboxStep(1)" aria-label="${t('pbNext')}">${I.chevronRight}</button>
       <span class="pb-lb-n" data-no-i18n>${i + 1} / ${ids.length}</span>` : ''}`;
 }
-function pbLightboxStep(d) { if (_pbLb) { _pbLb.i = (_pbLb.i + d + _pbLb.ids.length) % _pbLb.ids.length; pbLightboxDraw(); } }
-function pbLightboxClose() { _pbLb = null; q('#pb-lightbox')?.remove(); }
+function pbLightboxStep(d) {
+  if (!_pbLb) return;
+  if (_pbLb.pdf) { pcPdfFullStep(d); return; } // a PDF's pages (components/media.js)
+  if (!_pbLb.ids.length) return;
+  _pbLb.i = (_pbLb.i + d + _pbLb.ids.length) % _pbLb.ids.length;
+  pbLightboxDraw();
+}
+function pbLightboxClose() {
+  _pbLb = null;
+  q('#pb-lightbox')?.remove();
+  // a model shown in the box lets its WebGL context go (components/media-3d.js)
+  if (typeof PC3D !== 'undefined') for (const k of [...PC3D.keys()]) if (String(k).startsWith('lb-')) pc3dStop(k);
+}
 document.addEventListener('keydown', (e) => {
   if (!_pbLb) return;
   if (e.key === 'Escape') { e.stopPropagation(); pbLightboxClose(); } else if (e.key === 'ArrowLeft') pbLightboxStep(-1); else if (e.key === 'ArrowRight') pbLightboxStep(1);

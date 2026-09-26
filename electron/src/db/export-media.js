@@ -28,9 +28,12 @@ function mediaIds(htmls, nexusId) {
   return [...ids];
 }
 
-function originalOf(f) {
+// The file on disk, when it is one of `classes`. A site carries a page's
+// video, sound and subtitles too (MEDIA-EMBED M8) — as files, played by the
+// browser's own <video>/<audio>; a PDF or DOCX only ever holds pictures.
+function originalOf(f, classes = ['image']) {
   const ext = String(f?.file_type || '').toLowerCase();
-  if (!f || f.source_kind !== 'file' || assetClassOf(ext) !== 'image' || !f.file_path) return null;
+  if (!f || f.source_kind !== 'file' || !classes.includes(assetClassOf(ext)) || !f.file_path) return null;
   try {
     const st = fs.statSync(f.file_path);
     return st.isFile() ? { ext, size: st.size, file: f.file_path } : null;
@@ -51,7 +54,7 @@ function mediaForSite(htmls, nexusId) {
   let missing = 0;
   for (const id of mediaIds(htmls, nexusId)) {
     const f = getImportFile(id);
-    const orig = originalOf(f);
+    const orig = originalOf(f, ['image', 'video', 'audio', 'track']);
     if (orig) {
       const name = `media/${id}.${orig.ext}`;
       entries.push({ name, path: orig.file });

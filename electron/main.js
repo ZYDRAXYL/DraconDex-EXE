@@ -397,7 +397,11 @@ function registerDisplayImageProtocol() {
     try { f = await runWithVault(nexusId, () => db.getImportFile(id)); }
     catch (_) { return new Response(null, { status: 404 }); }
     const ext = (f?.file_type || '').toLowerCase();
-    if (!f || f.source_kind !== 'file' || !isStreamable(ext)) return new Response(null, { status: 404 });
+    if (!f || f.source_kind !== 'file') return new Response(null, { status: 404 });
+    // a poster (a PDF's first page, a model's first frame — MEDIA-EMBED M4/M5)
+    // is a proxy like an image's; the file itself streams only if its class does
+    const proxyOnly = /[?&]proxy=1(?:&|#|$)/.test(url);
+    if (!proxyOnly && !isStreamable(ext)) return new Response(null, { status: 404 });
     // v5 (APP docs/V5.md §2.5): the cover proxy stored in the vault, served
     // on ?proxy=1 and as the automatic fallback for an image whose original
     // has gone missing — the vault still shows every cover after a move.
@@ -1118,27 +1122,45 @@ h('importdock:delete',        (id)     => db.deleteImportFile(id));
 h('importdock:displayImages', (nx)     => db.getDisplayImages(nx));
 // Kept for the flat-file path (and Part 4's locate-nexus, which reuses the
 // dialog + guard): returns the walk, registers nothing.
+// Files the user chose — through main's dialog, or dropped on a page from
+// the OS (preload.js turns each dropped File into its path with webUtils; a
+// File the page made itself has no path) — registered like any import:
+// only the extensions of the asked classes, filed under moduleRef.
+function registerChosenFiles(nx, paths, moduleRef, classes) {
+  const exts = Object.keys(ASSET_CLASS).filter((e) => classes.includes(ASSET_CLASS[e]));
+  const files = (paths || []).map((p) => {
+    const type = path.extname(String(p)).slice(1).toLowerCase();
+    let size = 0;
+    try { const st = fs.statSync(p); if (!st.isFile()) return null; size = st.size; } catch (_) { return null; }
+    return exts.includes(type) ? { name: path.basename(p), path: String(p), size, folder: null, type } : null;
+  }).filter(Boolean);
+  if (!files.length) return { ids: [] };
+  db.addImportFiles(nx, files, moduleRef ?? null);
+  return { ids: db.importIdsByPath(nx, files.map((f) => f.path)) };
+}
+// A page accepts what its media blocks can show (MEDIA-EMBED M7).
+const DROPPABLE = ['image', 'video', 'audio', 'model', 'doc', 'track'];
+h('importdock:dropped', (nx, paths, moduleRef) =>
+  registerChosenFiles(nx, (Array.isArray(paths) ? paths : []).slice(0, 50).filter((p) => typeof p === 'string' && path.isAbsolute(p)), moduleRef, DROPPABLE));
+h('importdock:readBinary', (id) => db.readBinary(id));
+h('importdock:setPoster',  (id, dataUrl) => db.setPoster(id, dataUrl));
+
 // "Import new picture…" inside a picker (Procress 14, EXPORT-DECOR D4; the
 // media blocks, MEDIA-EMBED): the dialog is main's, so the files it returns
 // are the user's choice — the same guarantee a picked root gives — and only
 // the asset class asked for is offered. Filed under moduleRef like any
 // import. → { ids } in the order picked, or { canceled }.
 h('importdock:pickFiles', async (nx, moduleRef, cls) => {
-  const exts = Object.keys(ASSET_CLASS).filter((e) => ASSET_CLASS[e] === cls);
+  // 'media' is core.media's mix: pictures, videos and models
+  const classes = cls === 'media' ? ['image', 'video', 'model'] : [cls];
+  const exts = Object.keys(ASSET_CLASS).filter((e) => classes.includes(ASSET_CLASS[e]));
   if (!exts.length) return { canceled: true };
   const res = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
     properties: ['openFile', 'multiSelections'], filters: [{ name: cls, extensions: exts }],
   });
   if (res.canceled || !res.filePaths?.length) return { canceled: true };
-  const files = res.filePaths.map((p) => {
-    const type = path.extname(p).slice(1).toLowerCase();
-    let size = 0;
-    try { size = fs.statSync(p).size; } catch (_) { return null; }
-    return exts.includes(type) ? { name: path.basename(p), path: p, size, folder: null, type } : null;
-  }).filter(Boolean);
-  if (!files.length) return { canceled: true };
-  db.addImportFiles(nx, files, moduleRef ?? null);
-  return { ids: db.importIdsByPath(nx, files.map((f) => f.path)) };
+  const r = registerChosenFiles(nx, res.filePaths, moduleRef, classes);
+  return r.ids.length ? r : { canceled: true };
 });
 h('importdock:pickFolder', async () => {
   const root = await pickDirectory();

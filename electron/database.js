@@ -54,10 +54,12 @@ const dbTransfer = require('./src/db/db-transfer');
 const mirror    = require('./src/db/mirror');
 const vaults    = require('./src/db/vaults');
 const transfer  = require('./src/db/transfer');
+const mediaRead = require('./src/db/media-read');
 const cloud     = require('./src/db/cloud');
 
 module.exports = {
   ...core,
+  ...mediaRead,
   ...nexus,
   ...teach,
   ...preset,

@@ -5,13 +5,18 @@
 // Range parser, which is the thing standing between a 2 GB mkv and a single
 // in-memory Response.
 
-// Extension -> asset class. The four classes are the whole taxonomy the
+// Extension -> asset class. These classes are the whole taxonomy the
 // renderer switches on; IMPORT_EXTS / IMAGE_EXTS in main.js derive from it.
 const ASSET_CLASS = Object.freeze({
   png: 'image', jpg: 'image', jpeg: 'image', gif: 'image', webp: 'image', svg: 'image',
   mp3: 'audio', wav: 'audio', ogg: 'audio', m4a: 'audio', flac: 'audio',
   mp4: 'video', webm: 'video', mov: 'video', mkv: 'video',
   md: 'doc', txt: 'doc', docx: 'doc', pdf: 'doc',
+  // Procress 14 (APP docs/MEDIA-EMBED.md M1/M5): subtitles a video block
+  // plays, and 3D models a model block draws. glTF must be one file (.glb,
+  // or .gltf with its buffers embedded) — nothing outside it is ever read.
+  vtt: 'track',
+  glb: 'model', gltf: 'model', stl: 'model', obj: 'model',
 });
 
 const MIME = Object.freeze({
@@ -21,6 +26,8 @@ const MIME = Object.freeze({
   mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', mkv: 'video/x-matroska',
   pdf: 'application/pdf', md: 'text/markdown; charset=utf-8', txt: 'text/plain; charset=utf-8',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  vtt: 'text/vtt; charset=utf-8',
+  glb: 'model/gltf-binary', gltf: 'model/gltf+json', stl: 'model/stl', obj: 'model/obj',
 });
 
 const assetClassOf = (ext) => ASSET_CLASS[String(ext || '').toLowerCase()] || null;
@@ -28,7 +35,8 @@ const mimeOf = (ext) => MIME[String(ext || '').toLowerCase()] || 'application/oc
 
 // Classes ddx-file:// will stream. md/txt/docx are read through
 // importdock:readFile instead and never need a URL.
-const STREAMABLE = new Set(['image', 'audio', 'video']);
+// A .vtt is streamed too: a <track> element can only take a URL.
+const STREAMABLE = new Set(['image', 'audio', 'video', 'track']);
 const isStreamable = (ext) => STREAMABLE.has(assetClassOf(ext)) || String(ext || '').toLowerCase() === 'pdf';
 
 // Files above this are never read whole — hashed by stream only and given no

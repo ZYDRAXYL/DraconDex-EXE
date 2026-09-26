@@ -45,11 +45,13 @@ async function openPbImagePicker(opts = {}) {
 async function pbImgLoad() {
   const rows = (await api.importdock.list(S.nexus.id)) || [];
   if (!_pbImg) return;
-  _pbImg.files = rows.filter((r) => r.source_kind === 'file' && pbFileClass(r.file_type) === _pbImg.cls);
+  const want = _pbImg.cls === 'media' ? ['image', 'video', 'model'] : [_pbImg.cls];
+  _pbImg.files = rows.filter((r) => r.source_kind === 'file' && want.includes(pbFileClass(r.file_type)));
 }
 
 function pbImgThumb(f) {
-  if (_pbImg.cls !== 'image') return `<span class="pb-img-kind">${x(String(f.file_type || '').toUpperCase())}</span>`;
+  // a picture — or a PDF / model / video that already has a poster
+  if (pbFileClass(f.file_type) !== 'image' && !f.has_proxy) return `<span class="pb-img-kind">${x(String(f.file_type || '').toUpperCase())}</span>`;
   // the proxy first — small and fast; the original if there is none yet
   return `<img src="${displayImageUrl(f.id)}${f.has_proxy ? '?proxy=1' : ''}" loading="lazy" alt="" onerror="queueDisplayImageFallback(this,${f.id})">`;
 }

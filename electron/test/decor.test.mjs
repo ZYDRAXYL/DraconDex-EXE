@@ -52,8 +52,10 @@ test('picture and icon options take only stored references', () => {
 test('"Import new…" offers only the class asked for, and main picks the files', () => {
   const main = read('main.js');
   const h = main.slice(main.indexOf("h('importdock:pickFiles'"), main.indexOf("h('importdock:pickFolder'"));
-  assert.match(h, /ASSET_CLASS\[e\] === cls/, 'extensions come from the asked class');
+  assert.ok(h.length > 0);
+  assert.match(h, /registerChosenFiles\(nx, res\.filePaths, moduleRef, classes\)/, 'extensions come from the asked class');
   assert.match(h, /if \(!exts\.length\) return \{ canceled: true \}/, 'an unknown class opens nothing');
   assert.match(h, /dialog\.showOpenDialog/, 'the paths come from main’s own dialog');
-  assert.match(h, /exts\.includes\(type\)/, 'a picked file of another type is dropped');
+  const reg = main.slice(main.indexOf('function registerChosenFiles'), main.indexOf('const DROPPABLE'));
+  assert.match(reg, /exts\.includes\(type\)/, 'a picked file of another type is dropped');
 });

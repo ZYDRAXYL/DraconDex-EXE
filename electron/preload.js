@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const inv = (ch, ...a) => ipcRenderer.invoke(ch, ...a);
 
@@ -382,6 +382,11 @@ contextBridge.exposeInMainWorld('api', {
     displayImages: (nx)     => inv('importdock:displayImages', nx),
     pickFolder:    ()       => inv('importdock:pickFolder'),
     pickFiles:     (nx,m,c) => inv('importdock:pickFiles', nx,m,c),
+    // A drop on a page: the OS path of each dropped File, read HERE — the
+    // page never names a path (MEDIA-EMBED M7).
+    dropFiles:     (nx,files,m) => inv('importdock:dropped', nx, [...(files || [])].map((f) => { try { return webUtils?.getPathForFile(f) || ''; } catch (_) { return ''; } }).filter(Boolean), m),
+    readBinary:    (id)     => inv('importdock:readBinary', id),
+    setPoster:     (id,d)   => inv('importdock:setPoster', id,d),
     readFile:      (id)     => inv('importdock:readFile', id),
     readFiles:     (ids)    => inv('importdock:readFiles', ids),
     // v5 Asset Nest (APP docs/V5.md §2)
