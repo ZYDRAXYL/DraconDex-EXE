@@ -181,6 +181,17 @@ function pbInnerHtml(c, seen) {
   return typeof pbBasicHtml === 'function' ? pbBasicHtml(c, seen) : '';
 }
 
+// The blocks inside a container — a column of `columns`, a tab of
+// core.tabs, the body of core.toggle — by parent_id and config.col. A child
+// whose col is past the last one (a tab removed) shows in the last, so
+// removing a tab never hides what was in it.
+function pbChildrenHtml(c, col, count, seen) {
+  const mine = c.page.blocks.filter((k) => k.parent_id === c.block.id
+    && Math.min(count - 1, Math.max(0, Number(k.config?.col) || 0)) === col);
+  return `${mine.map((k) => pbBlockHtml(c.page, k, seen)).join('')}${pbArranging(c.page) ? pbAddBarHtml(c.page, { parentId: c.block.id, col }) : ''}`;
+}
+const pbIsContainer = (b) => b?.block_type === 'columns' || !!componentOf(b)?.container;
+
 // ── mount ───────────────────────────────────────────────────────────────
 // After the pane body is in the document. Mounts only what this render
 // drew (the iids of this pane).

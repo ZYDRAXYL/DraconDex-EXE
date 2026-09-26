@@ -145,6 +145,7 @@ function pbOptValid(def, v) {
     case 'fields': return Array.isArray(v) ? v.filter((k) => typeof k === 'string').slice(0, 40) : (typeof v === 'string' && def.single ? v : undefined);
     case 'module': return Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : undefined;
     case 'links': return Array.isArray(v) ? v : undefined;
+    case 'list': return Array.isArray(v) ? v.map((x2) => String(x2 ?? '').slice(0, 40)).slice(0, def.max || 12) : undefined;
     default: return undefined;
   }
 }

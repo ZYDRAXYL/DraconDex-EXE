@@ -144,6 +144,13 @@ function pbOptFieldHtml(iid, d, v) {
     }
     case 'fields': return pbOptFieldsHtml(iid, d, v);
     case 'links': return typeof pbLinksEditorHtml === 'function' ? pbLinksEditorHtml(iid, d, v) : '';
+    case 'list': {
+      const list = Array.isArray(v) && v.length ? v : [];
+      return `<div class="pb-le">${list.map((s, i) => `<div class="pb-le-row"><input type="text" value="${x(s)}" maxlength="40" aria-label="${x(t(d.label))} ${i + 1}"
+          onchange="pbListEdit(${xj(iid)},${xj(d.key)},${i},this.value)"><span class="pb-le-acts">
+          <button class="btn btn-g btn-i" onclick="pbListEdit(${xj(iid)},${xj(d.key)},${i},null)" title="${t('delete')}">${I.close}</button></span></div>`).join('')}
+        ${list.length < (d.max || 12) ? `<button class="btn btn-s btn-sm" onclick="pbListEdit(${xj(iid)},${xj(d.key)},${list.length},'')">${I.plus} ${t('pbListAdd')}</button>` : ''}</div>`;
+    }
     default: return '';
   }
 }
@@ -165,7 +172,10 @@ function pbOptFieldsHtml(iid, d, v) {
 
 async function pbPopLoadFields(b) {
   const i = pbInst(_pbPop.iid);
-  const src = findModuleNode(i?.sourceId ?? i?.moduleId);
+  // a field list may belong to the module another option names (navbox)
+  const of = pbOptionDefs(b).find((d) => d.type === 'fields' && d.of)?.of;
+  const picked = of ? Number(pbOpt({ block: b, config: b.config || {} }, of)) : null;
+  const src = findModuleNode(picked || (i?.sourceId ?? i?.moduleId));
   let list = [];
   try {
     if (src?.kind === 'classifier') {
@@ -215,6 +225,7 @@ async function pbOptSet(iid, key, value) {
   const opts = { ...(b.config?.opts || {}) };
   if (value === null || value === undefined || value === '') delete opts[key]; else opts[key] = value;
   await pbSetConfig(iid, { opts: Object.keys(opts).length ? opts : undefined });
+  if (_pbPop && pbOptionDefs(b).some((d) => d.of === key)) _pbPop.fields = null;
   pbPopRender();
 }
 
@@ -223,6 +234,21 @@ function pbOptField(iid, key, field, on) {
   const cur = b ? pbOpt({ block: b, config: b.config || {} }, key) : [];
   const list = (Array.isArray(cur) ? cur : []).filter((k) => k !== field);
   if (on) list.push(field);
+  return pbOptSet(iid, key, list.length ? list : null);
+}
+
+// A list option (tab names): edit, remove (null) or append ('') one entry.
+// An empty list starts from what the component shows by default.
+function pbListEdit(iid, key, i, value) {
+  const b = pbBlockOf(iid);
+  if (!b) return;
+  const comp = componentOf(b);
+  let list = pbOpt({ block: b, config: b.config || {} }, key);
+  if (!Array.isArray(list) || !list.length) list = key === 'tabs' && typeof pcTabNames === 'function' ? pcTabNames({ block: b, config: b.config || {} }) : [];
+  list = [...list];
+  if (value === null) list.splice(i, 1);
+  else if (i >= list.length) list.push(value || `${t(comp?.options?.().find((d) => d.key === key)?.placeholder || 'pbListAdd')} ${list.length + 1}`);
+  else list[i] = String(value).trim().slice(0, 40) || list[i];
   return pbOptSet(iid, key, list.length ? list : null);
 }
 

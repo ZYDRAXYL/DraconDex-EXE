@@ -148,13 +148,7 @@ function pbBasicHtml(c, seen) {
     }
     case 'columns': {
       const n = Math.min(3, Math.max(2, Number(c.config.n) || 2));
-      const kids = c.page.blocks.filter((k) => k.parent_id === b.id);
-      const arranging = pbArranging(c.page);
-      const cols = Array.from({ length: n }, (_, col) => {
-        const mine = kids.filter((k) => (Number(k.config?.col) || 0) === col);
-        return `<div class="pb-col" data-col="${col}">${mine.map((k) => pbBlockHtml(c.page, k, seen)).join('')}
-          ${arranging ? pbAddBarHtml(c.page, { parentId: b.id, col }) : ''}</div>`;
-      }).join('');
+      const cols = Array.from({ length: n }, (_, col) => `<div class="pb-col" data-col="${col}">${pbChildrenHtml(c, col, n, seen)}</div>`).join('');
       return `<div class="pb-cols" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${cols}</div>`;
     }
     default: return '';
@@ -171,7 +165,8 @@ function pbBasicMount(c) {
   createMarkdownEditor(el, {
     title: '', content: b.content || '', mode: b.content ? 'preview' : 'edit',
     srcKey: i?.itemKey && i.itemKey !== '*' ? i.itemKey : `module_${c.page.moduleId}`,
-    save: async (content) => { await api.block.update(b.id, { content }); b.content = content; },
+    save: async (content) => { await api.block.update(b.id, { content }); b.content = content; pbRefreshFootnotes(c.page, b.id); },
+    footnotes: () => pbFootnoteCtx(c.page),
   });
 }
 
@@ -232,4 +227,28 @@ async function openModuleTagPopup(moduleId, anchor) {
   });
   renderModalTagSuggestions('modtag');
   positionPopupNear(pop, anchor.getBoundingClientRect());
+}
+
+// ── footnotes across the page (Procress 14, TEMPLATES §7.3) ─────────────
+// One numbering for the whole page, in block order: [^a] in the first text
+// block is 1 wherever else it is referenced. A References block on the page
+// lists the notes; without one, each text block lists its own.
+function pbFootnoteCtx(page) {
+  const notes = new Map();
+  const order = [];
+  for (const b of page?.blocks || []) {
+    if (b.block_type !== 'text' || !b.content) continue;
+    const f = mdFootnotes(b.content);
+    for (const [id, note] of f.notes) if (!notes.has(id)) notes.set(id, note);
+    for (const id of f.order) if (!order.includes(id)) order.push(id);
+  }
+  const hideDefs = (page?.blocks || []).some((b) => b.component === 'core.references');
+  return { notes, order, hideDefs, num: (id) => { const n = order.indexOf(id); return n < 0 ? '?' : n + 1; } };
+}
+
+// A saved note can renumber every other block and the References list.
+function pbRefreshFootnotes(page, savedId) {
+  if (!page) return;
+  rerenderPageBlocks((i, b) => i.moduleId === page.moduleId && (i.itemKey ?? null) === (page.itemKey ?? null)
+    && (b.component === 'core.references' || (b.block_type === 'text' && b.id !== savedId && /\[\^/.test(b.content || ''))));
 }

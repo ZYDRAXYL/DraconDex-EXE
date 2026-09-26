@@ -900,6 +900,15 @@ h('block:remove',   (id)            => db.deleteBlock(id));
 h('block:restore',  (rows)          => db.restoreBlocks(rows));
 h('block:split',    (id,item)       => db.splitItemPage(id,item));
 h('block:revert',   (id,item)       => db.revertItemPage(id,item));
+// A page link to the web (Procress 14, TEMPLATES §7.2) — the same rule as
+// importdock:openUrl: main opens what the block's stored config says, by a
+// path into it, re-validated; the renderer never hands over a URL.
+h('block:openUrl', async (id, path) => {
+  const u = db.blockLinkUrl(id, path);
+  if (!u) return false;
+  await shell.openExternal(u);
+  return true;
+});
 h('block:setProp',  (id,item,pid,n,v,tp) => db.setProp(id,item,pid,n,v,tp));
 
 // Process 7 part 2 — app-wide session undo/redo (Ctrl+Z/Ctrl+Shift+Z),

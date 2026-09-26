@@ -182,17 +182,19 @@ function capturePage(moduleId, itemKey, borrowRef = () => true) {
       b.borrow = to;
     }
     if (r.content != null) b.content = r.content;
-    if (r.block_type === 'columns') {
-      const n = Math.min(3, Math.max(2, Number(config?.n) || 2));
+    // columns, and any container component (core.tabs, core.toggle): its
+    // children by column / tab, so a page saved as a template keeps them
+    const mine = kids.get(r.id) || [];
+    if (r.block_type === 'columns' || mine.length) {
+      const colOf = (k) => { try { return Math.max(0, Number(JSON.parse(k.config || '{}').col) || 0); } catch (_) { return 0; } };
+      const n = r.block_type === 'columns' ? Math.min(3, Math.max(2, Number(config?.n) || 2)) : Math.min(12, Math.max(1, ...mine.map((k) => colOf(k) + 1)));
       const cols = Array.from({ length: n }, () => []);
-      for (const k of kids.get(r.id) || []) {
-        let kc = {};
-        try { kc = k.config ? JSON.parse(k.config) : {}; } catch (_) {}
+      for (const k of mine) {
         const kb = block(k);
-        if (kb) cols[Math.min(n - 1, Math.max(0, Number(kc.col) || 0))].push(kb);
+        if (kb) cols[Math.min(n - 1, colOf(k))].push(kb);
       }
       b.children = cols;
-      if (config) delete config.n;
+      if (config && r.block_type === 'columns') delete config.n;
     }
     if (config && Object.keys(config).length) b.config = config;
     return b;

@@ -53,7 +53,7 @@ function openPbPicker(moduleId, itemKey, where) {
   const basic = ['text', 'heading', 'divider', 'image', ...(where ? [] : ['columns'])].map((tp) =>
     `<button class="btn btn-s pb-pick" onclick="pbAddBlock(${moduleId},${xv(itemKey)},${xv({ type: tp, ...(tp === 'columns' ? { config: { n: 2 } } : {}) })},${xv(where)})">${t(PB_TYPE_KEY[tp])}</button>`).join('');
   const own = Object.values(COMPONENTS)
-    .filter((c) => (c.kind === 'core' || c.kind === m.kind || (itemKey && c.kind === 'item')) && !(c.once && have.has(c.id)))
+    .filter((c) => (c.kind === 'core' || c.kind === m.kind || (itemKey && c.kind === 'item')) && !(c.once && have.has(c.id)) && !(where && c.container))
     .map((c) => `<button class="btn btn-s pb-pick" onclick="pbAddBlock(${moduleId},${xv(itemKey)},${xv({ type: 'component', component: c.id })},${xv(where)})">${x(componentLabel(c))}</button>`).join('');
   const borrowable = flattenModuleTree(S.moduleTree, 0).map((r) => r.m).filter((o) => o.id !== moduleId && COMPONENTS[`${o.kind}.view`]?.borrow);
   const borrow = borrowable.length ? `<div class="fg"><label>${t('pbBorrow')}</label>
@@ -126,6 +126,11 @@ async function pbDrop(ev, targetId) {
   const i = pbInst(el.dataset.iid);
   const page = i && pageOf(i.moduleId, i.itemKey);
   if (!page) return;
+  // never into itself: a container dropped beside one of its own children,
+  // or any container into another (one level of nesting, as columns had)
+  const byId = new Map(page.blocks.map((bb) => [bb.id, bb]));
+  for (let p = byId.get(targetId)?.parent_id; p != null; p = byId.get(p)?.parent_id) if (p === moving) return;
+  if (pbIsContainer(byId.get(moving)) && byId.get(targetId)?.parent_id != null) { toast(t('pbNoNesting'), 'warn'); return; }
   const order = page.blocks.map((b) => b.id).filter((id) => id !== moving);
   const target = page.blocks.find((b) => b.id === targetId);
   const mover = page.blocks.find((b) => b.id === moving);

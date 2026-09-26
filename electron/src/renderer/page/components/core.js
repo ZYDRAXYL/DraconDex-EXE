@@ -1,7 +1,8 @@
 'use strict';
 // ═══ Core page components (Procress 14, APP docs/TEMPLATES.md §2.1, §7.3) ══
 // The ones any page may hold: an infobox of the element's fields, a callout,
-// a row of numbers, the page's contents, and "see also". Each keeps to the
+// a row of numbers and the page's contents (the wiki ones — hatnote, see
+// also, links — are in components/wiki.js). Each keeps to the
 // page it sits on (kind 'core'); config comes from the template or the
 // arrange bar.
 
@@ -62,15 +63,6 @@ async function pcCalloutSave(iid, el) {
   b.content = text;
 }
 
-// Hatnote: one italic line at the top — "Main article: …", "Not to be
-// confused with …". Written right on the page, like a callout; the §7 link
-// model (typed links, config.kind) replaces the free text when it lands.
-registerComponent('core.hatnote', {
-  kind: 'core', labelKey: 'pcHatnote', once: true,
-  render: (c) => `<div class="pc-hatnote" contenteditable="true" data-ph="${x(t('pcHatnotePh'))}"
-    onblur="pcCalloutSave(${xj(c.iid)},this)">${x(c.block.content || '')}</div>`,
-});
-
 // Stats: a row of numbers — an element's own fields (config.tiles: [{field}]),
 // or, on a module page, how much the module holds.
 registerFilled('core.stats', { kind: 'core', labelKey: 'pcStats' }, async (c) => {
@@ -104,17 +96,7 @@ registerComponent('core.toc', {
     const hs = (c.page.blocks || []).filter((b) => b.block_type === 'heading' && (b.content || '').trim());
     if (!hs.length) return `<div class="pc">${pcEmpty(t('pcTocEmpty'))}</div>`;
     return `<nav class="pc pc-toc"><div class="pc-head">${t('pcToc')}</div>${hs.map((b) =>
-      `<a class="pc-toc-row" onclick="document.querySelector('.pblock[data-iid$=&quot;.${b.id}&quot;]')?.scrollIntoView({behavior:'smooth',block:'start'})">${x(b.content)}</a>`).join('')}</nav>`;
-  },
-});
-
-// See also: where this page links to.
-registerComponent('core.seealso', {
-  kind: 'core', labelKey: 'pcSeeAlso', once: true,
-  render: (c) => {
-    const out = (c.page.props?.links?.outgoing || []).filter((l) => l.key);
-    return `<div class="pc pc-seealso"><div class="pc-head">${t('pcSeeAlso')}</div>${out.length
-      ? `<ul>${out.map((l) => `<li><a ${pcOpen(l.key)}>${x(l.name)}</a></li>`).join('')}</ul>`
-      : pcEmpty(t('pcSeeAlsoEmpty'))}</div>`;
+      `<a class="pc-toc-row" role="link" tabindex="0" onclick="pbScrollToAnchor(${xj(pbAnchorOf(b))})"
+        onkeydown="if(event.key==='Enter')pbScrollToAnchor(${xj(pbAnchorOf(b))})">${x(b.content)}</a>`).join('')}</nav>`;
   },
 });
