@@ -15,6 +15,7 @@ const EXPORT_FORMATS = [
   { id: 'pdf', icon: 'document', title: 'exportPdf', desc: 'exportPdfD' },
   { id: 'docx', icon: 'writer', title: 'exportDocx', desc: 'exportDocxD', kinds: DOC_KINDS, why: 'exportOnlyDocs' },
   { id: 'epub', icon: 'book', title: 'exportEpub', desc: 'exportEpubD', kinds: ['author'], why: 'exportOnlyBooks' },
+  { id: 'view', icon: 'relation', title: 'exportView', desc: 'exportViewD', kinds: ['exhibitor', 'chronicler', 'designer', 'narrator', 'locator', 'wanderer', 'sketcher'], why: 'exportOnlyViews' },
   { id: 'xlsx', icon: 'table', title: 'exportXlsx', desc: 'exportXlsxD', kinds: ['classifier', 'chronicler'] },
   { id: 'csv', icon: 'list', title: 'exportCsv', desc: 'exportCsvD', kinds: ['classifier', 'chronicler'] },
   { id: 'html', icon: 'globe', title: 'htmlExport', desc: 'exportHtmlD' },
@@ -28,6 +29,7 @@ let _ex = null; // { moduleId, itemKey, kind, prefs }
 function exportBlocked(f, kind) {
   if (kind === 'collector' && ['pdf', 'html'].includes(f.id)) return t('exportNoPage');
   if (f.kinds && !f.kinds.includes(kind)) return t(f.why || 'exportOnlyTables');
+  if (f.id === 'view' && _ex?.itemKey) return t('exportNoView');
   return null;
 }
 
@@ -89,7 +91,7 @@ function exportOptsHtml(fmt) {
     return `<div class="ex-row"><div class="fg"><label>${t('exportScope')}</label>${sel('ex-mdscope', 'mdScope',
       [['module', t('exportScopeInside')], ['nexus', t('exportScopeNexus')]])}</div></div><p class="drafter-hint">${t('exportMdAnyHint')}</p>`;
   }
-  const hint = { csv: 'exportCsvHint', xlsx: 'exportXlsxHint', html: 'exportHtmlHint', mddx: 'exportMddxHint', docx: 'exportDocxHint', epub: 'exportEpubHint' }[fmt];
+  const hint = { csv: 'exportCsvHint', xlsx: 'exportXlsxHint', html: 'exportHtmlHint', mddx: 'exportMddxHint', docx: 'exportDocxHint', epub: 'exportEpubHint', view: 'exportViewHint' }[fmt];
   return `<p class="drafter-hint">${t(hint)}</p>`;
 }
 
@@ -110,6 +112,7 @@ async function runExport() {
   try { await api.module.setUi(moduleId, 'exportPrefs', JSON.stringify(prefs)); } catch (_) {}
   if (prefs.fmt === 'html') { closeModal(); openHtmlExportModal(S.nexus.id); return; }
   if (prefs.fmt === 'md' && prefs.mdScope === 'nexus') { closeModal(); nexusExportMarkdown(S.nexus.id); return; }
+  if (prefs.fmt === 'view') { closeModal(); await exportViewNow(moduleId); return; }
   if (['docx', 'epub', 'md'].includes(prefs.fmt)) { closeModal(); await exportDocNow(moduleId, prefs.fmt); return; }
   if (prefs.fmt === 'mddx') { closeModal(); ctxExportModule(moduleId); return; }
   if (prefs.fmt === 'csv' || prefs.fmt === 'xlsx') { closeModal(); await exportTableNow(moduleId, prefs.fmt); return; }

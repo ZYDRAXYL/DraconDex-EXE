@@ -17,6 +17,7 @@ const tableExport = require('./src/db/table-export');
 const pdfExport = require('./src/db/pdf-export');
 const docxExport = require('./src/db/docx-export');
 const epubExport = require('./src/db/epub-export');
+const viewExport = require('./src/db/view-export');
 const bundleCatalog = require('./src/db/bundle-catalog');
 const pageTemplate = require('./src/db/page-template');
 const bundleCapture = require('./src/db/bundle-capture');
@@ -73,6 +74,7 @@ module.exports = {
   exportTable: tableExport.exportTable,
   buildPrintHtml: pdfExport.buildPrintHtml, pdfOptions: pdfExport.pdfOptions,
   exportDocx: docxExport.exportDocx, exportEpub: epubExport.exportEpub,
+  sanitizeSvg: viewExport.sanitizeSvg, pngBytes: viewExport.pngBytes,
   bundleCatalog: bundleCatalog.bundleCatalog,
   pageCatalog: pageTemplate.pageCatalog, applyTemplate: pageTemplate.applyTemplate,
   restorePageLayout: pageTemplate.restorePageLayout, captureTemplate: pageTemplate.captureTemplate,

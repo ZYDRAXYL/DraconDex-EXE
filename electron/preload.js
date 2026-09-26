@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('api', {
     exportTable:  (mid,format)   => inv('export:table', mid,format),
     exportPdf:    (nx,payload,opts) => inv('export:pdf', nx,payload,opts),
     exportDoc:    (mid,format,opts) => inv('export:doc', mid,format,opts),
+    exportImage:  (name,pic)       => inv('export:image', name,pic),
     shareFile:    (id)     => inv('nexus:shareFile', id),
     revealFile:   (id)     => inv('nexus:revealFile', id),
     taught:       (nx)     => inv('nexus:taught', nx),

@@ -849,6 +849,22 @@ h('export:doc', async (moduleId, format, opts) => {
   const r = f.run(moduleId, result.filePath, { lang: String(opts?.lang || 'en'), nexusId: m.nexus_ref });
   return { ...r, saved: result.filePath };
 });
+// Procress 14 (EXPORT-DECOR.md E6): the open view as a picture. The renderer
+// drew it (hub/export-view.js); the SVG is sanitized and the PNG checked here.
+h('export:image', async (name, pic) => {
+  const svg = pic?.svg != null ? db.sanitizeSvg(pic.svg) : null;
+  const png = svg == null && pic?.png != null ? db.pngBytes(pic.png) : null;
+  if (svg == null && !png) return { ok: false, code: 'bad_image' };
+  const ext = svg != null ? 'svg' : 'png';
+  const safe = String(name || 'view').replace(/[\\/:*?"<>|]/g, '_').slice(0, 120) || 'view';
+  const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'Export', defaultPath: path.join(app.getPath('documents'), `${safe}.${ext}`),
+    filters: [ext === 'svg' ? { name: 'SVG', extensions: ['svg'] } : { name: 'PNG', extensions: ['png'] }],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  fs.writeFileSync(result.filePath, svg != null ? svg : png);
+  return { ok: true, saved: result.filePath, format: ext };
+});
 // Procress 14 (EXPORT-DECOR.md E4): a Classifier / Chronicler as a table.
 // The renderer names the module and the format; main reads the vault.
 h('export:table', async (moduleId, format) => {
