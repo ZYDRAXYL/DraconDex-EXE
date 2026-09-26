@@ -39,7 +39,7 @@ function pageHeadHtml(o = {}) {
   const layCls = lay ? ` ph--${lay.align}${lay.cover ? ' has-cover' : ''}${lay.icon ? ' has-icon' : ''}` : '';
   if (lay?.cover) watchPageCovers();
   return `<div class="page-navbar addr-bar">${addressRowHtml(o.addr || { label: o.titleText }, o.acts)}</div>
-    ${lay?.cover ? `<div class="ph-cover" data-cover-sha="${x(lay.cover)}"></div>` : ''}
+    ${lay?.cover ? `<div class="ph-cover" data-cover-sha="${x(lay.cover)}" style="background-position:${pbFocusCss(lay.focus)}"></div>` : ''}
     <div class="${cls} page-title${layCls}" style="border-left:4px solid ${x(col)}">
       ${lay?.icon ? `<div class="ph-icon" data-no-i18n>${x(lay.icon)}</div>` : ''}
       <div class="navbar-row"><h2 class="navbar-h">${icon}${o.title || ''}${o.after || ''}</h2></div>
@@ -65,7 +65,10 @@ function pageHeadLayout(moduleId, itemKey = null) {
   try { v = JSON.parse(pageOf(moduleId, itemKey)?.props?.ui?.[pageHeadUiKey(itemKey)] || 'null'); } catch (_) {}
   return {
     align: PAGE_HEAD_ALIGN.includes(v?.align) ? v.align : 'left',
-    cover: typeof v?.cover === 'string' && /^[a-f0-9]{64}$/.test(v.cover) ? v.cover : null,
+    // sha256, or file_<id> for a picture the vault has not hashed yet
+    // (EXPORT-DECOR D3) — a hash is what survives a sync to another device
+    cover: typeof v?.cover === 'string' && /^([a-f0-9]{64}|file_\d+)$/.test(v.cover) ? v.cover : null,
+    focus: v?.focus && typeof v.focus === 'object' ? pbFocusOf(v.focus) : null,
     // A few graphemes at most — an emoji, not a paragraph.
     icon: typeof v?.icon === 'string' && v.icon.trim() ? [...v.icon.trim()].slice(0, 4).join('') : null,
   };
@@ -73,6 +76,8 @@ function pageHeadLayout(moduleId, itemKey = null) {
 
 async function setPageHeadLayout(moduleId, itemKey, patch) {
   const next = { ...pageHeadLayout(moduleId, itemKey), ...patch };
+  if (!next.cover) next.focus = null;
+  if (!next.focus) delete next.focus;
   const val = next.align === 'left' && !next.cover && !next.icon ? '' : JSON.stringify(next);
   const key = pageHeadUiKey(itemKey);
   await api.module.setUi(moduleId, key, val);
@@ -117,7 +122,8 @@ async function hydratePageCovers() {
   for (const el of els) el.dataset.ph = 'pending';
   const { bySha } = await pageHeadImages();
   for (const el of els) {
-    const id = bySha.get(el.dataset.coverSha);
+    const ref = el.dataset.coverSha;
+    const id = /^file_\d+$/.test(ref) ? Number(ref.slice(5)) : bySha.get(ref);
     // A deleted or never-synced image is simply no cover (C6), not an error.
     if (id == null) { el.dataset.ph = 'gone'; continue; }
     el.style.backgroundImage = `url("${displayImageUrl(id)}")`;
@@ -145,14 +151,18 @@ async function openPageLayoutPopup(anchor) {
     ${images.length
       ? `<div class="ph-covers"><div role="button" tabindex="0" class="ph-cover-opt ph-cover-none${lay.cover ? '' : ' active'}" data-cover="" title="${t('pageCoverNone')}">✕</div>${covers}</div>`
       : `<div class="ph-pop-hint">${t('pageCoverEmpty')}</div>`}
+    <div class="ph-seg"><button type="button" class="btn btn-s btn-sm" data-more="1">${t('pageCoverMore')}</button>
+      ${lay.cover ? `<button type="button" class="btn btn-s btn-sm" data-focus="1">${t('pbFocusTitle')}</button>` : ''}</div>
     <div class="ph-pop-hint">${t('pageLayoutScope')}</div>`;
   document.body.appendChild(pop);
   pop.addEventListener('click', async (e) => {
     e.stopPropagation();
     const a = e.target.closest('[data-align]');
     const c = e.target.closest('[data-cover]');
+    if (e.target.closest('[data-more]')) { pop.remove(); pageCoverPick(tgt); return; }
+    if (e.target.closest('[data-focus]')) { pop.remove(); pageCoverFocus(tgt); return; }
     if (a) await setPageHeadLayout(tgt.moduleId, tgt.itemKey, { align: a.dataset.align });
-    else if (c) await setPageHeadLayout(tgt.moduleId, tgt.itemKey, { cover: c.dataset.cover || null });
+    else if (c) await setPageHeadLayout(tgt.moduleId, tgt.itemKey, { cover: c.dataset.cover || null, focus: null });
     else return;
     openPageLayoutPopup(anchor); // redraw with the new state, same anchor
   });
@@ -160,4 +170,28 @@ async function openPageLayoutPopup(anchor) {
   inp.addEventListener('change', () => setPageHeadLayout(tgt.moduleId, tgt.itemKey, { icon: inp.value.trim() || null }));
   inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
   positionPopupNear(pop, (anchor || document.querySelector('.page-title'))?.getBoundingClientRect() || { left: 200, top: 80, right: 200, bottom: 80, width: 0, height: 0 });
+}
+
+// Any picture in the Nexus as the cover, through the picture picker (D4):
+// stored by its hash when it has one, else by id (D3).
+function pageCoverPick(tgt) {
+  openPbImagePicker({ moduleId: tgt.moduleId, onPick: async ([id]) => {
+    if (id == null) return;
+    const { images } = await pageHeadImages(true);
+    const sha = images.find((f) => f.id === id)?.sha256;
+    await setPageHeadLayout(tgt.moduleId, tgt.itemKey, { cover: sha || `file_${id}`, focus: null });
+    renderNexusHome();
+  } });
+}
+
+// Where the cover keeps its subject when the band crops it.
+async function pageCoverFocus(tgt) {
+  const lay = pageHeadLayout(tgt.moduleId, tgt.itemKey);
+  if (!lay.cover) return;
+  const id = /^file_\d+$/.test(lay.cover) ? Number(lay.cover.slice(5)) : (await pageHeadImages()).bySha.get(lay.cover);
+  if (id == null) return;
+  pbFocusPicker(id, lay.focus, async (focus) => {
+    await setPageHeadLayout(tgt.moduleId, tgt.itemKey, { focus });
+    renderNexusHome();
+  });
 }

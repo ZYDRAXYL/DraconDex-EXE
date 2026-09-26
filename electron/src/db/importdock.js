@@ -220,7 +220,15 @@ const relinkImportFile = (id, newPath, size) => getDB().prepare(`
   UPDATE import_file SET file_path=?, file_size=?, missing=0, last_seen_at=datetime('now') WHERE id=?
 `).run(newPath, size || 0, id);
 
+// The rows a batch just added (or already had), by path — for a picker that
+// imports and then selects what it imported.
+function importIdsByPath(nexusId, paths) {
+  const q = getDB().prepare(`SELECT id FROM import_file WHERE nexus_ref=? AND file_path=?`);
+  return (paths || []).map((p) => q.get(nexusId, p)?.id).filter((id) => id != null);
+}
+
 module.exports = {
+  importIdsByPath,
   getImportFiles, getImportFile, addImportFiles, importFolderTree, addImportUrl,
   getModuleAssets, getNestAssets, setImportModule,
   setImportLinker, setImportUseAsImage, deleteImportFile, getDisplayImages,

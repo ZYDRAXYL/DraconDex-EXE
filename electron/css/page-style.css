@@ -127,3 +127,6 @@ body.ddx-site .pblock.pb-closed > .pb-head{padding-bottom:8px}
 .pb-pop-foot{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
 .pb-pop-foot .btn{flex:1 1 auto}
 .pb-pop .drafter-hint{margin:4px 0}
+/* a picker modal opened from the popover (a picture, a focal point) sits
+   over the page; the popover steps aside until it closes */
+body:has(#modal-overlay:not(.hidden)) .pb-pop{visibility:hidden}

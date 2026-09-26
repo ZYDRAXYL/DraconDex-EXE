@@ -61,11 +61,15 @@ const pbAnchorOf = (b) => blockStyleOf(b?.config).anchor || `b${b?.id}`;
 // hide content (§6.4).
 const pbHideOf = (b, st) => (b?.component === 'item.body' ? 'none' : st.hideOn);
 
-// A header's icon: an app icon by name, a symbol (sym:★), or nothing.
+// An icon reference as the page draws it — the shapes the app stores
+// everywhere (svg:<key>, sym:<glyph>, img:<data URI>; a bare key is an
+// svg:) — or nothing for one it does not know.
 function pbIconHtml(icon) {
-  if (!icon) return '';
-  if (icon.startsWith('sym:')) return `<span class="pb-ico" data-no-i18n>${x(icon.slice(4, 12))}</span>`;
-  return I[icon] ? `<span class="pb-ico">${I[icon]}</span>` : '';
+  if (!icon || typeof icon !== 'string') return '';
+  if (icon.startsWith('sym:')) return `<span class="pb-ico" data-no-i18n>${x(icon.slice(4, 16))}</span>`;
+  if (icon.startsWith('img:')) return /^img:data:image\/(png|jpeg|webp|gif);base64,/.test(icon) ? `<span class="pb-ico"><img src="${x(icon.slice(4))}" alt=""></span>` : '';
+  const key = icon.startsWith('svg:') ? icon.slice(4) : icon;
+  return I[key] ? `<span class="pb-ico">${I[key]}</span>` : '';
 }
 
 // The block's name — the header's default title and the arrange bar's text.
@@ -126,9 +130,13 @@ function pbScrollToAnchor(anchor, scope = document) {
 // ── options() (§6.2) ────────────────────────────────────────────────────
 // A component's own settings. Kept in config.opts; a template written before
 // §6 put the same keys at the top of config, so those still count.
+// A plain block may declare options too (divider and image draw through
+// core.divider / core.figure, EXPORT-DECOR D2): PB_BASIC_OPTIONS[type].
+const PB_BASIC_OPTIONS = {};
 const pbOptionDefs = (b) => {
   const comp = componentOf(b);
-  try { return comp?.options ? comp.options() || [] : []; } catch (_) { return []; }
+  const fn = comp ? comp.options : PB_BASIC_OPTIONS[b?.block_type];
+  try { return fn ? fn() || [] : []; } catch (_) { return []; }
 };
 
 function pbOptValid(def, v) {
@@ -146,6 +154,13 @@ function pbOptValid(def, v) {
     case 'module': return Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : undefined;
     case 'links': return Array.isArray(v) ? v : undefined;
     case 'list': return Array.isArray(v) ? v.map((x2) => String(x2 ?? '').slice(0, 40)).slice(0, def.max || 12) : undefined;
+    case 'icon': return typeof v === 'string' && /^(svg:[A-Za-z0-9_]{1,40}|sym:.{1,16})$/u.test(v) ? v : undefined;
+    case 'image': return typeof v === 'string' && /^file_\d+$/.test(v) ? v : undefined;
+    case 'images': return Array.isArray(v) ? v.filter((r) => typeof r === 'string' && /^file_\d+$/.test(r)).slice(0, 60) : undefined;
+    case 'focus': return v && typeof v === 'object' && Number.isFinite(Number(v.x)) && Number.isFinite(Number(v.y))
+      ? { x: Math.min(100, Math.max(0, Number(v.x))), y: Math.min(100, Math.max(0, Number(v.y))) } : undefined;
+    case 'iconitems': return Array.isArray(v) ? v.filter((it) => it && typeof it === 'object')
+      .map((it) => ({ icon: typeof it.icon === 'string' ? it.icon.slice(0, 60) : '', label: String(it.label ?? '').slice(0, 60) })).slice(0, 24) : undefined;
     default: return undefined;
   }
 }

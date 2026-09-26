@@ -8,7 +8,8 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const Module = require('node:module');
@@ -107,7 +108,7 @@ test('tabs and toggle keep their children, by tab, when a page is captured and a
 });
 
 // ── the renderer side: link parsing and footnotes ───────────────────────
-const root = new URL('..', import.meta.url).pathname;
+const root = join(dirname(fileURLToPath(import.meta.url)), '..'); // not URL.pathname: /D:/… on Windows
 const ctx = {
   S: { nexus: { id: 1 } }, COMPONENTS: {}, PB_TYPE_KEY: {}, I: {}, t: (k) => k, x: (s) => String(s ?? ''), xj: JSON.stringify, xv: JSON.stringify,
   findModuleNode: (id) => (id === 3 ? { id: 3, name: 'Map' } : null), componentOf: () => null, componentLabel: () => '',

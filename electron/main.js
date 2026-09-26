@@ -1118,6 +1118,28 @@ h('importdock:delete',        (id)     => db.deleteImportFile(id));
 h('importdock:displayImages', (nx)     => db.getDisplayImages(nx));
 // Kept for the flat-file path (and Part 4's locate-nexus, which reuses the
 // dialog + guard): returns the walk, registers nothing.
+// "Import new picture…" inside a picker (Procress 14, EXPORT-DECOR D4; the
+// media blocks, MEDIA-EMBED): the dialog is main's, so the files it returns
+// are the user's choice — the same guarantee a picked root gives — and only
+// the asset class asked for is offered. Filed under moduleRef like any
+// import. → { ids } in the order picked, or { canceled }.
+h('importdock:pickFiles', async (nx, moduleRef, cls) => {
+  const exts = Object.keys(ASSET_CLASS).filter((e) => ASSET_CLASS[e] === cls);
+  if (!exts.length) return { canceled: true };
+  const res = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
+    properties: ['openFile', 'multiSelections'], filters: [{ name: cls, extensions: exts }],
+  });
+  if (res.canceled || !res.filePaths?.length) return { canceled: true };
+  const files = res.filePaths.map((p) => {
+    const type = path.extname(p).slice(1).toLowerCase();
+    let size = 0;
+    try { size = fs.statSync(p).size; } catch (_) { return null; }
+    return exts.includes(type) ? { name: path.basename(p), path: p, size, folder: null, type } : null;
+  }).filter(Boolean);
+  if (!files.length) return { canceled: true };
+  db.addImportFiles(nx, files, moduleRef ?? null);
+  return { ids: db.importIdsByPath(nx, files.map((f) => f.path)) };
+});
 h('importdock:pickFolder', async () => {
   const root = await pickDirectory();
   if (!root) return { canceled: true };

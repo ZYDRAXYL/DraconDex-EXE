@@ -381,6 +381,7 @@ contextBridge.exposeInMainWorld('api', {
     delete:        (id)     => inv('importdock:delete', id),
     displayImages: (nx)     => inv('importdock:displayImages', nx),
     pickFolder:    ()       => inv('importdock:pickFolder'),
+    pickFiles:     (nx,m,c) => inv('importdock:pickFiles', nx,m,c),
     readFile:      (id)     => inv('importdock:readFile', id),
     readFiles:     (ids)    => inv('importdock:readFiles', ids),
     // v5 Asset Nest (APP docs/V5.md §2)

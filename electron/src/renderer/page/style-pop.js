@@ -102,7 +102,8 @@ function pbPopStyleHtml(iid, b) {
       <div><h6>${t('pbStyleDensity')}</h6>${pbSegHtml(iid, 'density', PB_STYLE.density, st.density, k('pbDensity'))}</div>
     </div>
     <h6>${t('pbStyleHeader')}</h6>
-    <label class="fv-useimg"><input type="checkbox"${st.header.show ? ' checked' : ''} onchange="pbStyleHeader(${xj(iid)},{show:this.checked})"> ${t('pbHeaderShow')}</label>
+    <div class="pb-row2"><label class="fv-useimg"><input type="checkbox"${st.header.show ? ' checked' : ''} onchange="pbStyleHeader(${xj(iid)},{show:this.checked})"> ${t('pbHeaderShow')}</label>
+      <button class="btn btn-s btn-sm pb-ipk-open" onclick="pbHeaderIcon(${xj(iid)},this)">${pbIconHtml(st.header.icon) || ''} ${t('pbChooseIcon')}</button></div>
     <input type="text" value="${x(st.header.title)}" placeholder="${x(pbBlockName(b))}" maxlength="80" aria-label="${x(t('pbHeaderTitle'))}"
       onchange="pbStyleHeader(${xj(iid)},{title:this.value.trim()})">
     <h6>${t('pbStyleCollapsible')}</h6>${pbSegHtml(iid, 'collapsible', PB_STYLE.collapsible, st.collapsible, k('pbColl'))}
@@ -125,7 +126,10 @@ function pbPopOptsHtml(iid, b) {
   }
   if (b.block_type === 'columns') parts.push(`<h6>${t('pbColumns')}</h6>${pbSegHtml(iid, 'n', ['2', '3'], String(Number(cfg.n) || 2), (v) => `${v} ▥`, 'pbColsSet')}`);
   const c = { block: b, config: cfg };
-  for (const d of pbOptionDefs(b)) parts.push(`${d.type === 'toggle' ? '' : `<h6>${t(d.label)}</h6>`}${pbOptFieldHtml(iid, d, pbOpt(c, d.key))}`);
+  for (const d of pbOptionDefs(b)) {
+    const html = pbOptFieldHtml(iid, d, pbOpt(c, d.key));
+    if (html) parts.push(`${d.type === 'toggle' ? '' : `<h6>${t(d.label)}</h6>`}${html}`);
+  }
   return parts.length ? parts.join('') : `<p class="drafter-hint">${t('pbNoOptions')}</p>`;
 }
 
@@ -144,6 +148,34 @@ function pbOptFieldHtml(iid, d, v) {
     }
     case 'fields': return pbOptFieldsHtml(iid, d, v);
     case 'links': return typeof pbLinksEditorHtml === 'function' ? pbLinksEditorHtml(iid, d, v) : '';
+    case 'icon': return `<button class="btn btn-s btn-sm pb-ipk-open" onclick="pbOptIcon(${xj(iid)},${xj(d.key)},this)">${pbIconHtml(v) || ''} ${t('pbChooseIcon')}</button>
+      ${v ? `<button class="btn btn-g btn-sm" onclick="pbOptSet(${xj(iid)},${xj(d.key)},null)">${t('pbNoIcon')}</button>` : ''}`;
+    case 'image': {
+      const id = pbFileId(v);
+      return `<div class="pb-opt-img">${id ? `<img src="${displayImageUrl(id)}?proxy=1" alt="" onerror="queueDisplayImageFallback(this,${id})">` : ''}
+        <button class="btn btn-s btn-sm" onclick="pbOptImage(${xj(iid)},${xj(d.key)},false,${xj(d.cls || 'image')})">${t(d.cls && d.cls !== 'image' ? 'pbChooseFile' : 'pbChooseImage')}</button>
+        ${id ? `<button class="btn btn-g btn-sm" onclick="pbOptSet(${xj(iid)},${xj(d.key)},null)">${t('pbClear')}</button>` : ''}</div>`;
+    }
+    case 'focus': {
+      // the block's picture: its image option, or a plain image block's own
+      const b = pbBlockOf(iid);
+      const id = b && (pbFileId(pbOpt({ block: b, config: b.config || {} }, 'image')) || pbFileId(b.source_key));
+      return id ? `<button class="btn btn-s btn-sm" onclick="pbOptFocus(${xj(iid)},${xj(d.key)},${id})">${t('pbFocusSet')}</button>` : '';
+    }
+    case 'images': {
+      const ids = (Array.isArray(v) ? v : []).map(pbFileId).filter(Boolean);
+      return `<div class="pb-opt-imgs">${ids.slice(0, 8).map((id) => `<img src="${displayImageUrl(id)}?proxy=1" alt="" onerror="queueDisplayImageFallback(this,${id})">`).join('')}${ids.length > 8 ? `<span>+${ids.length - 8}</span>` : ''}</div>
+        <button class="btn btn-s btn-sm" onclick="pbOptImage(${xj(iid)},${xj(d.key)},true)">${t('pbChooseImages')} (${ids.length})</button>
+        ${ids.length ? `<button class="btn btn-g btn-sm" onclick="pbOptSet(${xj(iid)},${xj(d.key)},null)">${t('pbClear')}</button>` : ''}`;
+    }
+    case 'iconitems': {
+      const list = Array.isArray(v) ? v : [];
+      return `<div class="pb-le">${list.map((it, i) => `<div class="pb-le-row pb-ii-row">
+          <button class="btn btn-s btn-i pb-ipk-open" onclick="pbItemIcon(${xj(iid)},${xj(d.key)},${i},this)" title="${t('pbChooseIcon')}" aria-label="${t('pbChooseIcon')}">${pbIconHtml(it.icon) || '＋'}</button>
+          <input type="text" value="${x(it.label)}" maxlength="60" aria-label="${x(t('pbLinkLabel'))}" onchange="pbItemEdit(${xj(iid)},${xj(d.key)},${i},{label:this.value})">
+          <span class="pb-le-acts"><button class="btn btn-g btn-i" onclick="pbItemEdit(${xj(iid)},${xj(d.key)},${i},null)" title="${t('delete')}">${I.close}</button></span></div>`).join('')}
+        ${list.length < 24 ? `<button class="btn btn-s btn-sm" onclick="pbItemEdit(${xj(iid)},${xj(d.key)},${list.length},{label:''})">${I.plus} ${t('pbListAdd')}</button>` : ''}</div>`;
+    }
     case 'list': {
       const list = Array.isArray(v) && v.length ? v : [];
       return `<div class="pb-le">${list.map((s, i) => `<div class="pb-le-row"><input type="text" value="${x(s)}" maxlength="40" aria-label="${x(t(d.label))} ${i + 1}"
@@ -252,6 +284,30 @@ function pbListEdit(iid, key, i, value) {
   return pbOptSet(iid, key, list.length ? list : null);
 }
 
+// ── icons and pictures in options (EXPORT-DECOR D1/D4) ────────────────
+function pbOptIcon(iid, key, btn) { openPbIconPick(btn, (ref) => pbOptSet(iid, key, ref || null)); }
+function pbOptImage(iid, key, multi, cls = 'image') {
+  const b = pbBlockOf(iid);
+  if (!b) return;
+  const cur = pbOpt({ block: b, config: b.config || {} }, key);
+  const selected = (multi ? (Array.isArray(cur) ? cur : []) : [cur]).map(pbFileId).filter(Boolean);
+  openPbImagePicker({ multi, cls, selected, moduleId: pbInst(iid)?.moduleId, onPick: (ids) => pbOptSet(iid, key, multi ? ids.map((i) => `file_${i}`) : (ids[0] ? `file_${ids[0]}` : null)) });
+}
+function pbOptFocus(iid, key, fileId) {
+  const b = pbBlockOf(iid);
+  if (!b || !fileId) return;
+  pbFocusPicker(fileId, pbOpt({ block: b, config: b.config || {} }, key), (f) => pbOptSet(iid, key, f));
+}
+const pbItemsRaw = (iid, key) => { const b = pbBlockOf(iid); const v = b ? pbOpt({ block: b, config: b.config || {} }, key) : null; return (Array.isArray(v) ? v : []).map((it) => ({ ...it })); };
+function pbItemEdit(iid, key, i, patch) {
+  const list = pbItemsRaw(iid, key);
+  if (patch === null) list.splice(i, 1);
+  else list[i] = { ...(list[i] || { icon: '', label: '' }), ...patch };
+  return pbOptSet(iid, key, list.length ? list : null);
+}
+function pbItemIcon(iid, key, i, btn) { openPbIconPick(btn, (ref) => pbItemEdit(iid, key, i, { icon: ref || '' })); }
+function pbHeaderIcon(iid, btn) { openPbIconPick(btn, (ref) => pbStyleHeader(iid, { icon: ref || '' })); }
+
 async function pbColsSet(iid, _key, n) { await pbSetConfig(iid, { n: Number(n) }); pbPopRender(); }
 
 // Reset: the Style tab clears the style; the Options tab clears the
@@ -319,7 +375,7 @@ async function pbStyleApplyAll(iid) {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && _pbPop) closePbStyle(); });
 document.addEventListener('pointerdown', (e) => {
   if (!_pbPop) return;
-  if (e.target.closest?.('#pb-pop, .pb-gear')) return;
+  if (e.target.closest?.('#pb-pop, .pb-gear, #pb-ipk, #modal-overlay')) return;
   closePbStyle();
 }, true);
 window.addEventListener('resize', () => { if (_pbPop) pbPopPlace(); });

@@ -139,11 +139,11 @@ function pbBasicHtml(c, seen) {
   switch (b.block_type) {
     case 'text': return `<div class="pb-md" data-r="md"></div>`;
     case 'heading': return `<input class="pb-heading" value="${x(b.content || '')}" placeholder="${x(t('pbHeading'))}" onchange="pbSetContent(${xj(c.iid)},this.value)">`;
-    case 'divider': return `<hr class="pb-hr">`;
+    // both draw through the decor components (components/decor.js, D2)
+    case 'divider': return pcDividerHtml(c);
     case 'image': {
       const f = /^file_(\d+)$/.exec(b.source_key || '');
-      if (f) return `<figure class="pb-img"><img src="${displayImageUrl(Number(f[1]))}" onerror="queueDisplayImageFallback(this,${Number(f[1])})" alt="">
-        ${b.content ? `<figcaption data-no-i18n>${x(b.content)}</figcaption>` : ''}</figure>`;
+      if (f) return pcFigureHtml(c, Number(f[1]), b.content);
       return `<button class="btn btn-s btn-sm" onclick="pbPickImage(${xj(c.iid)})">${I.plus} ${t('pbChooseImage')}</button>`;
     }
     case 'columns': {
@@ -178,16 +178,12 @@ async function pbSetContent(iid, value) {
   b.content = value;
 }
 
-async function pbPickImage(iid) {
+// The picture picker (page/imagepick.js, EXPORT-DECOR D4): search, recent,
+// import a new one right there.
+function pbPickImage(iid) {
   const i = pbInst(iid);
   if (!i || !S.nexus) return;
-  const idx = await api.viewer.index(S.nexus.id);
-  const imgs = idx.filter((e) => e.kind === 'file' && /^(png|jpe?g|gif|webp|bmp|svg)$/i.test(e.fileType || ''));
-  openModal(t('pbChooseImage'), imgs.length ? `<div class="pb-img-grid">${imgs.map((e) => {
-    const id = Number(String(e.key).slice(5));
-    return `<button class="btn btn-g pb-img-pick" onclick="pbSetImage(${xj(iid)},${xj(e.key)})" title="${x(e.name)}">
-      <img src="${displayImageUrl(id)}" onerror="queueDisplayImageFallback(this,${id})" alt=""></button>`;
-  }).join('')}</div>` : `<p class="drafter-hint">${t('pbNoImages')}</p>`);
+  openPbImagePicker({ moduleId: i.moduleId, onPick: ([id]) => id && pbSetImage(iid, `file_${id}`) });
 }
 
 async function pbSetImage(iid, key) {

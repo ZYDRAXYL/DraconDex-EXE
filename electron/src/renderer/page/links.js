@@ -228,7 +228,7 @@ function pbEntitySummary(key) {
       .map((pr) => ({ name: pr.prop_name, value: String(pr.content).slice(0, 80) }));
     const e = pbWikiEntry(key);
     const first = String((itemKey ? '' : m?.description) || '').split('\n').find((ln) => ln.trim()) || '';
-    return { name: e?.name || m?.name || key, kindLabel: m ? kindLabel(m.kind) : '', cover: /^[a-f0-9]{64}$/.test(lay?.cover || '') ? lay.cover : null,
+    return { name: e?.name || m?.name || key, kindLabel: m ? kindLabel(m.kind) : '', cover: /^([a-f0-9]{64}|file_\d+)$/.test(lay?.cover || '') ? lay.cover : null,
       icon: lay?.icon || null, fields, first: first.replace(/[#*_`>[\]]/g, '').slice(0, 160) };
   })().catch(() => null);
   _pbSummary.set(key, p);
