@@ -19,7 +19,7 @@ function walk(dir) {
   });
 }
 const registered = new Set(walk(join(root, 'src/renderer')).flatMap((f) =>
-  [...readFileSync(f, 'utf8').matchAll(/register(?:Component|Filled)\('([a-z]+\.[a-z]+)'/g)].map((m) => m[1])));
+  [...readFileSync(f, 'utf8').matchAll(/register(?:Component|Filled)\('([a-z]+\.[a-z][a-z0-9]*)'/g)].map((m) => m[1])));
 const catalog = new Map(pages.components.map((c) => [c.id, c]));
 
 // Every component a list of blocks names, columns' children included.

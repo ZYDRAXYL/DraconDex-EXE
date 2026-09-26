@@ -351,13 +351,13 @@
     {
       "id": "core.linkbar",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
       "id": "core.navbox",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
@@ -369,7 +369,7 @@
     {
       "id": "core.linkcard",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
@@ -382,88 +382,88 @@
     {
       "id": "core.children",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
       "id": "core.references",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false,
       "once": true
     },
     {
       "id": "core.tabs",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false,
       "container": true
     },
     {
       "id": "core.toggle",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false,
       "container": true
     },
     {
       "id": "core.banner",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
       "id": "core.gallery",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
       "id": "core.divider",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
       "id": "core.iconrow",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
       "id": "core.figure",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
       "id": "core.video",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
       "id": "core.audio",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
       "id": "core.pdf",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
       "id": "core.model3d",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     },
     {
       "id": "core.media",
       "kind": "core",
-      "since": "planned",
+      "since": "exe",
       "borrowable": false
     }
   ],
