@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld('api', {
     exportMarkdown: (id)   => inv('nexus:exportMarkdown', id),
     htmlCollect:  (nx,key,depth) => inv('htmlExport:collect', nx,key,depth),
     exportHtml:   (nx,payload)   => inv('htmlExport:write', nx,payload),
+    exportTable:  (mid,format)   => inv('export:table', mid,format),
+    exportPdf:    (nx,payload,opts) => inv('export:pdf', nx,payload,opts),
     shareFile:    (id)     => inv('nexus:shareFile', id),
     revealFile:   (id)     => inv('nexus:revealFile', id),
     taught:       (nx)     => inv('nexus:taught', nx),

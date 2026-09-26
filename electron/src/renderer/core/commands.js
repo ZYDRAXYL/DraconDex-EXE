@@ -112,6 +112,7 @@ const COMMANDS = {
   // Procress 13 part 4 (REDESIGN.md C6): the title's own layout, per page.
   'page.useTemplate': { label: 'tplUse', icon: 'layer', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode?.itemKey, run: () => openTemplateGallery(S.activeModuleNode.id), surfaces: ['page.head'] },
   'page.saveTemplate': { label: 'tplSave', icon: 'star', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode?.itemKey, run: () => openSavePresetModal(S.activeModuleNode.id), surfaces: ['page.head'] },
+  'page.export': { label: 'exportTitle', icon: 'export', scope: 'app', when: () => !!(S.activeModuleNode || S.activeItemNode?.itemKey), run: () => openExportModal(S.activeItemNode?.itemKey ? S.activeItemNode.moduleId : S.activeModuleNode.id, S.activeItemNode?.itemKey || null), surfaces: ['page.head'] },
   'page.layout': { label: 'pageLayout', icon: 'fields', scope: 'app', when: () => !!(S.activeModuleNode || S.activeItemNode?.itemKey), run: (c, el) => openPageLayoutPopup(el), surfaces: ['page.head'] },
   'page.readable': { label: 'pageReadable', icon: 'document', scope: 'app', when: () => !!(S.activeModuleNode || S.activeItemNode?.itemKey), run: () => togglePageReadable(), surfaces: ['page.head'] },
   'history.undo': { label: 'scUndo', icon: 'return', scope: 'app', hint: 'Ctrl+Z', run: () => handleHistoryShortcut('undo'), surfaces: ['shortcut'] },
@@ -140,6 +141,7 @@ const COMMANDS = {
     surfaces: ['nest.ctx'],
   },
   'module.importModule': { label: 'settingDbImportModule', icon: 'import', scope: 'module', when: isFolderCtx, run: (c) => ctxImportModule(c.moduleId), surfaces: ['nest.ctx'] },
+  'module.exportAs': { label: 'exportTitle', icon: 'export', scope: 'module', run: (c) => openExportModal(c.moduleId), surfaces: ['nest.ctx'] },
   'module.export': { label: 'settingDbExportModule', icon: 'export', scope: 'module', run: (c) => ctxExportModule(c.moduleId), surfaces: ['nest.ctx'] },
   'module.importFolder': { label: 'importFolderHere', icon: 'folder', scope: 'module', when: isFolderCtx, run: (c) => importDockPickFolder(c.moduleId), surfaces: ['nest.ctx', 'assets.strip'] },
   'module.addLink': { label: 'addAssetLink', icon: 'plus', scope: 'module', run: (c) => openAddAssetUrlModal(c.moduleId), surfaces: ['nest.ctx', 'assets.strip'] },

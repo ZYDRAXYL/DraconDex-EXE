@@ -18,6 +18,7 @@ function openModuleContextMenu(ev, id) {
 CTX_PROVIDERS['nest.module'] = (c) => [
   cmdItem('module.create', c),
   cmdItem('module.importModule', c),
+  cmdItem('module.exportAs', c),
   cmdItem('module.export', c),
   cmdItem('module.importFolder', c),
   cmdItem('module.addLink', c),

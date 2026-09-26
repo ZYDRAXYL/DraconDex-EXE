@@ -85,13 +85,20 @@ async function hxRenderPage(p) {
     const body = kind === 'author' ? `<div class="md-preview">${mdRender(item.chapter_content || '')}</div>` : await reg.renderBody(item, m);
     const prev = S.activeItemNode;
     S.activeItemNode = { itemKind: kind, moduleId: m.id, id: item.id, item, m, bodyHtml: body, itemKey: p.key };
-    try { html = withRenderPane(HX_PANE, () => pageBlocksHtml(m.id, p.key)); } finally { S.activeItemNode = prev; }
+    // Kept through the mount: an element page's components (infobox, stats)
+    // fill themselves after it and read the open element.
+    try {
+      html = withRenderPane(HX_PANE, () => pageBlocksHtml(m.id, p.key));
+      return await hxMountInto(host, p, html);
+    } finally { S.activeItemNode = prev; }
   }
+  return hxMountInto(host, p, html);
+}
+
+async function hxMountInto(host, p, html) {
   host.innerHTML = `<div class="bpane-body"><div class="module-page"><h1 class="site-title">${x(p.name)}</h1>${html}</div></div>`;
-  if (prefix === 'module') {
-    try { mountPageBlocks(HX_PANE); } catch (e) { console.error('html export mount:', e); }
-    await new Promise((r) => setTimeout(r, 250)); // Konva and the SVG boards draw on the next frames
-  }
+  try { mountPageBlocks(HX_PANE); } catch (e) { console.error('html export mount:', e); }
+  await new Promise((r) => setTimeout(r, 250)); // Konva, the SVG boards and the page components fill on the next frames
   return host.querySelector('.module-page');
 }
 
@@ -149,10 +156,14 @@ function hxKeyOfHandler(js) {
 }
 
 // The app's own styles, headed by the running theme's tokens, so the site
-// looks like the app did when it was exported.
-function hxSiteCss() {
+// looks like the app did when it was exported. print: daylight's tokens
+// instead (a PDF on paper) — read by putting daylight on <body> for the
+// one synchronous read, a custom or installed theme's inline tokens set
+// aside, then put back before anything paints.
+function hxSiteCss({ print = false } = {}) {
   const names = new Set();
   const rules = [];
+  const daylight = new Set();
   for (const sheet of document.styleSheets) {
     let list;
     try { list = sheet.cssRules; } catch (_) { continue; }
@@ -160,10 +171,25 @@ function hxSiteCss() {
       rules.push(r.cssText);
       const st = r.style;
       if (st) for (let i = 0; i < st.length; i++) if (st[i].startsWith('--')) names.add(st[i]);
+      if (st && r.selectorText === 'body[data-theme="daylight"]') for (let i = 0; i < st.length; i++) daylight.add(st[i]);
     }
   }
-  const cs = getComputedStyle(document.body);
-  const tokens = [...names].map((n) => `${n}:${cs.getPropertyValue(n).trim()}`).filter((s) => !s.endsWith(':')).join(';');
+  const body = document.body;
+  const saved = { theme: body.getAttribute('data-theme'), style: body.getAttribute('style') };
+  if (print) {
+    body.setAttribute('data-theme', 'daylight');
+    for (const n of daylight) body.style.removeProperty(n);
+  }
+  let tokens;
+  try {
+    const cs = getComputedStyle(body);
+    tokens = [...names].map((n) => `${n}:${cs.getPropertyValue(n).trim()}`).filter((s) => !s.endsWith(':')).join(';');
+  } finally {
+    if (print) {
+      if (saved.theme == null) body.removeAttribute('data-theme'); else body.setAttribute('data-theme', saved.theme);
+      if (saved.style == null) body.removeAttribute('style'); else body.setAttribute('style', saved.style);
+    }
+  }
   return `:root,body{${tokens}}
 body.ddx-site{margin:0;overflow:auto;height:auto;background:var(--bg);color:var(--t1)}
 .site-head{padding:12px 24px;border-bottom:1px solid var(--border);font-weight:700}
@@ -174,16 +200,13 @@ body.ddx-site{margin:0;overflow:auto;height:auto;background:var(--bg);color:var(
 .site-page{max-width:1100px;margin:0 auto;padding:16px 24px 64px}
 .site-title{font-size:1.5em;margin:8px 0 16px}
 a.xl{color:var(--accentH);text-decoration:none;cursor:pointer} a.xl:hover{text-decoration:underline}
-${rules.join('\n')}`;
+${rules.join('\n')}
+body.ddx-site{${tokens}}`;
 }
 
-async function runHtmlExport() {
-  if (!_hx) return;
-  const pages = _hx.pages.filter((p) => _hx.ticked.has(p.key));
-  const index = pages[0];
-  if (!index) return;
-  const go = q('#hx-go');
-  if (go) { go.disabled = true; go.textContent = t('htmlExportWorking'); }
+// Every page drawn, then made static — shared by the site and the PDF
+// (hub/export.js). → { pages: [{key, name, html}], images: [{name, base64}] }
+async function hxRenderAll(pages) {
   const images = [];
   const out = [];
   try {
@@ -195,10 +218,22 @@ async function runHtmlExport() {
     q(`#main-inner [data-pane="${HX_PANE}"]`)?.remove();
     pbPruneInstances();
   }
+  return { pages: out, images };
+}
+
+async function runHtmlExport() {
+  if (!_hx) return;
+  const pages = _hx.pages.filter((p) => _hx.ticked.has(p.key));
+  const index = pages[0];
+  if (!index) return;
+  const go = q('#hx-go');
+  if (go) { go.disabled = true; go.textContent = t('htmlExportWorking'); }
+  const drawn = await hxRenderAll(pages);
   closeModal();
-  const r = await api.nexus.exportHtml(_hx.nexusId, { indexKey: index.key, title: index.name, css: hxSiteCss(), pages: out, images });
+  const r = await api.nexus.exportHtml(_hx.nexusId, { indexKey: index.key, title: index.name, css: hxSiteCss(), ...drawn });
   renderNexusHome(); // the open page's data was reloaded for the export's own renders
   if (r?.canceled) return;
   if (!r?.ok) { toast(t(r?.code === 'too_many' ? 'nexusZipTooLarge' : 'driveErrServer'), 'error'); return; }
-  toast(`${t('nexusExported')} · ${r.pages} ${t('htmlExportPages')}`, 'ok');
+  toast(`${t('nexusExported')} · ${r.pages} ${t('htmlExportPages')}${r.media ? ` · ${r.media} ${t('exportPictures')}` : ''}`, 'ok');
+  if (r.missing) toast(t('exportMediaMissing').replace('{n}', r.missing), 'warn');
 }

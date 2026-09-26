@@ -795,7 +795,52 @@ h('htmlExport:write', async (nx, payload) => {
     filters: [{ name: 'Website (.zip)', extensions: ['zip'] }],
   });
   if (result.canceled || !result.filePath) return { ok: false, canceled: true };
-  return db.exportHtmlSite(result.filePath, payload);
+  return db.exportHtmlSite(result.filePath, payload, nx);
+});
+// Procress 14 (EXPORT-DECOR.md E1): PDF. db/pdf-export.js makes one print
+// document from the pages the renderer drew; it is printed in a hidden
+// window with JavaScript off, no preload and a session of its own (the
+// web-contents-created lockdown above covers it too), then closed.
+h('export:pdf', async (nx, payload, opts) => {
+  const doc = db.buildPrintHtml(payload, nx);
+  if (!doc.ok) return doc;
+  const safe = String(payload?.title || 'export').replace(/[\\/:*?"<>|]/g, '_').slice(0, 120) || 'export';
+  const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'Export PDF', defaultPath: path.join(app.getPath('documents'), `${safe}.pdf`),
+    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  const tmp = path.join(app.getPath('temp'), `ddx-print-${process.pid}-${Date.now()}.html`);
+  const win = new BrowserWindow({
+    show: false, width: 1100, height: 1400,
+    webPreferences: { javascript: false, sandbox: true, contextIsolation: true, nodeIntegration: false, partition: 'ddx-print', spellcheck: false },
+  });
+  try {
+    fs.writeFileSync(tmp, doc.html, 'utf8');
+    await win.loadFile(tmp);
+    const pdf = await win.webContents.printToPDF(db.pdfOptions(opts || {}, payload?.title || ''));
+    fs.writeFileSync(result.filePath, pdf);
+    return { ok: true, saved: result.filePath, pages: doc.pages, missing: doc.missing, bytes: pdf.length };
+  } catch (err) {
+    console.error('export:pdf', err);
+    return { ok: false, code: 'print_failed' };
+  } finally {
+    if (!win.isDestroyed()) win.destroy();
+    fs.rm(tmp, { force: true }, () => {});
+  }
+});
+// Procress 14 (EXPORT-DECOR.md E4): a Classifier / Chronicler as a table.
+// The renderer names the module and the format; main reads the vault.
+h('export:table', async (moduleId, format) => {
+  const m = db.getModule(moduleId);
+  if (!m || !['csv', 'xlsx'].includes(format)) return { ok: false, code: 'not_found' };
+  const safe = String(m.name || 'table').replace(/[\\/:*?"<>|]/g, '_');
+  const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    title: format === 'csv' ? 'Export CSV' : 'Export Excel', defaultPath: path.join(app.getPath('documents'), `${safe}.${format}`),
+    filters: [format === 'csv' ? { name: 'CSV', extensions: ['csv'] } : { name: 'Excel', extensions: ['xlsx'] }],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  return { ...db.exportTable(moduleId, format, result.filePath), saved: result.filePath };
 });
 h('module:duplicate',   (id)          => db.duplicateModule(id));
 h('module:move',        (nx,id,parentId,ids) => db.moveModule(nx,id,parentId,ids));
