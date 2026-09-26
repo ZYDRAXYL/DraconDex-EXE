@@ -29,9 +29,13 @@ registerFilled('classifier.roster', { kind: 'classifier', labelKey: 'pcRoster', 
 });
 
 // Breakdown: how many elements per value of one field (config.field, by key).
-registerFilled('classifier.breakdown', { kind: 'classifier', labelKey: 'pcBreakdown', borrow: true }, async (c) => {
+registerFilled('classifier.breakdown', {
+  kind: 'classifier', labelKey: 'pcBreakdown', borrow: true,
+  options: () => [{ key: 'field', type: 'fields', single: true, label: 'pcOptField' }],
+}, async (c) => {
   const { objects = [], templates = [] } = (await api.classifier.getObjectsFull(c.source.id)) || {};
-  const tp = (c.config.field && pcFindField(templates, c.config.field))
+  const field = pbOpt(c, 'field');
+  const tp = (field && pcFindField(templates, field))
     || templates.find((x2) => x2.attribute_type === 'select') || templates.find((x2) => x2.attribute_type !== 'relation');
   if (!tp || !objects.length) return pcEmpty(t('pcBreakdownEmpty'));
   const counts = new Map();
@@ -67,10 +71,13 @@ registerFilled('chronicler.eras', { kind: 'chronicler', labelKey: 'pcEras', borr
 
 // Upcoming: the next events from a point in the story (config.from: a year),
 // or the first ones.
-registerFilled('chronicler.upcoming', { kind: 'chronicler', labelKey: 'pcUpcoming', borrow: true }, async (c) => {
+registerFilled('chronicler.upcoming', {
+  kind: 'chronicler', labelKey: 'pcUpcoming', borrow: true,
+  options: () => [{ key: 'from', type: 'number', label: 'pcOptFrom' }],
+}, async (c) => {
   const evs = await pcEvents(c.source.id);
-  const from = Number(c.config.from);
-  const list = (Number.isFinite(from) ? evs.filter((e) => e.s_years >= from) : evs).slice(0, 5);
+  const from = pbOpt(c, 'from');
+  const list = (typeof from === 'number' ? evs.filter((e) => e.s_years >= from) : evs).slice(0, 5);
   if (!list.length) return pcEmpty(t('noEventsYet'));
   return `<div class="pc-head">${t('pcUpcoming')}</div><ul class="pc-list">${list.map((e) => `<li ${pcOpen(`tlev_${e.id}`)}>
     <span class="pc-dot"${e.color_code ? ` style="background:${x(e.color_code)}"` : ''}></span><span class="pc-li-main">${x(e.event_name)}</span>
@@ -89,12 +96,15 @@ registerFilled('locator.pinlist', { kind: 'locator', labelKey: 'pcPinlist', borr
 
 // ── Author ─────────────────────────────────────────────────────────────
 // Progress: words so far, per chapter and in all (config.goal: a target).
-registerFilled('author.progress', { kind: 'author', labelKey: 'pcProgress', borrow: true }, async (c) => {
+registerFilled('author.progress', {
+  kind: 'author', labelKey: 'pcProgress', borrow: true,
+  options: () => [{ key: 'goal', type: 'number', label: 'pcOptGoal', min: 0, max: 10000000 }],
+}, async (c) => {
   const chs = (await api.author.getChapters(c.source.id)) || [];
   if (!chs.length) return pcEmpty(t('pcNoChapters'));
   const rows = chs.map((ch) => ({ label: ch.chapter_label ? `${ch.chapter_label} · ${ch.name}` : ch.name, n: pcWords(ch.chapter_content) }));
   const total = rows.reduce((s, r) => s + r.n, 0);
-  const goal = Number(c.config.goal) || 0;
+  const goal = pbOpt(c, 'goal') || 0;
   return `<div class="pc-progress-top"><span class="pc-stat-v">${total.toLocaleString()}</span> <span class="pc-stat-k">${t('pcWords')}</span>
     ${goal ? `<span class="pc-goal">${Math.min(100, Math.round((total / goal) * 100))}% · ${goal.toLocaleString()}</span>` : ''}</div>${pcBarsHtml(rows)}`;
 });

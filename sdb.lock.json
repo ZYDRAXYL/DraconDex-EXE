@@ -3,8 +3,8 @@
   "self": "EXE",
   "source": {
     "repo": "ZYDRAXYL/DraconDex-SDB",
-    "ref": "sdb-v2.0.6",
-    "version": "2.0.6"
+    "ref": "3dac6a3297a90b613853e410c555479a379fd9f6",
+    "version": "2.0.7"
   },
   "expect": {
     "vaultSchemaVersion": 6,
@@ -61,7 +61,7 @@
     },
     "electron/templates/pages.json": {
       "artifact": "generated/templates/pages.json",
-      "sha256": "f7c3dc8cb15ab45525b6253ff6d21be7aa6bcd90f18b8488954f1d9a658b8949"
+      "sha256": "708e0e56d24b006a7aa6ff106e4d094ff6e0ca1888b1cf65d0a0f697594167ea"
     },
     "electron/test/fixtures/snapshot-v2.json": {
       "artifact": "fixtures/snapshot-v2.json",

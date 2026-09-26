@@ -405,6 +405,66 @@
       "since": "planned",
       "borrowable": false,
       "container": true
+    },
+    {
+      "id": "core.banner",
+      "kind": "core",
+      "since": "planned",
+      "borrowable": false
+    },
+    {
+      "id": "core.gallery",
+      "kind": "core",
+      "since": "planned",
+      "borrowable": false
+    },
+    {
+      "id": "core.divider",
+      "kind": "core",
+      "since": "planned",
+      "borrowable": false
+    },
+    {
+      "id": "core.iconrow",
+      "kind": "core",
+      "since": "planned",
+      "borrowable": false
+    },
+    {
+      "id": "core.figure",
+      "kind": "core",
+      "since": "planned",
+      "borrowable": false
+    },
+    {
+      "id": "core.video",
+      "kind": "core",
+      "since": "planned",
+      "borrowable": false
+    },
+    {
+      "id": "core.audio",
+      "kind": "core",
+      "since": "planned",
+      "borrowable": false
+    },
+    {
+      "id": "core.pdf",
+      "kind": "core",
+      "since": "planned",
+      "borrowable": false
+    },
+    {
+      "id": "core.model3d",
+      "kind": "core",
+      "since": "planned",
+      "borrowable": false
+    },
+    {
+      "id": "core.media",
+      "kind": "core",
+      "since": "planned",
+      "borrowable": false
     }
   ],
   "templates": [

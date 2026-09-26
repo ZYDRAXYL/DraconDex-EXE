@@ -163,7 +163,7 @@ function pbBasicHtml(c, seen) {
 
 function pbBasicMount(c) {
   if (c.block.block_type !== 'text') return;
-  const el = c.root.querySelector(':scope > [data-r="md"]');
+  const el = c.root.querySelector(':scope > .pb-body > [data-r="md"]');
   if (!el || el.dataset.mounted) return;
   el.dataset.mounted = '1';
   const b = c.block;

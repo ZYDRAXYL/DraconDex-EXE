@@ -7,16 +7,24 @@
 
 // Infobox: the element's fields, the ones config.fields names (by key) or
 // all of them — docked right / left / full, as a table or stacked.
-registerFilled('core.infobox', { kind: 'core', labelKey: 'pcInfobox', once: true }, async (c) => {
-  const dock = ['left', 'full'].includes(c.config.dock) ? c.config.dock : 'right';
-  const layout = c.config.layout === 'stacked' ? 'stacked' : 'table';
+registerFilled('core.infobox', {
+  kind: 'core', labelKey: 'pcInfobox', once: true,
+  options: () => [
+    { key: 'fields', type: 'fields', label: 'pcOptFields' },
+    { key: 'layout', type: 'select', label: 'pcOptLayout', choices: ['table', 'stacked'], default: 'table', choiceKey: (v) => `pcLayout${pbCap(v)}` },
+    { key: 'dock', type: 'select', label: 'pcOptDock', choices: ['right', 'left', 'full'], default: 'right', choiceKey: (v) => `pcDock${pbCap(v)}` },
+  ],
+}, async (c) => {
+  const dock = pbOpt(c, 'dock');
+  const layout = pbOpt(c, 'layout');
   const oid = pcObjectId(c.itemKey);
   let rows = [];
   if (oid) {
     const [templates, attrs] = await Promise.all([api.classifier.getTemplates(c.page.moduleId), api.classifier.getAttrs(oid)]);
     const byTpl = new Map((attrs || []).map((a) => [a.template_ref, a.attribute_value]));
-    const want = Array.isArray(c.config.fields) && c.config.fields.length
-      ? c.config.fields.map((k) => pcFindField(templates, k)).filter(Boolean)
+    const fields = pbOpt(c, 'fields');
+    const want = Array.isArray(fields) && fields.length
+      ? fields.map((k) => pcFindField(templates, k)).filter(Boolean)
       : (templates || []).filter((tp) => tp.attribute_type !== 'relation');
     rows = want.map((tp) => ({ label: tp.description, value: byTpl.get(tp.id) ?? '' }));
   } else {
@@ -35,8 +43,9 @@ registerFilled('core.infobox', { kind: 'core', labelKey: 'pcInfobox', once: true
 const PC_TONES = ['note', 'tip', 'warning', 'quote', 'secret'];
 registerComponent('core.callout', {
   kind: 'core', labelKey: 'pcCallout',
+  options: () => [{ key: 'tone', type: 'select', label: 'pcOptTone', choices: PC_TONES, default: 'note', choiceKey: (v) => `pcTone${pbCap(v)}` }],
   render: (c) => {
-    const tone = PC_TONES.includes(c.config.tone) ? c.config.tone : 'note';
+    const tone = pbOpt(c, 'tone');
     return `<div class="pc-callout" data-tone="${tone}">
       <div class="pc-callout-body" contenteditable="true" data-ph="${x(t('pcCalloutPh'))}"
         onblur="pcCalloutSave(${xj(c.iid)},this)">${x(c.block.content || '')}</div>
