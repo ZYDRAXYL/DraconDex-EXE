@@ -75,9 +75,21 @@ finding:
 - **Effort** — rough: copy/label tweak vs. new interaction pattern vs.
   structural rework
 
-If you were asked to also write the report to a file, use `Write` for that;
-otherwise return it directly as your final message — don't create files the
-caller didn't ask for.
+**Record the audit (G8).** Findings kept only in chat can't be compared
+before/after, so the report is also a file:
+
+- In a DraconDex-APP checkout, `Write` it to
+  `docs/redesign/audits/<screen>-<YYYY-MM-DD>.md` using the template in
+  `docs/redesign/audits/README.md` (Discover → Define → After), and copy the
+  screenshots you cite from `tmp-driver-data/shots/` into
+  `docs/redesign/audits/shots/<screen>-<YYYY-MM-DD>/`.
+- In any other repo (EXE, APK), audits don't live there — return the report
+  as your final message, headed with the path it belongs at in APP, so the
+  caller can commit it there.
+- Before writing, read any earlier audit of the same screen in that folder
+  and say what changed since it.
+
+Create no other files.
 
 ## Boundaries
 

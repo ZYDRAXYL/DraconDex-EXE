@@ -3,8 +3,8 @@
   "self": "EXE",
   "source": {
     "repo": "ZYDRAXYL/DraconDex-SDB",
-    "ref": "400dd41",
-    "version": "2.0.3"
+    "ref": "0de2276",
+    "version": "2.0.8"
   },
   "expect": {
     "vaultSchemaVersion": 6,
@@ -22,6 +22,10 @@
     "src/schema/generated/entity-kinds.json": {
       "artifact": "generated/electron/entity-kinds.json",
       "sha256": "29fdd294651e2f0e61c8971e335a49de81797075f74171cb8d1810756b4a4913"
+    },
+    "src/design/generated/tokens.css": {
+      "artifact": "generated/electron/tokens.css",
+      "sha256": "37586a51161484764ae396f5a4c7b5a97ae4989dcee373199188621ec0645f8a"
     },
     "src/assets/brand/DraconDex_BlackIn.png": {
       "artifact": "assets/brand/DraconDex_BlackIn.png",
@@ -53,7 +57,11 @@
     },
     "electron/templates/bundles.json": {
       "artifact": "generated/templates/bundles.json",
-      "sha256": "7d10b0cfdd0217a00a610e75ce8315499778836b5802f0b35fa4027f234fad15"
+      "sha256": "e80d8b6f2928696a4418850366febb5fc03a5afe60bea5f6b34e78186cbbe0b7"
+    },
+    "electron/templates/pages.json": {
+      "artifact": "generated/templates/pages.json",
+      "sha256": "1a11125e09559cb385709bebe8e144bba24a7e1e402a1992c62cdaa7d347c431"
     },
     "electron/test/fixtures/snapshot-v2.json": {
       "artifact": "fixtures/snapshot-v2.json",

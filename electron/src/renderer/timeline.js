@@ -65,7 +65,7 @@ function buildTimelineRulerSvg(minTs, maxTs, xFromTs, LINE_Y){
   for(const tk of ticks){
     const cx = xFromTs(tk.ordinal);
     svg += `<line class="tl-ruler-tick" data-tick-ts="${tk.ordinal}" x1="${cx}" y1="${LINE_Y-14}" x2="${cx}" y2="${LINE_Y+14}" stroke="var(--border)" stroke-width="1.5" opacity="0.55"/>
-      <text class="tl-ruler-label" data-tick-ts="${tk.ordinal}" x="${cx}" y="${LINE_Y+30}" text-anchor="middle" font-size="10.5" fill="var(--t3)">${x(tk.label)}</text>`;
+      <text class="tl-ruler-label" data-tick-ts="${tk.ordinal}" x="${cx}" y="${LINE_Y+30}" text-anchor="middle" font-size="10.5" fill="var(--t3-aa,var(--t2))">${x(tk.label)}</text>`;
   }
   return svg;
 }

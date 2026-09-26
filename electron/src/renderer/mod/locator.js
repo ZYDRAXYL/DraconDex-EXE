@@ -31,7 +31,10 @@ registerComponent('locator.view', {
 
 function buildLocatorMainHtml(m, c) {
   const d = LOC[m.id];
-  if (!d?.map) return `<div class="empty" style="margin-top:40px"><p>${t('locatorEmpty')}</p></div>`;
+  if (!d?.map) return kindEmptyStateHtml(m, { note: t('locatorEmpty') });
+  // No areas yet: the board stays (areas are drawn on it), and under it the
+  // kind's empty state stands in for the list — its one button is Add area.
+  if (!(d.areas || []).length) return `${mapBoardHtml(c)}<div class="rel-underboard">${kindEmptyStateHtml(m)}</div>`;
   const areaList = typeof renderAreaList === 'function'
     ? renderAreaList(d.areas || [], { iid: c.iid, state: c.state }) : '';
   return `${mapBoardHtml(c)}

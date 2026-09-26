@@ -92,6 +92,7 @@ const KIND_PRESETS = {
 // (hub/kinds.js reloadModuleTree) — the kind picker is synchronous.
 let _presetCache = { nexusId: null, rows: [] };
 async function refreshPresetCache() {
+  refreshPageTemplates(); // hub/page-templates.js — the kind picker's flyout lists them
   const nx = S.nexus?.id;
   if (nx == null || typeof api.preset?.list !== 'function') { _presetCache = { nexusId: nx, rows: [] }; return; }
   try { _presetCache = { nexusId: nx, rows: await api.preset.list(nx, null) }; }
@@ -171,7 +172,8 @@ function openPresetSubmenu(ev, kind, parentId) {
   const pid = parentId == null ? 'null' : Number(parentId);
   openCtxSubmenu(ev, `
     <div class="kind-list-item" onclick="closeAllPopups();quickCreateModule('${kind}',${pid})"><span class="kli-name">${x(t('presetEmpty'))}</span></div>
-    <div class="ctx-sep"></div>
+    ${templateMenuHtml(kind, pid)}
+    ${presetsFor(kind).length ? `<div class="ctx-sep"></div><div class="ctx-head">${t('presetsTitle')}</div>` : ''}
     ${presetsFor(kind).map(p => `<div class="kind-list-item" onclick="closeAllPopups();createModuleFromPreset('${kind}',${pid},${xj(p.ref)})">
       <span class="kicon">${I[p.icon] || ''}</span><span class="kli-name"${p.own ? ' data-no-i18n' : ''}>${x(p.name)}</span></div>`).join('')}`);
 }

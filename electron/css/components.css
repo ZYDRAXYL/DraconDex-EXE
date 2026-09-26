@@ -44,12 +44,12 @@
    buttons still use their background-fill hover). .btn-d keeps its red
    warning fill — a destructive-action cue, not decorative hover chrome. */
 .btn-i:not(.btn-d):hover{background:transparent}
-.btn-i.btn-i-sm{width:20px;height:20px;padding:2px}
+.btn-i.btn-i-sm{width:24px;height:24px;padding:4px} /* 24px = WCAG 2.5.8 target minimum; the icon stays 11px */
 .btn-i.btn-i-sm .icon{width:11px;height:11px}
 
 /* FORMS */
 .fg{margin-bottom:14px}
-.fg label{display:block;font-size:calc(11px * var(--fsc,1));color:var(--t3);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.fg label{display:block;font-size:calc(11px * var(--fsc,1));color:var(--t3-aa,var(--t2));margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
 .fg input,.fg textarea,.fg select{
 	width:100%;background:var(--bg);border:1px solid var(--border);
 	border-radius:var(--r);color:var(--t1);padding:8px 11px;
@@ -58,6 +58,19 @@
 }
 .fg input:focus,.fg textarea:focus,.fg select:focus{border-color:var(--accent)}
 .fg textarea{resize:vertical;min-height:72px}
+/* The component contract (APP docs/redesign/COMPONENTS.md): help under a
+   field, and the same line turned error. aria-invalid marks the field
+   itself, so a screen reader hears what the colour shows. */
+.fg .help{display:block;margin-top:5px;font-size:calc(11.5px * var(--fsc,1));color:var(--t3-aa,var(--t2))}
+.fg .help.err{color:var(--danger)}
+.fg [aria-invalid="true"]{border-color:var(--danger)}
+
+/* Keyboard focus. base.css drops the browser outline on inputs and buttons
+   (a mouse click drew one), which left keyboard users with nothing but a
+   border tint. :focus-visible is only true for keyboard focus, so pointer
+   use looks exactly as before. */
+.btn:focus-visible,.li:focus-visible,select:focus-visible,
+.fg input:focus-visible,.fg textarea:focus-visible,.fg select:focus-visible{outline:2px solid var(--accentH);outline-offset:2px}
 .fg select option{background:var(--raised)}
 .fg input[type="checkbox"]{width:auto;padding:0}
 
@@ -111,7 +124,7 @@
 }
 #modal-title{flex:1;font-size:calc(14px * var(--fsc,1));font-weight:700}
 #modal-close{
-	background:none;border:none;color:var(--t3);cursor:pointer;
+	background:none;border:none;color:var(--t3-aa,var(--t2));cursor:pointer;
 	font-size:calc(15px * var(--fsc,1));padding:3px 6px;border-radius:var(--rs);line-height:1;
 }
 #modal-close:hover{color:var(--t1)}
@@ -131,7 +144,7 @@
 	border-bottom:1px solid var(--border);font-size:calc(14px * var(--fsc,1));font-weight:700;flex-shrink:0;
 }
 .fp-close{
-	background:none;border:none;color:var(--t3);cursor:pointer;
+	background:none;border:none;color:var(--t3-aa,var(--t2));cursor:pointer;
 	font-size:calc(15px * var(--fsc,1));padding:3px 6px;border-radius:var(--rs);line-height:1;
 }
 .fp-close:hover{color:var(--t1)}
@@ -199,22 +212,27 @@
    the cell itself carries no onclick; the Download button inside it stays
    at full opacity so it still reads as the one actionable thing in the row. */
 .prefs-theme-cell.locked{opacity:.55;cursor:default}
+/* With a catalog preview the colours ARE the point — keep them at full
+   strength and mark "not downloaded" with a dashed border + corner button. */
+.prefs-theme-cell.locked.has-preview{opacity:1;border-style:dashed;position:relative}
+.prefs-theme-cell.locked.has-preview .prefs-theme-name{color:var(--t2)}
+.prefs-theme-cell.locked.has-preview .prefs-theme-dl{position:absolute;top:10px;right:10px}
 .prefs-theme-cell.locked:hover{border-color:var(--border)}
 .prefs-theme-cell.locked .btn{opacity:1}
-.prefs-theme-cell-lockglyph{align-items:center;justify-content:center;color:var(--t3)}
+.prefs-theme-cell-lockglyph{align-items:center;justify-content:center;color:var(--t3-aa,var(--t2))}
 .prefs-theme-name{margin-top:6px;font-size:calc(11.5px * var(--fsc,1));font-weight:600;color:var(--t1);
 	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prefs-theme-tools{display:none;position:absolute;top:6px;right:6px;gap:4px;background:var(--surface);
 	border-radius:var(--rs);padding:2px 4px}
 .prefs-theme-cell:hover .prefs-theme-tools{display:flex}
-.prefs-theme-tools span{cursor:pointer;color:var(--t3);padding:0 2px;font-size:calc(11px * var(--fsc,1))}
+.prefs-theme-tools span{cursor:pointer;color:var(--t3-aa,var(--t2));padding:0 2px;font-size:calc(11px * var(--fsc,1))}
 .prefs-theme-tools span:hover{color:var(--accentH)}
 .prefs-theme-check{position:absolute;top:6px;left:6px;color:var(--accent);font-weight:700;
 	background:var(--surface);border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;
 	font-size:calc(10px * var(--fsc,1))}
 .prefs-theme-add{
 	display:flex;align-items:center;justify-content:center;min-height:112px;
-	border:1px dashed var(--border);color:var(--t3);font-size:28px;font-weight:300;
+	border:1px dashed var(--border);color:var(--t3-aa,var(--t2));font-size:28px;font-weight:300;
 }
 .prefs-theme-add:hover{border-color:var(--accentH);color:var(--accentH)}
 .prefs-lang-shell{display:flex;gap:16px;margin-top:4px}
@@ -298,7 +316,7 @@
 	background:var(--button, var(--accent));
 	transition:width .3s ease;
 }
-#splash-pct{font-size:var(--fs-xs);color:var(--t3);font-variant-numeric:tabular-nums}
+#splash-pct{font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:reduce){#splash,#splash-fill{transition:none}}
 
 /* uiPrompt() — the text-entry sibling of uiConfirm. Reuses the whole confirm
@@ -320,7 +338,7 @@
 .guide-pop-title{font-size:calc(14px * var(--fsc,1));font-weight:700;color:var(--t1);margin-bottom:6px}
 .guide-pop-text{font-size:calc(12.5px * var(--fsc,1));color:var(--t2);line-height:1.5}
 .guide-pop-foot{display:flex;gap:6px;align-items:center;margin-top:14px}
-.guide-step{font-size:calc(11px * var(--fsc,1));color:var(--t3)}
+.guide-step{font-size:calc(11px * var(--fsc,1));color:var(--t3-aa,var(--t2))}
 
 /* Modal: separate description (hint callout) from data (labeled sections) */
 .modal-hint{
@@ -333,7 +351,7 @@
 .modal-hint .icon{width:14px;height:14px;flex-shrink:0;margin-top:1px;color:var(--accent)}
 .modal-section-h{
 	display:flex;align-items:center;gap:8px;
-	font-size:calc(11px * var(--fsc,1));font-weight:700;color:var(--t3);
+	font-size:calc(11px * var(--fsc,1));font-weight:700;color:var(--t3-aa,var(--t2));
 	text-transform:uppercase;letter-spacing:.05em;
 	margin:16px 0 6px;
 }
@@ -384,3 +402,10 @@
 .bundle-adj-mod{display:inline-flex;align-items:center;gap:4px}
 .bundle-adj-fields{grid-column:2;font-size:calc(12px * var(--fsc,1))}
 .bundle-adj-fields input{display:block;width:100%;margin-top:4px}
+
+/* Setting window search (Procress 13 part 4, G5 — core/setting-search.js) */
+.setting-search{margin:0 0 10px}
+.setting-hit-group{margin-bottom:14px}
+.setting-hit-row{display:flex;width:100%;justify-content:flex-start;text-align:left;padding:7px 10px;color:var(--t1)}
+.setting-hit-row:hover{background:var(--hover)}
+.setting-hit{outline:2px solid var(--accent);outline-offset:3px;border-radius:var(--rs);transition:outline-color .6s}

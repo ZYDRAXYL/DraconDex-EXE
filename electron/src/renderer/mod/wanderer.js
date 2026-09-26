@@ -140,7 +140,7 @@ function toggleWandererAreaOpen(areaId) {
 
 function buildWandererAreaListHtml(d) {
   const areas = d.areas || [];
-  if (!areas.length) return `<div class="wnd-arealist-pane"><div class="empty" style="padding:16px 8px"><p data-no-i18n>No areas yet</p></div></div>`;
+  if (!areas.length) return `<div class="wnd-arealist-pane"><div class="empty" style="padding:16px 8px"><p>${t('mapNoAreas')}</p></div></div>`;
   const rows = areas.map(area => {
     const open = d.openAreaId === area.id;
     const areaLinks = d.links.filter(l => l.area_ref === area.id);
@@ -154,7 +154,7 @@ function buildWandererAreaListHtml(d) {
         ${areaLinks.length ? areaLinks.map(l => `<div class="objrow" style="padding:4px 0">
           <div class="dot" style="background:${l.entity?.color || '#f97316'}"></div>
           <div style="flex:1;min-width:0">${x(l.entity?.name || '—')}</div>
-        </div>`).join('') : `<div class="empty" style="padding:6px 0;font-size:calc(12px * var(--fsc,1))" data-no-i18n>No links yet</div>`}
+        </div>`).join('') : `<div class="empty" style="padding:6px 0;font-size:calc(12px * var(--fsc,1))">${t('mapNoLinks')}</div>`}
         <button class="btn btn-g" style="margin-top:6px" onclick="openWandererAreaAddPicker(${area.id})">${I.plus} ${t('moduleLink')}</button>
       </div>` : ''}
     </div>`;
@@ -201,8 +201,10 @@ function buildWandererMainHtml(m, c) {
     ${viewBar}
   </div>`;
   if (!d.map || !d.timeline) {
-    return `${toolbar}<div class="empty" style="margin-top:30px"><div class="ei">${moduleIconHtml(m)}</div>
-      <h3>${t('wandererNeedsRefs')}</h3><p data-no-i18n>Locator + Chronicler</p></div>`;
+    // Nothing to place a pin on until both references are picked — the
+    // pickers are in the toolbar above, so the empty state names them and
+    // offers no button of its own (wanderer.place needs both).
+    return `${toolbar}${kindEmptyStateHtml(m, { note: t('wandererNeedsRefs'), start: false })}`;
   }
   const refLine = `<div class="wnd-refline" data-no-i18n>${t('wandererRefs')}: ${x(d.locators.find(l => l.id === d.mapModuleId)?.name || '')} (Locator) + ${x(d.chroniclers.find(c => c.id === d.timelineModuleId)?.name || '')} (Chronicler)</div>`;
   // The map board is map.js's, per instance (v5 Part 8).

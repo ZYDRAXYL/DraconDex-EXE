@@ -122,10 +122,13 @@ function settingWindowNavHtml(){
 function settingWindowBodyHtml(){
   const parts = (SETTING_PAGE_MERGE[S.settingPage] || [S.settingPage])
     .map(p => SETTING_PAGE_RENDERERS[`${S.settingGroup}.${p}`]).filter(Boolean);
-  const content = parts.length
+  // G5 (core/setting-search.js): a query shows the results in place of the page.
+  const query = String(S.settingQuery || '').trim();
+  const content = query ? settingSearchResultsHtml(query) : parts.length
     ? parts.map(fn => fn()).join('<div class="setting-merge-sep"></div>')
     : `<div class="empty"><p>${t('syncWorking')}</p></div>`;
-  return `<div class="setting-shell"><div class="setting-sidebar">${settingWindowNavHtml()}</div><div class="setting-content">${content}</div></div>`;
+  const search = `<div class="fg setting-search"><input type="search" value="${x(S.settingQuery || '')}" placeholder="${x(t('settingSearch'))}" oninput="onSettingSearch(this.value)"></div>`;
+  return `<div class="setting-shell"><div class="setting-sidebar">${search}${settingWindowNavHtml()}</div><div class="setting-content">${content}</div></div>`;
 }
 
 // ═══ Workspace → Theme (moved from settings.js's old Preferences panel) ══
@@ -133,10 +136,11 @@ function settingWindowBodyHtml(){
 // every existing call site is unchanged. The first-run wizard (core/welcome.js)
 // overrides both: it needs its own handler to re-render the wizard after the
 // theme applies, and the duplicate/edit tools have no place in a setup step.
-function settingThemeGridCellHtml(key, name, vars, {active, isCustom, onclick, tools = true} = {}){
-  const rawId = isCustom ? key.split(':')[1] : null;
-  return `<div class="prefs-theme-cell${active?' active':''}" onclick="${onclick || `setUiSetting('theme','${key}')`}">
-    <div class="ctm-preview mini" style="background:${x(vars['--bg'])};border-color:${x(vars['--border'])}">
+// The mini app mockup a theme card draws from a palette. Shared by installed
+// cards and, since the catalog carries `preview.vars`, by not-yet-downloaded
+// ones — so a locked theme shows its real colours before download.
+function themeMockupHtml(vars){
+  return `<div class="ctm-preview mini" style="background:${x(vars['--bg'])};border-color:${x(vars['--border'])}">
       <div class="ctm-pv-side" style="background:${x(vars['--surface'])}">
         <i class="ctm-pv-acc" style="background:${x(vars['--accent'])}"></i>
         <i style="background:${x(vars['--raised'])}"></i>
@@ -147,7 +151,12 @@ function settingThemeGridCellHtml(key, name, vars, {active, isCustom, onclick, t
         <span class="ctm-pv-txt w60" style="color:${x(vars['--t3'])}"></span>
         <span class="ctm-pv-btn" style="background:${x(vars['--accent'])}"></span>
       </div>
-    </div>
+    </div>`;
+}
+function settingThemeGridCellHtml(key, name, vars, {active, isCustom, onclick, tools = true} = {}){
+  const rawId = isCustom ? key.split(':')[1] : null;
+  return `<div class="prefs-theme-cell${active?' active':''}" onclick="${onclick || `setUiSetting('theme','${key}')`}">
+    ${themeMockupHtml(vars)}
     <div class="prefs-theme-name" data-no-i18n>${x(name)}</div>
     ${tools ? `<div class="prefs-theme-tools">
       <span onclick="event.stopPropagation();duplicateTheme(${xj(key)})" title="${t('duplicate')}">⧉</span>
@@ -183,10 +192,14 @@ registerSettingPage('workspace', 'theme', settingThemePageHtml);
 // there's nothing real to preview here.
 function settingThemeCatalogCellHtml(p){
   const btnSel = `#pkg-inline-${p.id}`;
-  return `<div class="prefs-theme-cell locked">
-    <div class="ctm-preview mini prefs-theme-cell-lockglyph">${I.import}</div>
+  // The catalog's preview.vars (validated in main) is enough to draw the real
+  // mockup; an entry without one (older catalog) keeps the plain glyph.
+  const pv = p.preview?.vars;
+  const mock = pv ? themeMockupHtml(pv) : `<div class="ctm-preview mini prefs-theme-cell-lockglyph">${I.import}</div>`;
+  return `<div class="prefs-theme-cell locked${pv ? ' has-preview' : ''}" title="${t('pkgPreviewHint')}">
+    ${mock}
     <div class="prefs-theme-name" data-no-i18n>${x(pkgDisplayName(p))}</div>
-    <button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}">${I.import}</button>
+    <button class="btn btn-p btn-i btn-i-sm prefs-theme-dl" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}">${I.import}</button>
   </div>`;
 }
 function settingThemeSectionHtml(){
@@ -194,7 +207,7 @@ function settingThemeSectionHtml(){
   const palettes = getThemePalettes();
   const shownBuiltins = expanded ? UI_THEME_OPTIONS : UI_THEME_OPTIONS_BUILTIN.slice(0, 3);
   const builtins = shownBuiltins.map(key =>
-    settingThemeGridCellHtml(key, t(key), palettes[key] || {}, {active: S.settings.theme === key})
+    settingThemeGridCellHtml(key, themeOptionLabel(key), palettes[key] || {}, {active: S.settings.theme === key})
   ).join('');
   const customs = (S.settings.customThemes || []).map(ct =>
     settingThemeGridCellHtml(`custom:${ct.id}`, ct.name, ct.vars || {}, {active: S.settings.theme === `custom:${ct.id}`, isCustom: true})
@@ -220,9 +233,10 @@ function toggleSettingThemeExpanded(){
 
 // UI style (Procress 10 part 1, new) — shape/elevation preset, see
 // state.js's UI_STYLE_OPTIONS and css/ui-style.css. Collapsed shows the
-// first 3 presets, expanded shows all 5 — there is no "basic vs. all" split
-// for this one the way built-in vs. PKG themes has, so this just mirrors the
-// Theme section's collapse shape for a consistent page.
+// first 3 options; expanded shows the rest plus, since the Procress 10 part 2
+// slim, the catalog's not-yet-downloaded presets as locked rows. The label
+// map still lists the three that became packages — pkgLocalName() reads it so
+// they keep their translated names.
 const UI_STYLE_LABEL_KEY = {
   roundedMinimal: 'uiStyleRoundedMinimal', cleanMinimal: 'uiStyleCleanMinimal',
   fluent: 'uiStyleFluent', hardBlock: 'uiStyleHardBlock', oldPlain: 'uiStyleOldPlain',
@@ -231,7 +245,13 @@ const UI_STYLE_LABEL_KEY = {
 // no onclick, Download button where the checkmark slot would be.
 function settingUiStyleCatalogItemHtml(p){
   const btnSel = `#pkg-inline-${p.id}`;
-  return `<div class="theme-item locked">
+  // A shape sample drawn from the catalog's preview.vars: the preset's own
+  // corner radius and popup shadow, on the current theme's colours.
+  const pv = p.preview?.vars;
+  const sample = pv
+    ? `<span class="uistyle-sample" style="border-radius:${x(pv['--rl'])};box-shadow:${x(pv['--shadow-pop'])}"><i style="border-radius:${x(pv['--rs'])}"></i></span>` : '';
+  return `<div class="theme-item locked${pv ? ' has-preview' : ''}" title="${t('pkgPreviewHint')}">
+    ${sample}
     <span class="theme-name" data-no-i18n>${x(pkgDisplayName(p))}</span>
     <button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}">${I.import}</button>
   </div>`;

@@ -249,6 +249,7 @@ function buildItemPageHtml(node) {
       sub: `<span data-no-i18n>${x(node.m?.name || '')}</span>`,
       acts: paged ? pageHeadActsHtml(node.moduleId, node.itemKey) : '',
       addr: { moduleId: node.moduleId, itemName: name },
+      layout: paged ? pageHeadLayout(node.moduleId, node.itemKey) : null,
     })}
     ${paged ? `<div class="item-page-body module-page${pageReadableOn(node.moduleId) ? ' page-readable' : ''}">${itemPageNoteHtml(node)}${pageBlocksHtml(node.moduleId, node.itemKey)}</div>`
       : `<div class="item-page-body">${node.bodyHtml}</div>`}`;

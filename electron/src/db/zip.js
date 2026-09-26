@@ -51,9 +51,11 @@ function scanFile(p) {
   return { crc, size };
 }
 
-// entries: [{ name, path, deflate? }] or [{ name, data }] — name is the path
-// inside the archive ('/' separated); `data` (a string or Buffer) is an entry
-// made in memory, always a deflate candidate. Returns { ok, entries, bytes } or { ok:false, code }.
+// entries: [{ name, path, deflate? }] or [{ name, data, store? }] — name is the
+// path inside the archive ('/' separated); `data` (a string or Buffer) is an
+// entry made in memory, a deflate candidate unless `store` is set (EPUB's
+// `mimetype` must be stored, not deflated — OCF §4.3).
+// Returns { ok, entries, bytes } or { ok:false, code }.
 function writeZip(outPath, entries) {
   if (entries.length > 0xfffe) return { ok: false, code: 'too_many' };
   const out = fs.openSync(outPath, 'w');
@@ -68,8 +70,8 @@ function writeZip(outPath, entries) {
       if (e.deflate || e.data != null) {
         const raw = e.data != null ? Buffer.from(e.data) : fs.readFileSync(e.path);
         crc = crc32(raw); size = raw.length;
-        data = zlib.deflateRawSync(raw, { level: 6 });
-        if (data.length < raw.length) { method = 8; csize = data.length; } else { data = raw; csize = size; }
+        data = e.store ? raw : zlib.deflateRawSync(raw, { level: 6 });
+        if (!e.store && data.length < raw.length) { method = 8; csize = data.length; } else { data = raw; csize = size; }
       } else {
         ({ crc, size } = scanFile(e.path));
         csize = size;

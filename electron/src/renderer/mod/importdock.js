@@ -75,8 +75,9 @@ const ASSET_CLASS_OF_EXT = {
   mp3: 'audio', wav: 'audio', ogg: 'audio', m4a: 'audio', flac: 'audio',
   mp4: 'video', webm: 'video', mov: 'video', mkv: 'video',
   md: 'doc', txt: 'doc', docx: 'doc', pdf: 'doc', url: 'url',
+  vtt: 'track', glb: 'model', gltf: 'model', stl: 'model', obj: 'model',
 };
-const ASSET_GLYPH = { image: '▣', audio: '♪', video: '▶', doc: '▤', url: '↗' };
+const ASSET_GLYPH = { image: '▣', audio: '♪', video: '▶', doc: '▤', url: '↗', track: '≡', model: '◈' };
 const assetClass = (f) => (f.source_kind === 'url' ? 'url' : ASSET_CLASS_OF_EXT[(f.file_type || '').toLowerCase()] || 'doc');
 const assetGlyph = (f) => ASSET_GLYPH[assetClass(f)] || '▤';
 

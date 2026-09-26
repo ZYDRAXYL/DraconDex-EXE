@@ -18,6 +18,7 @@ function openModuleContextMenu(ev, id) {
 CTX_PROVIDERS['nest.module'] = (c) => [
   cmdItem('module.create', c),
   cmdItem('module.importModule', c),
+  cmdItem('module.exportAs', c),
   cmdItem('module.export', c),
   cmdItem('module.importFolder', c),
   cmdItem('module.addLink', c),
@@ -32,6 +33,7 @@ CTX_PROVIDERS['nest.module'] = (c) => [
   cmdItem('module.duplicate', c),
   cmdItem('module.moveTo', c),
   cmdItem('module.savePreset', c),
+  cmdItem('module.saveBundle', c),
   { sep: true },
   cmdItem('module.delete', c),
   { sep: true },
@@ -294,7 +296,7 @@ function rememberRecentKind(kind) {
 // flyout would replace the first (there is one .ctx-submenu at a time).
 function kindListRowHtml(k, parentId, withPresets = false) {
   const pid = parentId ?? 'null';
-  const hasPresets = withPresets && presetsFor(k).length > 0;
+  const hasPresets = withPresets && (presetsFor(k).length > 0 || templatesFor(k).length > 0);
   const hover = hasPresets
     ? `onmouseenter="openPresetSubmenu(event,'${k}',${pid})" onmouseleave="scheduleCtxSubmenuClose()"`
     : `onmouseenter="scheduleCtxSubmenuClose()"`;
@@ -364,7 +366,9 @@ function filterKindList(inp) {
 //
 // presetRef (v5 Part 6, hub/presets.js): shape the new module from a preset
 // before it opens, so its first render is already the preset's.
-async function quickCreateModule(kind, parentId, presetRef = null) {
+// tplId (Procress 14, hub/page-templates.js): its first page — the kind's ★
+// when none is picked; a preset's own page, if it has one, wins after.
+async function quickCreateModule(kind, parentId, presetRef = null, tplId = null) {
   rememberRecentKind(kind);
   const name = t('newModuleName').replace('{kind}', kindLabel(kind));
   let moduleId;
@@ -380,6 +384,7 @@ async function quickCreateModule(kind, parentId, presetRef = null) {
     return;
   }
   closeAllPopups();
+  if (kind !== 'collector') await applyStartTemplate(moduleId, kind, tplId, { fields: !presetRef });
   if (presetRef) await applyPresetToModule(moduleId, kind, presetRef);
   if (parentId != null) S.moduleCollapsed.delete(parentId);
   await reloadModuleTree();

@@ -10,15 +10,16 @@ const pbArranging = (page) => !!page && S.arranging.has(pageKey(page.moduleId, p
 function togglePageArrange(moduleId = S.activeItemNode?.moduleId ?? S.activeModuleNode?.id, itemKey = pbItemKeyOf(S.activeItemNode)) {
   if (!moduleId) return;
   const k = pageKey(moduleId, itemKey);
-  if (S.arranging.has(k)) S.arranging.delete(k); else S.arranging.add(k);
+  if (S.arranging.has(k)) { S.arranging.delete(k); closePbStyle(); } else S.arranging.add(k);
   renderNexusHome();
 }
 
-// The bar on each block while arranging: grip, name, preset, remove.
+// The bar on each block while arranging: grip, ⚙ (page/style-pop.js),
+// name, preset, remove.
 function pbArrangeBarHtml(c) {
   const b = c.block;
   const comp = componentOf(b);
-  const name = b.block_type === 'component' ? componentLabel(comp) : t(PB_TYPE_KEY[b.block_type] || 'pbText');
+  const name = pbBlockName(b);
   const src = b.source_key && c.source && c.source.id !== c.page.moduleId ? ` <span class="pb-src" data-no-i18n>· ${x(c.source.name)}</span>` : '';
   const presets = comp?.presets ? comp.presets() : [];
   const preset = presets.length > 1 ? `<select class="pb-preset" onchange="pbSetPreset(${xj(c.iid)},this.value)">
@@ -27,7 +28,9 @@ function pbArrangeBarHtml(c) {
   const cols = b.block_type === 'columns' ? `<select class="pb-preset" onchange="pbSetConfig(${xj(c.iid)},{n:Number(this.value)})" data-no-i18n>
       ${[2, 3].map((n) => `<option value="${n}"${(Number(c.config.n) || 2) === n ? ' selected' : ''}>${n} ▥</option>`).join('')}</select>` : '';
   return `<div class="pb-bar" draggable="false">
-    <span class="pb-grip" title="${t('pbDrag')}">⠿</span><span class="pb-name">${x(name)}${src}</span>
+    <span class="pb-grip" title="${t('pbDrag')}">⠿</span>
+    <button class="btn btn-g btn-i pb-gear${_pbPop?.iid === c.iid ? ' active' : ''}" onclick="openPbStyle(${xj(c.iid)})" title="${t('pbBlockSettings')}" aria-label="${t('pbBlockSettings')}">${I.settings}</button>
+    <span class="pb-name">${x(name)}${src}</span>
     ${preset}${cols}
     <button class="btn btn-g btn-i" onclick="pbRemoveBlock(${xj(c.iid)})" title="${t('delete')}">${I.delete}</button>
   </div>`;
@@ -50,7 +53,7 @@ function openPbPicker(moduleId, itemKey, where) {
   const basic = ['text', 'heading', 'divider', 'image', ...(where ? [] : ['columns'])].map((tp) =>
     `<button class="btn btn-s pb-pick" onclick="pbAddBlock(${moduleId},${xv(itemKey)},${xv({ type: tp, ...(tp === 'columns' ? { config: { n: 2 } } : {}) })},${xv(where)})">${t(PB_TYPE_KEY[tp])}</button>`).join('');
   const own = Object.values(COMPONENTS)
-    .filter((c) => (c.kind === 'core' || c.kind === m.kind || (itemKey && c.kind === 'item')) && !(c.once && have.has(c.id)))
+    .filter((c) => (c.kind === 'core' || c.kind === m.kind || (itemKey && c.kind === 'item')) && !(c.once && have.has(c.id)) && !(where && c.container))
     .map((c) => `<button class="btn btn-s pb-pick" onclick="pbAddBlock(${moduleId},${xv(itemKey)},${xv({ type: 'component', component: c.id })},${xv(where)})">${x(componentLabel(c))}</button>`).join('');
   const borrowable = flattenModuleTree(S.moduleTree, 0).map((r) => r.m).filter((o) => o.id !== moduleId && COMPONENTS[`${o.kind}.view`]?.borrow);
   const borrow = borrowable.length ? `<div class="fg"><label>${t('pbBorrow')}</label>
@@ -123,6 +126,11 @@ async function pbDrop(ev, targetId) {
   const i = pbInst(el.dataset.iid);
   const page = i && pageOf(i.moduleId, i.itemKey);
   if (!page) return;
+  // never into itself: a container dropped beside one of its own children,
+  // or any container into another (one level of nesting, as columns had)
+  const byId = new Map(page.blocks.map((bb) => [bb.id, bb]));
+  for (let p = byId.get(targetId)?.parent_id; p != null; p = byId.get(p)?.parent_id) if (p === moving) return;
+  if (pbIsContainer(byId.get(moving)) && byId.get(targetId)?.parent_id != null) { toast(t('pbNoNesting'), 'warn'); return; }
   const order = page.blocks.map((b) => b.id).filter((id) => id !== moving);
   const target = page.blocks.find((b) => b.id === targetId);
   const mover = page.blocks.find((b) => b.id === moving);

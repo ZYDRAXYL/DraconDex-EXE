@@ -33,6 +33,11 @@
        contiguous slices of the old file and the cascade depends on them staying
        in this sequence — tokens → themes → base → chrome → layout → components
        → legacy → v3. Adding a file? Put it where its rules used to live. -->
+  <!-- Design tokens VENDORED from DraconDex-SDB (design/tokens.json, APP
+       docs/REDESIGN.md C5). First on purpose: css/tokens.css still declares
+       most of the same names and wins while it does; each copy there is
+       retired once nothing depends on its own value. -->
+  <link rel="stylesheet" href="../src/design/generated/tokens.css">
   <link rel="stylesheet" href="css/tokens.css">
   <!-- Token-tier, not a component file: overrides tokens.css's own
        --r/--rs/--rl/--shadow-* per data-ui-style, so it belongs beside it. -->
@@ -50,7 +55,15 @@
   <link rel="stylesheet" href="css/kinds.css">
   <link rel="stylesheet" href="css/builder.css">
   <link rel="stylesheet" href="css/page.css">
+  <link rel="stylesheet" href="css/page-style.css">
+  <link rel="stylesheet" href="css/page-wiki.css">
+  <link rel="stylesheet" href="css/page-decor.css">
+  <link rel="stylesheet" href="css/page-media.css">
+  <link rel="stylesheet" href="css/page-components.css">
   <link rel="stylesheet" href="css/workspace.css">
+  <!-- Fluent 2 restyles components under data-ui-style="fluent", so it comes
+       after every component file. -->
+  <link rel="stylesheet" href="css/fluent.css">
   <!-- Last on purpose: welcome-mode strips the app chrome down to a bare
        two-column picker, so its hide rules must win over every layout file
        above without needing !important. -->
@@ -244,6 +257,7 @@
   <script src="src/renderer/core/ui.js"></script>
   <script src="src/renderer/core/settings.js"></script>
   <script src="src/renderer/core/setting-window.js"></script>
+  <script src="src/renderer/core/setting-search.js"></script>
   <script src="src/renderer/core/workspace-style.js"></script>
   <script src="src/renderer/core/tool-toggle.js"></script>
   <script src="src/renderer/core/startup-settings.js"></script>
@@ -253,6 +267,7 @@
   <script src="src/renderer/core/chrome.js"></script>
   <script src="src/renderer/core/nav.js"></script>
   <script src="src/renderer/core/pickers.js"></script>
+  <script src="src/renderer/core/icon-catalog.js"></script>
   <script src="src/renderer/core/views.js"></script>
   <script src="src/renderer/core/nexus.js"></script>
   <script src="src/renderer/core/nexus-locate.js"></script>
@@ -278,10 +293,13 @@
   <script src="src/renderer/hub/page-head.js"></script>
   <script src="src/renderer/hub/open.js"></script>
   <script src="src/renderer/hub/kind-page.js"></script>
+  <script src="src/renderer/hub/page-templates.js"></script>
   <script src="src/renderer/hub/presets.js"></script>
   <script src="src/renderer/hub/bundles.js"></script>
   <script src="src/renderer/hub/activity.js"></script>
   <script src="src/renderer/hub/html-export.js"></script>
+  <script src="src/renderer/hub/export.js"></script>
+  <script src="src/renderer/hub/export-view.js"></script>
   <script src="src/renderer/hub/problems.js"></script>
   <script src="src/renderer/hub/csv-import.js"></script>
   <script src="src/renderer/hub/trash.js"></script>
@@ -292,12 +310,28 @@
   <script src="src/renderer/page/page.js"></script>
   <script src="src/renderer/page/blocks.js"></script>
   <script src="src/renderer/page/arrange.js"></script>
+  <script src="src/renderer/page/style.js"></script>
+  <script src="src/renderer/page/style-pop.js"></script>
+  <script src="src/renderer/page/links.js"></script>
+  <script src="src/renderer/page/iconpick.js"></script>
+  <script src="src/renderer/page/imagepick.js"></script>
+  <script src="src/renderer/page/media-load.js"></script>
+  <script src="src/renderer/page/drop.js"></script>
   <script src="src/renderer/page/canvas-frame.js"></script>
   <script src="src/renderer/page/kind-state.js"></script>
   <script src="src/renderer/page/side-panel.js"></script>
   <script src="src/renderer/page/item-page.js"></script>
   <script src="src/renderer/page/address.js"></script>
   <script src="src/renderer/page/focus.js"></script>
+  <script src="src/renderer/page/components/common.js"></script>
+  <script src="src/renderer/page/components/core.js"></script>
+  <script src="src/renderer/page/components/wiki.js"></script>
+  <script src="src/renderer/page/components/wiki-more.js"></script>
+  <script src="src/renderer/page/components/decor.js"></script>
+  <script src="src/renderer/page/components/media.js"></script>
+  <script src="src/renderer/page/components/media-3d.js"></script>
+  <script src="src/renderer/page/components/kinds.js"></script>
+  <script src="src/renderer/page/components/kinds-more.js"></script>
   <script src="src/renderer/iconpicker.js"></script>
   <script src="src/renderer/mod/cls-field-types.js"></script>
   <script src="src/renderer/mod/classifier.js"></script>

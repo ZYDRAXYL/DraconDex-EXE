@@ -116,7 +116,13 @@ const INSTALLED_PACKAGES = { themes: [], langs: [], views: [], uistyles: [] };
 // Built-in options. The live registries below start as copies of these and are
 // EXTENDED in place when packages load, so every `UI_THEME_OPTIONS.includes(x)`
 // call site keeps working with no change.
-const UI_THEME_OPTIONS_BUILTIN = ['daylight','moonlight','midnight','redEclipse','clearSky','clearStar','afterRain','rainbow','atDawn','atDusk','atDay','blueEclipse','clearAurora','atTwilight','atSunset','clearComet','atDaybreak','afterSunset','atSunrise','atNight','atNoon','clearDusk','atMidnight','clearMoon','clearGalaxy','clearNebula','afterStorm','afterSnow','atMorning','clearSun','atEvening','clearMeteor'];
+// Procress 10 part 2 (slim): the collapsed picker's 3 basics + rainbow, whose
+// extra rules (css/themes.css) a palette-only package can't carry. The other
+// 28 are DraconDex-PKG packages; a saved one is carried over to
+// pkg:theme-<name> by loadUiSettings() and fetched by pkgResolvePending().
+const UI_THEME_OPTIONS_BUILTIN = ['daylight','moonlight','midnight','rainbow'];
+const PACKAGED_THEMES = ['redEclipse','clearSky','clearStar','afterRain','atDawn','atDusk','atDay','blueEclipse','clearAurora','atTwilight','atSunset','clearComet','atDaybreak','afterSunset','atSunrise','atNight','atNoon','clearDusk','atMidnight','clearMoon','clearGalaxy','clearNebula','afterStorm','afterSnow','atMorning','clearSun','atEvening','clearMeteor'];
+const PKG_SETTING_RE = /^pkg:[A-Za-z0-9][A-Za-z0-9-]{0,63}$/; // a saved package choice
 const UI_LANGUAGE_OPTIONS_BUILTIN = ['en','ja','ko','th','zh','vi','id','es','pt','fr','de','ru','it','nl','pl','uk','tr','qd'];
 
 const UI_THEME_OPTIONS = UI_THEME_OPTIONS_BUILTIN.slice();
@@ -212,7 +218,9 @@ const WORKSPACE_STYLE_OPTIONS = ['drake', 'wyvern', 'dragon'];
 // extends UI_STYLE_OPTIONS in place with `pkg:<id>` for every installed
 // uistyle package, so every existing UI_STYLE_OPTIONS.includes(x) call site
 // keeps working with no change.
-const UI_STYLE_OPTIONS_BUILTIN = ['roundedMinimal', 'cleanMinimal', 'fluent', 'hardBlock', 'oldPlain'];
+// Procress 10 part 2 (slim): fluent stays built in, Procress 13 outgrows 7 tokens.
+const UI_STYLE_OPTIONS_BUILTIN = ['oldPlain', 'fluent'];
+const PACKAGED_UISTYLES = ['roundedMinimal', 'cleanMinimal', 'hardBlock'];
 const UI_STYLE_OPTIONS = UI_STYLE_OPTIONS_BUILTIN.slice();
 // Process 5 part1: each workspace style's own default nav orientation —
 // Drake/Dragon default to vertical (today's rail), Wyvern defaults to
@@ -256,7 +264,7 @@ function autoUiSizeFromScreen(){
 // theme provides, so widening it is safe for existing 10-token custom themes:
 // the five new ones simply fall through to css/themes.css as they did before.
 const CUSTOM_THEME_TOKENS = ['--bg','--surface','--raised','--hover','--border',
-  '--t1','--t2','--t3','--accent','--accentH','--danger','--success',
+  '--t1','--t2','--t3','--t3-aa','--accent','--accentH','--danger','--success',
   '--button','--on-accent','--on-button'];
 // The 7 shape/elevation tokens an installed uistyle package may override —
 // the same 7 css/ui-style.css sets per body[data-ui-style="<name>"]. Same
@@ -300,7 +308,11 @@ function loadUiSettings(){
   let saved = {};
   try{ saved = JSON.parse(localStorage.getItem(UI_SETTINGS_KEY) || '{}'); }
   catch(e){ saved = {}; }
-  const theme = UI_THEME_OPTIONS.includes(saved.theme) ? saved.theme : 'midnight';
+  // Procress 10 part 2: carry a former built-in over to its package, and keep
+  // a `pkg:` value — packages load later in boot, so checking it against
+  // UI_THEME_OPTIONS here reset every package theme on each restart.
+  const savedTheme = PACKAGED_THEMES.includes(saved.theme) ? `pkg:theme-${saved.theme}` : saved.theme;
+  const theme = UI_THEME_OPTIONS.includes(savedTheme) || PKG_SETTING_RE.test(String(savedTheme)) ? savedTheme : 'midnight';
   const language = UI_LANGUAGE_OPTIONS.includes(saved.language) ? saved.language : 'th';
   const savedSize = Number(saved.size);
   const size = Number.isFinite(savedSize) ? Math.min(UI_SIZE_MAX, Math.max(UI_SIZE_MIN, savedSize)) : autoUiSizeFromScreen();
@@ -335,7 +347,9 @@ function loadUiSettings(){
   const hubQuickToggles = Object.assign({ kinds: true, sage: true, dock: true }, saved.hubQuickToggles || {});
   const statusToggles = Object.assign({ vault: true, breadcrumb: true, words: true, saveState: true }, saved.statusToggles || {});
   const workspaceStyle = WORKSPACE_STYLE_OPTIONS.includes(saved.workspaceStyle) ? saved.workspaceStyle : 'drake';
-  const uiStyle = UI_STYLE_OPTIONS.includes(saved.uiStyle) ? saved.uiStyle : 'oldPlain';
+  // Same carry-over and same restart fix as theme above.
+  const savedUiStyle = PACKAGED_UISTYLES.includes(saved.uiStyle) ? `pkg:uistyle-${saved.uiStyle}` : saved.uiStyle;
+  const uiStyle = UI_STYLE_OPTIONS.includes(savedUiStyle) || PKG_SETTING_RE.test(String(savedUiStyle)) ? savedUiStyle : 'oldPlain';
   // Process 5 part1: per-style nav orientation, sanitized against the
   // default map so an unknown/missing style key or garbage value falls back
   // cleanly rather than propagating into applyNavOrientation().

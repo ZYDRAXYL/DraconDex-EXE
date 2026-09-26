@@ -139,22 +139,16 @@ function pbBasicHtml(c, seen) {
   switch (b.block_type) {
     case 'text': return `<div class="pb-md" data-r="md"></div>`;
     case 'heading': return `<input class="pb-heading" value="${x(b.content || '')}" placeholder="${x(t('pbHeading'))}" onchange="pbSetContent(${xj(c.iid)},this.value)">`;
-    case 'divider': return `<hr class="pb-hr">`;
+    // both draw through the decor components (components/decor.js, D2)
+    case 'divider': return pcDividerHtml(c);
     case 'image': {
       const f = /^file_(\d+)$/.exec(b.source_key || '');
-      if (f) return `<figure class="pb-img"><img src="${displayImageUrl(Number(f[1]))}" onerror="queueDisplayImageFallback(this,${Number(f[1])})" alt="">
-        ${b.content ? `<figcaption data-no-i18n>${x(b.content)}</figcaption>` : ''}</figure>`;
+      if (f) return pcFigureHtml(c, Number(f[1]), b.content);
       return `<button class="btn btn-s btn-sm" onclick="pbPickImage(${xj(c.iid)})">${I.plus} ${t('pbChooseImage')}</button>`;
     }
     case 'columns': {
       const n = Math.min(3, Math.max(2, Number(c.config.n) || 2));
-      const kids = c.page.blocks.filter((k) => k.parent_id === b.id);
-      const arranging = pbArranging(c.page);
-      const cols = Array.from({ length: n }, (_, col) => {
-        const mine = kids.filter((k) => (Number(k.config?.col) || 0) === col);
-        return `<div class="pb-col" data-col="${col}">${mine.map((k) => pbBlockHtml(c.page, k, seen)).join('')}
-          ${arranging ? pbAddBarHtml(c.page, { parentId: b.id, col }) : ''}</div>`;
-      }).join('');
+      const cols = Array.from({ length: n }, (_, col) => `<div class="pb-col" data-col="${col}">${pbChildrenHtml(c, col, n, seen)}</div>`).join('');
       return `<div class="pb-cols" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${cols}</div>`;
     }
     default: return '';
@@ -163,7 +157,7 @@ function pbBasicHtml(c, seen) {
 
 function pbBasicMount(c) {
   if (c.block.block_type !== 'text') return;
-  const el = c.root.querySelector(':scope > [data-r="md"]');
+  const el = c.root.querySelector(':scope > .pb-body > [data-r="md"]');
   if (!el || el.dataset.mounted) return;
   el.dataset.mounted = '1';
   const b = c.block;
@@ -171,7 +165,8 @@ function pbBasicMount(c) {
   createMarkdownEditor(el, {
     title: '', content: b.content || '', mode: b.content ? 'preview' : 'edit',
     srcKey: i?.itemKey && i.itemKey !== '*' ? i.itemKey : `module_${c.page.moduleId}`,
-    save: async (content) => { await api.block.update(b.id, { content }); b.content = content; },
+    save: async (content) => { await api.block.update(b.id, { content }); b.content = content; pbRefreshFootnotes(c.page, b.id); },
+    footnotes: () => pbFootnoteCtx(c.page),
   });
 }
 
@@ -183,16 +178,12 @@ async function pbSetContent(iid, value) {
   b.content = value;
 }
 
-async function pbPickImage(iid) {
+// The picture picker (page/imagepick.js, EXPORT-DECOR D4): search, recent,
+// import a new one right there.
+function pbPickImage(iid) {
   const i = pbInst(iid);
   if (!i || !S.nexus) return;
-  const idx = await api.viewer.index(S.nexus.id);
-  const imgs = idx.filter((e) => e.kind === 'file' && /^(png|jpe?g|gif|webp|bmp|svg)$/i.test(e.fileType || ''));
-  openModal(t('pbChooseImage'), imgs.length ? `<div class="pb-img-grid">${imgs.map((e) => {
-    const id = Number(String(e.key).slice(5));
-    return `<button class="btn btn-g pb-img-pick" onclick="pbSetImage(${xj(iid)},${xj(e.key)})" title="${x(e.name)}">
-      <img src="${displayImageUrl(id)}" onerror="queueDisplayImageFallback(this,${id})" alt=""></button>`;
-  }).join('')}</div>` : `<p class="drafter-hint">${t('pbNoImages')}</p>`);
+  openPbImagePicker({ moduleId: i.moduleId, onPick: ([id]) => id && pbSetImage(iid, `file_${id}`) });
 }
 
 async function pbSetImage(iid, key) {
@@ -232,4 +223,28 @@ async function openModuleTagPopup(moduleId, anchor) {
   });
   renderModalTagSuggestions('modtag');
   positionPopupNear(pop, anchor.getBoundingClientRect());
+}
+
+// ── footnotes across the page (Procress 14, TEMPLATES §7.3) ─────────────
+// One numbering for the whole page, in block order: [^a] in the first text
+// block is 1 wherever else it is referenced. A References block on the page
+// lists the notes; without one, each text block lists its own.
+function pbFootnoteCtx(page) {
+  const notes = new Map();
+  const order = [];
+  for (const b of page?.blocks || []) {
+    if (b.block_type !== 'text' || !b.content) continue;
+    const f = mdFootnotes(b.content);
+    for (const [id, note] of f.notes) if (!notes.has(id)) notes.set(id, note);
+    for (const id of f.order) if (!order.includes(id)) order.push(id);
+  }
+  const hideDefs = (page?.blocks || []).some((b) => b.component === 'core.references');
+  return { notes, order, hideDefs, num: (id) => { const n = order.indexOf(id); return n < 0 ? '?' : n + 1; } };
+}
+
+// A saved note can renumber every other block and the References list.
+function pbRefreshFootnotes(page, savedId) {
+  if (!page) return;
+  rerenderPageBlocks((i, b) => i.moduleId === page.moduleId && (i.itemKey ?? null) === (page.itemKey ?? null)
+    && (b.component === 'core.references' || (b.block_type === 'text' && b.id !== savedId && /\[\^/.test(b.content || ''))));
 }

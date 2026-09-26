@@ -146,12 +146,14 @@ function pbBlockHtml(page, b, seen) {
   try { inner = pbInnerHtml(c, seen); }
   catch (e) { console.error('page block render error:', b, e); inner = `<p class="drafter-hint">${t('pbBlockError')}</p>`; }
   const arranging = pbArranging(page);
-  // pb-<type> and pbc-<component> hook css/page.css per block kind.
-  const cls = ['pblock', `pb-${b.block_type}`, b.component ? `pbc-${b.component.replace('.', '-')}` : ''].filter(Boolean).join(' ');
+  // pb-<type> and pbc-<component> hook css/page.css per block kind; the
+  // style's classes (page/style.js, §6) hook css/page-style.css.
+  const st = pbStyleAttrs(c);
+  const cls = ['pblock', `pb-${b.block_type}`, b.component ? `pbc-${b.component.replace('.', '-')}` : '', ...st.cls].filter(Boolean).join(' ');
   return `<section class="${x(cls)}"
-      data-iid="${x(c.iid)}" data-block="${b.id}"${arranging ? ` draggable="true" ondragstart="pbDragStart(event,${b.id})"
+      data-iid="${x(c.iid)}" data-block="${b.id}"${st.attrs}${arranging ? ` draggable="true" ondragstart="pbDragStart(event,${b.id})"
       ondragover="pbDragOver(event,this)" ondragleave="this.classList.remove('drop-before','drop-after')" ondrop="pbDrop(event,${b.id})"` : ''}>
-    ${arranging ? pbArrangeBarHtml(c) : pbSourceCaptionHtml(c)}${inner}
+    ${arranging ? pbArrangeBarHtml(c) : pbSourceCaptionHtml(c)}${pbStyledInner(c, inner)}
   </section>`;
 }
 
@@ -178,6 +180,17 @@ function pbInnerHtml(c, seen) {
   }
   return typeof pbBasicHtml === 'function' ? pbBasicHtml(c, seen) : '';
 }
+
+// The blocks inside a container — a column of `columns`, a tab of
+// core.tabs, the body of core.toggle — by parent_id and config.col. A child
+// whose col is past the last one (a tab removed) shows in the last, so
+// removing a tab never hides what was in it.
+function pbChildrenHtml(c, col, count, seen) {
+  const mine = c.page.blocks.filter((k) => k.parent_id === c.block.id
+    && Math.min(count - 1, Math.max(0, Number(k.config?.col) || 0)) === col);
+  return `${mine.map((k) => pbBlockHtml(c.page, k, seen)).join('')}${pbArranging(c.page) ? pbAddBarHtml(c.page, { parentId: c.block.id, col }) : ''}`;
+}
+const pbIsContainer = (b) => b?.block_type === 'columns' || !!componentOf(b)?.container;
 
 // ── mount ───────────────────────────────────────────────────────────────
 // After the pane body is in the document. Mounts only what this render
@@ -225,7 +238,7 @@ function rerenderPageBlocks(pred) {
     if (!b || !pred(inst, b)) return;
     const c = withRenderPane(inst.pane, () => pbCtx(page, b));
     const bar = root.querySelector(':scope > .pb-bar');
-    root.innerHTML = (bar ? bar.outerHTML : '') + pbInnerHtml(c, new Set());
+    root.innerHTML = (bar ? bar.outerHTML : '') + pbStyledInner(c, pbInnerHtml(c, new Set()));
     c.root = root;
     const comp = componentOf(b);
     if (comp?.mount) comp.mount(c); else if (b.block_type !== 'component' && typeof pbBasicMount === 'function') pbBasicMount(c);

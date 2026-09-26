@@ -87,6 +87,7 @@ function buildModuleDetailHtml(m) {
       title: nameHtml, titleText: m.name, addr: { moduleId: m.id },
       after: `${moduleHandleHtml(m)}<span class="kind-chip" data-no-i18n>${x(kindLabelBoth(m.kind))}</span>`,
       acts: pageHeadActsHtml(m.id, null),
+      layout: pageHeadLayout(m.id, null),
     })}
     ${teachTipHtml(m)}
     ${buildModuleAssetsStripHtml(m)}
@@ -99,5 +100,8 @@ function pageHeadActsHtml(moduleId, itemKey) {
   const arranging = S.arranging?.has(pageKey(moduleId, itemKey));
   const hist = itemKey == null ? cmdBtn('page.history', {}, { iconOnly: true, cls: `btn-g btn-i bnav${sidePanelOpen('versions') ? ' active' : ''}` }) : '';
   const readable = cmdBtn('page.readable', {}, { iconOnly: true, cls: `btn-g btn-i bnav${pageReadableOn(moduleId) ? ' active' : ''}` });
-  return `${cmdBtn('page.arrange', {}, { cls: `btn-g btn-sm${arranging ? ' active' : ''}` })}${readable}${hist}${typeof pluginPanelButtonsHtml === 'function' ? pluginPanelButtonsHtml() : ''}`;
+  const layout = cmdBtn('page.layout', {}, { iconOnly: true, cls: 'btn-g btn-i bnav' });
+  const exp = cmdBtn('page.export', {}, { iconOnly: true, cls: 'btn-g btn-i bnav' });
+  const tpl = cmdBtn('page.useTemplate', {}, { iconOnly: true, cls: 'btn-g btn-i bnav' }) + cmdBtn('page.saveTemplate', {}, { iconOnly: true, cls: 'btn-g btn-i bnav' });
+  return `${cmdBtn('page.arrange', {}, { cls: `btn-g btn-sm${arranging ? ' active' : ''}` })}${layout}${tpl}${exp}${readable}${hist}${typeof pluginPanelButtonsHtml === 'function' ? pluginPanelButtonsHtml() : ''}`;
 }

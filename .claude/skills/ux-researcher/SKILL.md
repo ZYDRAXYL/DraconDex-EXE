@@ -98,6 +98,13 @@ Prioritized list, most severe first. Per finding:
 - **Effort** — rough: copy/label tweak vs. new interaction pattern vs.
   structural rework
 
+Then record it (G8): in an APP checkout write it to
+`docs/redesign/audits/<screen>-<YYYY-MM-DD>.md` (template in that folder's
+`README.md`) with the cited screenshots copied into
+`docs/redesign/audits/shots/<screen>-<YYYY-MM-DD>/`; anywhere else, head the
+report with that APP path so it can be committed there. Compare against any
+earlier audit of the same screen.
+
 ## Running as an agent
 
 For research-heavy or multi-screen work, spawn the `ux-researcher` agent
@@ -113,8 +120,7 @@ both — a fresh agent has none of this conversation's context.
 - Don't mistake "the v3 module system is powerful/complex" for "bad UX" on
   its own — propose progressive disclosure (smarter defaults, templates, the
   Artisan wizard) rather than recommending capability get removed.
-- `STYLE.md` itself has some drift from current code (e.g. it says 13
-  locales / `confirmBox()`; the actual code has 18 locales / `uiConfirm()`)
-  — verify a convention against real source before citing it as fact.
+- `STYLE.md` can drift from current code (it once named a `confirmBox()`
+  that never existed; the real one is `uiConfirm()`) — verify a convention against real source before citing it as fact.
 - Check `docs/SYSTEMS.md` §11 and `docs/CHANGELOG.md` before reporting
   something as newly discovered — some UX debt is already known and tracked.

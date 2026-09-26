@@ -16,9 +16,15 @@
 // A relation is `[[Name]]` in the frontmatter, and every [[wikilink]] in the
 // text is left exactly as written — Obsidian reads both as links as-is.
 // Export only: nothing here reads Markdown back (§11.4).
+//
+// Procress 14 (EXPORT-DECOR.md E3): opts.moduleId exports one module and
+// everything inside it instead of the whole Nexus, and the pictures a page
+// shows (its image blocks) travel as files in assets/, embedded where they
+// belong as ![[assets/…]] — the zip's top folder opens as an Obsidian vault.
 const { getVaultDB } = require('./core');
 const { ENTITY_KINDS } = require('./entity-kinds');
 const { writeZip } = require('./zip');
+const { mediaSource } = require('./export-media');
 
 const safeName = (s, fallback = 'untitled') =>
   (String(s ?? '').replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').replace(/^[\s.]+|[\s.]+$/g, '') || fallback).slice(0, 120);
@@ -43,10 +49,13 @@ function frontmatter(pairs) {
 
 const fmtDate = (r) => (r && r.years != null ? `${r.years}-${String(r.month).padStart(2, '0')}-${String(r.day).padStart(2, '0')}` : null);
 
-function exportNexusMarkdown(nexusId, zipPath) {
+function exportNexusMarkdown(nexusId, zipPath, opts = {}) {
   const d = getVaultDB(nexusId);
   const nx = d.prepare(`SELECT name FROM nexus WHERE id=?`).get(nexusId);
-  const root = safeName(nx?.name, 'nexus');
+  const scopeId = opts.moduleId != null ? Number(opts.moduleId) : null;
+  const scopeMod = scopeId != null ? d.prepare(`SELECT name FROM module WHERE id=? AND nexus_ref=?`).get(scopeId, nexusId) : null;
+  if (scopeId != null && !scopeMod) return { ok: false, code: 'not_found' };
+  const root = safeName(scopeMod ? scopeMod.name : nx?.name, 'nexus');
 
   // key -> display name, through each family's own lookup (§11.2).
   const nameCache = new Map();
@@ -62,7 +71,15 @@ function exportNexusMarkdown(nexusId, zipPath) {
   };
 
   // Module folders: the Nest tree, names made unique among siblings.
-  const mods = d.prepare(`SELECT id, parent_id, name, kind, handle, description FROM module WHERE nexus_ref=? ORDER BY display_order, id`).all(nexusId);
+  let mods = d.prepare(`SELECT id, parent_id, name, kind, handle, description FROM module WHERE nexus_ref=? ORDER BY display_order, id`).all(nexusId);
+  if (scopeId != null) { // the module and everything under it
+    const inside = new Set([scopeId]);
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const m of mods) if (!inside.has(m.id) && inside.has(m.parent_id)) { inside.add(m.id); grew = true; }
+    }
+    mods = mods.filter((m) => inside.has(m.id));
+  }
   const byId = new Map(mods.map((m) => [m.id, m]));
   const folderOf = new Map();
   const taken = new Map(); // folder -> Set(lowercase names)
@@ -76,6 +93,7 @@ function exportNexusMarkdown(nexusId, zipPath) {
   };
   const folder = (m) => {
     if (folderOf.has(m.id)) return folderOf.get(m.id);
+    if (m.id === scopeId) { folderOf.set(m.id, root); return root; }
     const parent = m.parent_id && byId.get(m.parent_id) ? folder(byId.get(m.parent_id)) : root;
     folderOf.set(m.id, null); // cycle guard: a broken parent chain lands at the root
     const f = `${parent}/${unique(parent, safeName(m.name))}`;
@@ -85,7 +103,38 @@ function exportNexusMarkdown(nexusId, zipPath) {
   for (const m of mods) folder(m);
 
   const entries = [];
-  const add = (dir, base, text) => entries.push({ name: `${dir}/${unique(dir, safeName(base), '.md')}`, data: text });
+  // Pictures: every image block on a page in scope, by the page's key (an
+  // element's own page, or module_<id> for the module page). Each file is
+  // copied once into assets/ and embedded under the text of its page.
+  const pics = new Map();
+  if (mods.length) {
+    const rows = d.prepare(`SELECT module_ref, item_key, source_key FROM page_block WHERE block_type='image' AND module_ref IN (${mods.map(() => '?').join(',')}) ORDER BY block_order, id`).all(...mods.map((m) => m.id));
+    for (const r of rows) {
+      const f = /^file_(\d+)$/.exec(r.source_key || '');
+      if (!f || r.item_key === '*') continue;
+      const key = r.item_key || `module_${r.module_ref}`;
+      if (!pics.has(key)) pics.set(key, []);
+      pics.get(key).push(Number(f[1]));
+    }
+  }
+  const assetName = new Map();
+  let missingPics = 0;
+  const assetOf = (fileId) => {
+    if (!assetName.has(fileId)) {
+      const src = mediaSource(fileId);
+      if (!src) { missingPics++; assetName.set(fileId, null); return null; }
+      const base = safeName(String(src.fileName || 'image').replace(/\.[^.]+$/, ''), 'image');
+      const name = `assets/${fileId}-${base}.${src.ext}`;
+      entries.push(src.path ? { name: `${root}/${name}`, path: src.path } : { name: `${root}/${name}`, data: src.data });
+      assetName.set(fileId, name);
+    }
+    return assetName.get(fileId);
+  };
+  const embeds = (key) => (pics.get(key) || []).map(assetOf).filter(Boolean).map((n) => `![[${n}]]`).join('\n\n');
+  const add = (dir, base, text, key = null) => {
+    const pix = key ? embeds(key) : '';
+    entries.push({ name: `${dir}/${unique(dir, safeName(base), '.md')}`, data: pix ? `${text}${text.endsWith('\n') || !text ? '' : '\n\n'}${pix}\n` : text });
+  };
 
   // Relations of one entity, both directions, minus a field's own rows (those
   // are written under the field). Names only: an id means nothing outside.
@@ -103,8 +152,8 @@ function exportNexusMarkdown(nexusId, zipPath) {
   // Drafter / Inspector: the module's own text is the content. Any other
   // module with a description keeps it as a folder note of the same name.
   for (const m of mods) {
-    if (!m.description && !['drafter', 'inspector'].includes(m.kind)) continue;
-    add(folderOf.get(m.id), m.name, frontmatter([['kind', m.kind], ['handle', m.handle], ['related', relatedOf(`module_${m.id}`)]]) + (m.description || ''));
+    if (!m.description && !['drafter', 'inspector'].includes(m.kind) && !pics.has(`module_${m.id}`)) continue;
+    add(folderOf.get(m.id), m.name, frontmatter([['kind', m.kind], ['handle', m.handle], ['related', relatedOf(`module_${m.id}`)]]) + (m.description || ''), `module_${m.id}`);
   }
 
   // Classifier objects.
@@ -131,7 +180,7 @@ function exportNexusMarkdown(nexusId, zipPath) {
         pairs.push([tp.description, v]);
       }
       pairs.push(['related', relatedOf(`cobj_${o.id}`)]);
-      add(folderOf.get(m.id), o.name, frontmatter(pairs) + (o.note || ''));
+      add(folderOf.get(m.id), o.name, frontmatter(pairs) + (o.note || ''), `cobj_${o.id}`);
     }
   }
 
@@ -143,7 +192,7 @@ function exportNexusMarkdown(nexusId, zipPath) {
       const pov = c.pov_key ? nameOf(c.pov_key) : null;
       add(folderOf.get(m.id), `${String(i + 1).padStart(width, '0')} ${c.name}`,
         frontmatter([['book', link(m.name)], ['label', c.chapter_label], ['status', c.status], ['synopsis', c.synopsis], ['pov', pov ? link(pov) : null], ['related', relatedOf(`bchp_${c.id}`)]])
-        + (c.chapter_content || ''));
+        + (c.chapter_content || ''), `bchp_${c.id}`);
     });
   }
 
@@ -152,7 +201,7 @@ function exportNexusMarkdown(nexusId, zipPath) {
     for (const s of d.prepare(`SELECT id, name FROM chat_session WHERE module_ref=? ORDER BY session_order, id`).all(m.id)) {
       const msgs = d.prepare(`SELECT message, side, create_at FROM chat_message WHERE session_ref=? ORDER BY id`).all(s.id);
       add(folderOf.get(m.id), s.name, frontmatter([['related', relatedOf(`chss_${s.id}`)]])
-        + msgs.map((g) => (g.side === 'l' ? `> ${String(g.message).replace(/\n/g, '\n> ')}` : g.message)).join('\n\n'));
+        + msgs.map((g) => (g.side === 'l' ? `> ${String(g.message).replace(/\n/g, '\n> ')}` : g.message)).join('\n\n'), `chss_${s.id}`);
     }
   }
 
@@ -166,7 +215,7 @@ function exportNexusMarkdown(nexusId, zipPath) {
       const start = fmtDate(dateStmt.get(e.start_at));
       const end = e.end_at ? fmtDate(dateStmt.get(e.end_at)) : null;
       add(folderOf.get(m.id), e.event_name || start || 'event',
-        frontmatter([['timeline', e.line_name], ['start', start], ['end', end], ['related', relatedOf(`tlev_${e.id}`)]]) + (e.story || ''));
+        frontmatter([['timeline', e.line_name], ['start', start], ['end', end], ['related', relatedOf(`tlev_${e.id}`)]]) + (e.story || ''), `tlev_${e.id}`);
     }
   }
 
@@ -200,12 +249,12 @@ function exportNexusMarkdown(nexusId, zipPath) {
   }
 
   // Legacy notes (nexus-level).
-  for (const n of d.prepare(`SELECT title, content FROM note WHERE nexus_ref=? ORDER BY id`).all(nexusId)) add(`${root}/Notes`, n.title, n.content || '');
+  if (scopeId == null) for (const n of d.prepare(`SELECT title, content FROM note WHERE nexus_ref=? ORDER BY id`).all(nexusId)) add(`${root}/Notes`, n.title, n.content || '');
 
-  if (!entries.length) return { ok: false, code: 'empty' };
+  if (!entries.some((e) => e.name.endsWith('.md'))) return { ok: false, code: 'empty' };
   const out = writeZip(zipPath, entries);
   if (!out.ok) { try { require('fs').rmSync(zipPath, { force: true }); } catch (_) {} return out; }
-  return { ok: true, filePath: zipPath, files: entries.length };
+  return { ok: true, filePath: zipPath, files: entries.filter((e) => e.name.endsWith('.md')).length, pictures: assetName.size - missingPics, missing: missingPics };
 }
 
 module.exports = { exportNexusMarkdown };
