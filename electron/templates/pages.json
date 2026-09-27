@@ -253,7 +253,7 @@
     {
       "id": "locator.placecard",
       "kind": "locator",
-      "since": "planned",
+      "since": "exe",
       "borrowable": true
     },
     {
@@ -345,7 +345,7 @@
     {
       "id": "inspector.facts",
       "kind": "inspector",
-      "since": "planned",
+      "since": "exe",
       "borrowable": true
     },
     {

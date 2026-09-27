@@ -103,6 +103,19 @@ registerFilled('scribe.pinned', { kind: 'scribe', labelKey: 'pcPinned', borrow: 
     `<li><span class="pc-li-main">${x(String(m.message).replace(/^\s*📌\s*/u, ''))}</span></li>`).join('')}</ul>`;
 });
 
+// ── Inspector ──────────────────────────────────────────────────────────
+// Facts: the note's `key: value` lines as a fact box (config.count: how
+// many at most).
+registerFilled('inspector.facts', {
+  kind: 'inspector', labelKey: 'pcFacts', borrow: true,
+  options: () => [{ key: 'count', type: 'number', label: 'pcOptCount', min: 1, max: 30, default: 12 }],
+}, async (c) => {
+  const m = await api.module.get(c.source.id);
+  const facts = pcFactsOf(m?.description, pbOpt(c, 'count') || 12);
+  if (!facts.length) return pcEmpty(t('pcNoFacts'));
+  return `<dl class="pc-facts">${facts.map((f) => `<dt>${x(f.k)}</dt><dd>${x(f.v)}</dd>`).join('')}</dl>`;
+});
+
 // ── Drafter ────────────────────────────────────────────────────────────
 // Tasks: every "- [ ]" line in the notes, done ones struck through.
 registerFilled('drafter.tasks', { kind: 'drafter', labelKey: 'pcTasks', borrow: true }, async (c) => {

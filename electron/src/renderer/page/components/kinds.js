@@ -94,6 +94,31 @@ registerFilled('locator.pinlist', { kind: 'locator', labelKey: 'pcPinlist', borr
     <span class="pc-dot"${a.color_code ? ` style="background:${x(a.color_code)}"` : ''}></span><span class="pc-li-main">${x(a.area_name || '—')}</span></li>`).join('')}</ul>`;
 });
 
+// Place card: one area of the map — its outline among its neighbours', its
+// name, where it comes from and what it borders. Which area: config.area
+// by name, else the one named like this page, else the first.
+registerFilled('locator.placecard', {
+  kind: 'locator', labelKey: 'pcPlacecard', borrow: true,
+  options: () => [{ key: 'area', type: 'text', label: 'pcOptArea', max: 80 }],
+}, async (c) => {
+  const map = await api.map.getModuleMap(c.source.id);
+  const rows = map ? ((await api.map.getAreas(map.id)) || []) : [];
+  if (!rows.length) return pcEmpty(t('mapNoAreas'));
+  const pts = await Promise.all(rows.map((a) => api.map.getPoints(a.id)));
+  const areas = rows.map((a, i) => ({ ...a, points: pts[i] || [] }));
+  const here = c.itemKey ? S.activeItemNode?.item?.name : findModuleNode(c.page.moduleId)?.name;
+  const area = pcPickArea(areas, pbOpt(c, 'area') || here);
+  const { view, borders } = pcPlaceGeom(areas, area);
+  const hex = (v) => (/^#[0-9a-f]{3,8}$/i.test(v || '') ? v : null);
+  const poly = (a) => a.points.length < 3 ? '' : `<polygon points="${a.points.map((p) => `${Number(p.x)},${Number(p.y)}`).join(' ')}" class="${a.id === area.id ? 'on' : ''}"${a.id === area.id && hex(a.color_code) ? ` style="fill:${hex(a.color_code)};stroke:${hex(a.color_code)}"` : ''}/>`;
+  const mini = view ? `<svg class="pc-place-map" viewBox="${view.join(' ')}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${areas.filter((a) => a.id !== area.id).map(poly).join('')}${poly(area)}</svg>` : '';
+  return `<div class="pc-place${mini ? '' : ' no-map'}" ${pcOpenModule(c.source.id)}>${mini}
+    <div class="pc-place-info"><div class="pc-ib-title">${x(area.area_name || '—')}</div>
+      <div class="pc-place-from">↪ ${x(c.source.name || '')}</div>
+      ${borders.length ? `<div class="pc-ib-row"><span class="pc-ib-k">${t('pcBorders')}</span><span class="pc-ib-v pc-place-chips">${borders.map((b) => `<span class="pc-chip">${x(b.area_name || '—')}</span>`).join('')}</span></div>` : ''}
+    </div></div>`;
+});
+
 // ── Author ─────────────────────────────────────────────────────────────
 // Progress: words so far, per chapter and in all (config.goal: a target).
 registerFilled('author.progress', {
