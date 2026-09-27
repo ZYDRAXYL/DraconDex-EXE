@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { app } = require('electron');
-const { currentNexusId } = require('./vault-context');
+const { currentNexusId, runWithVault } = require('./vault-context');
 const { createUndoRecorder } = require('./undo');
 
 // Boot/query profiling, off unless DDX_PERF is set in the environment. The whole
@@ -384,11 +384,15 @@ function getVaultDB(nexusId) {
   if (!row.file_path) throw new NoVaultError(id);
 
   let conn = null;
-  openDdx(row.file_path, {
+  // Opened in THIS vault's context: the init path's one-time backfills call
+  // getDB(), and a vault first opened from somewhere else — the Welcome
+  // window, a stats read across vaults — would otherwise resolve to no vault,
+  // fail, and still stamp the schema, so the backfill never ran again.
+  runWithVault(id, () => openDdx(row.file_path, {
     kind: 'vault',
     create: false,
     register: (c) => { conn = c; vaultDbs.set(id, { conn: c, filePath: row.file_path, lastUsed: Date.now() }); },
-  });
+  }));
   evictIdleVaults();
   return conn;
 }
@@ -399,11 +403,11 @@ function getVaultDB(nexusId) {
 function createVaultDB(nexusId, filePath) {
   const id = Number(nexusId);
   let conn = null;
-  openDdx(filePath, {
+  runWithVault(id, () => openDdx(filePath, {
     kind: 'vault',
     create: true,
     register: (c) => { conn = c; vaultDbs.set(id, { conn: c, filePath, lastUsed: Date.now() }); },
-  });
+  }));
   return conn;
 }
 
