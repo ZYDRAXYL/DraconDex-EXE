@@ -171,17 +171,20 @@ function welcomeStepLangHtml() {
 }
 
 // ── Step 2: theme ──
-// The Setting window's own card mockup, unchanged, in a box three rows tall —
-// all 32 themes are still reachable by scrolling, but the step stays the same
-// height as every other one instead of running several screens long.
+// The Setting window's own card mockup, unchanged, in a box three rows tall
+// so the step stays the same height as every other one. Procress 10 part 2:
+// the built-ins and installed themes, then the catalog's not-yet-downloaded
+// ones as locked cells with a Download button — the same cells the Setting
+// window's expanded Theme section shows.
 function welcomeStepThemeHtml() {
   const palettes = getThemePalettes();
-  const cells = UI_THEME_OPTIONS.map(key => settingThemeGridCellHtml(key, t(key), palettes[key] || {}, {
+  const cells = UI_THEME_OPTIONS.map(key => settingThemeGridCellHtml(key, themeOptionLabel(key), palettes[key] || {}, {
     active: S.settings.theme === key,
     tools: false,
     onclick: `welcomeSetUi('theme','${key}')`,
   })).join('');
-  return `<div class="welcome-theme-scroll"><div class="prefs-theme-grid">${cells}</div></div>`;
+  const locked = pkgCatalogGap('theme', UI_THEME_OPTIONS_BUILTIN).map(settingThemeCatalogCellHtml).join('');
+  return `<div class="welcome-theme-scroll"><div class="prefs-theme-grid">${cells}${locked}</div></div>`;
 }
 
 // ── Step 3: module names (nameMode) ──

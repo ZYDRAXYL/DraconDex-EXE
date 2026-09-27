@@ -129,7 +129,8 @@ test('every genre bundle resolves and builds in every locale', () => {
   assert.equal(locales.length, 18);
   for (const loc of locales) {
     const cat = bundleCatalog(loc);
-    assert.deepEqual(cat.map((b) => b.id), ['fantasy', 'ttrpg', 'rpg', 'mystery']);
+    assert.deepEqual(cat.map((b) => b.id), ['fantasy', 'ttrpg', 'rpg', 'mystery', 'webnovel', 'vn', 'comic', 'scifi', 'romance',
+      'classicDirector', 'classicNavigator', 'classicHero', 'classicWriter']);
     for (const b of cat) {
       const flat = JSON.stringify(b);
       assert.doesNotMatch(flat, /"t":/, `${loc}/${b.id} left a string key unresolved`);
@@ -144,4 +145,73 @@ test('every genre bundle resolves and builds in every locale', () => {
   const en = bundleCatalog('en').find((b) => b.id === 'fantasy');
   assert.notEqual(th.spec.modules[0].name, en.spec.modules[0].name, 'names follow the language');
   assert.equal(bundleCatalog('xx')[0].name, bundleCatalog('en')[0].name, 'an unknown locale falls back to English');
+});
+
+// Procress 14 part 2 (APP docs/TEMPLATES.md §4): bundle v2 — nested folders,
+// pages from templates with borrows, values by field key, samples, home.
+const director = () => require('../src/db/bundle-catalog.js').bundleCatalog('en').find((b) => b.id === 'classicDirector');
+const childNames = (id) => db.prepare(`SELECT name, kind FROM module WHERE parent_id=? ORDER BY id`).all(id);
+
+test('Classic Director builds its folders, pages, keyed values and home', () => {
+  const b = director();
+  freshVault();
+  const r = bundle.createBundle(1, null, { name: b.name, icon: b.icon, ...b.spec });
+  assert.equal(r.ok, true, r.message);
+  const top = childNames(r.folderId);
+  assert.deepEqual(top.filter((x) => x.kind === 'collector').map((x) => x.name), ['Data', 'Story'], 'nested folders under the project');
+  const ref = (i) => r.moduleIds[b.spec.modules.findIndex((m) => m.ref === i)];
+  assert.equal(r.homeId, ref('project'), 'opens on the project page');
+  assert.equal(r.managerId, ref('project'), 'its own Manager — no second one');
+  assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM module WHERE kind='manager'`).get().n, 1);
+  const def = JSON.parse(db.prepare(`SELECT ui_value FROM module_ui WHERE module_ref=? AND ui_key='filterDef'`).get(ref('project')).ui_value);
+  const folderOf = (name) => db.prepare(`SELECT id FROM module WHERE kind='collector' AND name=?`).get(name).id;
+  assert.deepEqual(def.groups.map((g) => g.rules[0].moduleId), [folderOf('Data'), folderOf('Story')], 'the project page selects the folders its modules sit in');
+  // chars sit in Data
+  const data = db.prepare(`SELECT id FROM module WHERE parent_id=? AND name='Data'`).get(r.folderId).id;
+  assert.equal(db.prepare(`SELECT parent_id FROM module WHERE id=?`).get(ref('chars')).parent_id, data);
+  // the project page borrows the timeline and the map through columns
+  const pb = require('../src/db/page-block.js');
+  const rows = db.prepare(`SELECT id, parent_id, block_type, component, source_key, config FROM page_block WHERE module_ref=? AND item_key IS NULL ORDER BY parent_id IS NOT NULL, block_order`).all(ref('project'));
+  assert.deepEqual(rows.filter((x) => x.parent_id == null).map((x) => x.component || x.block_type), ['manager.dashboard', 'columns', 'manager.recent']);
+  const kids = rows.filter((x) => x.parent_id != null);
+  assert.deepEqual(kids.map((x) => [x.component, x.source_key, JSON.parse(x.config).col]),
+    [['chronicler.eras', `module_${ref('timeline')}`, 0], ['locator.pinlist', `module_${ref('map')}`, 1]]);
+  assert.equal(pb.ensurePage(ref('project'), null, [{ component: 'manager.view' }]), false, 'laid out at creation');
+  // a character's page is the Character wiki's element page
+  const item = db.prepare(`SELECT component FROM page_block WHERE module_ref=? AND item_key='*' ORDER BY block_order`).all(ref('chars')).map((x) => x.component);
+  assert.deepEqual(item, ['core.infobox', 'item.body', 'core.related']);
+  // values and links by field key; the key rides in the field's options
+  const age = db.prepare(`SELECT id, options FROM classifier_template WHERE module_ref=? AND description='Age'`).get(ref('chars'));
+  assert.equal(JSON.parse(age.options).key, 'age');
+  const arin = db.prepare(`SELECT id FROM classifier_object WHERE module_ref=? AND name='Arin'`).get(ref('chars')).id;
+  assert.equal(db.prepare(`SELECT attribute_value AS v FROM classifier_attribute WHERE object_ref=? AND template_ref=?`).get(arin, age.id).v, '19');
+  assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM entity_relation WHERE from_key=?`).get(`cobj_${arin}`).n, 2, 'home + weapon');
+  assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM timeline_event`).get().n, 3);
+});
+
+test('without samples a bundle keeps its structure and drops the examples', () => {
+  const b = director();
+  freshVault();
+  const r = bundle.createBundle(1, null, { name: b.name, ...b.spec, includeSamples: false });
+  assert.equal(r.ok, true, r.message);
+  assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM classifier_object`).get().n, 0);
+  assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM timeline_event`).get().n, 0);
+  assert.ok(db.prepare(`SELECT COUNT(*) AS n FROM classifier_template`).get().n >= 7, 'fields stay');
+  const fantasy = require('../src/db/bundle-catalog.js').bundleCatalog('en').find((x) => x.id === 'fantasy');
+  freshVault();
+  const f = bundle.createBundle(1, null, { name: fantasy.name, ...fantasy.spec, includeSamples: false });
+  assert.equal(f.ok, true, f.message);
+  assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM book_chapter`).get().n, 3, 'skeleton chapters are structure');
+  assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM classifier_object`).get().n, 0);
+});
+
+test('a Wanderer is wired to the Locator and Chronicler it uses', () => {
+  const nav = require('../src/db/bundle-catalog.js').bundleCatalog('en').find((b) => b.id === 'classicNavigator');
+  freshVault();
+  const r = bundle.createBundle(1, null, { name: nav.name, ...nav.spec });
+  assert.equal(r.ok, true, r.message);
+  const ref = (i) => r.moduleIds[nav.spec.modules.findIndex((m) => m.ref === i)];
+  const ui = Object.fromEntries(db.prepare(`SELECT ui_key, ui_value FROM module_ui WHERE module_ref=?`).all(ref('journey')).map((x) => [x.ui_key, x.ui_value]));
+  assert.equal(ui.mapModule, String(ref('map')));
+  assert.equal(ui.timelineModule, String(ref('history')));
 });

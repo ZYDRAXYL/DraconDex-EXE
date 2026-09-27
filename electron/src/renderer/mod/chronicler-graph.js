@@ -221,7 +221,7 @@ async function buildChroniclerOneLineHtml(evs, tlid, col, inspectorEventId) {
     // left behind at their original x (Plan part3 #1).
     svg += `<line data-event-tick="${ev.id}" data-start-ts="${startTs[i] || ''}" x1="${xi}" y1="${tickY1}" x2="${xi}" y2="${tickY2}" stroke="var(--border)" stroke-width="1"/>
       <text data-event-label="${ev.id}" data-start-ts="${startTs[i] || ''}" x="${xi}" y="${nameY}" text-anchor="middle" fill="var(--t1)" font-size="12" style="cursor:pointer" onclick="toggleChroniclerInspector(${tlid},${ev.id})">${x(ev.event_name || '—')}</text>
-      ${shows.date ? `<text data-event-date="${ev.id}" data-start-ts="${startTs[i] || ''}" x="${xi}" y="${dateY}" text-anchor="middle" fill="var(--t3)" font-size="10">${x(sTxt)}</text>` : ''}
+      ${shows.date ? `<text data-event-date="${ev.id}" data-start-ts="${startTs[i] || ''}" x="${xi}" y="${dateY}" text-anchor="middle" fill="var(--t3-aa,var(--t2))" font-size="10">${x(sTxt)}</text>` : ''}
       ${shows.icon ? chroniclerEventIconSvg(ev, xi, iconY) : ''}
       <circle data-event-dot="${ev.id}" data-start-ts="${startTs[i] || ''}" cx="${xi}" cy="${LINE_Y}" r="7" fill="${ec}" style="cursor:pointer" onclick="toggleChroniclerInspector(${tlid},${ev.id})"><title>${x(ev.event_name || '')} — ${x(sTxt)}</title></circle>`;
   }

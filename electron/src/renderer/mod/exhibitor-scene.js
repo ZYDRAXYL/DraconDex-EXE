@@ -117,6 +117,8 @@ async function mountExhibitorScene() {
 
   const col = {
     accent: (exhCss('--accent') || '#6366f1'), text: (exhCss('--t1') || '#e5e7eb'), dim: (exhCss('--t3') || '#6b7280'),
+    // Text: the AA-lifted muted colour (REDESIGN.md C4); dim stays for lines.
+    muted: (exhCss('--t3-aa') || exhCss('--t2') || '#9ca3af'),
     surface: (exhCss('--surface') || '#1f2937'), raised: (exhCss('--raised') || '#374151'), border: (exhCss('--border') || '#4b5563'),
   };
   const shapes = new Map();   // node id -> Konva.Group
@@ -250,7 +252,7 @@ function exhDrawNode(n, col, d) {
   g.add(new Konva.Rect({ width: size.w, height: size.h, fill: col.surface, stroke, strokeWidth: selected ? 3 : 1.4, cornerRadius: 8, opacity: missing ? 0.5 : 1 }));
   g.add(new Konva.Text({ x: 10, y: 7, width: size.w - 20, text: title, fontSize: 13, fill: col.text, ellipsis: true, wrap: 'none' }));
   g.add(new Konva.Text({
-    x: 10, y: 26, width: size.w - 20, fontSize: 10, fill: col.dim, ellipsis: true, wrap: 'none',
+    x: 10, y: 26, width: size.w - 20, fontSize: 10, fill: col.muted, ellipsis: true, wrap: 'none',
     text: missing ? '?' : `${VIEWER_KIND_LABEL[it?.kind] || it?.kind || n.node_type}${it?.moduleName ? ` · ${it.moduleName}` : ''}`,
   }));
   return g;

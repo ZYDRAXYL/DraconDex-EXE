@@ -1,11 +1,12 @@
 // v5 Part 8 (V5.md §12.13) — export as an HTML website. The walk stops at
 // the chosen depth and only at pages (a collector is not one); a link to a
 // page the user unticked becomes its text, never a dead link; the zip holds
-// index.html, one file per other page, style.css and the canvases' PNGs.
+// index.html, one file per other page, style.css, the canvases' PNGs and
+// the Nexus pictures the pages show (media/).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -94,4 +95,43 @@ test('the site is index.html, a file per page, style.css and the images', () => 
   assert.equal(r.ok, true);
   const zip = readFileSync(out);
   for (const name of ['index.html', 'cobj_4.html', 'style.css', 'img/1.png']) assert.ok(zip.includes(Buffer.from(name)), name);
+});
+
+// Procress 14 (EXPORT-DECOR.md E7): an image block shows a Nexus file as
+// ddx-file://<nexus>-<id>, which means nothing outside the app. The site
+// carries the file itself — the original, or the vault's proxy once the
+// original has gone — and a URL naming another Nexus is left alone.
+test('the Nexus pictures a page shows travel in media/', () => {
+  freshVault();
+  const png = join(tmp, 'cover.png');
+  writeFileSync(png, Buffer.from('realpng'));
+  const addFile = (p, type, proxy = null) => db.prepare(`INSERT INTO import_file (nexus_ref, file_name, file_path, file_type, proxy, proxy_type) VALUES (1,?,?,?,?,?)`)
+    .run(p.split('/').pop(), p, type, proxy, proxy ? 'image/jpeg' : null).lastInsertRowid;
+  const live = addFile(png, 'png');
+  const gone = addFile(join(tmp, 'moved.webp'), 'webp', Buffer.from('proxyjpg'));
+  const lost = addFile(join(tmp, 'lost.png'), 'png');
+  const payload = {
+    indexKey: 'module_1', css: '',
+    pages: [
+      { key: 'module_1', name: 'Home', html: `<img src="ddx-file://1-${live}"><img src="ddx-file://1-${gone}"><img src="ddx-file://2-${live}">` },
+      { key: 'cobj_4', name: 'Four', html: `<img src="ddx-file://1-${live}"><img src="ddx-file://1-${lost}">` },
+    ],
+    images: [{ name: 'img/1.png', base64: Buffer.from('cv').toString('base64') }],
+  };
+  const site = hx.buildSite(payload, 1);
+  assert.deepEqual(site.entries.map((e) => e.name),
+    ['index.html', 'cobj_4.html', `media/${live}.png`, `media/${gone}.jpg`, 'style.css', 'img/1.png']);
+  assert.equal(site.entries.find((e) => e.name === `media/${live}.png`).path, png, 'the original streams from disk');
+  assert.equal(String(site.entries.find((e) => e.name === `media/${gone}.jpg`).data), 'proxyjpg');
+  assert.equal(site.media, 2);
+  assert.equal(site.missing, 1);
+  const index = site.entries[0].data;
+  assert.match(index, new RegExp(`<img src="media/${live}\\.png"><img src="media/${gone}\\.jpg"><img src="ddx-file://2-${live}">`));
+  assert.match(site.entries[1].data, new RegExp(`<img src="ddx-file://1-${lost}">`), 'nothing to carry: left as it was');
+
+  const out = join(tmp, 'media-site.zip');
+  const r = hx.exportHtmlSite(out, payload, 1);
+  assert.equal(r.ok, true);
+  assert.equal(r.media, 2);
+  assert.ok(readFileSync(out).includes(Buffer.from('realpng')));
 });

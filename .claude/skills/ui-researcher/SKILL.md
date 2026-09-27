@@ -102,6 +102,13 @@ Prioritized list, most severe first. Per finding:
 - **Effort** — rough: token/value tweak vs. new visual pattern vs.
   structural rework
 
+Then record it (G8): in an APP checkout write it to
+`docs/redesign/audits/<screen>-<YYYY-MM-DD>.md` (template in that folder's
+`README.md`) with the cited screenshots copied into
+`docs/redesign/audits/shots/<screen>-<YYYY-MM-DD>/`; anywhere else, head the
+report with that APP path so it can be committed there. Compare against any
+earlier audit of the same screen.
+
 ## Running as an agent
 
 For a full visual audit or heavy competitor-visual research, spawn the

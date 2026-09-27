@@ -36,9 +36,12 @@ function resolve(v, strings, locale) {
 }
 
 // → [{ id, icon, name, description, spec }], every string in `locale`.
+// bundles.json v2 (SDB 2.0.5, APP docs/TEMPLATES.md §4) adds `group`
+// (classic | genre), folders, pages and samples — createBundle reads them;
+// v1 had none of them, so both read the same way here.
 function bundleCatalog(locale = 'en') {
   const { bundles, strings } = load();
-  return bundles.map((b) => resolve(b, strings, locale));
+  return [...bundles].sort((a, b) => (a.order ?? 99) - (b.order ?? 99)).map((b) => resolve(b, strings, locale));
 }
 
-module.exports = { bundleCatalog };
+module.exports = { bundleCatalog, resolve, isT };

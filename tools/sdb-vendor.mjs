@@ -27,7 +27,7 @@ const ref = argOf('--ref') || lock.source.ref;
 const raw = p => `https://raw.githubusercontent.com/${lock.source.repo}/${ref}/${p}`;
 
 const normalizeEol = s => s.replace(/\r\n/g, '\n');
-const isText = p => /\.(js|dart|sql|json|md|mjs|txt)$/.test(p);
+const isText = p => /\.(js|dart|sql|json|md|mjs|txt|css)$/.test(p);
 const digest = (buf, rel) =>
   createHash('sha256').update(isText(rel) ? Buffer.from(normalizeEol(buf.toString('utf8')), 'utf8') : buf).digest('hex');
 

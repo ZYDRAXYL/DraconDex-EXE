@@ -1191,8 +1191,18 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
         if (target == null) continue;
         value = String(target);
       }
+      // An element page's title layout is keyed by the element
+      // ("pageHead:cobj_12", APP docs/REDESIGN.md C6) — the key itself goes
+      // through the entity maps, the same as page_block.item. Unmappable =
+      // the element is not in this snapshot, so the row is dropped.
+      let key = u.key;
+      if (String(key).startsWith('pageHead:')) {
+        const k = remapEntityKey(key.slice(9), keyMaps);
+        if (k == null) continue;
+        key = `pageHead:${k}`;
+      }
       db.prepare(`INSERT OR IGNORE INTO module_ui (module_ref, ui_key, ui_value) VALUES (?,?,?)`)
-        .run(mod(u.moduleId), u.key, value ?? null);
+        .run(mod(u.moduleId), key, value ?? null);
     }
     for (const [oldId, kind] of legacyKind) {
       if (kind !== 'connector') continue;

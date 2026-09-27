@@ -397,7 +397,11 @@ function registerDisplayImageProtocol() {
     try { f = await runWithVault(nexusId, () => db.getImportFile(id)); }
     catch (_) { return new Response(null, { status: 404 }); }
     const ext = (f?.file_type || '').toLowerCase();
-    if (!f || f.source_kind !== 'file' || !isStreamable(ext)) return new Response(null, { status: 404 });
+    if (!f || f.source_kind !== 'file') return new Response(null, { status: 404 });
+    // a poster (a PDF's first page, a model's first frame — MEDIA-EMBED M4/M5)
+    // is a proxy like an image's; the file itself streams only if its class does
+    const proxyOnly = /[?&]proxy=1(?:&|#|$)/.test(url);
+    if (!proxyOnly && !isStreamable(ext)) return new Response(null, { status: 404 });
     // v5 (APP docs/V5.md §2.5): the cover proxy stored in the vault, served
     // on ?proxy=1 and as the automatic fallback for an image whose original
     // has gone missing — the vault still shows every cover after a move.
@@ -765,6 +769,12 @@ h('tools:csvPick', async () => {
 h('bundle:guide',  (locale)          => db.guideSpec(locale));
 // The genre bundles, vendored from DraconDex-SDB and resolved in the UI language.
 h('bundle:catalog', (locale)         => db.bundleCatalog(locale));
+// Procress 14 (APP docs/TEMPLATES.md §3–§4): page templates and the user's own bundles.
+h('bundle:saveMine', (nx, folderId, name, opts) => db.saveBundle(nx, folderId, name, opts));
+h('bundle:listMine', (nx)          => db.listBundles(nx));
+h('template:catalog', (locale)     => db.pageCatalog(locale));
+h('template:apply',  (mid, tpl, opts) => db.applyTemplate(mid, tpl, opts));
+h('template:restore', (mid, old)   => db.restorePageLayout(mid, old));
 
 // v5 Part 7 (§11.4): the whole Nexus as .md files in a .zip — export only.
 h('nexus:exportMarkdown', async (id) => {
@@ -789,7 +799,88 @@ h('htmlExport:write', async (nx, payload) => {
     filters: [{ name: 'Website (.zip)', extensions: ['zip'] }],
   });
   if (result.canceled || !result.filePath) return { ok: false, canceled: true };
-  return db.exportHtmlSite(result.filePath, payload);
+  return db.exportHtmlSite(result.filePath, payload, nx);
+});
+// Procress 14 (EXPORT-DECOR.md E1): PDF. db/pdf-export.js makes one print
+// document from the pages the renderer drew; it is printed in a hidden
+// window with JavaScript off, no preload and a session of its own (the
+// web-contents-created lockdown above covers it too), then closed.
+h('export:pdf', async (nx, payload, opts) => {
+  const doc = db.buildPrintHtml(payload, nx);
+  if (!doc.ok) return doc;
+  const safe = String(payload?.title || 'export').replace(/[\\/:*?"<>|]/g, '_').slice(0, 120) || 'export';
+  const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'Export PDF', defaultPath: path.join(app.getPath('documents'), `${safe}.pdf`),
+    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  const tmp = path.join(app.getPath('temp'), `ddx-print-${process.pid}-${Date.now()}.html`);
+  const win = new BrowserWindow({
+    show: false, width: 1100, height: 1400,
+    webPreferences: { javascript: false, sandbox: true, contextIsolation: true, nodeIntegration: false, partition: 'ddx-print', spellcheck: false },
+  });
+  try {
+    fs.writeFileSync(tmp, doc.html, 'utf8');
+    await win.loadFile(tmp);
+    const pdf = await win.webContents.printToPDF(db.pdfOptions(opts || {}, payload?.title || ''));
+    fs.writeFileSync(result.filePath, pdf);
+    return { ok: true, saved: result.filePath, pages: doc.pages, missing: doc.missing, bytes: pdf.length };
+  } catch (err) {
+    console.error('export:pdf', err);
+    return { ok: false, code: 'print_failed' };
+  } finally {
+    if (!win.isDestroyed()) win.destroy();
+    fs.rm(tmp, { force: true }, () => {});
+  }
+});
+// Procress 14 (EXPORT-DECOR.md E2 / E5 / E3): a module as a Word document,
+// an Author book as an EPUB, a module (and what is inside it) as Markdown.
+// All built from the vault in main; the renderer names the module.
+const DOC_FORMATS = {
+  docx: { ext: 'docx', filter: { name: 'Word', extensions: ['docx'] }, run: (id, file) => db.exportDocx(id, file) },
+  epub: { ext: 'epub', filter: { name: 'EPUB', extensions: ['epub'] }, run: (id, file, o) => db.exportEpub(id, file, o) },
+  md:   { ext: 'zip', suffix: '-markdown', filter: { name: 'Markdown (.zip)', extensions: ['zip'] }, run: (id, file, o) => db.exportNexusMarkdown(o.nexusId, file, { moduleId: id }) },
+};
+h('export:doc', async (moduleId, format, opts) => {
+  const m = db.getModule(moduleId);
+  const f = DOC_FORMATS[format];
+  if (!m || !f) return { ok: false, code: 'not_found' };
+  const safe = String(m.name || 'export').replace(/[\\/:*?"<>|]/g, '_').slice(0, 120) || 'export';
+  const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'Export', defaultPath: path.join(app.getPath('documents'), `${safe}${f.suffix || ''}.${f.ext}`), filters: [f.filter],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  const r = f.run(moduleId, result.filePath, { lang: String(opts?.lang || 'en'), nexusId: m.nexus_ref });
+  return { ...r, saved: result.filePath };
+});
+// Procress 14 (EXPORT-DECOR.md E6): the open view as a picture. The renderer
+// drew it (hub/export-view.js); the SVG is sanitized and the PNG checked here.
+h('export:image', async (name, pic) => {
+  const svg = pic?.svg != null ? db.sanitizeSvg(pic.svg) : null;
+  const png = svg == null && pic?.png != null ? db.pngBytes(pic.png) : null;
+  if (svg == null && !png) return { ok: false, code: 'bad_image' };
+  const ext = svg != null ? 'svg' : 'png';
+  const safe = String(name || 'view').replace(/[\\/:*?"<>|]/g, '_').slice(0, 120) || 'view';
+  const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'Export', defaultPath: path.join(app.getPath('documents'), `${safe}.${ext}`),
+    filters: [ext === 'svg' ? { name: 'SVG', extensions: ['svg'] } : { name: 'PNG', extensions: ['png'] }],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  fs.writeFileSync(result.filePath, svg != null ? svg : png);
+  return { ok: true, saved: result.filePath, format: ext };
+});
+// Procress 14 (EXPORT-DECOR.md E4): a Classifier / Chronicler as a table.
+// The renderer names the module and the format; main reads the vault.
+h('export:table', async (moduleId, format) => {
+  const m = db.getModule(moduleId);
+  if (!m || !['csv', 'xlsx'].includes(format)) return { ok: false, code: 'not_found' };
+  const safe = String(m.name || 'table').replace(/[\\/:*?"<>|]/g, '_');
+  const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    title: format === 'csv' ? 'Export CSV' : 'Export Excel', defaultPath: path.join(app.getPath('documents'), `${safe}.${format}`),
+    filters: [format === 'csv' ? { name: 'CSV', extensions: ['csv'] } : { name: 'Excel', extensions: ['xlsx'] }],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  return { ...db.exportTable(moduleId, format, result.filePath), saved: result.filePath };
 });
 h('module:duplicate',   (id)          => db.duplicateModule(id));
 h('module:move',        (nx,id,parentId,ids) => db.moveModule(nx,id,parentId,ids));
@@ -813,6 +904,15 @@ h('block:remove',   (id)            => db.deleteBlock(id));
 h('block:restore',  (rows)          => db.restoreBlocks(rows));
 h('block:split',    (id,item)       => db.splitItemPage(id,item));
 h('block:revert',   (id,item)       => db.revertItemPage(id,item));
+// A page link to the web (Procress 14, TEMPLATES §7.2) — the same rule as
+// importdock:openUrl: main opens what the block's stored config says, by a
+// path into it, re-validated; the renderer never hands over a URL.
+h('block:openUrl', async (id, path) => {
+  const u = db.blockLinkUrl(id, path);
+  if (!u) return false;
+  await shell.openExternal(u);
+  return true;
+});
 h('block:setProp',  (id,item,pid,n,v,tp) => db.setProp(id,item,pid,n,v,tp));
 
 // Process 7 part 2 — app-wide session undo/redo (Ctrl+Z/Ctrl+Shift+Z),
@@ -1022,6 +1122,46 @@ h('importdock:delete',        (id)     => db.deleteImportFile(id));
 h('importdock:displayImages', (nx)     => db.getDisplayImages(nx));
 // Kept for the flat-file path (and Part 4's locate-nexus, which reuses the
 // dialog + guard): returns the walk, registers nothing.
+// Files the user chose — through main's dialog, or dropped on a page from
+// the OS (preload.js turns each dropped File into its path with webUtils; a
+// File the page made itself has no path) — registered like any import:
+// only the extensions of the asked classes, filed under moduleRef.
+function registerChosenFiles(nx, paths, moduleRef, classes) {
+  const exts = Object.keys(ASSET_CLASS).filter((e) => classes.includes(ASSET_CLASS[e]));
+  const files = (paths || []).map((p) => {
+    const type = path.extname(String(p)).slice(1).toLowerCase();
+    let size = 0;
+    try { const st = fs.statSync(p); if (!st.isFile()) return null; size = st.size; } catch (_) { return null; }
+    return exts.includes(type) ? { name: path.basename(p), path: String(p), size, folder: null, type } : null;
+  }).filter(Boolean);
+  if (!files.length) return { ids: [] };
+  db.addImportFiles(nx, files, moduleRef ?? null);
+  return { ids: db.importIdsByPath(nx, files.map((f) => f.path)) };
+}
+// A page accepts what its media blocks can show (MEDIA-EMBED M7).
+const DROPPABLE = ['image', 'video', 'audio', 'model', 'doc', 'track'];
+h('importdock:dropped', (nx, paths, moduleRef) =>
+  registerChosenFiles(nx, (Array.isArray(paths) ? paths : []).slice(0, 50).filter((p) => typeof p === 'string' && path.isAbsolute(p)), moduleRef, DROPPABLE));
+h('importdock:readBinary', (id) => db.readBinary(id));
+h('importdock:setPoster',  (id, dataUrl) => db.setPoster(id, dataUrl));
+
+// "Import new picture…" inside a picker (Procress 14, EXPORT-DECOR D4; the
+// media blocks, MEDIA-EMBED): the dialog is main's, so the files it returns
+// are the user's choice — the same guarantee a picked root gives — and only
+// the asset class asked for is offered. Filed under moduleRef like any
+// import. → { ids } in the order picked, or { canceled }.
+h('importdock:pickFiles', async (nx, moduleRef, cls) => {
+  // 'media' is core.media's mix: pictures, videos and models
+  const classes = cls === 'media' ? ['image', 'video', 'model'] : [cls];
+  const exts = Object.keys(ASSET_CLASS).filter((e) => classes.includes(ASSET_CLASS[e]));
+  if (!exts.length) return { canceled: true };
+  const res = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
+    properties: ['openFile', 'multiSelections'], filters: [{ name: cls, extensions: exts }],
+  });
+  if (res.canceled || !res.filePaths?.length) return { canceled: true };
+  const r = registerChosenFiles(nx, res.filePaths, moduleRef, classes);
+  return r.ids.length ? r : { canceled: true };
+});
 h('importdock:pickFolder', async () => {
   const root = await pickDirectory();
   if (!root) return { canceled: true };
@@ -1551,18 +1691,6 @@ h('sketcher:exportPng', async (name, dataUrl) => {
 // Plan part5 Author #5: ".doc" export is plain HTML wrapped in a Word
 // namespace shell — Word opens this natively, no docx-generation library
 // needed (package.json has none, and this app is offline-first).
-h('author:exportDoc', async (name, html) => {
-  const win = BrowserWindow.getFocusedWindow();
-  const res = await dialog.showSaveDialog(win, {
-    defaultPath: `${name || 'book'}.doc`,
-    filters: [{ name: 'Word Document', extensions: ['doc'] }],
-  });
-  if (res.canceled || !res.filePath) return { canceled: true };
-  const shell = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset="utf-8"></head><body>${html}</body></html>`;
-  fs.writeFileSync(res.filePath, shell, 'utf8');
-  return { saved: res.filePath };
-});
-
 // Plan part5 Drafter #1: content is already raw markdown text — no HTML
 // shell needed, just write the string as-is. Both extensions are offered
 // as separate filter groups so the save dialog's own format dropdown lets

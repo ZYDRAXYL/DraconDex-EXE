@@ -48,9 +48,10 @@ function viewBarHtml(views, active, onclick, label, opts = {}) {
 //   o.note   a line about THIS page's state (a filter that matched nothing)
 //   o.extra  HTML after the button
 //   o.attrs  attributes for the wrapper (a right-click menu)
+//   o.start  false to leave the button out (the page's own controls are the way in)
 function kindEmptyStateHtml(m, o = {}) {
   const col = m.icon_color_code || m.color_code || KIND_COLOR[m.kind] || 'var(--accent)';
-  const start = KIND_PAGE[m.kind]?.start;
+  const start = o.start === false ? null : KIND_PAGE[m.kind]?.start;
   const presets = typeof presetChipsHtml === 'function' ? presetChipsHtml(m) : '';
   return `<div class="empty kind-empty"${o.attrs ? ` ${o.attrs}` : ''}>
     <div class="ei" style="color:${x(col)}">${moduleIconHtml(m)}</div>

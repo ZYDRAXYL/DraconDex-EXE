@@ -13,7 +13,14 @@ const problems  = require('./src/db/problems');
 const csvImport = require('./src/db/csv-import');
 const pageBlock = require('./src/db/page-block');
 const htmlExport = require('./src/db/html-export');
+const tableExport = require('./src/db/table-export');
+const pdfExport = require('./src/db/pdf-export');
+const docxExport = require('./src/db/docx-export');
+const epubExport = require('./src/db/epub-export');
+const viewExport = require('./src/db/view-export');
 const bundleCatalog = require('./src/db/bundle-catalog');
+const pageTemplate = require('./src/db/page-template');
+const bundleCapture = require('./src/db/bundle-capture');
 const scribe    = require('./src/db/scribe');
 const wiki      = require('./src/db/wiki');
 const color     = require('./src/db/color');
@@ -47,10 +54,12 @@ const dbTransfer = require('./src/db/db-transfer');
 const mirror    = require('./src/db/mirror');
 const vaults    = require('./src/db/vaults');
 const transfer  = require('./src/db/transfer');
+const mediaRead = require('./src/db/media-read');
 const cloud     = require('./src/db/cloud');
 
 module.exports = {
   ...core,
+  ...mediaRead,
   ...nexus,
   ...teach,
   ...preset,
@@ -64,7 +73,14 @@ module.exports = {
   ...csvImport,
   ...pageBlock,
   ...htmlExport,
-  ...bundleCatalog,
+  exportTable: tableExport.exportTable,
+  buildPrintHtml: pdfExport.buildPrintHtml, pdfOptions: pdfExport.pdfOptions,
+  exportDocx: docxExport.exportDocx, exportEpub: epubExport.exportEpub,
+  sanitizeSvg: viewExport.sanitizeSvg, pngBytes: viewExport.pngBytes,
+  bundleCatalog: bundleCatalog.bundleCatalog,
+  pageCatalog: pageTemplate.pageCatalog, applyTemplate: pageTemplate.applyTemplate,
+  restorePageLayout: pageTemplate.restorePageLayout, captureTemplate: pageTemplate.captureTemplate,
+  ...bundleCapture,
   ...scribe,
   ...wiki,
   ...color,

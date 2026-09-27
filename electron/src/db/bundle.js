@@ -26,9 +26,23 @@
 //   pages         Sketcher: [name]
 //   selects       Exhibitor / Manager: [moduleRef] — its filter is "inside these"
 // } ] }
+//
+// v2 (SDB 2.0.5, APP docs/TEMPLATES.md §4) — all optional, a v1 spec is unchanged:
+//   folders       [{ ref, name, parent? }] — nested Collectors; the root (no
+//                 parent) is the project's folder and takes spec.name
+//   module.folder which folder the module goes in (the root when absent)
+//   field.key     a field's name-free handle: values / links / a page's
+//                 config.field name it (a guide still names fields by name)
+//   module.page / module.itemPage  a page template id (templates/pages.json)
+//                 or inline blocks — a block's `borrow` is a module ref here
+//   module.uses   Wanderer: [locatorRef, chroniclerRef]
+//   sample / samples  sample data, left out when spec.includeSamples === false
+//   home          the module to open once it is made (returned as homeId)
+// A spec that brings its own Manager gets no second one.
 // Text may hold [[links]] to anything else in the bundle by name; they are
 // indexed as the rows land.
 const { getDB } = require('./core');
+const pageTpl = require('./page-template');
 const moduleDb = require('./module');
 const cls = require('./classifier');
 const preset = require('./preset');
@@ -40,6 +54,18 @@ const KINDS = new Set(['manager', 'inspector', 'classifier', 'locator', 'chronic
   'author', 'scribe', 'drafter', 'exhibitor', 'sketcher', 'designer', 'diviner']);
 const str = (v, n = 4000) => (typeof v === 'string' ? v.slice(0, n) : v == null ? '' : String(v).slice(0, n));
 const arr = (v) => (Array.isArray(v) ? v : []);
+const COLLECTIONS = ['objects', 'events', 'chapters', 'dialogues', 'sessions', 'nodes', 'pages', 'tables'];
+
+// Sample data out: a module marked `samples` loses its collections; an item
+// marked `sample` goes by itself. Everything else is structure and stays.
+function withoutSamples(m) {
+  const o = { ...m };
+  for (const c of COLLECTIONS) {
+    if (!Array.isArray(o[c])) continue;
+    o[c] = m.samples ? [] : o[c].filter((x) => !(x && typeof x === 'object' && x.sample));
+  }
+  return o;
+}
 
 function colorId(d, code) {
   if (!code || !/^#[0-9a-fA-F]{3,8}$/.test(code)) return null;
@@ -74,7 +100,8 @@ function projectPage(d, managerId, moduleIds, mods) {
 
 function createBundle(nexusId, parentId, spec) {
   const d = getDB();
-  const mods = arr(spec?.modules).filter((m) => KINDS.has(m?.kind) && str(m.name, 200).trim()).slice(0, MAX_MODULES);
+  const mods = arr(spec?.modules).filter((m) => KINDS.has(m?.kind) && str(m.name, 200).trim()).slice(0, MAX_MODULES)
+    .map((m) => (spec.includeSamples === false ? withoutSamples(m) : m));
   const name = str(spec?.name, 200).trim();
   if (!name) return { ok: false, code: 'name_required' };
   const reindex = []; // [key, text] — after the rows exist, so a [[link]] finds its target
@@ -83,15 +110,29 @@ function createBundle(nexusId, parentId, spec) {
     const bare = spec.folder === false;
     const folderId = bare ? (parentId ?? null)
       : moduleDb.createModule({ nexus_ref: nexusId, parent_id: parentId ?? null, name, kind: 'collector', icon: spec.icon || null, color: col, icon_color: col });
+    // v2 folders, parents first. The root is the project's own folder.
+    const folderIds = new Map();
+    const folders = bare ? [] : arr(spec.folders).filter((x) => x && x.ref);
+    const root = folders.find((x) => !x.parent);
+    if (root) folderIds.set(root.ref, folderId);
+    for (let pass = 0; pass < folders.length && folderIds.size < folders.length; pass++) {
+      for (const x of folders) {
+        if (folderIds.has(x.ref) || !folderIds.has(x.parent)) continue;
+        folderIds.set(x.ref, moduleDb.createModule({ nexus_ref: nexusId, parent_id: folderIds.get(x.parent),
+          name: str(x.name, 200).trim() || x.ref, kind: 'collector', color: col, icon_color: col }, { logHistory: false }));
+      }
+    }
     const created = [];
     const modByRef = new Map();
+    const pendingPages = [];    // [moduleId, module spec]
+    const pendingUses = [];     // [moduleId, [ref]]
     const objByRef = new Map();
     const pendingFieldRel = []; // [templateId, relTo]
     const pendingLinks = [];    // [objectId, templateId, [objRef]]
     const pendingSelects = [];  // [moduleId, [ref]]
     for (const m of mods) {
       const id = moduleDb.createModule({
-        nexus_ref: nexusId, parent_id: folderId, name: str(m.name, 200).trim(), kind: m.kind,
+        nexus_ref: nexusId, parent_id: folderIds.get(m.folder) ?? folderId, name: str(m.name, 200).trim(), kind: m.kind,
         icon: m.icon || null, color: col, icon_color: col,
         cat_type: m.kind === 'classifier' ? (['object', 'character', 'element'].includes(m.catType) ? m.catType : 'object') : null,
       }, { logHistory: false });
@@ -103,12 +144,16 @@ function createBundle(nexusId, parentId, spec) {
       }
       if (m.kind === 'classifier') {
         const tplByName = new Map();
+        const tplByKey = new Map();
+        // values / links name a field by key (v2), or by name (v1, guides)
+        const field = (k) => tplByKey.get(k) || tplByName.get(k);
         for (const f of arr(m.fields)) {
           const opts = typeof f.options === 'string' ? JSON.parse(f.options || 'null') : (f.options || null);
-          const o = { ...(opts || {}), ...(f.role ? { role: f.role } : {}) };
+          const o = { ...(opts || {}), ...(f.role ? { role: f.role } : {}), ...(f.key ? { key: String(f.key) } : {}) };
           const tid = cls.createTemplate(id, str(f.name, 200), f.type || 'text', !!f.levelable, !!f.hasCondition, null,
             Object.keys(o).length ? JSON.stringify(o) : null);
           tplByName.set(str(f.name, 200), { id: tid, type: f.type || 'text' });
+          if (f.key) tplByKey.set(String(f.key), { id: tid, type: f.type || 'text' });
           if (f.relTo) pendingFieldRel.push([tid, f.relTo, o]);
         }
         for (const ob of arr(m.objects)) {
@@ -116,13 +161,13 @@ function createBundle(nexusId, parentId, spec) {
           if (ob.ref) objByRef.set(ob.ref, oid);
           if (ob.note) { d.prepare(`UPDATE classifier_object SET note=? WHERE id=?`).run(str(ob.note, 20000), oid); }
           for (const [fname, v] of Object.entries(ob.values || {})) {
-            const tp = tplByName.get(fname);
+            const tp = field(fname);
             if (!tp) continue;
             const val = Array.isArray(v) ? JSON.stringify(v) : typeof v === 'boolean' ? (v ? '1' : '0') : str(v);
             d.prepare(`INSERT OR REPLACE INTO classifier_attribute (object_ref, template_ref, attribute_value) VALUES (?,?,?)`).run(oid, tp.id, val);
           }
           for (const [fname, refs] of Object.entries(ob.links || {})) {
-            const tp = tplByName.get(fname);
+            const tp = field(fname);
             if (tp) pendingLinks.push([oid, tp.id, arr(refs)]);
           }
           reindex.push([`cobj_${oid}`, null]);
@@ -177,6 +222,8 @@ function createBundle(nexusId, parentId, spec) {
         arr(m.pages).forEach((p, i) => d.prepare(`INSERT INTO sketch_page (module_ref, name, page_order) VALUES (?,?,?)`).run(id, str(p, 200), i));
       }
       if (['exhibitor', 'manager'].includes(m.kind) && arr(m.selects).length) pendingSelects.push([id, arr(m.selects)]);
+      if (m.page || m.itemPage) pendingPages.push([id, m]);
+      if (m.kind === 'wanderer' && arr(m.uses).length) pendingUses.push([id, arr(m.uses)]);
     }
     // A relation field names the module it points into; values point at objects.
     for (const [tid, relTo, o] of pendingFieldRel) {
@@ -191,17 +238,50 @@ function createBundle(nexusId, parentId, spec) {
     }
     const setUi = d.prepare(`INSERT INTO module_ui (module_ref, ui_key, ui_value) VALUES (?,?,?)
       ON CONFLICT(module_ref, ui_key) DO UPDATE SET ui_value=excluded.ui_value`);
+    // A filter says "inside these". A Manager naming a module that is not a
+    // folder selects the folder it sits in — the same modules, and the ones
+    // added there later — since a Manager with no rule shows the whole vault.
     for (const [mid, refs] of pendingSelects) {
-      const groups = refs.map((r) => modByRef.get(r)).filter(Boolean).map((moduleId) => ({ rules: [{ field: 'childOf', moduleId }] }));
+      const row = (id) => d.prepare(`SELECT kind, parent_id FROM module WHERE id=?`).get(id);
+      const isManager = row(mid)?.kind === 'manager';
+      const scope = [...new Set(refs.map((r) => modByRef.get(r) ?? folderIds.get(r)).filter(Boolean).map((id) => {
+        const m = row(id);
+        return isManager && m?.kind !== 'collector' && m?.parent_id ? m.parent_id : id;
+      }))];
+      const groups = scope.map((moduleId) => ({ rules: [{ field: 'childOf', moduleId }] }));
       if (groups.length) setUi.run(mid, 'filterDef', JSON.stringify({ groups }));
     }
+    // A Wanderer walks a Locator's map along a Chronicler's time (the same
+    // module_ui keys its toolbar pickers write).
+    for (const [wid, refs] of pendingUses) {
+      for (const r of refs) {
+        const tid = modByRef.get(r);
+        const kind = tid && d.prepare(`SELECT kind FROM module WHERE id=?`).get(tid)?.kind;
+        if (kind === 'locator') setUi.run(wid, 'mapModule', String(tid));
+        if (kind === 'chronicler') setUi.run(wid, 'timelineModule', String(tid));
+      }
+    }
+    // Pages last: a template may borrow any module of the bundle.
+    for (const [mid, m] of pendingPages) {
+      // A template id brings both its pages; an explicit itemPage wins.
+      const tpl = typeof m.page === 'string' ? pageTpl.findTemplate(m.page) : null;
+      for (const [which, itemKey] of [['page', null], ['itemPage', '*']]) {
+        let blocks = m[which] ?? tpl?.[which];
+        if (typeof blocks === 'string') blocks = pageTpl.findTemplate(blocks)?.[which] || null;
+        if (!Array.isArray(blocks) || !blocks.length) continue;
+        pageTpl.replacePage(d, mid, itemKey, pageTpl.layoutRows(blocks, modByRef).rows);
+      }
+    }
     let managerId = null;
-    if (spec.manager !== false && !bare) {
+    const ownManager = mods.findIndex((m) => m.kind === 'manager');
+    if (ownManager >= 0) managerId = created[ownManager];
+    else if (spec.manager !== false && !bare) {
       managerId = moduleDb.createModule({ nexus_ref: nexusId, parent_id: folderId, name, kind: 'manager', color: col, icon_color: col }, { logHistory: false });
       setUi.run(managerId, 'filterDef', JSON.stringify({ groups: [{ rules: [{ field: 'childOf', moduleId: folderId }] }] }));
       projectPage(d, managerId, created, mods);
     }
-    return { folderId: bare ? null : folderId, managerId, moduleIds: created, modules: mods.length };
+    const homeId = spec.home ? (modByRef.get(spec.home) ?? null) : null;
+    return { folderId: bare ? null : folderId, managerId, homeId, moduleIds: created, modules: mods.length };
   });
   let out;
   try { out = run(); } catch (e) { return { ok: false, code: 'failed', message: String(e?.message || e) }; }

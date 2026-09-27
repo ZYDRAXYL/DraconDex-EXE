@@ -15,6 +15,7 @@
 const { getDB } = require('./core');
 const wiki = require('./wiki');
 const { writeZip } = require('./zip');
+const { mediaForSite, rewriteMedia } = require('./export-media');
 
 // Keys that have a page: a module, and the elements with element pages
 // (renderer ITEM_KIND entries with a keyOf).
@@ -96,11 +97,12 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const fileOf = (key, indexKey) => (key === indexKey ? 'index.html' : `${key}.html`);
 
 // Every <a … data-key="K">…</a> the renderer left: a link when K was
-// exported, its text when not.
-function rewriteLinks(html, exported, indexKey) {
+// exported, its text when not. hrefOf: where K lives (a file of the site;
+// an anchor in the one PDF document).
+function rewriteLinks(html, exported, indexKey, hrefOf = (key) => fileOf(key, indexKey)) {
   return String(html || '').replace(/<a\b([^>]*?)\bdata-key="([^"]*)"([^>]*)>([\s\S]*?)<\/a>/g, (_, pre, key, post, inner) => (
     exported.has(key)
-      ? `<a class="xl" href="${esc(fileOf(key, indexKey))}">${inner}</a>`
+      ? `<a class="xl" href="${esc(hrefOf(key))}">${inner}</a>`
       : `<span class="xl-text">${inner}</span>`));
 }
 
@@ -114,7 +116,9 @@ ${menu ? `<nav class="site-menu">${menu}</nav>` : ''}<main class="site-page">${b
 
 // payload: { title, indexKey, css, pages: [{ key, name, html }], images: [{ name, base64 }] }
 // → zip entries. The index page carries the site's menu: every page.
-function buildSite(payload) {
+// Canvases arrive rendered (img/N.png); the Nexus's own pictures are read
+// here, from the vault's files, into media/ (export-media.js).
+function buildSite(payload, nexusId = null) {
   const pages = (payload?.pages || []).filter((p) => PAGE_KEY.test(p.key));
   const indexKey = payload?.indexKey;
   if (!pages.some((p) => p.key === indexKey)) return { ok: false, code: 'no_index' };
@@ -122,23 +126,25 @@ function buildSite(payload) {
   const siteTitle = payload.title || pages.find((p) => p.key === indexKey).name;
   const menu = `<ul>${pages.filter((p) => p.key !== indexKey)
     .map((p) => `<li><a href="${esc(fileOf(p.key, indexKey))}">${esc(p.name)}</a></li>`).join('')}</ul>`;
+  const media = nexusId == null ? { entries: [], urls: new Map(), missing: 0 } : mediaForSite(pages.map((p) => p.html), nexusId);
   const entries = pages.map((p) => ({
     name: fileOf(p.key, indexKey),
-    data: pageShell(p.name, siteTitle, rewriteLinks(p.html, exported, indexKey), p.key === indexKey ? menu : ''),
+    data: pageShell(p.name, siteTitle, rewriteLinks(rewriteMedia(p.html, nexusId, media.urls), exported, indexKey), p.key === indexKey ? menu : ''),
   }));
+  entries.push(...media.entries);
   entries.push({ name: 'style.css', data: String(payload.css || '') });
   for (const img of payload.images || []) {
     if (!/^img\/[\w.-]+\.png$/.test(img.name)) continue;
     entries.push({ name: img.name, data: Buffer.from(String(img.base64 || ''), 'base64') });
   }
-  return { ok: true, entries };
+  return { ok: true, entries, media: media.entries.length, missing: media.missing };
 }
 
-function exportHtmlSite(outPath, payload) {
-  const site = buildSite(payload);
+function exportHtmlSite(outPath, payload, nexusId = null) {
+  const site = buildSite(payload, nexusId);
   if (!site.ok) return site;
   const r = writeZip(outPath, site.entries);
-  return r.ok ? { ok: true, pages: payload.pages.length, bytes: r.bytes } : r;
+  return r.ok ? { ok: true, pages: payload.pages.length, bytes: r.bytes, media: site.media, missing: site.missing } : r;
 }
 
-module.exports = { collectPages, buildSite, exportHtmlSite, rewriteLinks };
+module.exports = { collectPages, buildSite, exportHtmlSite, rewriteLinks, PAGE_KEY };

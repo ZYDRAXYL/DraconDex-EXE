@@ -16,6 +16,7 @@
 const { getDB } = require('./core');
 const versions = require('./versions');
 const wiki = require('./wiki');
+const { normalizeAssetUrl } = require('./asset-media');
 
 const STACK_TYPES = `block_type<>'property'`;
 // '' is not a page: treat it as the module's own page (NULL).
@@ -244,7 +245,27 @@ function getPageProps(moduleId, itemKey = null) {
   }))();
 }
 
+// The external address a page link points at (Procress 14, APP
+// docs/TEMPLATES.md §7.2): read from the block's STORED config by a path
+// (['links', 2], ['links', 0] …), never from a URL the renderer sends, and
+// re-checked — http/https only — on the way out. A path into config.opts
+// first, then config itself (a template written before options kept the
+// same keys at the top). → the URL, or null.
+const LINK_PATH_KEY = /^[a-z][a-zA-Z0-9]{0,30}$/;
+function blockLinkUrl(blockId, path) {
+  if (!Array.isArray(path) || !path.length || path.length > 6) return null;
+  if (!path.every((p) => (typeof p === 'string' && LINK_PATH_KEY.test(p)) || (Number.isInteger(p) && p >= 0 && p < 1000))) return null;
+  const b = getBlock(Number(blockId));
+  if (!b?.config || typeof b.config !== 'object') return null;
+  const walk = (o) => path.reduce((v, k) => (v != null && typeof v === 'object' && Object.prototype.hasOwnProperty.call(v, k) ? v[k] : undefined), o);
+  const link = walk(b.config.opts) ?? walk(b.config);
+  const to = typeof link?.to === 'string' ? link.to : null;
+  if (!to || !to.startsWith('url:')) return null;
+  return normalizeAssetUrl(to.slice(4));
+}
+
 module.exports = {
+  blockLinkUrl,
   listBlocks, listProps, ensurePage, addBlock, getBlock, updateBlock, moveBlock, deleteBlock,
   restoreBlocks, splitItemPage, revertItemPage, clearItemBlocks, setProp, getPageProps,
 };

@@ -77,9 +77,15 @@ function setBusy(el, on = true) {
   host.setAttribute('aria-busy', 'true');
 }
 
-function openModal(title,body) {
+// opts.size: 'xl' for a two-pane dialog (the Artisan gallery, Export…,
+// Use template…). Reset on every open, so a normal modal after a wide one
+// is normal again. opts.focus: a selector to focus instead of the first
+// field — a checkbox at the bottom of a scrolling pane would otherwise pull
+// the pane down past its heading.
+function openModal(title,body,opts={}) {
   q('#modal-title').textContent=tr(title);
   q('#modal-body').innerHTML=body;
+  const m=q('#modal'); if(m){ if(opts.size) m.dataset.size=opts.size; else delete m.dataset.size; }
   // Reset the ✕ (openWelcomeModal hides it for the required-choice first-run modal).
   const closeBtn = q('#modal-close'); if(closeBtn) closeBtn.style.display='';
   const overlay = q('#modal-overlay');
@@ -93,7 +99,7 @@ function openModal(title,body) {
     modalEl.tabIndex = -1;
     setTimeout(()=>{
       try{
-        const first = q('#modal-body input:not([type="hidden"]):not([disabled]), #modal-body textarea:not([disabled]), #modal-body select:not([disabled])');
+        const first = (opts.focus && q(opts.focus)) || q('#modal-body input:not([type="hidden"]):not([disabled]), #modal-body textarea:not([disabled]), #modal-body select:not([disabled])');
         (first || modalEl).focus();
       }catch(e){}
     }, 30);

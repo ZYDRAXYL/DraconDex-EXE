@@ -33,7 +33,7 @@ const LOCAL_ONLY = process.argv.includes('--local');
 // on the way to disk; hashing raw bytes would redden every Windows CI run for
 // a difference that is not real.
 const normalizeEol = s => s.replace(/\r\n/g, '\n');
-const isText = p => /\.(js|dart|sql|json|md|mjs|txt)$/.test(p);
+const isText = p => /\.(js|dart|sql|json|md|mjs|txt|css)$/.test(p);
 const hash = (abs, rel) => {
   const buf = readFileSync(abs);
   const data = isText(rel) ? Buffer.from(normalizeEol(buf.toString('utf8')), 'utf8') : buf;

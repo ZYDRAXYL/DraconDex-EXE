@@ -362,13 +362,13 @@ for (const file of targets) {
   if (missingT.length) [...new Set(missingT)].forEach(err);
   else ok("all t('key') strings exist in all locales");
 
-  // native dialogs are banned (frameless window; house style is toast()/confirmBox())
+  // native dialogs are banned (frameless window; house style is toast()/uiConfirm())
   for (const m of src.matchAll(/\b(alert|window\.confirm|window\.prompt)\s*\(/g)) {
     const line = lines[lineOf(m.index) - 1];
     const col = m.index - src.lastIndexOf('\n', m.index) - 1;
     const commentAt = line.indexOf('//');
     if (commentAt !== -1 && commentAt < col) continue;
-    err(`${m[1]}() at line ${lineOf(m.index)} — use toast() / confirmBox() (${app('src/renderer/core')}/)`);
+    err(`${m[1]}() at line ${lineOf(m.index)} — use toast() / uiConfirm() (${app('src/renderer/core')}/)`);
   }
 
   // hardcoded hex colors (allow `|| '#xxxxxx'` data-color fallbacks)

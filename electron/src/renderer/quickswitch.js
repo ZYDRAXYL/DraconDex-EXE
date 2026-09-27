@@ -60,7 +60,7 @@ const QS_ICON_BY_KIND = { object: 'person', event: 'timeline', dialogue: 'narrat
 
 function qsCommandItems() {
   return paletteCommands(_qsFocusEl).map(c => ({
-    key: `cmd:${c.id}`, cmd: c, name: c.name, alt: c.alt, color: 'var(--t3)',
+    key: `cmd:${c.id}`, cmd: c, name: c.name, alt: c.alt, color: 'var(--t3-aa,var(--t2))',
     badge: QS_BADGE.command, icon: (c.icon && I[c.icon]) || I[QS_ICON_BY_KIND.command],
     moduleId: null, crumb: c.crumb, hint: c.hint, count: 0,
   }));
@@ -242,7 +242,8 @@ async function openQuickSwitcher(seed = '') {
           <span class="dot" style="background:${e.color || 'var(--accent)'}"></span>
           <span class="name">${x(e.name)}</span>
           ${e.handle ? `<span class="qs-handle" data-no-i18n>@${x(e.handle)}</span>` : ''}
-          ${e.hint ? `<span class="qs-handle" data-no-i18n>${x(e.hint)}</span>` : ''}
+          ${e.hint ? `<span class="qs-keys" data-no-i18n>${e.hint.split('+').map(k => `<kbd>${x(k)}</kbd>`).join('')}</span>` : ''}
+          ${e.recent ? `<span class="qs-recent" title="${x(t('qsRecent'))}">${I.return}</span>` : ''}
           ${e.count ? `<span class="qs-lc" data-no-i18n>🔗 ${e.count}</span>` : ''}
           ${canPin && !e.cmd ? `<span class="qs-pin" data-i="${i}" title="${t('qsPinHint')}">📌</span>` : ''}
           <span class="qs-crumb" data-no-i18n>${x(e.crumb)}</span>
@@ -260,12 +261,17 @@ async function openQuickSwitcher(seed = '') {
     const cmdOnly = qv.startsWith('>');
     if (cmdOnly) qv = qv.slice(1).trim();
     const pool = _qsItems.filter(e => qsInScope(e) && (!_qsKind || e.badge === _qsKind) && (!cmdOnly || e.cmd));
+    // G6: commands run lately come first — as the whole list for a bare '>',
+    // and after the recent pages when the box is empty.
+    const recentCmds = recentCommandIds().map(id => byKey.get(`cmd:${id}`))
+      .filter(e => e && (!_qsKind || e.badge === _qsKind)).map(e => ({ ...e, recent: true }));
     if (cmdOnly && !qv) {
-      _qsShown = pool.slice(0, 50);
+      const rk = new Set(recentCmds.map(e => e.key));
+      _qsShown = recentCmds.concat(pool.filter(e => !rk.has(e.key))).slice(0, 50);
     } else if (!qv) {
       const recent = (S.recentEntities || []).map(k => byKey.get(k))
         .filter(e => e && qsInScope(e) && (!_qsKind || e.badge === _qsKind));
-      _qsShown = (recent.length ? recent : pool).slice(0, 20);
+      _qsShown = recent.length || recentCmds.length ? recent.slice(0, 15).concat(recentCmds.slice(0, 5)) : pool.slice(0, 20);
     } else {
       // Process 8 part 1: a module can also be found by its handle. Scored as
       // a separate candidate and the better of the two wins, rather than

@@ -114,7 +114,15 @@ function settingWorkspaceAnimationHtml() {
     <div class="settings-label" style="margin-top:18px">${t('settingPages')}</div>
     <div class="settings-group">
       <div class="togglerow" onclick="toggleAutoCollapseLeft()"><span class="tg${S.settings.autoCollapseLeft !== false ? ' on' : ''}"></span>${t('settingAutoCollapseLeft')}</div>
+      <div class="togglerow" onclick="toggleLinkPreview()"><span class="tg${S.settings.linkPreview !== false ? ' on' : ''}"></span>${t('settingLinkPreview')}</div>
     </div>`;
+}
+// Procress 14 (TEMPLATES §7.3): hovering a [[link]] shows what it leads to
+// (page/links.js). On unless turned off here.
+function toggleLinkPreview() {
+  S.settings.linkPreview = S.settings.linkPreview === false;
+  saveUiSettings();
+  renderSettingWindow();
 }
 function toggleAnimationsEnabled() {
   S.settings.animationsEnabled = !(S.settings.animationsEnabled !== false);
