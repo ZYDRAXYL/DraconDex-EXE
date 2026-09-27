@@ -139,9 +139,15 @@ contextBridge.exposeInMainWorld('api', {
     revert:  (id,item)       => inv('block:revert', id,item),
     setProp: (id,item,pid,n,v,tp) => inv('block:setProp', id,item,pid,n,v,tp),
   },
+  // One namespace: a second `history:` key further down used to replace
+  // this one outright, and Ctrl+Z / Ctrl+Y called an undefined undo().
   history: {
     undo: ()               => inv('history:undo'),
     redo: ()               => inv('history:redo'),
+    bytesUsed:   () => inv('history:bytesUsed'),
+    clearModule: () => inv('history:clearModule'),
+    clearNexus:  () => inv('history:clearNexus'),
+    clearAll:    () => inv('history:clearAll'),
   },
   classifier: {
     setCatType:        (id,ct)             => inv('classifier:setCatType', id,ct),
@@ -274,12 +280,6 @@ contextBridge.exposeInMainWorld('api', {
   setting: {
     get: (k)   => inv('setting:get', k),
     set: (k,v) => inv('setting:set', k,v),
-  },
-  history: {
-    bytesUsed:   () => inv('history:bytesUsed'),
-    clearModule: () => inv('history:clearModule'),
-    clearNexus:  () => inv('history:clearNexus'),
-    clearAll:    () => inv('history:clearAll'),
   },
   sync: {
     getConfig:    ()           => inv('sync:getConfig'),
