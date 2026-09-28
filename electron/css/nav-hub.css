@@ -69,20 +69,24 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
    live nav button/status bar sitting behind the modeless Setting window. */
 .tool-toggle-flash{outline:2px solid var(--accent);outline-offset:2px;transition:outline-color .6s ease}
 
-/* SEARCH BAR (#left-panel header, index.html) — restored (Process 4 part 1)
-   after it was lost in the legacy Director/Navigator/Hero/Writer CSS
-   deletion (v.4.10.0); #search-input had been rendering as a bare unstyled
-   native input in the meantime. */
-#search-bar{
-	padding:2px;border-bottom:1px solid var(--border);background:var(--surface);
-	flex-shrink:0;display:flex;align-items:center;gap:8px;
+/* NEST TREE FILTER (hub/sections.js, UX-LAYOUT §6.2) — replaces the old
+   #search-bar. Label above the field, a visible border at rest, the accent
+   at focus (§8). */
+.nest-filter{display:flex;flex-direction:column;gap:3px;padding:6px 8px 4px}
+.nest-filter-label{font-size:var(--fs-micro);color:var(--t2)}
+.nest-filter input{
+	width:100%;box-sizing:border-box;background:var(--raised);border:1px solid var(--border);
+	border-radius:var(--r);color:var(--t1);padding:6px 10px;
+	font-size:calc(12.5px * var(--fsc,1));outline:none;transition:border-color var(--ease);
 }
-#search-input{
-	flex:1;min-width:0;background:var(--bg);border:1px solid var(--border);
-	border-radius:var(--r);color:var(--t1);padding:8px 12px;
-	font-size:calc(13px * var(--fsc,1));outline:none;transition:border-color var(--ease);
-}
-#search-input:focus{border-color:var(--accent)}
+.nest-filter input:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.nest-filter-hit .nest-filter-path{margin-left:auto;font-size:var(--fs-micro);color:var(--t3-aa,var(--t2));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45%}
+/* The Nest's one create button, split (UX-LAYOUT §6.2, E3). */
+.split-btn{display:inline-flex;align-items:stretch;border-radius:var(--rs);overflow:hidden;margin-right:2px}
+.split-btn .btn{border-radius:0;min-height:26px}
+.split-btn .split-main{padding:0 8px;gap:4px}
+.split-btn .split-more{padding:0 5px;border-left:1px solid color-mix(in srgb,var(--on-accent,#fff) 30%,transparent)}
+.split-btn .icon{width:14px;height:14px}
 
 /* MODULE ITEM (nexus left panel) */
 .module-item{

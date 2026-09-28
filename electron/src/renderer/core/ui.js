@@ -259,8 +259,6 @@ function applyLeftPanelState(){
   // #title-left-zone mirrors #nav-sidebar + #left-panel's width so the builder tab
   // strip that follows it in the title bar stays aligned with #main-area below.
   q('#title-tab-bar')?.classList.toggle('left-panel-collapsed', S.leftPanelCollapsed);
-  q('#hub-toggle-btn')?.classList.toggle('active', !S.leftPanelCollapsed);
-  q('#hub-toggle-btn')?.setAttribute('title', t('toggleHub'));
   // process2 part1 #3: keep #nav-logo-btn's logo/expand-hub swap in sync on
   // every path that reaches this function (toggle click, boot, workspace switch).
   updateTopNavButton();
@@ -270,10 +268,6 @@ function setLeftPanelCollapsed(collapsed){
   S.leftPanelCollapsed = !!collapsed;
   localStorage.setItem(LEFT_PANEL_COLLAPSED_KEY, S.leftPanelCollapsed ? '1' : '0');
   applyLeftPanelState();
-}
-
-function bindHubToggle(){
-  q('#hub-toggle-btn')?.addEventListener('click', () => setLeftPanelCollapsed(!S.leftPanelCollapsed));
 }
 
 // ═══ Left panel resize (Plan part4 #1) ═════════════════════════════════

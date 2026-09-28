@@ -118,6 +118,8 @@
    so it gets the same docked scrollable max-height as .icon-edit-popup above. */
 .context-menu-popup{width:280px;max-height:min(72vh,520px);overflow-y:auto;padding:6px}
 .ctx-sep{height:0;border-top:1px solid var(--border);margin:5px 0}
+/* A group's name over its rows (page ⋯, UX-LAYOUT §6.3). */
+.ctx-head{padding:6px 12px 2px;font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t3-aa,var(--t2));pointer-events:none;user-select:none}
 /* Module edit modal sectioning (Plan part6 #4a) — same uppercase/spaced
    typographic treatment as .insp-label, tuned for a modal body's padding
    (no dock-specific horizontal offset) instead of copying it verbatim. */

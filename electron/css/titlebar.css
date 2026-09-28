@@ -8,7 +8,6 @@
 #window-frame.popup-mode #nav-sidebar,
 #window-frame.popup-mode #left-panel,
 #window-frame.popup-mode #layout-menu-wrap,
-#window-frame.popup-mode #hub-toggle-btn,
 #window-frame.popup-mode #titlebar-vault,
 #window-frame.popup-mode #settings-menu-wrap,
 #window-frame.popup-mode #titlebar-update-btn,
@@ -78,6 +77,10 @@
 .title-update-btn.hidden{display:none}
 .title-update-btn .icon{width:17px;height:17px}
 .title-update-btn:hover{background:var(--hover)}
+/* UX-LAYOUT §6.1 (E8): with a rail, Settings is its last button
+   (#nav-settings-btn, index.html) — the title-bar gear is only for the
+   layouts that have no rail: Wyvern and the welcome page. */
+body:not([data-workspace="wyvern"]):not(.welcome-mode) #settings-menu-wrap{display:none}
 #settings-menu-wrap{
 	position:relative;height:100%;display:flex;align-items:center;flex-shrink:0;
 	-webkit-app-region:no-drag;

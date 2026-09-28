@@ -19,13 +19,13 @@ function toggleSettingsMenu(force){
 
 function translateStaticChrome(){
   q('#settings-menu-btn')?.setAttribute('title', t('settings'));
+  q('#nav-settings-btn')?.setAttribute('title', t('settings'));
   q('#layout-menu-btn')?.setAttribute('title', t('splitLayout'));
   q('#win-min')?.setAttribute('title', t('minimize'));
   q('#win-max')?.setAttribute('title', t('maximize'));
   q('#win-close')?.setAttribute('title', t('close'));
   // The hint is worth carrying here: with a vault open this box hands off to the
   // quick switcher, which otherwise has no discoverable entry point at all.
-  q('#search-input')?.setAttribute('placeholder', `${t('search')} (Ctrl+P)`);
   document.querySelectorAll('.nav-btn[data-panel]').forEach(btn => {
     const key = btn.dataset.panel;
     if(L.en[key]) btn.setAttribute('title', t(key));

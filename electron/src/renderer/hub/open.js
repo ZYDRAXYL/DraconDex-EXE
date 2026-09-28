@@ -95,13 +95,42 @@ function buildModuleDetailHtml(m) {
   </div>`;
 }
 
-// The page's own buttons (§12.6): arrange, version history, plugin panels.
+// The page's own buttons (APP docs/UX-LAYOUT.md §6.3): ONE primary action —
+// "Edit page", which is Arrange, and reads "Done" while arranging — and a ⋯
+// that holds everything else in four groups (view · template · share ·
+// more). It used to be seven buttons plus one per plugin panel in a row,
+// which is the wall Hick's law warns about and left the page with no
+// primary action at all. Every row is still a command, so Ctrl+P and the
+// shortcuts reach them exactly as before.
 function pageHeadActsHtml(moduleId, itemKey) {
   const arranging = S.arranging?.has(pageKey(moduleId, itemKey));
-  const hist = itemKey == null ? cmdBtn('page.history', {}, { iconOnly: true, cls: `btn-g btn-i bnav${sidePanelOpen('versions') ? ' active' : ''}` }) : '';
-  const readable = cmdBtn('page.readable', {}, { iconOnly: true, cls: `btn-g btn-i bnav${pageReadableOn(moduleId) ? ' active' : ''}` });
-  const layout = cmdBtn('page.layout', {}, { iconOnly: true, cls: 'btn-g btn-i bnav' });
-  const exp = cmdBtn('page.export', {}, { iconOnly: true, cls: 'btn-g btn-i bnav' });
-  const tpl = cmdBtn('page.useTemplate', {}, { iconOnly: true, cls: 'btn-g btn-i bnav' }) + cmdBtn('page.saveTemplate', {}, { iconOnly: true, cls: 'btn-g btn-i bnav' });
-  return `${cmdBtn('page.arrange', {}, { cls: `btn-g btn-sm${arranging ? ' active' : ''}` })}${layout}${tpl}${exp}${readable}${hist}${typeof pluginPanelButtonsHtml === 'function' ? pluginPanelButtonsHtml() : ''}`;
+  const primary = cmdBtn('page.arrange', {}, { cls: `btn-p btn-sm${arranging ? ' active' : ''}` });
+  return `${primary}<button class="btn btn-g btn-i bnav" aria-haspopup="menu" title="${x(t('pageMenu'))}" onclick="event.stopPropagation();openPageMenu(this)">${I.options}</button>`;
+}
+
+// The ⋯ of the page head: the menu engine's own items (hub/ctxmenu.js), with
+// a header per group. Plugin panels come last, under "more", as rows.
+CTX_PROVIDERS['page.menu'] = () => {
+  const head = (key) => ({ head: t(key) });
+  const plugins = [];
+  for (const owner of S.pluginPanels || []) {
+    for (const panel of owner.panels) {
+      plugins.push({
+        label: `${t('openPluginPanel')} — ${panel.title}`, icon: 'layer',
+        checked: sidePanelOpen('plugin', { pluginKey: owner.pluginKey, panelId: panel.id }),
+        onClick: () => togglePluginPanel(owner.pluginKey, panel.id),
+      });
+    }
+  }
+  const groups = [
+    [head('pageMenuView'), cmdItem('page.readable'), cmdItem('page.layout')],
+    [head('pageMenuTemplate'), cmdItem('page.useTemplate'), cmdItem('page.saveTemplate')],
+    [head('pageMenuShare'), cmdItem('page.export')],
+    [head('pageMenuMore'), cmdItem('page.history'), ...plugins],
+  ].filter((g) => g.slice(1).some(Boolean));
+  return groups.flatMap((g, i) => (i ? [{ sep: true }, ...g] : g));
+};
+function openPageMenu(btn) {
+  const items = CTX_PROVIDERS['page.menu']();
+  if (items.length) ctxMenu(null, items, { anchor: btn });
 }

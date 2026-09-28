@@ -20,6 +20,8 @@ body[data-theme="daylight"]{
 	--accentH:#3b82f6;
 	--danger:#dc2626;
 	--success:#16a34a;
+	--warn:#b45309;
+	--info:#0369a1;
 }
 body[data-theme="moonlight"]{
 	--bg:#101620;
@@ -34,6 +36,8 @@ body[data-theme="moonlight"]{
 	--accentH:#9bb5ff;
 	--danger:#f87171;
 	--success:#34d399;
+	--warn:#f59e0b;
+	--info:#38bdf8;
 	--on-accent:var(--ink-dark);--on-button:var(--ink-dark);
 }
 body[data-theme="midnight"]{
@@ -49,6 +53,8 @@ body[data-theme="midnight"]{
 	--accentH:#818cf8;
 	--danger:#ef4444;
 	--success:#22c55e;
+	--warn:#f59e0b;
+	--info:#38bdf8;
 }
 /* Full-spectrum theme: light, readable surfaces float over a pastel-rainbow
    backdrop; the nav rail and left panel go translucent so the rainbow shows
@@ -66,6 +72,8 @@ body[data-theme="rainbow"]{
 	--accentH:#7c3aed;
 	--danger:#fb7185;
 	--success:#22c55e;
+	--warn:#b45309;
+	--info:#0369a1;
 }
 body[data-theme="rainbow"] #window-frame{
 	background:linear-gradient(135deg,#ffb3ba,#ffdfba,#fdffb6,#baffc9,#bae1ff,#d5baff,#ffbaf2);
@@ -96,3 +104,8 @@ body{
 	user-select:none; -webkit-user-select:none;
 	font-size:calc(14px * var(--fsc,1));
 }
+
+/* A custom or package theme is only a palette (core/settings.js stamps
+   data-theme-tone from its --bg): on a light one, the status colours take
+   their darker pair so they keep 4.5:1 on --surface (UX-LAYOUT §9). */
+body[data-theme-tone="light"]{--warn:#b45309;--info:#0369a1}

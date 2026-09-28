@@ -222,12 +222,13 @@ const WORKSPACE_STYLE_OPTIONS = ['drake', 'wyvern', 'dragon'];
 const UI_STYLE_OPTIONS_BUILTIN = ['oldPlain', 'fluent'];
 const PACKAGED_UISTYLES = ['roundedMinimal', 'cleanMinimal', 'hardBlock'];
 const UI_STYLE_OPTIONS = UI_STYLE_OPTIONS_BUILTIN.slice();
-// Process 5 part1: each workspace style's own default nav orientation —
-// Drake/Dragon default to vertical (today's rail), Wyvern defaults to
-// horizontal (its own toolbar was always meant to read as a top strip, see
-// wyvern.js) — user-overridable per style from Setting -> Workspace, see
-// applyNavOrientation() (core/boot.js).
-const NAV_ORIENTATION_DEFAULT = { drake: 'vertical', wyvern: 'horizontal', dragon: 'vertical' };
+// Nav orientation (Process 5 part1) is vertical-only since the UX-LAYOUT
+// decision of 2026-09-28 (APP docs/UX-LAYOUT.md §11 #4): the three workspace
+// styles stay, the horizontal nav bar goes — every layout reads left =
+// navigation, like the Activity Bar it is modelled on, and one orientation
+// is one layout to test instead of two per style. A saved 'horizontal' is
+// ignored on load.
+const NAV_ORIENTATION_DEFAULT = { drake: 'vertical', wyvern: 'vertical', dragon: 'vertical' };
 // Dragon's ERP console (dragon.js) renders the level either as grouped app
 // tiles or as a flat record table — a persisted per-user preference, same
 // tier as the nav-orientation/display prefs above.
@@ -355,8 +356,7 @@ function loadUiSettings(){
   // cleanly rather than propagating into applyNavOrientation().
   const navOrientation = {};
   for (const st of WORKSPACE_STYLE_OPTIONS) {
-    const v = (saved.navOrientation || {})[st];
-    navOrientation[st] = (v === 'horizontal' || v === 'vertical') ? v : NAV_ORIENTATION_DEFAULT[st];
+    navOrientation[st] = 'vertical';
   }
   const navHorizontalDisplay = ['icon', 'label', 'both'].includes(saved.navHorizontalDisplay) ? saved.navHorizontalDisplay : 'both';
   // Process 6 part 1: vertical-only advanced customization — force the

@@ -122,7 +122,6 @@ async function init() {
   // when relaying that move.
   S.isPopup  = new URLSearchParams(location.search).get('popup') === '1';
   bindWindowChrome();
-  bindHubToggle();
   bindBuilderGridDrop();
   applyLeftPanelState();
   applyLeftPanelWidth();
@@ -178,7 +177,6 @@ async function init() {
   bindWikilinkClicks();
   bindGlobalShortcuts();
   updateStatusBar();
-  bindSearch();
   initDriveAutoBackup();   // fire-and-forget — must not block first paint
   initVersionCheck();      // fire-and-forget — must not block first paint
   initLegacyDataCheck();   // fire-and-forget — must not block first paint
@@ -225,7 +223,9 @@ function applyWorkspaceStyle(){
 // goes through Apply & Restart's location.reload()).
 function applyNavOrientation(){
   const style = S.settings.workspaceStyle;
-  const orient = (S.settings.navOrientation || {})[style] || NAV_ORIENTATION_DEFAULT[style] || 'vertical';
+  // Vertical only (UX-LAYOUT §11 #4) — the horizontal branch below stays
+  // only so an element left in #nav-toolbar-h by an older build moves back.
+  const orient = 'vertical';
   document.body.dataset.navOrientation = orient;
   document.body.dataset.navDisplay = S.settings.navHorizontalDisplay || 'both';
   const navEl = style === 'wyvern' ? q('#workspace-toolbar') : q('#nav-sidebar');
