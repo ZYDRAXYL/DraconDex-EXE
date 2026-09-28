@@ -75,7 +75,8 @@ function bindWikilinkClicks() {
 }
 
 // ═══ STATUS BAR ═══════════════════════════════════════════
-// IDE-style footer: active vault · open item · word count · save state.
+// IDE-style footer (UX-LAYOUT §6.7): left = vault · save state · open item,
+// right = this page's kind · split · word count.
 const _statusState = {};
 function updateStatusBar(patch = {}) {
   Object.assign(_statusState, patch);
@@ -84,23 +85,21 @@ function updateStatusBar(patch = {}) {
   const st = S.settings.statusToggles || {};
   const parts = [];
   if (S.nexus && st.vault !== false) parts.push(`<span class="sb-item sb-nexus" onclick="renderNexusHome()"><span class="nexus-vault-dot" style="${S.nexus.color_code ? `background:${x(S.nexus.color_code)}` : ''}"></span>${x(S.nexus.name)}</span>`);
-  // Breadcrumb + module-type badge for the focused v3 module (mockups /
-  // Section A status-bar spec): `Main › name` + `Major · Kind` (every module,
-  // main or nested, is a Major module — see Plan.md's Process 3 terminology).
+  // UX-LAYOUT §6.7 (E4): left = the whole vault, right = this page, the way
+  // VS Code splits its status bar. The breadcrumb that used to sit here is
+  // gone — the page's address row already shows it, one place is enough.
   const mNode = (!S.activeModule && S.activeModuleNode) ? S.activeModuleNode : null;
+  const pageRight = [];
   if (mNode && st.breadcrumb !== false) {
-    const mainMod = mNode.parent_id != null && typeof moduleRootAncestor === 'function' ? moduleRootAncestor(mNode) : null;
-    const crumb = mainMod ? `${x(mainMod.name)} › <b>${x(mNode.name)}</b>` : `<b>${x(mNode.name)}</b>`;
-    parts.push(`<span class="sb-item sb-crumb">${crumb}</span>`);
-    parts.push(`<span class="sb-badge" data-no-i18n>Major · ${x(kindLabel(mNode.kind))}</span>`);
+    pageRight.push(`<span class="sb-badge" data-no-i18n>${x(kindLabel(mNode.kind))}</span>`);
   }
   if (S.builder && S.builder.layoutTree.type === 'split' && S.view === 'nexus' && !S.activeModule) {
-    parts.push(`<span class="sb-badge" data-no-i18n>Split ${collectPaneIndices(S.builder.layoutTree).length}</span>`);
+    pageRight.push(`<span class="sb-badge" data-no-i18n>Split ${collectPaneIndices(S.builder.layoutTree).length}</span>`);
   }
   if (_statusState.item) parts.push(`<span class="sb-item">${x(_statusState.item)}</span>`);
-  const right = [];
+  if (_statusState.saveState && st.saveState !== false) parts.push(`<span class="sb-item sb-save">${x(_statusState.saveState)}</span>`);
+  const right = [...pageRight];
   if (_statusState.words != null && st.words !== false) right.push(`<span class="sb-item">${_statusState.words} ${t('words')}</span>`);
-  if (_statusState.saveState && st.saveState !== false) right.push(`<span class="sb-item sb-save">${x(_statusState.saveState)}</span>`);
   el.innerHTML = `<div class="sb-left">${parts.join('')}</div><div class="sb-right">${right.join('')}</div>`;
 }
 

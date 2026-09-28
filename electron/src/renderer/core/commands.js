@@ -98,13 +98,15 @@ const COMMANDS = {
   'app.createGuide': { label: 'guideCreate', icon: 'info', scope: 'app', when: () => !!S.nexus, run: () => createGuideBundle(), surfaces: ['bundle.picker', 'left.panel'] },
   'app.newProject': { label: 'bundleTitle', icon: 'artisan', scope: 'app', when: () => !!S.nexus, run: (c) => openBundlePicker(c?.parentId ?? null), surfaces: ['kind.picker', 'left.panel'] },
   'app.trash': { label: 'trashTitle', icon: 'delete', scope: 'app', when: () => !!S.nexus, run: (c) => (c?.rail ? railDest('trash') : showLeftDest('trash')), surfaces: ['rail'] },
+  'app.newCollector': { label: 'nestNewFolder', icon: 'folder', scope: 'app', when: () => !!S.nexus, run: () => quickCreateModule('collector', null), surfaces: ['nest.head'] },
+  'app.importFolder': { label: 'importFolder', icon: 'import', scope: 'app', when: () => !!S.nexus, run: () => importDockPickFolder(null), surfaces: ['nest.head'] },
   'app.newModule': { label: 'createMajorModule', icon: 'plus', scope: 'app', run: (c, el) => openKindPopup(null, el || paletteAnchor()), surfaces: ['nest.head'] },
   'app.settings': { label: 'settingOpenWindow', icon: 'settings', scope: 'app', run: () => openSettingWindow(), surfaces: ['settings.menu'] },
   'dock.importFolder': { label: 'importFolder', icon: 'import', scope: 'app', run: () => importDockPickFolder(null), surfaces: ['dock'] },
   'dock.addLink': { label: 'addAssetLink', icon: 'plus', scope: 'app', run: () => openAddAssetUrlModal(null), surfaces: ['dock'] },
   'dock.relinkFolder': { label: 'assetRelinkFolder', icon: 'folder', scope: 'app', when: () => (S.importFiles || []).some(f => f.missing), run: () => relinkMissingFromFolder(), surfaces: ['dock'] },
   // v5 Part 8 (§12.5/§12.8): the page's own buttons.
-  'page.arrange': { label: 'pbArrange', icon: 'move', scope: 'app', when: () => !!(S.activeModuleNode || S.activeItemNode?.itemKey), run: () => togglePageArrange(), surfaces: ['page.head'] },
+  'page.arrange': { label: () => (pageArrangingNow() ? 'pbArrangeDone' : 'pbEditPage'), icon: 'edit', scope: 'app', when: () => !!(S.activeModuleNode || S.activeItemNode?.itemKey), run: () => togglePageArrange(), surfaces: ['page.head'] },
   'page.split': { label: 'pbSplitPage', icon: 'copy', scope: 'app', when: () => pageOf(S.activeItemNode?.moduleId, S.activeItemNode?.itemKey)?.from === 'shared', run: () => splitItemPageNow(), surfaces: ['page.layout'] },
   'page.revert': { label: 'pbRevertPage', icon: 'return', scope: 'app', when: () => pageOf(S.activeItemNode?.moduleId, S.activeItemNode?.itemKey)?.from === 'own', run: () => revertItemPageNow(), surfaces: ['page.layout'] },
   'page.history': { label: 'versionHistory', icon: 'timeline', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode, run: () => toggleVersionPanel(S.activeModuleNode.id), surfaces: ['page.head'] },
@@ -292,6 +294,13 @@ const COMMANDS = {
   'exhibitor.linkTo': { label: 'exhibitorLinkTo', icon: 'relation', scope: 'kind:exhibitor', when: (c) => !!c.node?.linker_key, run: (c) => startExhibitorLink(c.node.id), surfaces: ['exhibitor.ctx'] },
   'exhibitor.removeNode': { label: 'exhibitorRemoveNode', icon: 'delete', danger: true, scope: 'kind:exhibitor', when: (c) => !!c.node, run: (c) => removeExhibitorNode(c.node.id), surfaces: ['exhibitor.ctx'] },
 };
+
+// Whether the open page is in Arrange — the page head's one primary button
+// reads "Edit page" or "Done" by it (UX-LAYOUT §6.3).
+function pageArrangingNow() {
+  const mid = S.activeItemNode?.moduleId ?? S.activeModuleNode?.id;
+  return !!mid && !!S.arranging?.has(pageKey(mid, pbItemKeyOf(S.activeItemNode)));
+}
 
 // ── Resolving a command ─────────────────────────────────────────────────
 const cmdLabelKey = (def, c) => (typeof def.label === 'function' ? def.label(c || {}) : def.label);

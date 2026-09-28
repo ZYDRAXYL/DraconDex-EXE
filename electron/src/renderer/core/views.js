@@ -65,7 +65,7 @@ async function importDatabaseFile(){
     const picked = await api.db.pickImportFile();
     if(picked?.canceled) return;
     const ext = (picked.filePath.split('.').pop() || '').toLowerCase();
-    openImportTargetChoiceModal(picked.filePath, ext === 'mddx' || ext === 'mdx' ? 'module' : 'nexus');
+    openImportTargetChoiceModal(picked.filePath, ext === 'mddx' || ext === 'mdx' ? 'module' : ext === 'dxpack' ? 'pack' : 'nexus');
   }catch(e){
     toastImportError(e);
   }
@@ -83,7 +83,7 @@ function openImportTargetChoiceModal(filePath, kind){
   const fileName = filePath.split(/[\\/]/).pop();
   openModal(t('importChooseTargetTitle'), `
     <p class="modal-hint" data-no-i18n style="word-break:break-all">${x(fileName)}</p>
-    <p class="modal-hint">${t(kind === 'module' ? 'importChooseTargetHintModule' : 'importChooseTargetHintNexus')}</p>
+    <p class="modal-hint">${t(kind === 'module' ? 'importChooseTargetHintModule' : kind === 'pack' ? 'importChooseTargetHintPack' : 'importChooseTargetHintNexus')}</p>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
       <button class="btn btn-p" ${S.nexus ? '' : 'disabled'} onclick="closeModal();importIntoCurrentNexus(${xj(filePath)},${xj(kind)})">${t('importIntoThisNexus')}${S.nexus ? ` — ${x(S.nexus.name)}` : ''}</button>
       <button class="btn btn-s" onclick="closeModal();importAsNewNexus(${xj(filePath)},${xj(kind)})">${t('importAsNewNexus')}</button>
@@ -92,7 +92,9 @@ function openImportTargetChoiceModal(filePath, kind){
 async function importIntoCurrentNexus(filePath, kind){
   if (!S.nexus) return toast(t('nexusSelectFirst'), 'error');
   try{
-    if (kind === 'module') {
+    if (kind === 'pack') {
+      if (await finishAssetPackImport(S.nexus.id, filePath)) await reloadModuleTree();
+    } else if (kind === 'module') {
       const r = await api.db.importModuleFileAt(S.nexus.id, null, filePath);
       if (!r?.ok) return toast(t('driveErrServer'), 'error');
       await reloadModuleTree();
@@ -105,11 +107,14 @@ async function importIntoCurrentNexus(filePath, kind){
   }
 }
 async function importAsNewNexus(filePath, kind){
-  const fileBase = filePath.split(/[\\/]/).pop().replace(/\.(ddx|mddx|mdx|db)$/i, '') || 'Imported Nexus';
+  const fileBase = filePath.split(/[\\/]/).pop().replace(/\.(ddx|mddx|mdx|dxpack|db)$/i, '') || 'Imported Nexus';
   try{
     const newId = await api.nexus.create(fileBase, '', null, null);
     await reloadNexuses();
-    if (kind === 'module') {
+    if (kind === 'pack') {
+      await finishAssetPackImport(newId, filePath);
+      if (S.isWelcome) await welcomeOpenNexus(newId); else await selectNexus(newId);
+    } else if (kind === 'module') {
       const r = await api.db.importModuleFileAt(newId, null, filePath);
       if (!r?.ok) { toast(t('driveErrServer'), 'error'); return; }
       toastSnapshotResult(r, 'settingDbImportOk');
@@ -121,6 +126,20 @@ async function importAsNewNexus(filePath, kind){
     toast(t('nexusNameTaken'), 'error');
   }
 }
+// .dxpack (APP docs/ASSET-PACK.md): the tree and the files the APK / PWA
+// sorted into folders. main.js asks for a Locate folder when the Nexus has
+// none (the files need a place on disk); a cancel there is not an error.
+async function finishAssetPackImport(nexusId, filePath){
+  const r = await api.db.importAssetPackAt(nexusId, null, filePath);
+  if (r?.canceled) return false;
+  if (!r?.ok) { toast(t('packImportErr'), 'error'); return false; }
+  const s = r.summary || {};
+  const msg = t('packImportOk').replace('{folders}', s.collectors || 0).replace('{files}', s.files || 0);
+  if (s.missing > 0) toast(`${msg} — ${t('packImportMissing').replace('{n}', s.missing)}`, 'warn');
+  else toast(msg, 'ok');
+  return true;
+}
+
 // Shared tail for both the "into current nexus" and "into a freshly created
 // one" vault-merge branches — identical to what importDatabaseFile() used to
 // do inline before the target choice existed.

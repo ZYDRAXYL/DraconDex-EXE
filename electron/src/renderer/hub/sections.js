@@ -49,6 +49,60 @@ function setNestSignatureMode(mode) {
   if (pop) pop.innerHTML = buildNestOptionsPopupHtml();
 }
 
+// ── Nest head: the ▾ of the create split button ────────────────────────
+// A plain function, not a CTX_PROVIDERS entry: this file loads before
+// hub/ctxmenu.js defines CTX_PROVIDERS, so registering one here threw at
+// load and left the ▾ without a menu.
+function nestCreateMenuItems() {
+  return [
+    cmdItem('app.newCollector'),
+    { sep: true },
+    cmdItem('app.importDock'),
+    cmdItem('app.importFolder'),
+  ];
+}
+function openNestCreateMenu(btn) {
+  ctxMenu(null, nestCreateMenuItems(), { anchor: btn });
+}
+
+// ── Nest tree filter (UX-LAYOUT §6.2, E2) ──────────────────────────────
+// Filters THIS tree by name, in place of the old #search-bar that sat above
+// every destination and did nothing of its own. A match lists flat, with its
+// path, because a hit three folders deep is what the user is looking for —
+// vault-wide content search stays the Search destination and Ctrl+P.
+function nestFilterHtml() {
+  if (!S.moduleTree?.length || nestByKind()) return '';
+  return `<label class="nest-filter" onclick="event.stopPropagation()">
+    <span class="nest-filter-label">${x(t('nestFilter'))}</span>
+    <input type="search" value="${x(S.nestFilter || '')}" autocomplete="off" spellcheck="false"
+      oninput="setNestFilter(this.value)" onkeydown="if(event.key==='Escape'){this.value='';setNestFilter('')}">
+  </label>`;
+}
+function nestTreeBodyHtml() {
+  if (nestByKind()) return buildKindBrowserHtml();
+  const q0 = String(S.nestFilter || '').trim().toLowerCase();
+  if (!q0) return buildNestTreeHtml();
+  const hits = [];
+  const walk = (list, path) => {
+    for (const m of list || []) {
+      if (String(m.name || '').toLowerCase().includes(q0)) hits.push({ m, path });
+      walk(m.children, path.concat(m.name));
+    }
+  };
+  walk(S.moduleTree, []);
+  if (!hits.length) return `<div class="empty" style="padding:16px 10px">${x(t('nestFilterNone'))}</div>`;
+  return hits.map(({ m, path }) => `<div class="li nest-filter-hit" onclick="openModuleNode(${m.id})" oncontextmenu="openModuleContextMenu(event,${m.id})">
+      <span class="kicon">${I[KIND_ICON[m.kind]] || I.layer}</span>
+      <span class="name">${x(m.name)}</span>
+      <span class="nest-filter-path" data-no-i18n>${x(path.join(' › '))}</span>
+    </div>`).join('');
+}
+function setNestFilter(v) {
+  S.nestFilter = String(v || '');
+  const body = q('#nest-tree-body');
+  if (body) body.innerHTML = nestTreeBodyHtml();
+}
+
 function buildHubHtml() {
   // Vertical drag-resize (Plan part1 #2.1): once >1 section is open, an open
   // section's stored height wins over the default equal-share flex:1 — see
@@ -61,12 +115,16 @@ function buildHubHtml() {
   const openCount = ['nest', 'dock'].filter(k => S.hubOpen[k]).length;
   const h = (key) => openCount > 1 ? heights[key] : null;
   const sections = [
-    { key: 'nest', html: buildAccSection('nest', t('nexusNest'), nestByKind() ? buildKindBrowserHtml() : buildNestTreeHtml(),
-        // Plan part1 #6: one-click Collector create, no popup/name-prompt
-        // needed — quickCreateModule already auto-names + enters inline
-        // rename mode for every kind when called with no cat_type decision.
-        `<button class="btn btn-g btn-i" onclick="event.stopPropagation();quickCreateModule('collector',null)" title="${kindLabel('collector')}">${I[KIND_ICON.collector]}</button>
-         <button class="btn btn-g btn-i" data-cmd="app.newModule" onclick="event.stopPropagation();runCommand('app.newModule',{},this)" title="${t('createMajorModule')}">${I.plus}</button>
+    { key: 'nest', html: buildAccSection('nest', t('nexusNest'),
+        nestFilterHtml() + `<div id="nest-tree-body">${nestTreeBodyHtml()}</div>`,
+        // UX-LAYOUT §6.2 (E3): ONE primary create button — a split button.
+        // Its main half is "new module" (the kind picker); ▾ holds the rest
+        // of what creates something here: a folder (Collector), and the two
+        // imports. The quick-Collector button that sat beside "+" is the ▾'s
+        // first row now, so the header has one + instead of two.
+        `<span class="split-btn">
+           <button class="btn btn-p btn-sm split-main" data-cmd="app.newModule" onclick="event.stopPropagation();runCommand('app.newModule',{},this)" title="${t('createMajorModule')}">${I.plus} ${t('nestNew')}</button><button class="btn btn-p btn-sm split-more" aria-haspopup="menu" title="${t('nestNewMore')}" onclick="event.stopPropagation();openNestCreateMenu(this)">${I.chevronDown}</button>
+         </span>
          <button class="btn btn-g btn-i" onclick="event.stopPropagation();openNestOptionsPopup(this)" title="${t('nestOptionsTitle')}">${I.options}</button>`, h('nest')) },
     { key: 'dock', html: buildAccSection('dock', t('importDock'),
         typeof buildImportDockRows === 'function' ? buildImportDockRows() : '',

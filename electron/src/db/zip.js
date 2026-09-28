@@ -5,8 +5,8 @@
 // of the format every unzipper reads: local headers, stored or deflated
 // entries, a central directory, UTF-8 names (flag bit 11, so Thai names
 // survive). No ZIP64: an archive that would pass 4 GiB or 65,535 entries is
-// refused rather than written corrupt. Nothing here reads a zip back — the
-// user opens it with Explorer / 7-Zip / Finder.
+// refused rather than written corrupt. The one zip read back is a .dxpack
+// (APP docs/ASSET-PACK.md) — openZip below, the same subset in reverse.
 //
 // Entries are streamed from disk in chunks: a stored video is never held in
 // memory whole. Deflate is for the entries that compress (the .ddx itself);
@@ -116,4 +116,79 @@ function writeZip(outPath, entries) {
   }
 }
 
-module.exports = { writeZip, crc32 };
+// ── Reading (.dxpack, APP docs/ASSET-PACK.md) ───────────────────────────
+// The central directory is the truth: a writer that streams (the APK's
+// `archive` package) may leave sizes out of the local header and put them in
+// a data descriptor, which the central directory always repeats. Entry data
+// is read per entry through the fd, so a pack full of video is never held
+// whole — only the one entry being read.
+//
+// safeEntryName is the zip-slip gate: an entry name is a relative '/' path
+// with no '..', no empty or '.' segment, no drive letter and no leading
+// slash. A name that fails it is not listed at all, so nothing downstream
+// can write it anywhere.
+function safeEntryName(name) {
+  const n = String(name || '');
+  if (!n || n.includes('\\') || n.includes('\0') || n.startsWith('/') || /^[a-zA-Z]:/.test(n)) return null;
+  const segs = n.split('/');
+  if (segs[segs.length - 1] === '') segs.pop(); // a directory entry
+  if (!segs.length || segs.some((s) => !s || s === '.' || s === '..')) return null;
+  return segs.join('/');
+}
+
+// Returns { ok, entries: Map(name -> entry), unsafe, read(name) -> Buffer|null,
+// close() } or { ok:false, code }. Directory entries are skipped.
+function openZip(zipPath) {
+  let fd;
+  try { fd = fs.openSync(zipPath, 'r'); } catch (_) { return { ok: false, code: 'bad_file' }; }
+  const fail = (code) => { try { fs.closeSync(fd); } catch (_) {} return { ok: false, code }; };
+  const size = fs.fstatSync(fd).size;
+  const tailLen = Math.min(size, 22 + 0xffff);
+  const tail = Buffer.alloc(tailLen);
+  fs.readSync(fd, tail, 0, tailLen, size - tailLen);
+  let eocd = -1;
+  for (let i = tailLen - 22; i >= 0; i--) if (tail.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) return fail('bad_zip');
+  const count = tail.readUInt16LE(eocd + 10);
+  const cdSize = tail.readUInt32LE(eocd + 12);
+  const cdStart = tail.readUInt32LE(eocd + 16);
+  if (count === 0xffff || cdStart === LIMIT || cdStart + cdSize > size) return fail('zip64_unsupported');
+  const cd = Buffer.alloc(cdSize);
+  fs.readSync(fd, cd, 0, cdSize, cdStart);
+  const entries = new Map();
+  let unsafe = 0;
+  for (let p = 0, i = 0; i < count; i++) {
+    if (p + 46 > cd.length || cd.readUInt32LE(p) !== 0x02014b50) return fail('bad_zip');
+    const method = cd.readUInt16LE(p + 10);
+    const crc = cd.readUInt32LE(p + 16);
+    const csize = cd.readUInt32LE(p + 20);
+    const usize = cd.readUInt32LE(p + 24);
+    const nlen = cd.readUInt16LE(p + 28), xlen = cd.readUInt16LE(p + 30), clen = cd.readUInt16LE(p + 32);
+    const at = cd.readUInt32LE(p + 42);
+    const raw = cd.toString('utf8', p + 46, p + 46 + nlen);
+    p += 46 + nlen + xlen + clen;
+    if (raw.endsWith('/')) continue;
+    const name = safeEntryName(raw);
+    if (!name) { unsafe++; continue; }
+    entries.set(name, { name, method, crc, csize, size: usize, at });
+  }
+  const read = (name) => {
+    const e = entries.get(name);
+    if (!e) return null;
+    const lh = Buffer.alloc(30);
+    fs.readSync(fd, lh, 0, 30, e.at);
+    if (lh.readUInt32LE(0) !== 0x04034b50) throw new Error('bad_zip');
+    const start = e.at + 30 + lh.readUInt16LE(26) + lh.readUInt16LE(28);
+    const data = Buffer.alloc(e.csize);
+    fs.readSync(fd, data, 0, e.csize, start);
+    let out;
+    if (e.method === 0) out = data;
+    else if (e.method === 8) out = zlib.inflateRawSync(data);
+    else throw new Error('unsupported_method');
+    if (out.length !== e.size || crc32(out) !== e.crc) throw new Error('bad_crc');
+    return out;
+  };
+  return { ok: true, entries, unsafe, read, close: () => { try { fs.closeSync(fd); } catch (_) {} } };
+}
+
+module.exports = { writeZip, crc32, openZip, safeEntryName };

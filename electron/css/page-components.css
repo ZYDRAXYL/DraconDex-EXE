@@ -38,7 +38,7 @@
 /* callout */
 .pc-callout{border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--surface));border-radius:var(--rs);padding:10px 12px}
 .pc-callout[data-tone="tip"]{border-left-color:var(--success,var(--accent))}
-.pc-callout[data-tone="warning"]{border-left-color:var(--warning,var(--danger))}
+.pc-callout[data-tone="warning"]{border-left-color:var(--warn)}
 .pc-callout[data-tone="secret"]{border-left-color:var(--danger)}
 .pc-callout[data-tone="quote"]{border-left-color:var(--border);font-style:italic}
 .pc-callout-body{outline:none;min-height:1.4em;color:var(--t1);white-space:pre-wrap}

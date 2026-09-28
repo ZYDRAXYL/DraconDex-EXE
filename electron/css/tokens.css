@@ -16,6 +16,13 @@ html{height:100%;overflow:hidden}
 	--accentH: #818cf8;
 	--danger:  #ef4444;
 	--success: #22c55e;
+	/* Status colours with a meaning of their own (APP docs/UX-LAYOUT.md §9):
+	   warn = something needs attention (a missing file to Relink, a nearly
+	   full budget), info = a tip, a teach note, "new". Never decoration, and
+	   always paired with an icon — colour alone is not the message. Light
+	   themes (themes.css) carry darker pairs so text on --surface keeps 4.5:1. */
+	--warn:    #f59e0b;
+	--info:    #38bdf8;
 	/* --button (optional; declared by 13 of the 32 themes) — primary-button fill
 	   for themes that want the CTA to differ from --accent. Always consumed as
 	   var(--button, var(--accent)), so the 19 themes that omit it fall back
@@ -47,6 +54,8 @@ html{height:100%;overflow:hidden}
 	--on-accent: #fff;
 	--on-button: #fff;
 	--on-danger: #fff;
+	--on-warn: #1a1200;
+	--on-info: #03202e;
 	--ink-dark:  #1a1a26;
 
 	/* ── Scales below are vocabulary for NEW code. The ~2200 px literals already
