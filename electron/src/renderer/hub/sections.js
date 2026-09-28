@@ -50,14 +50,19 @@ function setNestSignatureMode(mode) {
 }
 
 // ── Nest head: the ▾ of the create split button ────────────────────────
-CTX_PROVIDERS['nest.create'] = () => [
-  cmdItem('app.newCollector'),
-  { sep: true },
-  cmdItem('app.importDock'),
-  cmdItem('app.importFolder'),
-];
+// A plain function, not a CTX_PROVIDERS entry: this file loads before
+// hub/ctxmenu.js defines CTX_PROVIDERS, so registering one here threw at
+// load and left the ▾ without a menu.
+function nestCreateMenuItems() {
+  return [
+    cmdItem('app.newCollector'),
+    { sep: true },
+    cmdItem('app.importDock'),
+    cmdItem('app.importFolder'),
+  ];
+}
 function openNestCreateMenu(btn) {
-  ctxMenu(null, CTX_PROVIDERS['nest.create'](), { anchor: btn });
+  ctxMenu(null, nestCreateMenuItems(), { anchor: btn });
 }
 
 // ── Nest tree filter (UX-LAYOUT §6.2, E2) ──────────────────────────────
