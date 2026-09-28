@@ -499,9 +499,9 @@ h('db:pickImportFile', async () => {
   // to a .ddx vault export; the renderer branches on extension afterward,
   // see importDatabaseFile() in core/views.js).
   const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
-    title: 'Import Database (.ddx / .mddx / .db)',
+    title: 'Import Database (.ddx / .mddx / .dxpack / .db)',
     properties: ['openFile'],
-    filters: [{ name: 'DraconDex File', extensions: ['ddx', 'mddx', 'mdx', 'db'] }],
+    filters: [{ name: 'DraconDex File', extensions: ['ddx', 'mddx', 'mdx', 'dxpack', 'db'] }],
   });
   if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
   pickedImportDbPaths.add(path.resolve(result.filePaths[0]));
@@ -1208,6 +1208,26 @@ h('nexus:locatePick', async (nx) => {
   return syncLocate(nx);
 });
 h('nexus:locateSync',   (nx) => syncLocate(nx));
+// .dxpack (APP docs/ASSET-PACK.md): modules + files the APK / PWA sorted into
+// folders. The files land in the Nexus's Locate folder, laid out by the
+// collector tree — so a Nexus with no Locate folder yet is asked for one
+// first, and that folder becomes its Locate folder (the pack's layout IS a
+// Locate layout; putting it anywhere else would leave the next sync to
+// import it all a second time). The pack path went through db:pickImportFile.
+h('db:importAssetPackAt', async (nx, parentModuleId, filePath) => {
+  if (!filePath || !pickedImportDbPaths.has(path.resolve(String(filePath)))) return { ok: false, canceled: true };
+  const v = db.getNexus(nx);
+  if (!v) return { ok: false, code: 'not_found' };
+  let root = v.locate_dir && !v.locate_missing ? path.resolve(v.locate_dir) : null;
+  if (!root) {
+    const picked = await pickDirectory();
+    if (!picked) return { ok: false, canceled: true };
+    root = path.resolve(picked);
+    db.setVaultLocateDir(nx, root);
+  }
+  pickedImportRoots.add(root);
+  return db.importAssetPack(nx, path.resolve(String(filePath)), { parentModuleId: parentModuleId ?? null, destRoot: root });
+});
 h('nexus:locateForget', (nx) => { db.setVaultLocateDir(nx, null); return true; });
 // Opens only the folder the registry holds, never a path from the renderer.
 h('nexus:locateOpen', async (nx) => {

@@ -719,7 +719,7 @@ function remapKeyList(json, maps) {
 // Everything else — lookups, the modules BFS insert, every per-kind child
 // insert, relation/note insert, module_ui remap — is identical either way.
 function applySnapshotCore(nexusId, payload, opts = {}) {
-  const { wipe = false, updateNexusMeta = false, reparentRootTo = null } = opts; // + withKeyMaps (db/trash.js)
+  const { wipe = false, updateNexusMeta = false, reparentRootTo = null } = opts; // + withKeyMaps (db/trash.js), withModMap (db/asset-pack.js)
   if (!validateSnapshot(payload)) return { ok: false, code: 'bad_snapshot' };
   const db = getVaultDB(nexusId);
   const arr = (a) => (Array.isArray(a) ? a : []);
@@ -1217,10 +1217,12 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       droppedRelations,
       droppedPins,
       keyMaps, // taken off below — the trash (db/trash.js) asks for it
+      modMap, // likewise — the .dxpack import (db/asset-pack.js) files assets by it
     };
   })();
-  const { keyMaps } = summary;
+  const { keyMaps, modMap } = summary;
   delete summary.keyMaps;
+  delete summary.modMap;
 
   // A snapshot from an older app (or the APK, which has not adopted the
   // rule yet) can carry modules under a non-collector — wrap them the same
@@ -1232,7 +1234,8 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     console.error('sync: wiki rebuild after pull failed:', e);
   }
 
-  return opts.withKeyMaps ? { ok: true, summary, keyMaps } : { ok: true, summary };
+  const out = opts.withKeyMaps ? { ok: true, summary, keyMaps } : { ok: true, summary };
+  return opts.withModMap ? { ...out, modMap } : out;
 }
 
 // Whole-nexus wipe-and-rebuild — Token Sync pull's only caller, same

@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('api', {
     exportModuleFile: (nexusId,modId,name)   => inv('db:exportModuleFile', nexusId,modId,name),
     importModuleFile: (nexusId,parentId)     => inv('db:importModuleFile', nexusId,parentId),
     importModuleFileAt: (nexusId,parentId,filePath) => inv('db:importModuleFileAt', nexusId,parentId,filePath),
+    importAssetPackAt:  (nexusId,parentId,filePath) => inv('db:importAssetPackAt', nexusId,parentId,filePath),
   },
   nexus: {
     locatePick:   (nx) => inv('nexus:locatePick', nx),

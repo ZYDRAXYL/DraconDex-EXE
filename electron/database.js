@@ -52,6 +52,7 @@ const extension = require('./src/db/extension');
 const pkg       = require('./src/db/pkg');
 const dbTransfer = require('./src/db/db-transfer');
 const mirror    = require('./src/db/mirror');
+const assetPack = require('./src/db/asset-pack');
 const vaults    = require('./src/db/vaults');
 const transfer  = require('./src/db/transfer');
 const mediaRead = require('./src/db/media-read');
@@ -112,6 +113,7 @@ module.exports = {
   ...pkg,
   ...dbTransfer,
   ...mirror,
+  importAssetPack: assetPack.importAssetPack,
   setVaultLocateDir: vaults.setVaultLocateDir,
   ...transfer,
   ...cloud,
