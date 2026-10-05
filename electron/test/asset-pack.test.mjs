@@ -118,7 +118,7 @@ test('a pack becomes the collector tree, its files land in their folders, filed 
   assert.equal(row('map.png').file_path, join(locateRoot, 'World', 'Maps', 'map.png'));
   assert.equal(row('map.png').sha256, sha(MAP));
   assert.ok(readFileSync(join(locateRoot, 'World', 'Maps', 'map.png')).equals(MAP));
-  // Filed in the Classifier itself, stored in World/ (Cast is a .mddx file).
+  // Filed in the Classifier itself, stored in World/ (Cast is a .ddata + .dpage pair).
   assert.equal(row('face.jpg').module_ref, cast.id);
   assert.equal(row('face.jpg').file_path, join(locateRoot, 'World', 'face.jpg'));
   // A proxy is still written — it is the only copy the PWA had.
@@ -129,8 +129,8 @@ test('a pack becomes the collector tree, its files land in their folders, filed 
   assert.equal(row('tool.exe'), undefined);
   assert.equal(existsSync(join(tmp, 'escape.png')), false);
 
-  // The mirror ran into the same root: the non-collector became its .mddx.
-  assert.ok(existsSync(join(locateRoot, 'World', 'Cast.mddx')));
+  // The mirror ran into the same root: the non-collector became its .ddata + .dpage.
+  assert.ok(existsSync(join(locateRoot, 'World', 'Cast.ddata')) && existsSync(join(locateRoot, 'World', 'Cast.dpage')));
 });
 
 test('importing the same pack again is additive, like a .mddx: a second tree, never an overwrite', () => {

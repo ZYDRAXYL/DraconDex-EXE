@@ -3,17 +3,17 @@
   "self": "EXE",
   "source": {
     "repo": "ZYDRAXYL/DraconDex-SDB",
-    "ref": "sdb-v2.0.10",
-    "version": "2.0.10"
+    "ref": "sdb-v2.1.0",
+    "version": "2.1.0"
   },
   "expect": {
-    "vaultSchemaVersion": 6,
+    "vaultSchemaVersion": 7,
     "supabaseSchemaVersion": 2
   },
   "vendored": {
     "src/schema/generated/vault-ddl.electron.js": {
       "artifact": "generated/electron/vault-ddl.electron.js",
-      "sha256": "ea9f145c312ebcfb555483be62dc6aff25a81909a2fdb2d60934af1431a69ac2"
+      "sha256": "0c4b4244de687094f260cb1729bc94b712eb3552777461c293463e1c245438f6"
     },
     "electron/src/db/supabase-schema.js": {
       "artifact": "generated/electron/supabase-schema.js",
@@ -25,7 +25,7 @@
     },
     "src/design/generated/tokens.css": {
       "artifact": "generated/electron/tokens.css",
-      "sha256": "37586a51161484764ae396f5a4c7b5a97ae4989dcee373199188621ec0645f8a"
+      "sha256": "6dfd6491ffb53752ff79f7386adf57319918154bbd400b3169c8048810918bd6"
     },
     "src/assets/brand/DraconDex_BlackIn.png": {
       "artifact": "assets/brand/DraconDex_BlackIn.png",
@@ -61,7 +61,7 @@
     },
     "electron/templates/pages.json": {
       "artifact": "generated/templates/pages.json",
-      "sha256": "a4a1d84c2d1314b01af84b1ef9d552c08d4465017864969e693db0d68ee47b9a"
+      "sha256": "a1b113e0f95635cd167f3ae8473c1b194a759cebc432505a8af8ca8fe0120aef"
     },
     "electron/test/fixtures/snapshot-v2.json": {
       "artifact": "fixtures/snapshot-v2.json",

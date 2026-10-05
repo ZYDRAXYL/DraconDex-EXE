@@ -68,7 +68,7 @@ function layoutRows(blocks, refs = null) {
     if (type === 'columns' || Array.isArray(b.children)) {
       const cols = (b.children || []).map((col) => walk(col).filter(Boolean));
       row.children = cols;
-      if (type === 'columns') row.config = { ...(row.config || {}), n: Math.min(3, Math.max(2, cols.length)) };
+      if (type === 'columns') row.config = { ...(row.config || {}), n: Math.min(6, Math.max(1, cols.length)) };
     }
     return row;
   }).filter(Boolean);
@@ -129,6 +129,13 @@ function applyTemplate(moduleId, tplOrId, opts = {}) {
   return d.transaction(() => {
     const out = { ok: true, old: {}, dropped: 0, fields: 0 };
     if (m.kind === 'classifier' && opts.fields !== false) out.fields = addPresetFields(d, moduleId, tpl.preset);
+    // Procress 16 B5: a character template makes a character category — but
+    // only while it is still empty; a category in use keeps what it is.
+    const catType = tpl.preset?.catType || (tpl.for || [])[0];
+    if (m.kind === 'classifier' && ['object', 'character', 'element'].includes(catType)
+        && !d.prepare(`SELECT 1 FROM classifier_object WHERE module_ref=? LIMIT 1`).get(moduleId)) {
+      d.prepare(`UPDATE module SET cat_type=? WHERE id=?`).run(catType, moduleId);
+    }
     if (tpl.page) {
       const { rows, dropped } = layoutRows(tpl.page, opts.refs);
       out.old.page = replacePage(d, moduleId, null, rows);
@@ -187,7 +194,10 @@ function capturePage(moduleId, itemKey, borrowRef = () => true) {
     const mine = kids.get(r.id) || [];
     if (r.block_type === 'columns' || mine.length) {
       const colOf = (k) => { try { return Math.max(0, Number(JSON.parse(k.config || '{}').col) || 0); } catch (_) { return 0; } };
-      const n = r.block_type === 'columns' ? Math.min(3, Math.max(2, Number(config?.n) || 2)) : Math.min(12, Math.max(1, ...mine.map((k) => colOf(k) + 1)));
+      // a row: as many columns as config.widths has (Procress 16 part 3b), else n
+      const n = r.block_type === 'columns'
+        ? (Array.isArray(config?.widths) && config.widths.length ? Math.min(6, config.widths.length) : Math.min(3, Math.max(2, Number(config?.n) || 2)))
+        : Math.min(12, Math.max(1, ...mine.map((k) => colOf(k) + 1)));
       const cols = Array.from({ length: n }, () => []);
       for (const k of mine) {
         const kb = block(k);

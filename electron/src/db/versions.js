@@ -26,9 +26,23 @@ const versionLimit = () => {
 // own recordVersion calls are suppressed so only the 'restore' row lands.
 let _suppress = false;
 
+// Procress 17 B1: a batch write is ONE version, not one per row — the rows'
+// restore payloads are collected into a 'batch' op that undoes them all.
+let _collect = null;
+
 function recordVersion(moduleRef, action, detail, restore) {
   if (_suppress) return;
+  if (_collect) { if (restore) _collect.push(restore); return; }
   _recordVersion(moduleRef, action, detail, restore);
+}
+
+function asOneVersion(moduleRef, action, detail, fn) {
+  if (_collect) return fn(); // nested: the outer batch owns the record
+  _collect = [];
+  let out, steps;
+  try { out = fn(); } finally { steps = _collect; _collect = null; }
+  if (steps.length) _recordVersion(moduleRef, action, detail, { op: 'batch', args: { steps } });
+  return out;
 }
 
 function _recordVersion(moduleRef, action, detail, restore) {
@@ -50,6 +64,20 @@ function _recordVersion(moduleRef, action, detail, restore) {
     })();
   } catch (_) { /* versioning must never break the edit itself */ }
 }
+
+// Procress 16 part 5: what changed lately across the whole Nexus — content
+// edits (module_version) and Hub events (nexus_history) together, newest
+// first, one row per module (its latest). A deleted module's events keep
+// its name (nexus_history.module_name) but carry no id to open.
+const recentChanges = (nexusRef, limit = 30) => getDB().prepare(`
+  SELECT moduleId, name, action, MAX(at) AS at FROM (
+    SELECT v.module_ref AS moduleId, m.name AS name, v.action AS action, v.create_at AS at
+      FROM module_version v JOIN module m ON m.id = v.module_ref WHERE m.nexus_ref = ?
+    UNION ALL
+    SELECT h.module_ref, COALESCE(m.name, h.module_name), h.action, h.create_at
+      FROM nexus_history h LEFT JOIN module m ON m.id = h.module_ref WHERE h.nexus_ref = ?
+  ) GROUP BY COALESCE(moduleId, name) ORDER BY at DESC LIMIT ?
+`).all(nexusRef, nexusRef, limit);
 
 const listVersions = (moduleRef) => getDB().prepare(`
   SELECT id, module_ref, seq, action, detail, create_at FROM module_version
@@ -138,6 +166,8 @@ const RESTORE_OPS = {
   classifierTemplate: (a) => require('./classifier').updateTemplate(a.templateId, a.description, a.attributeType, a.levelable, a.hasCondition),
   authorChapterContent: (a) => require('./author').updateBookChapterContent(a.chapterId, a.content),
   authorChapterName: (a) => require('./author').renameBookChapter(a.chapterId, a.name),
+  // asOneVersion's record: every row's undo, newest first, in one transaction
+  batch: (a) => getDB().transaction(() => { for (const s of [...(a.steps || [])].reverse()) RESTORE_OPS[s.op]?.(s.args || {}); })(),
 };
 
 function restoreVersion(id) {
@@ -157,6 +187,6 @@ function restoreVersion(id) {
 }
 
 module.exports = {
-  recordVersion, listVersions, restoreVersion, getAppSetting, setAppSetting,
+  recordVersion, asOneVersion, listVersions, recentChanges, restoreVersion, getAppSetting, setAppSetting,
   recordNexusHistory, historyBytesUsed, clearModuleHistory, clearNexusHistory, clearAllHistory,
 };

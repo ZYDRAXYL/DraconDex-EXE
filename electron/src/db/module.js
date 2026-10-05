@@ -304,6 +304,12 @@ const getModuleTags = (moduleId) => getDB().prepare(`
   JOIN module_hashtag mh ON h.id = mh.hashtag_id WHERE mh.module_ref=? ORDER BY h.tag_name
 `).all(moduleId);
 
+// Procress 16 part 2: every module ↔ label pair of a Nexus, for the Nest filter's l: token.
+const moduleTagIndex = (nexusId) => getDB().prepare(`
+  SELECT mh.module_ref AS moduleId, h.tag_name AS tag FROM module_hashtag mh
+  JOIN hashtag h ON h.id = mh.hashtag_id JOIN module m ON m.id = mh.module_ref WHERE m.nexus_ref=?
+`).all(nexusId);
+
 function setModuleTags(moduleId, tags) {
   const d = getDB();
   // One transaction for the whole operation, not one per sub-step: the prev-tag
@@ -329,11 +335,14 @@ const getModuleLinks = (moduleId) => ({
   backlinks: wiki.getBacklinks(`module_${moduleId}`),
 });
 
+// Procress 17 B1: several modules, one transaction — all or none.
+const createModules = (list = []) => getDB().transaction(() => list.map((data) => createModule(data)))();
+
 module.exports = {
-  getTree, getModule, createModule, updateModule, updateModuleDescription, deleteModule,
+  getTree, getModule, createModule, createModules, updateModule, updateModuleDescription, deleteModule,
   duplicateModule, moveModule, countModules, nexusOfModule, getNestItems,
   getModuleUi, setModuleUi,
-  getModuleTags, setModuleTags,
+  getModuleTags, setModuleTags, moduleTagIndex,
   getModuleLinks,
   takeParentNormalizeReport,
 };

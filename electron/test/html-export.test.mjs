@@ -84,7 +84,7 @@ test('the site is index.html, a file per page, style.css and the images', () => 
   };
   const site = hx.buildSite(payload);
   assert.equal(site.ok, true);
-  assert.deepEqual(site.entries.map((e) => e.name), ['index.html', 'cobj_4.html', 'style.css', 'img/1.png']);
+  assert.deepEqual(site.entries.map((e) => e.name), ['index.html', 'cobj_4.html', 'README.txt', 'style.css', 'img/1.png']);
   const index = site.entries[0].data;
   assert.match(index, /<nav class="site-menu"><ul><li><a href="cobj_4\.html">Four<\/a><\/li><\/ul><\/nav>/);
   assert.match(index, /<a class="xl" href="cobj_4\.html">Four<\/a>/);
@@ -120,7 +120,7 @@ test('the Nexus pictures a page shows travel in media/', () => {
   };
   const site = hx.buildSite(payload, 1);
   assert.deepEqual(site.entries.map((e) => e.name),
-    ['index.html', 'cobj_4.html', `media/${live}.png`, `media/${gone}.jpg`, 'style.css', 'img/1.png']);
+    ['index.html', 'cobj_4.html', `media/${live}.png`, `media/${gone}.jpg`, 'README.txt', 'style.css', 'img/1.png']);
   assert.equal(site.entries.find((e) => e.name === `media/${live}.png`).path, png, 'the original streams from disk');
   assert.equal(String(site.entries.find((e) => e.name === `media/${gone}.jpg`).data), 'proxyjpg');
   assert.equal(site.media, 2);
@@ -134,4 +134,35 @@ test('the Nexus pictures a page shows travel in media/', () => {
   assert.equal(r.ok, true);
   assert.equal(r.media, 2);
   assert.ok(readFileSync(out).includes(Buffer.from('realpng')));
+});
+
+// Procress 16 part 6 — publishing: the user's CSS is sandboxed, the menu is
+// the Nest's shape on every page, a search box gets an index of the site's
+// own text, and the site can be written as a folder ready for a host.
+test('publish: sandboxed CSS, a Nest-shaped menu everywhere, a search index, a folder', () => {
+  const css = hx.sanitizeCss('a{color:red}</style><script>alert(1)</script>@import url(x.css);b{background:url(https://evil.example/p.png)}c{background:url(media/3.png)}');
+  assert.doesNotMatch(css, /<|@import|https:/);
+  assert.match(css, /url\("media\/3\.png"\)/);
+  const payload = {
+    indexKey: 'module_1', title: 'My World', css: '', siteCss: 'body{color:red}<script>', search: true,
+    pageCss: { cobj_4: '.x{color:blue}</style><b>' },
+    nav: [{ key: 'module_1', name: 'Home', children: [{ key: 'cobj_4', name: 'Four', children: [] }, { key: 'module_9', name: 'Not out', children: [] }] }],
+    pages: [{ key: 'module_1', name: 'Home', html: '<p>Welcome</p>' }, { key: 'cobj_4', name: 'Four', html: '<p>The fourth <b>harbor</b></p>' }],
+  };
+  const site = hx.buildSite(payload);
+  const byName = new Map(site.entries.map((e) => [e.name, String(e.data)]));
+  const four = byName.get('cobj_4.html');
+  assert.match(four, /<nav class="site-menu"><ul><li><a href="index\.html">Home<\/a><ul><li><a href="cobj_4\.html" aria-current="page">Four<\/a><\/li><\/ul><\/li><\/ul><\/nav>/, 'the menu on every page, the page marked, unexported pages left out');
+  assert.match(four, /<style>\.x\{color:blue\}<\/style>/, 'its own CSS, sandboxed');
+  assert.match(four, /search-index\.js/);
+  assert.match(byName.get('style.css'), /body\{color:red\}/);
+  assert.doesNotMatch(byName.get('style.css'), /<script/);
+  const idx = byName.get('search-index.js');
+  assert.match(idx, /"t":"Four"/);
+  assert.match(idx, /The fourth harbor/, 'its text, without markup');
+  assert.ok(byName.has('site.js') && byName.has('README.txt'));
+  const dir = join(tmp, 'site-folder');
+  const r = hx.exportHtmlSite(dir, payload, null, { folder: true });
+  assert.equal(r.ok, true);
+  assert.ok(readFileSync(join(dir, 'index.html'), 'utf8').includes('Welcome'));
 });

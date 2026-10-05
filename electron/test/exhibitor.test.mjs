@@ -95,6 +95,28 @@ test('findExhibitorFor finds the Exhibitor created for a module by its ui key', 
   assert.equal(ex.findExhibitorFor(src), e);
 });
 
+// Procress 16 B3: "Open in Exhibitor" pressed 3 times = 1 Exhibitor.
+test('findExhibitorsFor reuses: itself, the one made for it, any whose filter covers it', () => {
+  freshVault();
+  const ex = require('../src/db/exhibitor.js');
+  const folder = mkModule('World', 'collector');
+  const src = mkModule('Cast', 'classifier', folder);
+  const e = mkModule('Cast · Exhibitor', 'exhibitor');
+  db.prepare(`INSERT INTO module_ui (module_ref, ui_key, ui_value) VALUES (?,?,?)`).run(e, 'exhibitorFor', String(src));
+  // on an Exhibitor's own page the answer is itself, never a new "· Exhibitor · Exhibitor"
+  assert.deepEqual(ex.findExhibitorsFor(e), [e]);
+  // one whose filter covers the folder above the module counts, after the one made for it
+  const who = mkModule('Who knows whom', 'exhibitor');
+  db.prepare(`INSERT INTO module_ui (module_ref, ui_key, ui_value) VALUES (?,?,?)`)
+    .run(who, 'filterDef', JSON.stringify({ groups: [{ rules: [{ field: 'childOf', moduleId: folder }] }] }));
+  assert.deepEqual(ex.findExhibitorsFor(src), [e, who]);
+  // an unrelated filter / a broken filterDef is not a match
+  const other = mkModule('Other', 'exhibitor');
+  db.prepare(`INSERT INTO module_ui (module_ref, ui_key, ui_value) VALUES (?,?,?)`).run(other, 'filterDef', '{not json');
+  assert.deepEqual(ex.findExhibitorsFor(src), [e, who]);
+  assert.deepEqual(ex.findExhibitorsFor(99999), []);
+});
+
 test('createEntityRelation is idempotent under the v5 index and returns the existing id', () => {
   freshVault();
   const v = require('../src/db/viewer.js');

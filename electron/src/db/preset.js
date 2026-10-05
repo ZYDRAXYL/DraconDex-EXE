@@ -45,7 +45,8 @@ function cleanBlocks(v) {
     if (b.config && typeof b.config === 'object' && !Array.isArray(b.config)) o.config = b.config;
     if (typeof b.content === 'string') o.content = b.content.slice(0, 20000);
     if (b.borrow === true || typeof b.borrow === 'string') o.borrow = b.borrow;
-    if (Array.isArray(b.children) && depth < 2) o.children = b.children.slice(0, 3).map((c) => walk(c, depth + 1));
+    // up to 12: a row on the 12-slot grid (Procress 16 part 3b), or a tabs block
+    if (Array.isArray(b.children) && depth < 4) o.children = b.children.slice(0, 12).map((c) => walk(c, depth + 1));
     return o;
   });
   const out = walk(v, 0);

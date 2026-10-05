@@ -16,7 +16,7 @@
 //     Each app creates it at runtime inside a try; without fts5, every
 //     query uses LIKE. It is derived data like wiki_link: never in a
 //     snapshot, rebuilt from the content.
-const { getVaultDB } = require('./core');
+const { getVaultDB, getDB } = require('./core');
 const { ENTITY_KINDS } = require('./entity-kinds');
 const { CONTENT_SOURCES } = require('./wiki-sources');
 
@@ -104,5 +104,9 @@ function searchContent(nexusId, query, limit = 40) {
 
 // For tests and for a caller that just changed a lot (an import).
 const invalidateSearch = (nexusId) => { const st = _state.get(getVaultDB(nexusId)); if (st) st.builtAt = 0; };
+// Procress 17 B3: every IPC write marks the open vault's index stale
+// (main.js h()); the next search or Ctrl+P rebuilds once — not per write,
+// and not on every Ctrl+P when nothing changed.
+const markSearchDirty = () => { try { const st = _state.get(getDB()); if (st) st.builtAt = 0; } catch (_) { /* no vault open */ } };
 
-module.exports = { searchContent, rebuildSearch, invalidateSearch };
+module.exports = { searchContent, rebuildSearch, invalidateSearch, markSearchDirty };

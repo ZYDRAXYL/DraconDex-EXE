@@ -37,6 +37,7 @@ const author    = require('./src/db/author');
 const chatscribe = require('./src/db/chatscribe');
 const viewer    = require('./src/db/viewer');
 const exhibitor = require('./src/db/exhibitor');
+const undoDelete = require('./src/db/undo-delete');
 const calendar  = require('./src/db/calendar');
 const sketcher  = require('./src/db/sketcher');
 const designer  = require('./src/db/designer');
@@ -98,6 +99,7 @@ module.exports = {
   ...chatscribe,
   ...viewer,
   ...exhibitor,
+  ...undoDelete,
   ...calendar,
   ...sketcher,
   ...designer,

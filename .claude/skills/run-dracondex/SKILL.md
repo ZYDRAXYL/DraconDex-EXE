@@ -76,6 +76,8 @@ Commands (each one argv entry, quoted):
 | `click <selector>` | click first match (Playwright selectors, `:has-text()` ok) |
 | `dragto <src> :: <dst> [:: frac]` | genuine mouse-driven HTML5 drag-and-drop (multi-step mouse move, not a synthetic dispatch) |
 | `rclick <selector>` | genuine mouse-driven right-click (fires real `contextmenu`, not synthetic dispatch) |
+| `hover <selector> [:: steps]` | real pointer move there in N steps (default 12) — crosses what lies on the way, so `:hover` / hover-intent behave as for a user |
+| `mclick <selector>` | real middle click (fires `auxclick`) |
 | `fill <sel> :: <text>` | set input value (note the ` :: ` separator) |
 | `upload <sel> :: <filepath>` | real file-input upload via `setInputFiles` (fires a genuine `change` event, exercises `FileReader` handlers end-to-end) |
 | `type <text>` / `press <key>` | keyboard input |

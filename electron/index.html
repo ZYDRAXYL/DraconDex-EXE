@@ -70,6 +70,8 @@
   <link rel="stylesheet" href="css/welcome.css">
 </head>
 <body>
+  <!-- Procress 17 I4: the first Tab stop skips the title bar and the panels -->
+  <a id="skip-link" class="skip-link" href="#main-inner" onclick="event.preventDefault();document.getElementById('main-inner').focus()">Skip to content</a>
 <div id="splash">
   <img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img splash-logo" alt="DraconDex">
   <div id="splash-track"><div id="splash-fill"></div></div>
@@ -225,7 +227,7 @@
   </aside>
   <div id="left-panel-resize" class="panel-resize-handle" onmousedown="startLeftPanelResize(event)" title="Resize panel"></div>
   <div id="workspace-toolbar" class="hidden"></div>
-  <main id="main-area"><div id="main-inner"></div></main>
+  <main id="main-area"><div id="main-inner" tabindex="-1"></div></main>
   <!-- v5 Part 8 (§12.8): version history and plugin panels. Outside every
        page, so a page render never rebuilds it (page/side-panel.js). -->
   <div id="side-panel-resize" class="panel-resize-handle hidden" onmousedown="startSidePanelResize(event)" title="Resize panel"></div>
@@ -243,6 +245,7 @@
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="sr-live" class="sr-only" aria-live="polite"></div>
   <!-- i18n data + Core + Director loaded immediately; Timeline/Relation/Map/Hashtag lazy-loaded on first use -->
   <script src="src/renderer/i18n.js"></script>
   <script>__splash.set(15)</script>
@@ -259,6 +262,7 @@
   <script src="src/renderer/core/boot.js"></script>
   <script src="src/renderer/core/calendar-engine.js"></script>
   <script src="src/renderer/core/ui.js"></script>
+  <script src="src/renderer/core/lazy-rows.js"></script>
   <script src="src/renderer/core/settings.js"></script>
   <script src="src/renderer/core/setting-window.js"></script>
   <script src="src/renderer/core/setting-search.js"></script>
@@ -286,6 +290,8 @@
        kinds.js first (it owns MODULE_KINDS / KIND_* consts). -->
   <script src="src/renderer/hub/kinds.js"></script>
   <script src="src/renderer/hub/sections.js"></script>
+  <script src="src/renderer/hub/folder-page.js"></script>
+  <script src="src/renderer/hub/category-page.js"></script>
   <script src="src/renderer/hub/tree.js"></script>
   <script src="src/renderer/hub/popups.js"></script>
   <script src="src/renderer/hub/ctxmenu.js"></script>
@@ -316,6 +322,7 @@
   <script src="src/renderer/page/arrange.js"></script>
   <script src="src/renderer/page/style.js"></script>
   <script src="src/renderer/page/style-pop.js"></script>
+  <script src="src/renderer/page/collection.js"></script>
   <script src="src/renderer/page/links.js"></script>
   <script src="src/renderer/page/iconpick.js"></script>
   <script src="src/renderer/page/imagepick.js"></script>
@@ -324,6 +331,7 @@
   <script src="src/renderer/page/canvas-frame.js"></script>
   <script src="src/renderer/page/kind-state.js"></script>
   <script src="src/renderer/page/side-panel.js"></script>
+  <script src="src/renderer/page/props-panel.js"></script>
   <script src="src/renderer/page/item-page.js"></script>
   <script src="src/renderer/page/address.js"></script>
   <script src="src/renderer/page/focus.js"></script>
@@ -331,6 +339,7 @@
   <script src="src/renderer/page/components/core.js"></script>
   <script src="src/renderer/page/components/wiki.js"></script>
   <script src="src/renderer/page/components/wiki-more.js"></script>
+  <script src="src/renderer/page/components/site.js"></script>
   <script src="src/renderer/page/components/decor.js"></script>
   <script src="src/renderer/page/components/media.js"></script>
   <script src="src/renderer/page/components/media-3d.js"></script>

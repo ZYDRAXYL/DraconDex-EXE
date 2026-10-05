@@ -18,9 +18,15 @@ function toggleSettingsMenu(force){
 }
 
 function translateStaticChrome(){
-  q('#settings-menu-btn')?.setAttribute('title', t('settings'));
-  q('#nav-settings-btn')?.setAttribute('title', t('settings'));
+  // Procress 17 R3: icon-only, so the name a screen reader reads is set too.
+  for (const id of ['#settings-menu-btn', '#nav-settings-btn']) {
+    q(id)?.setAttribute('title', t('settings'));
+    q(id)?.setAttribute('aria-label', t('settings'));
+  }
+  // The rail's tooltips and labels are built with t() — rebuild them in the new language.
+  if (typeof renderModuleRail === 'function') renderModuleRail();
   q('#layout-menu-btn')?.setAttribute('title', t('splitLayout'));
+  const skip = q('#skip-link'); if (skip) skip.textContent = t('skipToContent');
   q('#win-min')?.setAttribute('title', t('minimize'));
   q('#win-max')?.setAttribute('title', t('maximize'));
   q('#win-close')?.setAttribute('title', t('close'));

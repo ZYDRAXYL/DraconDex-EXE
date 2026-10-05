@@ -20,7 +20,9 @@ const fs = require('fs');
 const path = require('path');
 
 const MANIFEST = '.dracondex-mirror.json';
-const MODULE_EXT = '.mddx';
+const MODULE_EXT = '.mddx'; // what mirrors before Procress 16 part 3a wrote — still cleaned up
+const { DATA_EXT, PAGE_EXT, splitSnapshot } = require('./module-files');
+const MIRROR_EXTS = [MODULE_EXT, DATA_EXT, PAGE_EXT];
 const WIN_RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 
 // collector name -> folder name. Identity for any name a folder can carry,
@@ -54,7 +56,7 @@ function planMirror(modules) {
     for (const m of kids) {
       const isDir = m.kind === 'collector';
       let base = dirNameOf(m.name);
-      const key = (b) => (isDir ? b : b + MODULE_EXT).toLowerCase();
+      const key = (b) => (isDir ? b : b + DATA_EXT).toLowerCase();
       if (used.has(key(base))) base = `${base} (${m.id})`;
       used.add(key(base));
       const p = rel ? `${rel}/${base}` : base;
@@ -62,7 +64,8 @@ function planMirror(modules) {
         dirs.push({ id: m.id, rel: p });
         walk(m.id, p);
       } else {
-        files.push({ id: m.id, rel: p + MODULE_EXT });
+        // Procress 16 part 3a: a module is two files — its data and its page
+        files.push({ id: m.id, rel: p + DATA_EXT, part: 'data' }, { id: m.id, rel: p + PAGE_EXT, part: 'page' });
       }
     }
   };
@@ -122,16 +125,18 @@ function writeMirror(root, modules, serialize) {
     } catch (_) { /* leave it; the folder is recreated below */ }
   }
   for (const dir of plan.dirs) fs.mkdirSync(path.join(root, ...dir.rel.split('/')), { recursive: true });
+  const split = new Map(); // one snapshot per module, two files from it
   for (const f of plan.files) {
     const abs = path.join(root, ...f.rel.split('/'));
-    const body = JSON.stringify(serialize(f.id));
+    if (!split.has(f.id)) split.set(f.id, splitSnapshot(serialize(f.id)));
+    const body = JSON.stringify(split.get(f.id)[f.part]);
     let cur = null;
     try { cur = fs.readFileSync(abs, 'utf8'); } catch (_) {}
     if (cur !== body) { fs.writeFileSync(abs, body); written++; }
   }
   const nowFiles = new Set(plan.files.map((f) => f.rel.toLowerCase()));
   for (const rel of prev.files) {
-    if (nowFiles.has(String(rel).toLowerCase()) || !String(rel).endsWith(MODULE_EXT)) continue;
+    if (nowFiles.has(String(rel).toLowerCase()) || !MIRROR_EXTS.some((e) => String(rel).endsWith(e))) continue;
     const abs = inside(root, rel);
     if (abs && fs.existsSync(abs)) { try { fs.unlinkSync(abs); removed++; } catch (_) {} }
   }
@@ -178,5 +183,5 @@ function repointAssets(db, nexusId, from, to) {
 }
 
 module.exports = {
-  MODULE_EXT, dirNameOf, collectorNameOfDir, planMirror, writeMirror, syncNexusMirror,
+  MODULE_EXT, MIRROR_EXTS, dirNameOf, collectorNameOfDir, planMirror, writeMirror, syncNexusMirror,
 };

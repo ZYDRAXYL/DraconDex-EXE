@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('api', {
     exportMarkdown: (id)   => inv('nexus:exportMarkdown', id),
     htmlCollect:  (nx,key,depth) => inv('htmlExport:collect', nx,key,depth),
     exportHtml:   (nx,payload)   => inv('htmlExport:write', nx,payload),
+    openSite:     (dir)          => inv('htmlExport:open', dir),
     exportTable:  (mid,format)   => inv('export:table', mid,format),
     exportPdf:    (nx,payload,opts) => inv('export:pdf', nx,payload,opts),
     exportDoc:    (mid,format,opts) => inv('export:doc', mid,format,opts),
@@ -112,6 +113,7 @@ contextBridge.exposeInMainWorld('api', {
     getNestItems: (nx)     => inv('module:getNestItems', nx),
     get:     (id)          => inv('module:get', id),
     create:  (data)        => inv('module:create', data),
+    createMany: (list)     => inv('module:createMany', list),
     update:  (id,data)     => inv('module:update', id,data),
     updateDescription: (id,d) => inv('module:updateDescription', id,d),
     delete:  (id)          => inv('module:delete', id),
@@ -123,6 +125,7 @@ contextBridge.exposeInMainWorld('api', {
     setUi:   (id,k,v)      => inv('module:setUi', id,k,v),
     getTags: (id)          => inv('module:getTags', id),
     setTags: (id,tags)     => inv('module:setTags', id,tags),
+    tagIndex: (nx)         => inv('module:tagIndex', nx),
     getLinks: (id)         => inv('module:getLinks', id),
     getProps: (id,item)    => inv('module:getProps', id,item),
   },
@@ -130,9 +133,11 @@ contextBridge.exposeInMainWorld('api', {
     list:    (id,item)       => inv('block:list', id,item),
     ensure:  (id,item,defs)  => inv('block:ensure', id,item,defs),
     add:     (id,item,b)     => inv('block:add', id,item,b),
+    addMany: (id,item,list)  => inv('block:addMany', id,item,list),
     get:     (id)            => inv('block:get', id),
     update:  (id,patch)      => inv('block:update', id,patch),
     move:    (id,to)         => inv('block:move', id,to),
+    moveBeside: (tid,mid,side) => inv('block:moveBeside', tid,mid,side),
     remove:  (id)            => inv('block:remove', id),
     restore: (rows)          => inv('block:restore', rows),
     split:   (id,item)       => inv('block:split', id,item),
@@ -142,6 +147,11 @@ contextBridge.exposeInMainWorld('api', {
   },
   // One namespace: a second `history:` key further down used to replace
   // this one outright, and Ctrl+Z / Ctrl+Y called an undefined undo().
+  // Procress 17 I3: an object / field delete, undone from its toast
+  undoDelete: {
+    capture: (kind,id) => inv('undo:capture', kind, id),
+    restore: (snap)    => inv('undo:restoreRows', snap),
+  },
   history: {
     undo: ()               => inv('history:undo'),
     redo: ()               => inv('history:redo'),
@@ -155,6 +165,7 @@ contextBridge.exposeInMainWorld('api', {
     getObjects:        (mref)              => inv('classifier:getObjects', mref),
     getObjectsFull:    (mref)              => inv('classifier:getObjectsFull', mref),
     createObject:      (mref,n,c,ic)          => inv('classifier:createObject', mref,n,c,ic),
+    createObjects:     (mref,rows)            => inv('classifier:createObjects', mref,rows),
     updateObject:      (id,n,c,ic)            => inv('classifier:updateObject', id,n,c,ic),
     deleteObject:      (id)                   => inv('classifier:deleteObject', id),
     duplicateObject:   (id,n)                 => inv('classifier:duplicateObject', id,n),
@@ -167,6 +178,7 @@ contextBridge.exposeInMainWorld('api', {
     openUrl:           (oid,tid)              => inv('classifier:openUrl', oid, tid),
     getAttrs:          (oid)                  => inv('classifier:getAttrs', oid),
     upsertAttr:        (oid,tid,v)            => inv('classifier:upsertAttr', oid,tid,v),
+    upsertAttrs:       (rows)                 => inv('classifier:upsertAttrs', rows),
     getLevels:         (oid)                  => inv('classifier:getLevels', oid),
     createLevel:       (oid,tid)              => inv('classifier:createLevel', oid,tid),
     updateLevelField:  (id,f,v)               => inv('classifier:updateLevelField', id,f,v),
@@ -250,6 +262,7 @@ contextBridge.exposeInMainWorld('api', {
     deleteNode:   (id)         => inv('exhibitor:deleteNode', id),
     setView:      (mid, patch) => inv('exhibitor:setView', mid, patch),
     findFor:      (mid)        => inv('exhibitor:findFor', mid),
+    findAllFor:   (mid)        => inv('exhibitor:findAllFor', mid),
     dedupeReport: ()           => inv('exhibitor:dedupeReport'),
   },
   sketcher: {
@@ -276,6 +289,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   versions: {
     list:    (mref) => inv('versions:list', mref),
+    recent:  (nx, n) => inv('versions:recent', nx, n),
     restore: (id)   => inv('versions:restore', id),
   },
   setting: {
@@ -386,6 +400,9 @@ contextBridge.exposeInMainWorld('api', {
     // A drop on a page: the OS path of each dropped File, read HERE — the
     // page never names a path (MEDIA-EMBED M7).
     dropFiles:     (nx,files,m) => inv('importdock:dropped', nx, [...(files || [])].map((f) => { try { return webUtils?.getPathForFile(f) || ''; } catch (_) { return ''; } }).filter(Boolean), m),
+    dropToNest:    (nx,files,target) => inv('importdock:dropToNest', nx, [...(files || [])].map((f) => { try { return webUtils?.getPathForFile(f) || ''; } catch (_) { return ''; } }).filter(Boolean), target),
+    locateDefault: (nx,create)  => inv('importdock:locateDefault', nx, create),
+    reveal:        (nx,target)  => inv('importdock:reveal', nx, target),
     readBinary:    (id)     => inv('importdock:readBinary', id),
     setPoster:     (id,d)   => inv('importdock:setPoster', id,d),
     readFile:      (id)     => inv('importdock:readFile', id),

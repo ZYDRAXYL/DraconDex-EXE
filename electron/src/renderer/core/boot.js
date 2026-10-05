@@ -111,6 +111,8 @@ async function init() {
   ]);
   S.moduleTree = moduleTree;
   seedNestItems(nestItems);
+  loadRecentEntities(); // this Nexus's Recent (core/router.js)
+  S.moduleCollapsed.load(S.nexus.id); // and its fold state (core/state.js)
   if (S.nexus && typeof reportRelationDedupe === 'function') reportRelationDedupe();
   if (S.nexus) reportParentNormalize();
   if (S.nexus) scheduleMirrorSync(3000);
