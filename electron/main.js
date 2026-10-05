@@ -72,9 +72,31 @@ app.on('second-instance', () => {
 // window:moveTabToMain below.
 const popupWindowIds = new Set();
 
+// Procress 17 I6: a vault window opens where the last one was (size,
+// position, maximized) and only once it can paint — it used to appear at a
+// fixed size with a blank flash, after the Welcome window had already gone.
+const VAULT_BOUNDS_KEY = 'vaultWindowBounds';
+function lastVaultBounds() {
+  try {
+    const b = JSON.parse(db.getAppSetting(VAULT_BOUNDS_KEY) || 'null');
+    if (!b || !(b.width > 0 && b.height > 0)) return null;
+    // still on a screen? (a monitor may have been unplugged)
+    const { screen } = require('electron');
+    const area = screen.getDisplayMatching(b).workArea;
+    const onScreen = b.x < area.x + area.width && b.x + b.width > area.x && b.y < area.y + area.height && b.y + b.height > area.y;
+    return onScreen ? b : { width: b.width, height: b.height, maximized: b.maximized };
+  } catch (_) { return null; }
+}
+function rememberVaultBounds(win) {
+  try { db.setAppSetting(VAULT_BOUNDS_KEY, JSON.stringify({ ...win.getNormalBounds(), maximized: win.isMaximized() })); } catch (_) {}
+}
+
 function createWindow(bootstrapNexusId, bootstrapTabKey) {
+  const last = bootstrapTabKey ? null : lastVaultBounds();
   const win = new BrowserWindow({
-    width: bootstrapTabKey ? 900 : 1280, height: bootstrapTabKey ? 650 : 800,
+    width: last?.width || (bootstrapTabKey ? 900 : 1280), height: last?.height || (bootstrapTabKey ? 650 : 800),
+    ...(last?.x != null ? { x: last.x, y: last.y } : {}),
+    show: false,
     minWidth: 960, minHeight: 600,
     backgroundColor: '#050506',
     frame: false,
@@ -93,6 +115,8 @@ function createWindow(bootstrapNexusId, bootstrapTabKey) {
     },
   });
   hardenWebviewAttach(win.webContents);
+  win.once('ready-to-show', () => { if (last?.maximized) win.maximize(); win.show(); });
+  if (!bootstrapTabKey) win.on('close', () => rememberVaultBounds(win));
   // Which vault this window's IPC calls belong to. Registered before loadFile
   // so the renderer's very first wave of calls already resolves.
   if (bootstrapNexusId) {
@@ -127,6 +151,7 @@ function createWindow(bootstrapNexusId, bootstrapTabKey) {
   if (bootstrapNexusId) params.set('nexus', bootstrapNexusId);
   if (bootstrapTabKey) { params.set('tab', bootstrapTabKey); params.set('popup', '1'); }
   win.loadFile(path.join(__dirname, 'index.html'), params.toString() ? { search: params.toString() } : undefined);
+  return win;
 }
 
 // Welcome window (v4.6.0) — the app's single entry point. Boot no longer
@@ -455,7 +480,28 @@ app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) creat
 //
 // The Welcome window has no entry in windowNexus, so its handlers run with a
 // null vault and any vault-scoped call fails loudly rather than picking one.
-const h = (ch, fn) => ipcMain.handle(ch, async (event, ...a) => {
+// Procress 17 B2: a write handler runs as ONE transaction on its vault — the
+// row, its version entry, wiki/search reindex all commit together (and are
+// one session-undo step). conn.js measured ~2.5 ms per bare statement vs
+// ~6 µs inside a transaction. Synchronous handlers only (an async one would
+// commit before its awaits), and never the channels that open, swap, sync or
+// back up the vault file itself.
+const TX_VERB = /^(create|update|upsert|delete|add|remove|move|set|duplicate|restore|rename|save|apply|insert|reorder|clear|toggle|split|revert|link|unlink|merge|pin|attach|detach)/;
+const TX_SKIP = new Set(['nexus', 'vault', 'db', 'sync', 'drive', 'cloud', 'transfer', 'window', 'app', 'plugin', 'pkg', 'update', 'trx', 'importdock', 'asset', 'file', 'locate', 'export', 'backup']);
+const { getDB: vaultDB } = require('./src/db/core');
+const h = (ch, fn) => {
+  const [ns, verb = ''] = ch.split(':');
+  const tx = TX_VERB.test(verb) && !TX_SKIP.has(ns) && fn.constructor.name !== 'AsyncFunction';
+  const dirty = TX_VERB.test(verb) || /^import/.test(verb); // B3: the search index is stale after any write
+  const body = !tx ? fn : (...a) => {
+    let d = null;
+    try { d = vaultDB(); } catch (_) { /* no vault open: an app-level write */ }
+    return d ? d.transaction(() => fn(...a))() : fn(...a);
+  };
+  const run = !dirty ? body : async (...a) => { try { return await body(...a); } finally { db.markSearchDirty(); } };
+  return hRaw(ch, run);
+};
+const hRaw = (ch, fn) => ipcMain.handle(ch, async (event, ...a) => {
   const nexusId = windowNexus.get(BrowserWindow.fromWebContents(event.sender)?.id) ?? null;
   try {
     return await runWithVault(nexusId, () => fn(...a));
@@ -501,7 +547,7 @@ h('db:pickImportFile', async () => {
   const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
     title: 'Import Database (.ddx / .mddx / .dxpack / .db)',
     properties: ['openFile'],
-    filters: [{ name: 'DraconDex File', extensions: ['ddx', 'mddx', 'mdx', 'dxpack', 'db'] }],
+    filters: [{ name: 'DraconDex File', extensions: ['ddx', 'ddata', 'dpage', 'mddx', 'mdx', 'dxpack', 'db'] }],
   });
   if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
   pickedImportDbPaths.add(path.resolve(result.filePaths[0]));
@@ -547,10 +593,10 @@ h('db:importNexusFile', async (nexusId) => {
 // (Plan process5 part2 had moved it from bare .json to .mdx to tell it apart
 // from the Nexus snapshot export above.)
 h('db:exportModuleFile', async (nexusId, moduleId, moduleName) => {
-  const defaultName = `${String(moduleName || 'module').replace(/[\\/:*?"<>|]/g, '_')}.mddx`;
+  const defaultName = `${String(moduleName || 'module').replace(/[\\/:*?"<>|]/g, '_')}.ddata`; // + its .dpage beside it (Procress 16 part 3a)
   const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
     title: 'Export Module', defaultPath: path.join(app.getPath('documents'), defaultName),
-    filters: [{ name: 'DraconDex Module File', extensions: ['mddx'] }],
+    filters: [{ name: 'DraconDex Module (data + page)', extensions: ['ddata'] }, { name: 'DraconDex Module File (one file)', extensions: ['mddx'] }],
   });
   if (result.canceled || !result.filePath) return { ok: false, canceled: true };
   return db.exportModuleFile(nexusId, moduleId, result.filePath);
@@ -560,7 +606,7 @@ h('db:exportModuleFile', async (nexusId, moduleId, moduleName) => {
 h('db:importModuleFile', async (nexusId, parentModuleId) => {
   const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
     title: 'Import Module', properties: ['openFile'],
-    filters: [{ name: 'DraconDex Module File', extensions: ['mddx', 'mdx', 'json'] }],
+    filters: [{ name: 'DraconDex Module File', extensions: ['ddata', 'dpage', 'mddx', 'mdx', 'json'] }],
   });
   if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true };
   return db.importModuleFile(nexusId, parentModuleId, result.filePaths[0]);
@@ -721,6 +767,7 @@ h('module:getTree',     (nx)          => { db.autoMigrateNotes(nx); return db.ge
 h('module:getNestItems', (nx)         => db.getNestItems(nx));
 h('module:get',         (id)          => db.getModule(id));
 h('module:create',      (data)        => db.createModule(data));
+h('module:createMany',  (list)        => db.createModules(list));
 h('module:update',      (id,data)     => db.updateModule(id,data));
 h('module:updateDescription', (id,d)  => db.updateModuleDescription(id,d));
 h('module:delete',      (id)          => db.deleteModule(id));
@@ -731,7 +778,7 @@ h('trash:restore', (nx, id)  => db.restoreTrash(nx, id));
 h('trash:delete',  (nx, id)  => db.deleteTrash(nx, id));
 h('trash:empty',   (nx)      => db.emptyTrash(nx));
 // v5 Part 7 (§11.4): content search (FTS5 trigram, LIKE fallback).
-h('search:rebuild', (nx)     => db.rebuildSearch(nx, true));
+h('search:rebuild', (nx)     => db.rebuildSearch(nx)); // only if a write marked it stale (B3)
 h('search:query',   (nx, qy) => db.searchContent(nx, qy));
 
 // v5 Part 7 (§11.5): Diviner — random tables and dice.
@@ -794,12 +841,25 @@ h('htmlExport:write', async (nx, payload) => {
   const n = db.getNexus(nx);
   if (!n) return { ok: false, code: 'not_found' };
   const safe = String(n.name || 'nexus').replace(/[\\/:*?"<>|]/g, '_');
+  // Procress 16 part 6: a folder (ready to drop on a host) or a .zip
+  if (payload?.target === 'folder') {
+    const r = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
+      title: 'Export HTML', defaultPath: app.getPath('documents'), properties: ['openDirectory', 'createDirectory'],
+    });
+    if (r.canceled || !r.filePaths?.[0]) return { ok: false, canceled: true };
+    return db.exportHtmlSite(path.join(r.filePaths[0], `${safe}-site`), payload, nx, { folder: true });
+  }
   const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
     title: 'Export HTML', defaultPath: path.join(app.getPath('documents'), `${safe}-site.zip`),
     filters: [{ name: 'Website (.zip)', extensions: ['zip'] }],
   });
   if (result.canceled || !result.filePath) return { ok: false, canceled: true };
   return db.exportHtmlSite(result.filePath, payload, nx);
+});
+// "Open in the browser": the index of a folder just written
+h('htmlExport:open', (dir) => {
+  const f = path.join(String(dir || ''), 'index.html');
+  return fs.existsSync(f) ? shell.openPath(f) : 'missing';
 });
 // Procress 14 (EXPORT-DECOR.md E1): PDF. db/pdf-export.js makes one print
 // document from the pages the renderer drew; it is printed in a hidden
@@ -873,11 +933,12 @@ h('export:image', async (name, pic) => {
 // The renderer names the module and the format; main reads the vault.
 h('export:table', async (moduleId, format) => {
   const m = db.getModule(moduleId);
-  if (!m || !['csv', 'xlsx'].includes(format)) return { ok: false, code: 'not_found' };
+  if (!m || !['csv', 'xlsx', 'json'].includes(format)) return { ok: false, code: 'not_found' };
   const safe = String(m.name || 'table').replace(/[\\/:*?"<>|]/g, '_');
+  const FILTER = { csv: { name: 'CSV', extensions: ['csv'] }, xlsx: { name: 'Excel', extensions: ['xlsx'] }, json: { name: 'JSON', extensions: ['json'] } };
   const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
-    title: format === 'csv' ? 'Export CSV' : 'Export Excel', defaultPath: path.join(app.getPath('documents'), `${safe}.${format}`),
-    filters: [format === 'csv' ? { name: 'CSV', extensions: ['csv'] } : { name: 'Excel', extensions: ['xlsx'] }],
+    title: `Export ${FILTER[format].name}`, defaultPath: path.join(app.getPath('documents'), `${safe}.${format}`),
+    filters: [FILTER[format]],
   });
   if (result.canceled || !result.filePath) return { ok: false, canceled: true };
   return { ...db.exportTable(moduleId, format, result.filePath), saved: result.filePath };
@@ -890,6 +951,7 @@ h('module:getUi',       (id)          => db.getModuleUi(id));
 h('module:setUi',       (id,k,v)      => db.setModuleUi(id,k,v));
 h('module:getTags',     (id)          => db.getModuleTags(id));
 h('module:setTags',     (id,tags)     => db.setModuleTags(id,tags));
+h('module:tagIndex', (nx) => db.moduleTagIndex(nx));
 h('module:getLinks',    (id)          => db.getModuleLinks(id));
 h('module:getProps',    (id,item)     => db.getPageProps(id,item));
 
@@ -897,9 +959,11 @@ h('module:getProps',    (id,item)     => db.getPageProps(id,item));
 h('block:list',     (id,item)       => db.listBlocks(id,item));
 h('block:ensure',   (id,item,defs)  => db.ensurePage(id,item,defs));
 h('block:add',      (id,item,b)     => db.addBlock(id,item,b));
+h('block:addMany',  (id,item,list)  => db.addBlocks(id,item,list));
 h('block:get',      (id)            => db.getBlock(id));
 h('block:update',   (id,patch)      => db.updateBlock(id,patch));
 h('block:move',     (id,to)         => db.moveBlock(id,to));
+h('block:moveBeside', (tid,mid,side) => db.moveBeside(tid,mid,side));
 h('block:remove',   (id)            => db.deleteBlock(id));
 h('block:restore',  (rows)          => db.restoreBlocks(rows));
 h('block:split',    (id,item)       => db.splitItemPage(id,item));
@@ -925,8 +989,11 @@ h('classifier:setCatType',        (id,ct)              => db.setCatType(id,ct));
 h('classifier:getObjects',        (mref)                => db.getObjects(mref));
 h('classifier:getObjectsFull',    (mref)                => db.getObjectsFull(mref));
 h('classifier:createObject',      (mref,n,c,ic)         => db.createObject(mref,n,c,ic));
+h('classifier:createObjects',     (mref,rows)           => db.createObjects(mref,rows));
 h('classifier:updateObject',      (id,n,c,ic)           => db.updateObject(id,n,c,ic));
 h('classifier:deleteObject',      (id)                  => db.deleteObject(id));
+h('undo:capture',  (kind,id) => db.captureRows(kind,id));
+h('undo:restoreRows', (snap) => db.restoreRows(snap));
 h('classifier:duplicateObject',   (id,n)                => db.duplicateObject(id,n));
 h('classifier:moveObject',        (id,mref)             => db.moveObject(id,mref));
 h('classifier:getTemplates',      (mref)                => db.getTemplates(mref));
@@ -936,6 +1003,7 @@ h('classifier:updateTemplate',    (id,d,t,lv,c,op)      => db.updateTemplate(id,
 h('classifier:deleteTemplate',    (id)                  => db.deleteTemplate(id));
 h('classifier:getAttrs',          (oid)                 => db.getAttrs(oid));
 h('classifier:upsertAttr',        (oid,tid,v)           => db.upsertAttr(oid,tid,v));
+h('classifier:upsertAttrs',       (rows)                => db.upsertAttrs(rows));
 h('classifier:getLevels',         (oid)                 => db.getLevels(oid));
 h('classifier:createLevel',       (oid,tid)             => db.createLevel(oid,tid));
 h('classifier:updateLevelField',  (id,f,v)              => db.updateLevelField(id,f,v));
@@ -1013,6 +1081,7 @@ h('exhibitor:moveNodes',   (moves)      => db.moveExhibitNodes(moves));
 h('exhibitor:deleteNode',  (id)         => db.deleteExhibitNode(id));
 h('exhibitor:setView',     (mid, patch) => db.setExhibitView(mid, patch));
 h('exhibitor:findFor',     (mid)        => db.findExhibitorFor(mid));
+h('exhibitor:findAllFor',  (mid)        => db.findExhibitorsFor(mid));
 h('exhibitor:dedupeReport', ()          => db.takeRelationDedupeReport());
 
 // Drawing "Sketcher" (v3 Phase 15) — pages, strokes, pins, PNG export
@@ -1208,6 +1277,80 @@ h('nexus:locatePick', async (nx) => {
   return syncLocate(nx);
 });
 h('nexus:locateSync',   (nx) => syncLocate(nx));
+// Procress 16 B7 + Suggestion.md: files / folders dragged from the OS onto the
+// Nest (or pasted) are COPIED into the Nexus's Locate folder — into the folder
+// of the collector they were dropped on, by planMirror's layout — and the
+// Locate sync above files them, exactly as copying them there in Explorer
+// would. Dropped on a module that is not a folder: the new files are filed
+// under that module. A name already there becomes "name (2).ext".
+// → { ok, added } · { ok:false, code:'no_dir' } when the Nexus has no Locate
+//   folder yet (the renderer offers one, importdock:locateDefault, then retries).
+function freeName(dir, base) {
+  const ext = path.extname(base), stem = base.slice(0, base.length - ext.length);
+  let name = base;
+  for (let n = 2; fs.existsSync(path.join(dir, name)); n++) name = `${stem} (${n})${ext}`;
+  return path.join(dir, name);
+}
+function filesUnder(p) {
+  const st = fs.statSync(p);
+  if (!st.isDirectory()) return [p];
+  return fs.readdirSync(p).flatMap((n) => filesUnder(path.join(p, n)));
+}
+h('importdock:dropToNest', (nx, paths, targetId) => {
+  const v = db.getNexus(nx);
+  if (!v?.locate_dir || v.locate_missing) return { ok: false, code: 'no_dir' };
+  const src = (Array.isArray(paths) ? paths : []).slice(0, 200)
+    .filter((p) => typeof p === 'string' && path.isAbsolute(p) && fs.existsSync(p));
+  if (!src.length) return { ok: true, added: 0 };
+  const mods = vaultDB().prepare(`SELECT id, parent_id, name, kind, display_order FROM module WHERE nexus_ref=?`).all(nx);
+  const target = mods.find((m) => m.id === targetId) || null;
+  const folderId = !target ? null : target.kind === 'collector' ? target.id : target.parent_id;
+  const { planMirror } = require('./src/db/mirror');
+  const rel = folderId == null ? '' : (planMirror(mods).dirs.find((d) => d.id === folderId)?.rel || '');
+  const root = path.resolve(v.locate_dir);
+  const dest = path.join(root, ...rel.split('/').filter(Boolean));
+  fs.mkdirSync(dest, { recursive: true });
+  const copied = [];
+  for (const p of src) {
+    const to = freeName(dest, path.basename(p));
+    fs.cpSync(p, to, { recursive: true });
+    copied.push(...filesUnder(to));
+  }
+  const r = syncLocate(nx);
+  if (target && target.kind !== 'collector') {
+    for (const id of db.importIdsByPath(nx, copied)) db.setImportModule(id, target.id);
+  }
+  return { ok: true, added: copied.length, imported: r.imported || null };
+});
+// "Show in Explorer" (Procress 16 part 2): a file where it is, or a folder's
+// own directory inside the Locate folder (planMirror's layout).
+h('importdock:reveal', (nx, target) => {
+  if (target?.fileId != null) {
+    const f = db.getImportFile(Number(target.fileId));
+    if (!f?.file_path || !fs.existsSync(f.file_path)) return { ok: false };
+    shell.showItemInFolder(f.file_path);
+    return { ok: true };
+  }
+  const v = db.getNexus(nx);
+  if (!v?.locate_dir) return { ok: false };
+  const mods = vaultDB().prepare(`SELECT id, parent_id, name, kind, display_order FROM module WHERE nexus_ref=?`).all(nx);
+  const rel = planMirrorDirs(mods).find((d) => d.id === Number(target?.moduleId))?.rel || '';
+  const dir = path.join(path.resolve(v.locate_dir), ...rel.split('/').filter(Boolean));
+  if (!fs.existsSync(dir)) return { ok: false };
+  shell.openPath(dir);
+  return { ok: true };
+});
+const planMirrorDirs = (mods) => require('./src/db/mirror').planMirror(mods).dirs;
+// The Locate folder a first drop offers: "<vault name>" beside the .ddx.
+h('importdock:locateDefault', (nx, create) => {
+  const v = db.getNexus(nx);
+  if (!v?.file_path) return { ok: false };
+  const dir = path.join(path.dirname(v.file_path), String(v.name || 'Nexus').replace(/[\\/:*?"<>|]/g, '_').trim() || 'Nexus');
+  if (!create) return { ok: true, dir };
+  fs.mkdirSync(dir, { recursive: true });
+  db.setVaultLocateDir(nx, dir);
+  return { ok: true, dir, ...syncLocate(nx) };
+});
 // .dxpack (APP docs/ASSET-PACK.md): modules + files the APK / PWA sorted into
 // folders. The files land in the Nexus's Locate folder, laid out by the
 // collector tree — so a Nexus with no Locate folder yet is asked for one
@@ -1446,6 +1589,7 @@ h('importdock:relinkFolder', async (nx) => {
 
 // Version control (v3 Phase 21)
 h('versions:list',    (mref) => db.listVersions(mref));
+h('versions:recent',  (nx, n) => db.recentChanges(nx, n));
 h('versions:restore', (id)   => db.restoreVersion(id));
 // setting:get/set are a GENERIC key/value door into app_setting, which is
 // also where Drive/Sync park their refresh tokens and OAuth client secret.
@@ -1822,9 +1966,11 @@ h('window:openWelcome', () => { createWelcomeWindow(); });
 // wrapper discards it. Order matters: the new window exists before the old
 // one closes, so window-all-closed never sees zero windows and quits.
 ipcMain.handle('window:openNexusReplace', (event, nexusId) => {
-  createWindow(nexusId);
+  const win = createWindow(nexusId);
   const caller = BrowserWindow.fromWebContents(event.sender);
-  if (caller && !caller.isDestroyed()) caller.close();
+  // Procress 17 I6: the Welcome window goes once the vault window is up, not before — no gap
+  const closeCaller = () => { if (caller && !caller.isDestroyed()) caller.close(); };
+  if (win) win.once('show', closeCaller); else closeCaller();
 });
 // Same pattern as window:openNexus, but bootstraps a specific Builder tab
 // into a leaner popup window instead of the full app shell — see core.js's

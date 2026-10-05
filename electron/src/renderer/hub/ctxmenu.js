@@ -39,7 +39,7 @@ function ctxItemsHtml(items) {
     // no data-ci, so the arrow keys and the click wiring pass over it.
     if (it.head) return `<div class="ctx-head" role="presentation">${x(it.head)}</div>`;
     const i = _ctxActions.push(it) - 1;
-    const icon = it.icon && I[it.icon] ? `<span class="kicon">${I[it.icon]}</span>` : '';
+    const icon = it.icon && I[it.icon] ? `<span class="kicon" aria-hidden="true">${I[it.icon]}</span>` : '';
     const hasSub = !!(it.sub || it.subHtml);
     const cls = ['kind-list-item', hasSub ? 'kli-submenu-parent' : '', it.danger ? 'kli-danger' : '', it.disabled ? 'kli-disabled' : '']
       .filter(Boolean).join(' ');
@@ -70,7 +70,7 @@ function wireCtxItems(pop) {
     const row = e.target.closest('[data-ci]');
     if (!row) return;
     const it = _ctxActions[Number(row.dataset.ci)];
-    if (it?.sub || it?.subHtml) openCtxItemSubmenu(row, it);
+    if (it?.sub || it?.subHtml) ctxHoverIntent(() => { if (row.matches(':hover, :focus')) openCtxItemSubmenu(row, it); });
     else if (!pop.classList.contains('ctx-submenu')) scheduleCtxSubmenuClose();
   });
 }

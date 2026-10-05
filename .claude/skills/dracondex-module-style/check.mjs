@@ -251,7 +251,7 @@ console.log('=== command registry (core/commands.js) ===');
   const SURFACE_FILES = {
     'nest.ctx': ['hub/menus.js'], 'nest.head': ['hub/sections.js'], 'pane.ctx': ['hub/menus.js'],
     'rail': ['hub/kinds.js'], 'settings.menu': ['core/settings.js'], 'shortcut': ['core/shortcuts.js'],
-    'dock': ['mod/importdock.js'], 'assets.strip': ['mod/importdock.js'], 'asset.ctx': ['mod/importdock.js'],
+    'problems': ['hub/problems.js'], 'assets.strip': ['mod/importdock.js'], 'asset.ctx': ['mod/importdock.js'],
     'asset.viewer': ['mod/fileviewer.js'], 'text.ctx': ['core/wiki-field.js'],
     'canvas.ctx': ['mod/canvas-ctx.js'], 'classifier.ctx': ['mod/classifier-ctx.js'], 'exhibitor.ctx': ['mod/exhibitor-cards.js'],
     'locator.page': ['mod/locator.js'], 'sketcher.board': ['mod/sketcher.js'], 'scribe.toolbar': ['mod/chatscribe.js'],
@@ -325,6 +325,25 @@ console.log('=== command registry (core/commands.js) ===');
   }
 }
 
+// ═══ One global scope ═══
+// Every <script> in index.html shares one scope: a second top-level
+// const/let/class of the same name is a SyntaxError that silently drops the
+// WHOLE later file (Procress 16 B12 nearly shipped page.js's pbBlockOf over
+// style-pop.js's, killing the ⚙ popover).
+{
+  console.log('\n=== top-level names across index.html scripts ===');
+  const seen = new Map();
+  for (const [, f] of indexSrc.matchAll(/<script src="(src\/[^"]+)"/g)) {
+    if (!existsSync(path.join(root, app(f)))) continue;
+    for (const [, name] of read(app(f)).matchAll(/^(?:const|let|class)\s+([A-Za-z_$][\w$]*)/gm)) {
+      if (seen.has(name)) err(`\`${name}\` is declared at top level in both ${seen.get(name)} and ${f} — the later script would not load`);
+      else seen.set(name, f);
+    }
+  }
+  if (![...seen.keys()].length) warn('no scripts found in index.html');
+  else ok(`${seen.size} top-level const/let/class names, none declared twice`);
+}
+
 // ═══ Per-file lint ═══
 // Recursive: renderer code lives in src/renderer/{,mod/,core/,hub/,navigator/,
 // hero/}. A flat readdir here used to skip mod/ entirely and would now skip
@@ -370,6 +389,10 @@ for (const file of targets) {
     if (commentAt !== -1 && commentAt < col) continue;
     err(`${m[1]}() at line ${lineOf(m.index)} — use toast() / uiConfirm() (${app('src/renderer/core')}/)`);
   }
+
+  // xj() already HTML-escapes; x(xj(…)) escapes twice → &quot; inside an inline
+  // handler = silent syntax error, the button does nothing (Procress 16 B1)
+  for (const m of src.matchAll(/\bx\(\s*xj\(/g)) err(`x(xj(…)) at line ${lineOf(m.index)} — xj() is already escaped, drop the outer x()`);
 
   // hardcoded hex colors (allow `|| '#xxxxxx'` data-color fallbacks)
   const hexLines = [];

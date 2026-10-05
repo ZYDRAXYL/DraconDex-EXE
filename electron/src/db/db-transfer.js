@@ -8,6 +8,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { DATA_EXT, PAGE_EXT, readModuleFile, writeModuleFiles } = require('./module-files');
 const { getNexuses, exportNexusVaultFile } = require('./nexus');
 const { getVaultDB } = require('./conn');
 const { ASSET_CLASS } = require('./asset-media');
@@ -35,13 +36,16 @@ function exportModuleFile(nexusId, moduleId, filePath) {
   if (!moduleIds.length) return { ok: false, code: 'not_found' };
   const snapshot = serializeVault(nexusId, moduleIds);
   if (!snapshot) return { ok: false, code: 'not_found' };
-  fs.writeFileSync(filePath, JSON.stringify(snapshot));
+  // Procress 16 part 3a: <name>.ddata + <name>.dpage (a .mddx path still gets one file)
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === DATA_EXT || ext === PAGE_EXT) writeModuleFiles(filePath.slice(0, -ext.length), snapshot);
+  else fs.writeFileSync(filePath, JSON.stringify(snapshot));
   return { ok: true };
 }
 
 function importModuleFile(nexusId, parentModuleId, filePath) {
   let payload;
-  try { payload = JSON.parse(fs.readFileSync(filePath, 'utf8')); }
+  try { payload = readModuleFile(filePath); } // .ddata(+.dpage) · .mddx · .mdx · .json
   catch (e) { return { ok: false, code: 'bad_file', error: String(e?.message || e) }; }
   return importModuleSnapshot(nexusId, parentModuleId, payload);
 }

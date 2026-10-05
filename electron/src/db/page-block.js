@@ -114,6 +114,35 @@ function addBlock(moduleId, itemKey, b = {}) {
   })();
 }
 
+// Procress 16 part 3b (the Notion move): a block dropped on the left or
+// right of another — the two become a 50/50 row where the target stood (in
+// the same column, if it was in one). One transaction, so one undo.
+function moveBeside(targetId, moverId, side) {
+  const d = getDB();
+  const one = (id) => d.prepare(`SELECT * FROM page_block WHERE id=?`).get(id);
+  const t = one(targetId);
+  const m = one(moverId);
+  if (!t || !m || t.id === m.id || t.module_ref !== m.module_ref || (t.item_key ?? null) !== (m.item_key ?? null)) return null;
+  const cfg = (r) => { try { return JSON.parse(r.config || '{}') || {}; } catch (_) { return {}; } };
+  return d.transaction(() => {
+    const tc = cfg(t);
+    const rowCfg = { widths: [6, 6], n: 2, ...(t.parent_id != null && tc.col != null ? { col: tc.col } : {}) };
+    const rowId = d.prepare(`INSERT INTO page_block (module_ref, item_key, parent_id, block_type, config, block_order) VALUES (?,?,?,?,?,?)`)
+      .run(t.module_ref, t.item_key ?? null, t.parent_id ?? null, 'columns', JSON.stringify(rowCfg), t.block_order).lastInsertRowid;
+    const [left, right] = side === 'left' ? [m, t] : [t, m];
+    const put = d.prepare(`UPDATE page_block SET parent_id=?, config=? WHERE id=?`);
+    put.run(rowId, JSON.stringify({ ...cfg(left), col: 0 }), left.id);
+    put.run(rowId, JSON.stringify({ ...cfg(right), col: 1 }), right.id);
+    // the row takes the target's place in the page order
+    const ids = d.prepare(`SELECT id FROM page_block WHERE module_ref=? AND ${pageWhere(t.item_key)} AND ${STACK_TYPES} ORDER BY block_order, id`)
+      .all(...pageArgs(t.module_ref, t.item_key)).map((r) => r.id).filter((x) => x !== rowId);
+    ids.splice(Math.max(0, ids.indexOf(t.id)), 0, rowId);
+    const up = d.prepare(`UPDATE page_block SET block_order=? WHERE id=?`);
+    ids.forEach((x, i) => up.run(i, x));
+    return rowId;
+  })();
+}
+
 const getBlock = (id) => parseConfig(getDB().prepare(`SELECT * FROM page_block WHERE id=?`).get(id));
 
 // patch: any of {content, config, propName, propType, sourceKey, parentId}.
@@ -264,8 +293,12 @@ function blockLinkUrl(blockId, path) {
   return normalizeAssetUrl(to.slice(4));
 }
 
+// Procress 17 B1: several blocks, one transaction (addBlock's own transaction joins it).
+const addBlocks = (moduleId, itemKey, list = []) => getDB().transaction(() =>
+  versions.asOneVersion(moduleId, 'block', `+ ${list.length}`, () => list.map((b) => addBlock(moduleId, itemKey, b))))();
+
 module.exports = {
-  blockLinkUrl,
-  listBlocks, listProps, ensurePage, addBlock, getBlock, updateBlock, moveBlock, deleteBlock,
+  blockLinkUrl, addBlocks,
+  listBlocks, listProps, ensurePage, addBlock, getBlock, updateBlock, moveBlock, moveBeside, deleteBlock,
   restoreBlocks, splitItemPage, revertItemPage, clearItemBlocks, setProp, getPageProps,
 };

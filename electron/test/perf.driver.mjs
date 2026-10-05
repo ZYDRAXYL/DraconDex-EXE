@@ -1,0 +1,104 @@
+// Procress 17 — the measuring script behind Plan.md's "ตัวเลขที่วัดได้" table.
+// Builds the stress vault the table was measured on (520 modules + a
+// Classifier with 3,000 objects / 5,000 values) in the real app and prints
+// each number next to its target. Re-run after every part-2/3 change: a row
+// that does not move is not done (Plan.md Procress 17 "การตรวจ").
+//
+//   node electron/test/perf.driver.mjs
+//
+// A tool, not a CI test (it prints, it does not assert) — no test glob runs it.
+import { launchWithVault } from './ui-app.mjs';
+
+const ui = await launchWithVault('Perf');
+const { win } = ui;
+const rows = [];
+const row = (what, value, target) => { rows.push({ what, value, target }); console.log(`${what.padEnd(46)} ${String(value).padEnd(18)} ${target}`); };
+
+try {
+  // per-kind open time on the sample vault (before it grows)
+  const kinds = await win.evaluate(async () => {
+    const out = [];
+    const w = (ns) => ns.forEach((m) => { if (m.kind !== 'collector') out.push(m); w(m.children || []); });
+    w(S.moduleTree);
+    const res = [];
+    for (const m of out) { const t0 = performance.now(); await openModuleNode(m.id); res.push([m.kind, performance.now() - t0]); }
+    return res;
+  });
+  const slowest = kinds.sort((a, b) => b[1] - a[1])[0];
+  row('open each kind (sample vault), slowest', `${Math.round(slowest[1])} ms (${slowest[0]})`, '< 200 ms');
+
+  // the stress vault — built with the batch APIs (B1)
+  const seed = await win.evaluate(async () => {
+    const nx = S.nexus.id;
+    let t0 = performance.now();
+    const folders = await api.module.createMany(Array.from({ length: 20 }, (_, i) => ({ nexus_ref: nx, name: `Folder ${i}`, kind: 'collector' })));
+    await api.module.createMany(Array.from({ length: 500 }, (_, i) => ({ nexus_ref: nx, parent_id: folders[i % 20], name: `Doc ${i}`, kind: 'drafter' })));
+    const modules = performance.now() - t0;
+    const cls = await api.module.create({ nexus_ref: nx, parent_id: null, name: 'Big category', kind: 'classifier', cat_type: 'object' });
+    const t1 = await api.classifier.createTemplate(cls, 'Age', 'text', false, false, null);
+    const t2 = await api.classifier.createTemplate(cls, 'Role', 'text', false, false, null);
+    t0 = performance.now();
+    const ids = await api.classifier.createObjects(cls, Array.from({ length: 3000 }, (_, i) => ({ name: `Object ${i}` })));
+    await api.classifier.upsertAttrs(ids.flatMap((id, i) => (i < 2000 ? [{ objectId: id, templateId: t1, value: String(i) }, { objectId: id, templateId: t2, value: 'r' }] : [{ objectId: id, templateId: t1, value: String(i) }])));
+    return { cls, modules, objects: performance.now() - t0 };
+  });
+  row('write 520 modules (batch IPC)', `${Math.round(seed.modules)} ms`, '—');
+  row('write 3,000 objects + 5,000 values (batch IPC)', `${Math.round(seed.objects)} ms`, '< 1,000 ms');
+
+  // one write over IPC
+  const perWrite = await win.evaluate(async (cls) => {
+    const t0 = performance.now();
+    for (let i = 0; i < 200; i++) await api.classifier.createObject(cls, `Single ${i}`, null, null);
+    return (performance.now() - t0) / 200;
+  }, seed.cls);
+  row('one write over IPC', `${perWrite.toFixed(2)} ms`, '(was 4.7 ms)');
+
+  // Nest tree at 520 modules + 3,000 elements
+  const nest = await win.evaluate(async () => {
+    S.settings.nestShowItems = true;
+    let t0 = performance.now();
+    await reloadModuleTree();
+    const reload = performance.now() - t0;
+    const dom = document.querySelectorAll('#left-panel-inner *').length;
+    t0 = performance.now();
+    setNestFilter('Doc 4');
+    const filter = performance.now() - t0;
+    setNestFilter('');
+    return { reload, dom, filter };
+  });
+  row('Nest: reloadModuleTree', `${Math.round(nest.reload)} ms`, '< 50 ms');
+  row('Nest: elements in DOM', nest.dom, '< 1,500');
+  row('Nest: one filter keystroke', `${Math.round(nest.filter)} ms`, '< 50 ms');
+
+  // the 3,000-object Classifier, each view
+  for (const view of ['table', 'listDetail', 'grid', 'relationCat']) {
+    const r = await win.evaluate(async ([cls, v]) => {
+      // the view lives on the page block (config.preset) — switch it the way the view bar does
+      await openModuleNode(cls);
+      const iid = document.querySelector('[onclick*="setClassifierView"]')?.getAttribute('onclick').match(/setClassifierView\(["']([^"']+)["']/)?.[1];
+      if (iid) await setClassifierView(iid, v);
+      await builderOpenPage(null);
+      const t0 = performance.now();
+      await openModuleNode(cls);
+      await new Promise((res) => requestAnimationFrame(() => res()));
+      return { ms: performance.now() - t0, dom: document.querySelectorAll('#main-inner *').length };
+    }, [seed.cls, view]);
+    row(`Classifier 3,000: ${view}`, `${Math.round(r.ms)} ms · ${r.dom} nodes`, '< 300 ms · < 3,000');
+  }
+
+  // Home of the big vault, and search
+  const home = await win.evaluate(async () => { const t0 = performance.now(); await builderOpenPage(null); return performance.now() - t0; });
+  row('Home of the big vault', `${Math.round(home)} ms`, '< 150 ms');
+  const search = await win.evaluate(async () => {
+    const nx = S.nexus.id;
+    await api.classifier.createObject((S.moduleTree.find((m) => m.kind === 'classifier') || {}).id, 'x', null, null).catch(() => {});
+    let t0 = performance.now(); await api.search.rebuild(nx); const rebuild = performance.now() - t0;
+    t0 = performance.now(); await api.search.query(nx, 'Object 12'); const query = performance.now() - t0;
+    return { rebuild, query };
+  });
+  row('search: rebuild / query', `${Math.round(search.rebuild)} / ${Math.round(search.query)} ms`, '(146 / 10 ms)');
+  const mem = await ui.app.evaluate(() => process.memoryUsage().rss / 1e6);
+  row('RAM main process', `${Math.round(mem)} MB`, '(237–260 MB)');
+} finally {
+  await ui.close();
+}

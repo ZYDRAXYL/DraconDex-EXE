@@ -53,7 +53,9 @@ test('every command has a unique id, a label, a scope and a surface besides the 
 
 test('module menu: folder-only rows appear on a folder and not on a module', () => {
   const { cmdItem } = load({ tree: [folder] });
-  assert.ok(cmdItem('module.create', { moduleId: 1 })?.subHtml, 'create is a flyout on a folder');
+  // Procress 17 I2: a click row that opens the kind picker, not a hover flyout
+  const create = cmdItem('module.create', { moduleId: 1 });
+  assert.ok(create && !create.subHtml && create.onClick, 'create is a click row on a folder');
   assert.equal(cmdItem('module.create', { moduleId: 2 }), null);
   assert.equal(cmdItem('module.openTab', { moduleId: 1 }), null, 'a folder has no page to open');
   assert.ok(cmdItem('module.openTab', { moduleId: 2 }));

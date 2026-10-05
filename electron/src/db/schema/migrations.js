@@ -32,6 +32,7 @@ function migrateInlineColumns(db) {
   // v5: rebuild module for its kind CHECK BEFORE idx_module_handle is made —
   // a rebuild drops every index on the table, and this one is not in INDEX_SQL.
   migrateModuleKindV5(db);
+  migrateModuleKindPage(db); // Procress 16 part 3a
   try { db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_module_handle ON module(nexus_ref, handle COLLATE NOCASE) WHERE handle IS NOT NULL`).run(); } catch (_) {}
   migrateClassifierLevels(db);
   migrateDesignNodeShapes(db);
@@ -280,6 +281,30 @@ function migrateModuleKindV5(db) {
   }
   const bad = db.prepare(`PRAGMA foreign_key_check`).all();
   if (bad.length) console.error(`module kind v5 migration: ${bad.length} foreign-key violation(s)`, bad.slice(0, 5));
+}
+
+// Procress 16 part 3a (APP docs/DATA-PAGE.md): kind 'page' — a page of its
+// own, with no data of its own, drawing on other modules through its components.
+// The same rebuild as migrateModuleKindV5. SDB's vault.sql carries 'page' from
+// its next release; until that is vendored, the vendored DDL is widened here,
+// and once it is, the CHECK test below makes this a no-op.
+const withPageKind = (ddl) => (/kind\s+IN\s*\([^)]*'page'/i.test(ddl) ? ddl : ddl.replace(/'diviner'\s*\)/, "'diviner','page')"));
+function migrateModuleKindPage(db) {
+  if (!hasTable(db, 'module') || /kind\s+IN\s*\([^)]*'page'/i.test(tableSql(db, 'module'))) return;
+  try {
+    const cols = columnsOf(db, 'module');
+    db.exec('PRAGMA foreign_keys = OFF');
+    db.exec(withPageKind(vendoredTableDdl('module', 'module_new')));
+    const keep = columnsOf(db, 'module_new').filter((c) => cols.includes(c));
+    db.exec(`INSERT INTO module_new (${keep.join(', ')}) SELECT ${keep.join(', ')} FROM module`);
+    db.exec('DROP TABLE module');
+    db.exec('ALTER TABLE module_new RENAME TO module');
+  } catch (e) {
+    console.error('module kind page migration error:', e);
+    try { db.exec('DROP TABLE IF EXISTS module_new'); } catch (_) {}
+  } finally {
+    db.exec('PRAGMA foreign_keys = ON');
+  }
 }
 
 // Rows removed as duplicates by the last entity_relation rebuild, reported

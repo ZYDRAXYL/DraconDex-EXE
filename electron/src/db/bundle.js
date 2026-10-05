@@ -51,7 +51,7 @@ const wiki = require('./wiki');
 
 const MAX_MODULES = 60;
 const KINDS = new Set(['manager', 'inspector', 'classifier', 'locator', 'chronicler', 'wanderer', 'narrator',
-  'author', 'scribe', 'drafter', 'exhibitor', 'sketcher', 'designer', 'diviner']);
+  'author', 'scribe', 'drafter', 'exhibitor', 'sketcher', 'designer', 'diviner', 'page']);
 const str = (v, n = 4000) => (typeof v === 'string' ? v.slice(0, n) : v == null ? '' : String(v).slice(0, n));
 const arr = (v) => (Array.isArray(v) ? v : []);
 const COLLECTIONS = ['objects', 'events', 'chapters', 'dialogues', 'sessions', 'nodes', 'pages', 'tables'];

@@ -17,7 +17,8 @@ body[data-theme="daylight"]{
 	--t2:#596274;
 	--t3:#8a94a6;
 	--accent:#2563eb;
-	--accentH:#3b82f6;
+	--accentH:#1d4ed8; /* Procress 18 part 5: a light theme's hover is DARKER — #3b82f6 text read 3.4:1 */
+	--accent-text:#1d4ed8;
 	--danger:#dc2626;
 	--success:#16a34a;
 	--warn:#92400e;--on-warn:#ffffff;
@@ -49,8 +50,9 @@ body[data-theme="midnight"]{
 	--t1:#e8e8f0;
 	--t2:#9090a8;
 	--t3:#5a5a72;
-	--accent:#6366f1;
+	--accent:#585ced; /* Procress 18 part 5: white on it 5.0:1 (#6366f1 was 4.47) */
 	--accentH:#818cf8;
+	--accent-text:#818cf8; /* accent as text on the dark surfaces */
 	--danger:#ef4444;
 	--success:#22c55e;
 	--warn:#f59e0b;

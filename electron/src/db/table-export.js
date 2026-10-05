@@ -185,6 +185,28 @@ ${sheets.map((n) => `<Relationship Id="rId${n}" Type="http://schemas.openxmlform
 }
 
 // ── The export ────────────────────────────────────────────────────────
+// Procress 16 part 7 — for a game engine: every table as records keyed by
+// column name, values typed the way the field is (a number a number, a
+// checkbox a boolean, a multi-choice a list). One file for all the tables.
+function toJson(tables) {
+  const typed = (type, v) => {
+    if (v === '' || v == null) return null;
+    if (type === 'number') { const n = Number(v); return Number.isFinite(n) ? n : v; }
+    if (type === 'checkbox') return v === 'true';
+    if (type === 'multi') return String(v).split(', ').filter(Boolean);
+    return v;
+  };
+  return JSON.stringify({
+    format: 'dracondex-table', version: 1,
+    tables: tables.map((tb) => {
+      const keys = []; // a column name twice gets a suffix, so no value is lost
+      for (const c of tb.columns) { let k = c.name; for (let i = 2; keys.includes(k); i++) k = `${c.name} ${i}`; keys.push(k); }
+      return { name: tb.name, columns: tb.columns.map((c, i) => ({ key: keys[i], type: c.type })),
+        records: tb.rows.map((r) => Object.fromEntries(keys.map((k, i) => [k, typed(tb.columns[i].type, r[i])]))) };
+    }),
+  }, null, 2);
+}
+
 function exportTable(moduleId, format, outPath, fs = require('fs')) {
   const tables = tablesFor(moduleId);
   if (!tables.length) return { ok: false, code: 'not_table' };
@@ -198,7 +220,11 @@ function exportTable(moduleId, format, outPath, fs = require('fs')) {
     const r = writeZip(outPath, xlsxEntries(tables));
     return r.ok ? { ok: true, rows, sheets: tables.length, more: 0, skipped } : r;
   }
+  if (format === 'json') {
+    fs.writeFileSync(outPath, toJson(tables), 'utf8');
+    return { ok: true, rows, sheets: tables.length, more: 0, skipped };
+  }
   return { ok: false, code: 'bad_format' };
 }
 
-module.exports = { classifierTable, chroniclerTables, tablesFor, toCsv, xlsxEntries, sheetNames, exportTable, isoDate };
+module.exports = { classifierTable, chroniclerTables, tablesFor, toCsv, toJson, xlsxEntries, sheetNames, exportTable, isoDate };

@@ -142,3 +142,14 @@ test('a Chronicler: a sheet per timeline, dates as y.mm.dd; CSV takes the first 
   assert.ok(readFileSync(out, 'utf8').includes("'+danger"));
   assert.equal(tx.exportTable(mkModule('โน้ต', 'drafter'), 'csv', out).code, 'not_table');
 });
+
+// Procress 16 part 7 — for a game engine: JSON records, typed by field.
+test('JSON: records keyed by column, numbers as numbers, checkboxes as booleans, one entry per table', () => {
+  const tables = [{ name: 'Units', columns: [{ name: 'name', type: 'text' }, { name: 'HP', type: 'number' }, { name: 'Boss', type: 'checkbox' }, { name: 'Tags', type: 'multi' }, { name: 'HP', type: 'number' }],
+    rows: [['Slime', '12', 'false', 'goo, small', '3'], ['Dragon', '900', 'true', '', '']] }];
+  const out = JSON.parse(tx.toJson(tables));
+  assert.equal(out.format, 'dracondex-table');
+  assert.deepEqual(out.tables[0].columns.map((c) => c.key), ['name', 'HP', 'Boss', 'Tags', 'HP 2']);
+  assert.deepEqual(out.tables[0].records[0], { name: 'Slime', HP: 12, Boss: false, Tags: ['goo', 'small'], 'HP 2': 3 });
+  assert.deepEqual(out.tables[0].records[1], { name: 'Dragon', HP: 900, Boss: true, Tags: null, 'HP 2': null });
+});

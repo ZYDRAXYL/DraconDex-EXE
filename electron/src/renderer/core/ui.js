@@ -39,6 +39,15 @@ let _tt;
 // indistinguishable from a success message. Aliasing here fixes all of them at
 // once and keeps future call sites from having to remember which spelling wins.
 const TOAST_CLS = { error: 'err', success: 'ok' };
+// Procress 18 part 4: what a screen reader should hear when the screen
+// already shows it (a rename that took, a move) — no toast for those.
+function announce(msg) {
+  const el = document.getElementById('sr-live');
+  if (!el) return;
+  el.textContent = '';
+  requestAnimationFrame(() => { el.textContent = msg; });
+}
+
 function toast(msg,type='') {
   const el=q('#toast'); el.textContent=tr(msg); el.className=`show ${TOAST_CLS[type] || type}`;
   clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2600);
@@ -470,4 +479,3 @@ function animateToggleCloseThenCommit(el, commit) {
   const ms = ANIM_SPEED_MS[S.settings.animationSpeed] || ANIM_SPEED_MS.normal;
   setTimeout(finish, ms + 60); // safety net if animationend never fires
 }
-

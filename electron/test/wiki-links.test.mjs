@@ -161,3 +161,38 @@ test('footnotes: numbered by first reference, notes carried for the hover card, 
   assert.equal(L.mdRender('no notes here'), '<p>no notes here</p>');
   assert.match(L.mdRender('x[^<img>]'), /x\[\^&lt;img&gt;\]/, 'not an id: left as escaped text');
 });
+
+// Procress 16 part 5 — another name for a page (a redirect): a page property
+// "alias" resolves [[Old name]] to the module; a real name always wins; the
+// renderer's quick index carries the alias after every real name.
+test('an alias property resolves to its module, after every real name', () => {
+  freshVault();
+  const wiki = require('../src/db/wiki.js');
+  const town = mkModule('Port Ashen', 'drafter');
+  const other = mkModule('The Harbor', 'drafter');
+  pb.setProp(town, null, null, 'alias', 'Ashport, The Harbor', 'text');
+  assert.equal(wiki.resolveWikiName('Ashport', 1), `module_${town}`);
+  assert.equal(wiki.resolveWikiName('ashport', 1), `module_${town}`, 'any case');
+  assert.equal(wiki.resolveWikiName('The Harbor', 1), `module_${other}`, 'a real name wins over an alias');
+  assert.equal(wiki.resolveWikiName('Ash', 1), null, 'a whole alias, not part of one');
+  const qi = wiki.quickIndex(1);
+  const at = (name) => qi.findIndex((e) => e.name === name);
+  assert.ok(at('Ashport') > at('Port Ashen') && at('Ashport') > at('The Harbor'), 'aliases come last');
+});
+
+// Procress 16 part 5 — the vault-wide feed: edits and Hub events together,
+// newest first, one row per module, a deleted module still named.
+test('recent changes: edits and hub events, one row per module, newest first', () => {
+  freshVault();
+  const v = require('../src/db/versions.js');
+  const a = mkModule('Alpha', 'drafter');
+  const b = mkModule('Beta', 'drafter');
+  const at = (sec) => `2026-01-01 00:00:${String(sec).padStart(2, '0')}`;
+  const ins = db.prepare(`INSERT INTO module_version (module_ref, seq, action, detail, create_at) VALUES (?,?,?,?,?)`);
+  ins.run(a, 1, 'note', null, at(1)); ins.run(a, 2, 'note', null, at(5)); ins.run(b, 1, 'block', null, at(3));
+  db.prepare(`INSERT INTO nexus_history (nexus_ref, seq, action, module_ref, module_name, create_at) VALUES (1,1,'delete',999,'Gone',?)`).run(at(9));
+  const r = v.recentChanges(1, 10);
+  assert.deepEqual(r.map((x) => x.name), ['Gone', 'Alpha', 'Beta']);
+  assert.equal(r.find((x) => x.name === 'Alpha').at, at(5), 'its latest change');
+  assert.equal(r.length, 3);
+});

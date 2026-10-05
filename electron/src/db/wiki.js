@@ -26,6 +26,7 @@ const WIKILINK_RE = /\[\[([^\[\]|]+?)(?:\|([^\[\]]+?))?\]\]/g;
 // there.
 const ekResolver = (prefix) => [prefix, (d, n, nx) => scopedGet(d, ENTITY_KINDS[prefix].wiki.sql, nx, n)?.id, `${prefix}_`];
 const WIKI_FAMILIES = Object.keys(ENTITY_KINDS).filter((p) => ENTITY_KINDS[p].wiki);
+const ALIAS_PROPS = `('alias','aliases','ชื่อแฝง')`;
 const RESOLVERS = [
   ...WIKI_FAMILIES.filter((p) => p === 'note').map(ekResolver),
   ['obj',   (d, n, nx) => scopedGet(d, `SELECT o.id FROM object o JOIN project p ON o.project_id=p.id WHERE (? IS NULL OR p.nexus_ref=?) AND o.name=? COLLATE NOCASE`, nx, n)?.id, 'obj_'],
@@ -41,6 +42,12 @@ const RESOLVERS = [
   ['write', (d, n, nx) => scopedGet(d, `SELECT id FROM write_project WHERE (? IS NULL OR nexus_ref=?) AND project_name=? COLLATE NOCASE`, nx, n)?.id, 'write_'],
   ...WIKI_FAMILIES.filter((p) => p !== 'note' && p !== 'file').map(ekResolver),
   ...WIKI_FAMILIES.filter((p) => p === 'file').map(ekResolver),
+  // Procress 16 part 5: a module's other names — a page property "alias"
+  // (or "aliases" / "ชื่อแฝง"), comma-separated — so [[Old name]] still
+  // reaches it (a redirect). Last: a real name always wins.
+  ['alias', (d, n, nx) => scopedGet(d, `SELECT pb.module_ref AS id FROM page_block pb JOIN module m ON m.id=pb.module_ref
+    WHERE (? IS NULL OR m.nexus_ref=?) AND pb.block_type='property' AND pb.item_key IS NULL AND lower(pb.prop_name) IN ${ALIAS_PROPS}
+      AND (',' || lower(replace(replace(pb.content, ', ', ','), ' ,', ',')) || ',') LIKE '%,' || lower(?) || ',%' LIMIT 1`, nx, n)?.id, 'module_'],
 ];
 
 // Optional memo for bulk passes (Plan part2 #2.4). A miss costs all 17
@@ -298,6 +305,13 @@ function _quickIndex(nexusId) {
   add(`SELECT s.id, s.name, NULL AS color_code FROM chat_session s JOIN module m ON s.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'chss_', 'chat', 'scribe');
   add(`SELECT o.id, o.name, uc.color_code FROM classifier_object o JOIN module m ON o.module_ref=m.id LEFT JOIN use_color uc ON uc.id=o.color WHERE (? IS NULL OR m.nexus_ref=?)`, 'cobj_', 'object', 'classifier');
   add(`SELECT t.id, t.name, NULL AS color_code FROM diviner_table t JOIN module m ON t.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'divt_', 'table', 'diviner');
+  // aliases last, so a real name keeps precedence in the renderer's cache too
+  try {
+    for (const r of scopedAll(d, `SELECT pb.module_ref AS id, pb.content FROM page_block pb JOIN module m ON m.id=pb.module_ref
+      WHERE (? IS NULL OR m.nexus_ref=?) AND pb.block_type='property' AND pb.item_key IS NULL AND lower(pb.prop_name) IN ${ALIAS_PROPS}`, nx)) {
+      for (const a of String(r.content || '').split(',').map((s) => s.trim()).filter(Boolean)) out.push({ key: `module_${r.id}`, name: a, type: 'alias', module: 'hub', color: null });
+    }
+  } catch (_) {}
   return out;
 }
 

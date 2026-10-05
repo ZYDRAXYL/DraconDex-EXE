@@ -140,6 +140,21 @@ for (const raw of commands) {
         console.log(`[rclick] ${rest} @ ${cx},${cy}`);
         break;
       }
+      case 'hover':
+      case 'mclick': {
+        // Real pointer: `hover <sel> [:: steps]` moves there in `steps` moves
+        // (default 12), crossing whatever lies on the way like a hand would —
+        // so :hover, mouseenter and hover-intent code see what a user makes.
+        // `mclick <sel>` is a real middle click (fires auxclick).
+        const [sel, steps] = rest.split(' :: ');
+        const box = await win.locator(sel).first().boundingBox({ timeout: 5000 });
+        if (!box) throw new Error(`${verb}: element not visible`);
+        const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+        await win.mouse.move(cx, cy, { steps: Number(steps) || 12 });
+        if (verb === 'mclick') await win.mouse.click(cx, cy, { button: 'middle' });
+        console.log(`[${verb}] ${sel} @ ${cx},${cy}`);
+        break;
+      }
       case 'fill': {
         const [sel, text] = rest.split(' :: ');
         await win.fill(sel.trim(), text ?? '', { timeout: 5000 });

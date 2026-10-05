@@ -126,6 +126,9 @@ test('both rebuilds are idempotent and leave a fresh v5 vault untouched', () => 
   mig.migrateInlineColumns(db);
   assert.deepEqual(db.prepare(`SELECT sql FROM sqlite_master WHERE name IN ('module','entity_relation') ORDER BY name`).all(), once);
   openVault(VAULT_DDL_SQL);
+  // Procress 16 part 3a: until SDB's vendored DDL carries kind 'page', a fresh
+  // vault gets that one rebuild (migrateModuleKindPage); every run after is a no-op.
+  mig.migrateInlineColumns(db);
   const fresh = db.prepare(`SELECT sql FROM sqlite_master WHERE name IN ('module','entity_relation') ORDER BY name`).all();
   mig.migrateInlineColumns(db);
   assert.deepEqual(db.prepare(`SELECT sql FROM sqlite_master WHERE name IN ('module','entity_relation') ORDER BY name`).all(), fresh);

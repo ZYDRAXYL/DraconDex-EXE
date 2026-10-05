@@ -287,10 +287,12 @@ const upsertAttr = (objectId, templateId, value) => {
   const obj = d.prepare(`SELECT name, module_ref FROM classifier_object WHERE id=?`).get(objectId);
   const tpl = d.prepare(`SELECT description FROM classifier_template WHERE id=?`).get(templateId);
   const prev = d.prepare(`SELECT attribute_value FROM classifier_attribute WHERE object_ref=? AND template_ref=?`).get(objectId, templateId);
-  const r = d.prepare(`
-    INSERT INTO classifier_attribute (object_ref, template_ref, attribute_value) VALUES (?,?,?)
-    ON CONFLICT(object_ref, template_ref) DO UPDATE SET attribute_value=excluded.attribute_value, update_at=datetime('now')
-  `).run(objectId, templateId, value);
+  // update-by-id or insert, not an upsert: the session undo (undo.js) can
+  // reverse these two shapes, and a field edit is the edit most often undone.
+  const row = d.prepare(`SELECT id FROM classifier_attribute WHERE object_ref=? AND template_ref=?`).get(objectId, templateId);
+  const r = row
+    ? d.prepare(`UPDATE classifier_attribute SET attribute_value=?, update_at=datetime('now') WHERE id=?`).run(value, row.id)
+    : d.prepare(`INSERT INTO classifier_attribute (object_ref, template_ref, attribute_value) VALUES (?,?,?)`).run(objectId, templateId, value);
   if (obj && (prev?.attribute_value ?? '') !== (value ?? '')) {
     versions.recordVersion(obj.module_ref, 'attr',
       `${obj.name} · ${tpl?.description ?? ''}: ${prev?.attribute_value ?? '—'} → ${value ?? ''}`,
@@ -350,8 +352,23 @@ function moveLevels(objectId, templateId, orderedIds) {
   })();
 }
 
+// Procress 17 B1: many rows in ONE transaction, through the single-row path
+// (same versions / wiki side effects). conn.js measured a statement outside a
+// transaction at ~2.5 ms and inside one at ~6 µs — paste, duplicate, bundle
+// and import of hundreds of rows were paying the first price per row.
+// One history entry per batch (versions.asOneVersion), which undoes it all.
+const createObjects = (moduleRef, rows = []) => getDB().transaction(() =>
+  versions.asOneVersion(moduleRef, 'object', `+ ${rows.length}`, () =>
+    rows.map((r) => createObject(moduleRef, r.name, r.colorId ?? null, r.icon ?? null))))();
+const upsertAttrs = (rows = []) => {
+  if (!rows.length) return 0;
+  const moduleRef = getDB().prepare(`SELECT module_ref FROM classifier_object WHERE id=?`).get(rows[0].objectId)?.module_ref;
+  return getDB().transaction(() => versions.asOneVersion(moduleRef, 'attr', `${rows.length} values`, () =>
+    rows.map((r) => upsertAttr(r.objectId, r.templateId, r.value)).length))();
+};
+
 module.exports = {
-  getAttrValue,
+  getAttrValue, createObjects, upsertAttrs,
   setCatType,
   getObjects, createObject, updateObject, updateObjectNote, deleteObject, duplicateObject, moveObject,
   getTemplates, getObjectTemplates, createTemplate, updateTemplate, deleteTemplate,

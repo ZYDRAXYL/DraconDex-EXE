@@ -55,7 +55,22 @@ function idParamIndex(sql) {
 // Classifies one write statement: which table, which op, and — for
 // update/delete — which arg index holds the row's id (-1 if this isn't a
 // simple single-row-by-id statement we can safely reverse).
+// Derived bookkeeping, not content: version history, the hub log, and the
+// link/search indexes rebuilt from content. Recorded, the history prune (a
+// bulk DELETE) made every edit's undo step "irreversible" — a field change
+// could not be undone at all (found in Procress 17 B2).
+// module_ui is view state (active view, zoom…), not content either.
+const UNTRACKED = new Set(['module_version', 'nexus_history', 'wiki_link', 'search_index', 'module_ui']);
+const TABLE_RE = /^\s*(?:INSERT(?:\s+OR\s+\w+)?\s+INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM)\s+["'`]?(\w+)/i;
+// An upsert that may have UPDATED an existing row leaves lastInsertRowid
+// pointing at some other row — recording it as an insert made undo touch the
+// wrong row. Honest answer: irreversible. (ON CONFLICT DO NOTHING / OR IGNORE
+// stay inserts: they either inserted that row or changed nothing.)
+const UPSERT_RE = /\bON\s+CONFLICT\b[\s\S]*\bDO\s+UPDATE\b|^\s*(?:INSERT\s+OR\s+REPLACE|REPLACE)\b/i;
+
 function classifyWrite(sql) {
+  if (UNTRACKED.has(TABLE_RE.exec(sql)?.[1])) return null;
+  if (UPSERT_RE.test(sql)) return { op: 'other' };
   let m;
   if ((m = INSERT_RE.exec(sql))) return { op: 'insert', table: m[1] };
   if ((m = UPDATE_RE.exec(sql))) return { op: 'update', table: m[1], idIdx: idParamIndex(sql) };
@@ -139,7 +154,8 @@ function createUndoRecorder(origPrepare) {
     const info = classifyWrite(sql);
     if (info?.op === 'insert') {
       const id = result && result.lastInsertRowid;
-      if (id != null) group.entries.push({ table: info.table, id, op: 'insert', before: null, after: rawRow(info.table, id) });
+      if (result && result.changes === 0) { /* OR IGNORE / DO NOTHING hit an existing row: nothing changed */ }
+      else if (id != null) group.entries.push({ table: info.table, id, op: 'insert', before: null, after: rawRow(info.table, id) });
       else markIrreversible();
     } else if (info?.op === 'update') {
       if (pre) group.entries.push({ table: pre.table, id: pre.id, op: 'update', before: pre.before, after: rawRow(pre.table, pre.id) });

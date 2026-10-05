@@ -87,10 +87,30 @@ function setExhibitView(moduleId, patch) {
 // The Exhibitor that "belongs" to a module — the one "Open in Exhibitor"
 // lands on (§3.5). Found by the module_ui key it was created with, so a
 // user renaming or moving it does not orphan the link.
-const findExhibitorFor = (moduleId) => getDB().prepare(`
-  SELECT m.id FROM module m JOIN module_ui u ON u.module_ref=m.id
-  WHERE m.kind='exhibitor' AND u.ui_key='exhibitorFor' AND u.ui_value=? ORDER BY m.id LIMIT 1
-`).get(String(moduleId))?.id ?? null;
+//
+// Procress 16 B3: every Exhibitor that already shows the module, best first —
+// an Exhibitor is its own; then the one made for it; then any whose filter
+// has a childOf rule on it or on a folder above it. Reusing these is what
+// stops "Open in Exhibitor" stacking "X · Exhibitor · Exhibitor".
+function findExhibitorsFor(moduleId) {
+  const d = getDB();
+  const m = d.prepare(`SELECT id, kind FROM module WHERE id=?`).get(moduleId);
+  if (!m) return [];
+  if (m.kind === 'exhibitor') return [m.id];
+  const scope = new Set();
+  const parentOf = d.prepare(`SELECT parent_id FROM module WHERE id=?`);
+  for (let id = m.id; id != null && !scope.has(id); id = parentOf.get(id)?.parent_id ?? null) scope.add(id);
+  const own = [], covers = [];
+  for (const r of d.prepare(`SELECT m.id, u.ui_key, u.ui_value FROM module m JOIN module_ui u ON u.module_ref=m.id
+      WHERE m.kind='exhibitor' AND u.ui_key IN ('exhibitorFor','filterDef') ORDER BY m.id`).all()) {
+    if (r.ui_key === 'exhibitorFor') { if (r.ui_value === String(moduleId)) own.push(r.id); continue; }
+    let def = null;
+    try { def = JSON.parse(r.ui_value); } catch (_) { continue; }
+    if ((def?.groups || []).some((g) => (g.rules || []).some((x) => x.field === 'childOf' && scope.has(Number(x.moduleId))))) covers.push(r.id);
+  }
+  return [...new Set([...own, ...covers])];
+}
+const findExhibitorFor = (moduleId) => findExhibitorsFor(moduleId)[0] ?? null;
 
 // Duplicate relations removed by the v5 entity_relation rebuild (§4.2) —
 // counted in migrations.js at vault open, surfaced once by the renderer.
@@ -99,5 +119,5 @@ const { takeRelationDedupeReport } = require('./schema/migrations');
 module.exports = {
   takeRelationDedupeReport,
   getExhibitScene, addExhibitNodes, updateExhibitNode, moveExhibitNodes, deleteExhibitNode,
-  setExhibitView, findExhibitorFor,
+  setExhibitView, findExhibitorFor, findExhibitorsFor,
 };

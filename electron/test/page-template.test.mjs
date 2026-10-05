@@ -55,7 +55,8 @@ const stack = (mid, itemKey = null) => db.prepare(`SELECT id, parent_id, block_t
 
 test('every ★ is in the catalog, one per kind (per catType for a Classifier)', () => {
   const { templates } = pt.pageCatalog('en');
-  assert.equal(templates.length, 41);
+  assert.equal(templates.length, 47);
+  assert.equal(pt.defaultTemplate('page').id, 'page.blank', 'a new page starts empty (Procress 16 part 3a); the layouts are a choice');
   assert.equal(pt.defaultTemplate('classifier', 'character').id, 'classifier.characterWiki');
   assert.equal(pt.defaultTemplate('classifier', 'element').id, 'classifier.list');
   assert.equal(pt.defaultTemplate('classifier', null).id, 'classifier.encyclopedia');
@@ -79,6 +80,21 @@ test('a template lays out a new Classifier: fields with keys, its page and its e
   assert.deepEqual(stack(mid, '*').map((b) => b.component), ['core.infobox', 'item.body', 'core.related']);
   assert.equal(pb.ensurePage(mid, null, [{ component: 'x' }]), false, 'the template counts as laid out');
   assert.equal(pt.applyTemplate(mid, 'classifier.characterSheet', { locale: 'en' }).fields, 0, 'never adds fields to a shaped module');
+});
+
+// Procress 16 B5: the gallery made "character" templates into 'object' categories.
+test('a template sets an empty Classifier\'s cat_type, never a category in use', () => {
+  freshVault();
+  const catType = (id) => db.prepare(`SELECT cat_type FROM module WHERE id=?`).get(id).cat_type;
+  const mid = mkModule('Cast', 'classifier');
+  db.prepare(`UPDATE module SET cat_type='object' WHERE id=?`).run(mid);
+  pt.applyTemplate(mid, 'classifier.characterWiki', { locale: 'en' });
+  assert.equal(catType(mid), 'character');
+  pt.applyTemplate(mid, 'classifier.roster', { locale: 'en' }); // no preset — falls back to `for`
+  assert.equal(catType(mid), 'character');
+  db.prepare(`INSERT INTO classifier_object (module_ref, name) VALUES (?, 'Ann')`).run(mid);
+  pt.applyTemplate(mid, 'classifier.glossary', { locale: 'en' });
+  assert.equal(catType(mid), 'character', 'a category with objects keeps its type');
 });
 
 test('Use template… is undone exactly', () => {
@@ -146,4 +162,46 @@ test('a folder saved as an Artisan bundle makes the same project again', () => {
   const def = JSON.parse(db.prepare(`SELECT ui_value FROM module_ui WHERE module_ref=? AND ui_key='filterDef'`).get(mgr).ui_value);
   const kinds = def.groups.map((g) => db.prepare(`SELECT kind FROM module WHERE id=?`).get(g.rules[0].moduleId).kind);
   assert.deepEqual(kinds, ['collector', 'collector']);
+});
+
+// Procress 16 part 3b: a row's widths on the 12 grid survive save → apply,
+// with as many columns as widths has (a four-column row is four, not three).
+test('a row with config.widths keeps its widths and column count through a template', () => {
+  freshVault();
+  const a = mkModule('Page A', 'page');
+  const row = pb.addBlock(a, null, { type: 'columns', config: { widths: [3, 3, 3, 3], n: 4 } });
+  const rowId = row?.id ?? row;
+  for (const col of [0, 1, 2, 3]) pb.addBlock(a, null, { type: 'text', parentId: rowId, config: { col } });
+  preset.savePreset(1, a, 'Three');
+  const saved = preset.listPresets(1, 'page').find((p) => p.name === 'Three').spec;
+  const r0 = saved.page.find((b) => b.type === "columns" || Array.isArray(b.children));
+  assert.equal(r0.children.length, 4);
+  assert.deepEqual(r0.config.widths, [3, 3, 3, 3]);
+  const b = mkModule('Page B', 'page');
+  preset.applyPreset(b, saved);
+  const cols = stack(b).find((x) => x.block_type === 'columns');
+  assert.deepEqual(JSON.parse(cols.config).widths, [3, 3, 3, 3]);
+  assert.equal(stack(b).filter((x) => x.parent_id === cols.id).length, 4);
+});
+
+// Procress 16 part 3b: a block dropped beside another — the two become a
+// 50/50 row in the target's place (keeping the target's column when it had one).
+test('moveBeside wraps target and mover in a row where the target stood', () => {
+  freshVault();
+  const p = mkModule('Page', 'page');
+  const id = (r) => r?.id ?? r;
+  const a = id(pb.addBlock(p, null, { type: 'heading', content: 'A' }));
+  const b = id(pb.addBlock(p, null, { type: 'heading', content: 'B' }));
+  const c = id(pb.addBlock(p, null, { type: 'heading', content: 'C' }));
+  const row = pb.moveBeside(b, c, 'left');
+  const top = stack(p).filter((x) => x.parent_id == null);
+  assert.deepEqual(top.map((x) => x.id), [a, row]);
+  assert.deepEqual(JSON.parse(top[1].config).widths, [6, 6]);
+  const kids = stack(p).filter((x) => x.parent_id === row).map((x) => [x.id, JSON.parse(x.config).col]);
+  assert.deepEqual(kids.sort((m, n) => m[1] - n[1]), [[c, 0], [b, 1]]);
+  // inside a column: the new row keeps the target's column
+  const inner = pb.moveBeside(b, a, 'right');
+  const r2 = stack(p).find((x) => x.id === inner);
+  assert.equal(r2.parent_id, row);
+  assert.equal(JSON.parse(r2.config).col, 1);
 });
