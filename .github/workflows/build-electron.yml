@@ -90,6 +90,17 @@ jobs:
       - name: Run regression tests
         run: node --test "electron/test/*.test.mjs"
 
+      # The *.driver.mjs suites click the real app through Playwright, so they
+      # need a display and an Electron launch — which is why the glob above
+      # skips them. windows-latest has a desktop session, so they run here.
+      # Procress 16 part 1: 249 data-layer tests passed while the rail, the
+      # Create flyout and the tab strip were broken; these are what catch that.
+      - name: UI smoke test (clicks the real app)
+        run: node --test electron/test/ui-smoke.driver.mjs
+
+      - name: UI audit (page errors, raw i18n keys, contrast, open time)
+        run: node --test electron/test/ui-audit.driver.mjs
+
       - name: Resolve version and release tag
         id: meta
         shell: pwsh
