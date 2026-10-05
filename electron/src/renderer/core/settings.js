@@ -84,6 +84,8 @@ function applyUiSettings(){
     else document.body.style.removeProperty(tok);
   }
   document.documentElement.style.setProperty('--fsc', String((S.settings.fontScale || 100) / 100));
+  // Per-area overrides are global scale × area %, so they follow the global one.
+  applyAreaScales();
   // Process 7 part 1: speed preset for the toggle-animation keyframes below
   // (nav-hub.css/inspector.css) — a single token so every consumer picks up
   // a speed change live, same idiom as --fsc/--ui-scale.
@@ -120,6 +122,7 @@ function setUiSetting(key, value){
     value = Math.min(UI_SIZE_MAX, Math.max(UI_SIZE_MIN, Math.round(value)));
   }
   S.settings[key] = value;
+  endSettingPreview(); // after the assignment, so its revert lands on the new value
   saveUiSettings();
   applyUiSettings();
   renderSettingsMenu();
@@ -142,6 +145,7 @@ function setFontScaleFromSlider(value){
   S.settings.fontScale = v;
   saveUiSettings();
   document.documentElement.style.setProperty('--fsc', String(v / 100));
+  applyAreaScales();
   const el = q('#settings-font-value');
   if(el) el.textContent = `${v}%`;
 }
@@ -382,23 +386,82 @@ function currentPaletteVars(){
 }
 
 
-// Procress 16 part 7 — live preview (Office): pointing at a theme shows it
-// on the whole app; leaving puts the chosen one back. Nothing is saved
-// until it is clicked. (Language already previews this way.)
-let _themePreview = null;
+// Procress 16 part 7 — live preview (Office): pointing at a theme or a
+// language shows it; leaving puts the chosen one back. Nothing is saved until
+// it is clicked. The preview waits SETTING_PREVIEW_DELAY_MS of resting on an
+// item, with a progress ring at the cursor, so sweeping the pointer across
+// the grid doesn't flash every theme over the whole app.
+// Reverting re-applies S.settings rather than restoring a snapshot of <body>:
+// a click re-renders the cells, the old cell's mouseleave never fires, and a
+// snapshot taken before the click would later put the old theme back.
+const SETTING_PREVIEW_DELAY_MS = 3000;
+let _settingPreview = null; // { el, apply, revert, timer, shown }
+let _previewRing = null;
+
+function settingPreviewTarget(node){
+  const el = node?.closest?.('[data-preview-theme],[data-preview-lang]');
+  if (!el) return null;
+  const theme = el.dataset.previewTheme;
+  if (theme) {
+    if (theme === S.settings.theme || !UI_THEME_OPTIONS.includes(theme)) return null;
+    return { el, revert: applyUiSettings, apply: () => {
+      const keep = S.settings.theme;
+      S.settings.theme = theme;
+      applyUiSettings();
+      S.settings.theme = keep;
+    } };
+  }
+  const lang = el.dataset.previewLang;
+  if (lang === S.settings.language || !UI_LANGUAGE_OPTIONS.includes(lang)) return null;
+  return { el, apply: () => settingPreviewLang(lang), revert: () => settingPreviewLang(S.settings.language) };
+}
+
+function movePreviewRing(e){
+  _previewRing.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+}
+function showPreviewRing(e){
+  if (!_previewRing) {
+    _previewRing = document.createElement('div');
+    _previewRing.id = 'preview-ring';
+    _previewRing.innerHTML = '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/><circle class="pr-fill" cx="10" cy="10" r="8" pathLength="100"/></svg>';
+    // On <html>, not <body>: body carries the UI-size zoom, which would scale
+    // the ring and offset it from clientX/clientY.
+    document.documentElement.appendChild(_previewRing);
+  }
+  _previewRing.style.color = getComputedStyle(document.body).getPropertyValue('--accent');
+  _previewRing.style.setProperty('--pr-dur', `${SETTING_PREVIEW_DELAY_MS}ms`);
+  _previewRing.classList.remove('on');
+  void _previewRing.offsetWidth; // restart the fill animation
+  _previewRing.classList.add('on');
+  movePreviewRing(e);
+  document.addEventListener('mousemove', movePreviewRing);
+}
+function hidePreviewRing(){
+  _previewRing?.classList.remove('on');
+  document.removeEventListener('mousemove', movePreviewRing);
+}
+
+function endSettingPreview(){
+  const p = _settingPreview;
+  if (!p) return;
+  _settingPreview = null;
+  clearTimeout(p.timer);
+  hidePreviewRing();
+  if (p.shown) p.revert();
+}
+
 document.addEventListener('mouseover', (e) => {
-  const el = e.target.closest?.('[data-preview-theme]');
-  const want = el?.dataset.previewTheme;
-  if (!want || !UI_THEME_OPTIONS.includes(want) || String(want).startsWith('custom:') || String(want).startsWith('pkg:')) return;
-  const body = document.body;
-  if (!_themePreview) _themePreview = { theme: body.getAttribute('data-theme'), style: body.getAttribute('style') };
-  body.setAttribute('data-theme', want);
-  for (const n of [...body.style].filter((p) => p.startsWith('--'))) body.style.removeProperty(n); // a custom theme's inline tokens
-  el.addEventListener('mouseleave', () => {
-    if (!_themePreview) return;
-    const p = _themePreview;
-    _themePreview = null;
-    if (p.theme == null) document.body.removeAttribute('data-theme'); else document.body.setAttribute('data-theme', p.theme);
-    if (p.style == null) document.body.removeAttribute('style'); else document.body.setAttribute('style', p.style);
-  }, { once: true });
+  const next = settingPreviewTarget(e.target);
+  if (next && next.el === _settingPreview?.el) return; // still on the same item
+  endSettingPreview();
+  if (!next) return;
+  _settingPreview = next;
+  showPreviewRing(e);
+  next.timer = setTimeout(() => {
+    hidePreviewRing();
+    next.shown = true;
+    next.apply();
+  }, SETTING_PREVIEW_DELAY_MS);
 });
+// Pointer left the window entirely — no mouseover follows, so end it here.
+document.addEventListener('mouseout', (e) => { if (!e.relatedTarget) endSettingPreview(); });

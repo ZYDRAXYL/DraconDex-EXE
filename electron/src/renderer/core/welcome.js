@@ -185,7 +185,7 @@ function welcomeSetUi(key, value) {
 // ── Step 1: language ──
 function welcomeStepLangHtml() {
   const rows = UI_LANGUAGE_OPTIONS.map(lang => `
-    <div class="lang-item${S.settings.language === lang ? ' active' : ''}" onmouseenter="settingPreviewLang('${lang}')" onclick="welcomeSetUi('language','${lang}')">
+    <div class="lang-item${S.settings.language === lang ? ' active' : ''}" data-preview-lang="${lang}" onclick="welcomeSetUi('language','${lang}')">
       <span data-no-i18n>${x(LANGUAGE_LABELS[lang] || lang)}</span>${S.settings.language === lang ? `<span class="theme-check">${I.check}</span>` : ''}
     </div>`).join('');
   return `<div class="prefs-lang-shell">

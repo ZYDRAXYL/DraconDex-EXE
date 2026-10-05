@@ -349,7 +349,7 @@ function sliderNumberRowHtml(labelHtml, { min, max, step = 1, value, commit }) {
     </div></div>`;
 }
 // Procress 10 part 2: a catalog lang package not yet downloaded — locked,
-// no onmouseenter preview / onclick select, Download button in place of the
+// no hover preview / onclick select, Download button in place of the
 // checkmark slot.
 function settingLangCatalogItemHtml(p){
   const btnSel = `#pkg-inline-${p.id}`;
@@ -360,7 +360,7 @@ function settingLangCatalogItemHtml(p){
 }
 function settingTextSizePageHtml(){
   const rows = UI_LANGUAGE_OPTIONS.map(lang => `
-    <div class="lang-item${S.settings.language===lang?' active':''}" onmouseenter="settingPreviewLang('${lang}')" onclick="setUiSetting('language','${lang}')">
+    <div class="lang-item${S.settings.language===lang?' active':''}" data-preview-lang="${lang}" onclick="setUiSetting('language','${lang}')">
       <span>${LANGUAGE_LABELS[lang]}</span>${S.settings.language===lang?`<span class="theme-check">${I.check}</span>`:''}
     </div>`).join('') + pkgCatalogGap('lang', UI_LANGUAGE_OPTIONS_BUILTIN).map(settingLangCatalogItemHtml).join('');
   const areaRows = Object.keys(SETTING_AREA_CONTAINERS).map(key =>

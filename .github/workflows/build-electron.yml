@@ -90,6 +90,17 @@ jobs:
       - name: Run regression tests
         run: node --test "electron/test/*.test.mjs"
 
+      # Procress 16 part 1: clicks the real app (rail, Create flyout, presets,
+      # Exhibitor, tabs) — the data-layer tests above all passed while those
+      # buttons were dead. windows-latest has a display, so no Xvfb here.
+      - name: UI smoke (drives the real app)
+        run: node --test electron/test/ui-smoke.driver.mjs
+
+      # Procress 17 R7: every page of the sample vault — page errors, inline
+      # handlers that do not parse, white OS inputs, raw i18n keys, slow opens.
+      - name: UI audit (every page)
+        run: node --test electron/test/ui-audit.driver.mjs
+
       - name: Resolve version and release tag
         id: meta
         shell: pwsh
