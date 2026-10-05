@@ -367,4 +367,4 @@ version/release helpers (`version-update`, `build-release-git`,
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — created by LDKTC.

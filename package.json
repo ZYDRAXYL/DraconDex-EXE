@@ -6,6 +6,7 @@
   "main": "electron/main.js",
   "license": "MIT",
   "author": "ZYDRAXYL",
+  "contributors": ["LDKTC"],
   "repository": {
     "type": "git",
     "url": "https://github.com/ZYDRAXYL/DraconDex-EXE.git"
@@ -42,6 +43,7 @@
   "build": {
     "appId": "com.dracondex.app",
     "productName": "DraconDex",
+    "copyright": "Copyright (c) 2026 ZYDRAXYL — created by LDKTC",
     "asar": true,
     "directories": {
       "output": "DraconDexPortable"
