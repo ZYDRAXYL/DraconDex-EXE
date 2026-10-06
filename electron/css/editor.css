@@ -75,6 +75,7 @@
 #status-bar .sb-nexus{cursor:pointer;color:var(--t2)}
 #status-bar .sb-nexus:hover{color:var(--accent-text,var(--accent))}
 #status-bar .nexus-vault-dot{width:7px;height:7px}
+#status-bar .sb-credit{opacity:.7;letter-spacing:.2px}
 
 /* Editor columns + backlinks panel */
 .mded-cols{flex:1;min-height:0;display:flex;gap:10px}

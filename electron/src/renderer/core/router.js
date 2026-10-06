@@ -113,6 +113,7 @@ function updateStatusBar(patch = {}) {
   if (live && _statusState.saveState && st.saveState !== false) parts.push(`<span class="sb-item sb-save">${x(_statusState.saveState)}</span>`);
   const right = [...pageRight];
   if (live && _statusState.words != null && st.words !== false) right.push(`<span class="sb-item">${_statusState.words} ${t('words')}</span>`);
+  right.push(`<span class="sb-item sb-credit" data-no-i18n>Created by LDKTC</span>`); // credit — always last, bottom-right corner
   el.innerHTML = `<div class="sb-left">${parts.join('')}</div><div class="sb-right">${right.join('')}</div>`;
   const ps = q('#main-inner .page-title .ph-save'); // Procress 18 part 1: next to the page name too
   if (ps) ps.textContent = live && st.saveState !== false ? (_statusState.saveState || '') : '';
