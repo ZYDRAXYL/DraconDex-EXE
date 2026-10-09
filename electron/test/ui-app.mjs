@@ -30,6 +30,15 @@ export async function launchWithVault(name = 'Test') {
   win = await app.waitForEvent('window', { timeout: 20000 });
   await win.waitForSelector('#hub-body', { timeout: 20000 });
   await win.locator("button:has-text('Skip')").first().click({ timeout: 3000 }).catch(() => {}); // the Nest tour
+  // The suites assert a desktop layout: 100% UI Size and a window wide enough
+  // for the docked Properties panel (layout.css floats it under 1100 px).
+  // Neither may depend on the machine's screen — autoUiSizeFromScreen() picks
+  // 80% on the 1024-px display of a windows-latest runner, and the OS shrinks
+  // the 1280-px window to fit it. Pin both, so the suites test the app rather
+  // than the monitor they happen to run on.
+  await win.setViewportSize({ width: 1280, height: 800 });
+  await win.evaluate(() => setUiSetting('size', 100));
+  await win.waitForTimeout(300);
   return {
     app, win,
     close: async () => { await app.close().catch(() => {}); rmSync(dataDir, { recursive: true, force: true }); },

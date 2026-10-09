@@ -132,10 +132,16 @@ test('no page or console error anywhere above', () => {
 });
 
 test('reflow at 960 px: Properties folds first, the sidebar narrows, the page keeps its primary button', async () => {
-  const size = (w, h) => ui.app.evaluate(({ BrowserWindow }, [w2, h2]) => {
-    const bw = BrowserWindow.getAllWindows().find((x) => x.isVisible());
-    bw.unmaximize(); bw.setContentSize(w2, h2);
-  }, [w, h]);
+  // The window AND the viewport: launchWithVault pins the viewport to 1280 so
+  // the layout does not follow the runner's screen, and a pinned viewport no
+  // longer tracks the window — resizing the window alone would test nothing.
+  const size = async (w, h) => {
+    await ui.app.evaluate(({ BrowserWindow }, [w2, h2]) => {
+      const bw = BrowserWindow.getAllWindows().find((x) => x.isVisible());
+      bw.unmaximize(); bw.setContentSize(w2, h2);
+    }, [w, h]);
+    await win.setViewportSize({ width: w, height: h });
+  };
   await win.evaluate(() => { localStorage.setItem('dracondex-props-open', '1'); });
   await size(960, 680); await win.waitForTimeout(500);
   const r = await win.evaluate(async () => {
