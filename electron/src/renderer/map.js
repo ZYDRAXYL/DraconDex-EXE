@@ -435,8 +435,9 @@ async function renderMapBoard(mi){
       boardEl?.classList.remove('is-panning');
     }
   };
-  window.removeEventListener('mouseup', cleanupPan);
-  window.addEventListener('mouseup', cleanupPan);
+  // removeEventListener could never match the previous draw's closure, so
+  // every draw added one more — each holding its stage (Procress 19 RAM).
+  window.addEventListener('mouseup', cleanupPan, { signal: boardSignal(container, '_mapAbort') });
 
   layer.batchDraw();
 }
