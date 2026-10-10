@@ -52,6 +52,18 @@ try {
   row('open each kind (sample vault), slowest', `${Math.round(slowest[1])} ms (${slowest[0]})`, '< 200 ms');
   if (drafter) row('Drafter: first open in a window', `${Math.round(drafter[1])} ms`, '< 200 ms (F10)');
 
+  // Procress 19 F9: a second window on the same vault, open → Nest drawn.
+  // Measured from the window's own navigation start, so process launch is out.
+  {
+    const next = ui.app.waitForEvent('window');
+    await win.evaluate(() => api.window.openNexus(S.nexus.id));
+    const w2 = await next;
+    await w2.waitForSelector('#hub-body', { timeout: 20000 });
+    const t = await w2.evaluate(() => ({ dcl: performance.getEntriesByType('navigation')[0].domContentLoadedEventEnd, ready: performance.now() }));
+    await w2.close();
+    row('second vault window: parsed / ready', `${Math.round(t.dcl)} / ${Math.round(t.ready)} ms`, '(F9)');
+  }
+
   // the stress vault — built with the batch APIs (B1)
   const seed = await win.evaluate(async () => {
     const nx = S.nexus.id;
