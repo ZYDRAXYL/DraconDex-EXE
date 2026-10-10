@@ -11,19 +11,25 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { launchWithVault } from './ui-app.mjs';
 
-// Procress 19 F8: i18n.js is ~45 % of the JS every window parses. Measured in
-// this Node (same V8 as the renderer, no window needed): compile + run, best
-// of 5. Each pass gets a distinct trailing comment, or V8's in-isolate
-// compilation cache answers passes 2–5 and the number means nothing.
+// Procress 19 F8: i18n.js was ~45 % of the JS every window parses (1.9 MB,
+// 18 languages). Now a window parses i18n.js + en.js + its own language —
+// measured for the default, Thai. In this Node (same V8 as the renderer, no
+// window needed): compile + run, best of 5. Each pass gets a distinct trailing
+// comment, or V8's in-isolate compilation cache answers passes 2–5 and the
+// number means nothing.
 {
-  const src = readFileSync(new URL('../src/renderer/i18n.js', import.meta.url), 'utf8');
+  const files = ['i18n.js', 'i18n/en.js', 'i18n/th.js'].map((f) => readFileSync(new URL(`../src/renderer/${f}`, import.meta.url), 'utf8'));
+  const stub = { localStorage: { getItem: () => '{}' }, document: { write() {} } };
   let best = Infinity;
   for (let i = 0; i < 5; i++) {
     const t0 = performance.now();
-    new vm.Script(`${src}\n// pass ${i}`, { filename: 'i18n.js' }).runInNewContext({});
+    const ctx = vm.createContext({ ...stub });
+    // one realm, like the page: i18n.js's top-level const/function stay visible to the language files
+    for (const src of files) new vm.Script(`${src}\n// pass ${i}`).runInContext(ctx);
     best = Math.min(best, performance.now() - t0);
   }
-  console.log(`${'i18n.js parse + run'.padEnd(46)} ${`${Math.round(best)} ms · ${(src.length / 1e6).toFixed(2)} MB`.padEnd(18)} (Procress 19 F8)`);
+  const mb = files.reduce((n, s) => n + s.length, 0) / 1e6;
+  console.log(`${'i18n parse + run (i18n.js + en + th)'.padEnd(46)} ${`${Math.round(best)} ms · ${mb.toFixed(2)} MB`.padEnd(18)} (Procress 19 F8)`);
 }
 
 const ui = await launchWithVault('Perf');

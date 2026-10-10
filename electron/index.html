@@ -248,6 +248,9 @@
 <div id="sr-live" class="sr-only" aria-live="polite"></div>
   <!-- i18n data + Core + Director loaded immediately; Timeline/Relation/Map/Hashtag lazy-loaded on first use -->
   <script src="src/renderer/i18n.js"></script>
+  <!-- Procress 19 F8: English is every lookup's fallback, so it always loads;
+       i18n.js has just written the saved language's file in above this line. -->
+  <script src="src/renderer/i18n/en.js"></script>
   <script>__splash.set(15)</script>
   <script src="src/renderer/markdown.js"></script>
   <script src="src/renderer/sanitize.js"></script>

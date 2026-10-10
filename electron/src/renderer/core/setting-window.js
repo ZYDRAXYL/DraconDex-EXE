@@ -302,6 +302,9 @@ function settingLangPreviewHtml(lang){
 }
 function settingPreviewLang(lang){
   S.settingPreviewLang = lang;
+  // Procress 19 F8: only the saved language is parsed at boot — load the
+  // hovered one, then draw it if the pointer is still on it.
+  if (!i18nLoaded(lang)) return i18nLoad(lang).then(() => { if (S.settingPreviewLang === lang) settingPreviewLang(lang); });
   const el = q('.prefs-lang-preview');
   if (el) el.innerHTML = settingLangPreviewHtml(lang);
 }

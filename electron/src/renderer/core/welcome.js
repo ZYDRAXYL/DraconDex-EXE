@@ -178,7 +178,8 @@ function welcomeWizardFinish() {
 // calls applyUiSettings(), so the ✓ would not move). Re-rendering here means
 // the wizard never depends on which branch it happened to take.
 function welcomeSetUi(key, value) {
-  setUiSetting(key, value);
+  const loading = setUiSetting(key, value); // a language not loaded yet (F8)
+  if (loading) return loading.then(renderWelcomeWindow);
   renderWelcomeWindow();
 }
 
