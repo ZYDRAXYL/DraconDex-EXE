@@ -241,7 +241,10 @@ test('16 part 2: a real file dropped on a folder is copied into it on disk and f
     const dt = new DataTransfer(); for (const f of files) dt.items.add(f);
     const row = document.querySelector('#left-panel-inner [data-mid="1"]'); // the Guide folder
     row.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: dt }));
-    await new Promise((res) => setTimeout(res, 3000));
+    // Wait for the file to land rather than a fixed 3 s: the first drop makes
+    // the Locate folder, mirrors the whole Nexus, copies, mirrors again and
+    // reloads the tree — over 3 s on a slow Windows runner disk.
+    for (let i = 0; i < 100 && !nestAssetsOf(1).length; i++) await new Promise((res) => setTimeout(res, 200));
     return nestAssetsOf(1).map((f) => f.file_path);
   });
   assert.equal(r.length, 1);
@@ -674,15 +677,21 @@ test('16 part 7: Quick Access — a command pinned from Ctrl+P becomes a rail bu
   assert.equal(await win.locator(`#nav-sidebar .qa-btn[data-qa="${id}"]`).count(), 0, 'right-click took it off');
 });
 test('16 part 7: live preview — pointing at a theme or a block look shows it, leaving puts it back, nothing saved', async () => {
-  const theme = await win.evaluate(() => {
+  // v5.1.1: the preview waits SETTING_PREVIEW_DELAY_MS of resting on the item
+  // (a sweep across the grid must not flash every theme), and ends when the
+  // pointer moves onto anything that is not a preview item.
+  const theme = await win.evaluate(async () => {
     const el = document.createElement('button'); el.dataset.previewTheme = 'daylight'; document.body.appendChild(el);
     const was = document.body.dataset.theme;
     el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    const early = document.body.dataset.theme;
+    await new Promise((r) => setTimeout(r, SETTING_PREVIEW_DELAY_MS + 200));
     const during = document.body.dataset.theme;
-    el.dispatchEvent(new MouseEvent('mouseleave'));
+    document.body.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
     el.remove();
-    return { was, during, after: document.body.dataset.theme, saved: S.settings.theme };
+    return { was, early, during, after: document.body.dataset.theme, saved: S.settings.theme };
   });
+  assert.equal(theme.early, theme.was, 'not at once — a sweep across the grid shows nothing');
   assert.equal(theme.during, 'daylight');
   assert.equal(theme.after, theme.was);
   assert.equal(theme.saved, theme.was);
