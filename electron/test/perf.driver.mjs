@@ -105,7 +105,19 @@ try {
     row(`Classifier 3,000: ${view}`, `${Math.round(r.ms)} ms · ${r.dom} nodes`, '< 300 ms · < 3,000');
   }
 
-  // F10: lazyRows grows and never recycles — scroll the table to its end and
+  // Home of the big vault, and search
+  const home = await win.evaluate(async () => { const t0 = performance.now(); await builderOpenPage(null); return performance.now() - t0; });
+  row('Home of the big vault', `${Math.round(home)} ms`, '< 150 ms');
+  const search = await win.evaluate(async () => {
+    const nx = S.nexus.id;
+    await api.classifier.createObject((S.moduleTree.find((m) => m.kind === 'classifier') || {}).id, 'x', null, null).catch(() => {});
+    let t0 = performance.now(); await api.search.rebuild(nx); const rebuild = performance.now() - t0;
+    t0 = performance.now(); await api.search.query(nx, 'Object 12'); const query = performance.now() - t0;
+    return { rebuild, query };
+  });
+  row('search: rebuild / query', `${Math.round(search.rebuild)} / ${Math.round(search.query)} ms`, '(146 / 10 ms)');
+  // Last, because it leaves 50k nodes behind that every later number would pay
+  // to tear down. F10: lazyRows grows and never recycles — scroll the table to its end and
   // count what the DOM holds then.
   const scrolled = await win.evaluate(async (cls) => {
     await openModuleNode(cls);
@@ -127,17 +139,6 @@ try {
   row('Classifier 3,000: table scrolled to the end', `${scrolled.before} → ${scrolled.dom} nodes · ${Math.round(scrolled.ms)} ms`, '< 3,000 nodes (F10)');
   row('  worst step while scrolling', `${Math.round(scrolled.worst)} ms`, '< 32 ms');
 
-  // Home of the big vault, and search
-  const home = await win.evaluate(async () => { const t0 = performance.now(); await builderOpenPage(null); return performance.now() - t0; });
-  row('Home of the big vault', `${Math.round(home)} ms`, '< 150 ms');
-  const search = await win.evaluate(async () => {
-    const nx = S.nexus.id;
-    await api.classifier.createObject((S.moduleTree.find((m) => m.kind === 'classifier') || {}).id, 'x', null, null).catch(() => {});
-    let t0 = performance.now(); await api.search.rebuild(nx); const rebuild = performance.now() - t0;
-    t0 = performance.now(); await api.search.query(nx, 'Object 12'); const query = performance.now() - t0;
-    return { rebuild, query };
-  });
-  row('search: rebuild / query', `${Math.round(search.rebuild)} / ${Math.round(search.query)} ms`, '(146 / 10 ms)');
   const mem = await ui.app.evaluate(() => process.memoryUsage().rss / 1e6);
   row('RAM main process', `${Math.round(mem)} MB`, '(237–260 MB)');
 } finally {
