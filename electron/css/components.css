@@ -453,8 +453,11 @@
 .setting-hit-row{display:flex;width:100%;justify-content:flex-start;text-align:left;padding:7px 10px;color:var(--t1)}
 .setting-hit-row:hover{background:var(--hover)}
 .setting-hit{outline:2px solid var(--accent);outline-offset:3px;border-radius:var(--rs);transition:outline-color .6s}
-/* Procress 17 P1: core/ui.js lazyRows sentinel — invisible, spans a whole grid row */
-.lazy-more{height:1px;grid-column:1/-1}
+/* Procress 17 P1: core/ui.js lazyRows sentinel — invisible, spans a whole grid row.
+   Procress 19 F10: also the spacers of a recycled list, so never the scroll
+   anchor (the rows are) and, as a table row, no cell padding of its own. */
+.lazy-more{height:1px;grid-column:1/-1;overflow-anchor:none}
+.lazy-more>td{padding:0;border:0}
 /* Procress 17 P2: "N more ›" after a module's first 50 elements in the Nest */
 .nest-item-more .name{color:var(--t3-aa,var(--t2));font-style:italic}
 /* Procress 16 B6: the Nest's "Unsorted (N)" virtual folder (was the Import Dock) */

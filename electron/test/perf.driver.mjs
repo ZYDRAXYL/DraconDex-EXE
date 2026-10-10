@@ -135,8 +135,8 @@ try {
   });
   row('search: rebuild / query', `${Math.round(search.rebuild)} / ${Math.round(search.query)} ms`, '(146 / 10 ms)');
   // Last, because it leaves 50k nodes behind that every later number would pay
-  // to tear down. F10: lazyRows grows and never recycles — scroll the table to its end and
-  // count what the DOM holds then.
+  // to tear down (before Procress 19 F10 — lazyRows recycles rows now). Scroll
+  // the table to its end and count what the DOM holds then.
   const scrolled = await win.evaluate(async (cls) => {
     await openModuleNode(cls);
     const iid = document.querySelector('[onclick*="setClassifierView"]')?.getAttribute('onclick').match(/setClassifierView\(["']([^"']+)["']/)?.[1];
@@ -146,16 +146,23 @@ try {
     const frame = () => new Promise((res) => requestAnimationFrame(() => res()));
     const t0 = performance.now();
     let worst = 0;
+    // A step waits two frames, so it can never read under ~33 ms at 60 Hz —
+    // the longest gap between frames is the number that shows jank.
+    let frameWorst = 0, last = performance.now(), on = true;
+    const tick = (t) => { frameWorst = Math.max(frameWorst, t - last); last = t; if (on) requestAnimationFrame(tick); };
+    requestAnimationFrame((t) => { last = t; requestAnimationFrame(tick); });
     for (let i = 0; i < 200 && document.querySelector('[data-lazy]'); i++) {
       const s = performance.now();
       document.querySelector('[data-lazy]').scrollIntoView();
       await frame(); await frame();
       worst = Math.max(worst, performance.now() - s);
     }
-    return { ms: performance.now() - t0, worst, before, dom: document.querySelectorAll('#main-inner *').length };
+    on = false;
+    return { ms: performance.now() - t0, worst, frameWorst, before, dom: document.querySelectorAll('#main-inner *').length };
   }, seed.cls);
   row('Classifier 3,000: table scrolled to the end', `${scrolled.before} → ${scrolled.dom} nodes · ${Math.round(scrolled.ms)} ms`, '< 3,000 nodes (F10)');
-  row('  worst step while scrolling', `${Math.round(scrolled.worst)} ms`, '< 32 ms');
+  row('  worst step while scrolling (2 frames)', `${Math.round(scrolled.worst)} ms`, '< 32 ms');
+  row('  longest frame while scrolling', `${Math.round(scrolled.frameWorst)} ms`, '< 32 ms (F10)');
 
   const mem = await ui.app.evaluate(() => process.memoryUsage().rss / 1e6);
   row('RAM main process', `${Math.round(mem)} MB`, '(237–260 MB)');
