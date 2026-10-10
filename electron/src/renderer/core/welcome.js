@@ -42,7 +42,7 @@ function renderWelcomeWindow() {
   q('#left-panel-foot').innerHTML = '';
   q('#main-inner').innerHTML = `
     <div class="welcome-hero">
-      <div class="ei"><img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img" alt="DraconDex" style="height:72px;width:72px;opacity:.4"></div>
+      <div class="ei"><img src="../src/assets/brand/web/DraconDex_WhiteOut.webp" class="brand-img" alt="DraconDex" style="height:72px;width:72px;opacity:.4"></div>
       <h2 class="welcome-title">${t('wmTitle')}</h2>
       <p class="welcome-text">${hasVaults ? t('nexusSelect') : t('wmText')}</p>
       ${recent.length ? `
