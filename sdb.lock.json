@@ -25,7 +25,7 @@
     },
     "src/design/generated/tokens.css": {
       "artifact": "generated/electron/tokens.css",
-      "sha256": "6dfd6491ffb53752ff79f7386adf57319918154bbd400b3169c8048810918bd6"
+      "sha256": "92c76f13d1e1692c8c579147baf733784bb05fa437d54f107f7a1ac7b38f3a59"
     },
     "src/assets/brand/DraconDex_BlackIn.png": {
       "artifact": "assets/brand/DraconDex_BlackIn.png",
@@ -54,6 +54,30 @@
     "src/assets/brand/DraconDex_WhiteOut.png": {
       "artifact": "assets/brand/DraconDex_WhiteOut.png",
       "sha256": "7677500149b9655d06460bc69ac31c46a1b7323fe9c85f1c8680247b1a107821"
+    },
+    "src/assets/brand/web/DraconDex_BlackIn.webp": {
+      "artifact": "assets/brand/web/DraconDex_BlackIn.webp",
+      "sha256": "2fb4892bda774cd405b6f8c954b55f227b049ce3d2b2de05fbf82bba210cdd46"
+    },
+    "src/assets/brand/web/DraconDex_BlackOut.webp": {
+      "artifact": "assets/brand/web/DraconDex_BlackOut.webp",
+      "sha256": "819a31b68a4e1565816176ddd7e34c5485e39f5c5e228776639f2daf64b0ef4a"
+    },
+    "src/assets/brand/web/DraconDex_Color.webp": {
+      "artifact": "assets/brand/web/DraconDex_Color.webp",
+      "sha256": "85ff0218d0e66a57e2468755a0f21c79892305f02cd887521a91268e9695fc55"
+    },
+    "src/assets/brand/web/DraconDex_Shade.webp": {
+      "artifact": "assets/brand/web/DraconDex_Shade.webp",
+      "sha256": "14c2d1b92bfbb0b7c6f26fb6ad5b338a08290231a408024b269ab5e47d2dbf8a"
+    },
+    "src/assets/brand/web/DraconDex_WhiteIn.webp": {
+      "artifact": "assets/brand/web/DraconDex_WhiteIn.webp",
+      "sha256": "db3e889e2607f23fc9aa96907b42c7245863f53667a96329d84865abbc64a54b"
+    },
+    "src/assets/brand/web/DraconDex_WhiteOut.webp": {
+      "artifact": "assets/brand/web/DraconDex_WhiteOut.webp",
+      "sha256": "d14ab0e9b47ef1d3ab178cfdbe6a815b24e22c454e8efd2da4c29b4e88c019f5"
     },
     "electron/templates/bundles.json": {
       "artifact": "generated/templates/bundles.json",

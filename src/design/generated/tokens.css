@@ -36,6 +36,37 @@
 	--shadow-float:0px 8px 24px rgba(0,0,0,0.4);
 	--shadow-menu:0px 18px 44px rgba(0,0,0,0.42);
 	--shadow-modal:0px 24px 64px rgba(0,0,0,0.55);
+	--row-compact:28px;
+	--row-comfy:40px;
+	--ctl-sm:24px;
+	--ctl-md:32px;
+	--ctl-lg:40px;
+	--icon-sm:16px;
+	--icon-md:20px;
+	--modal-sm:400px;
+	--modal-md:560px;
+	--modal-lg:1100px;
+	--focus-ring:2px;
+	--z-base:0;
+	--z-sticky:10;
+	--z-dropdown:100;
+	--z-popover:900;
+	--z-modal:1000;
+	--z-toast:1100;
+	--z-tooltip:1200;
+	--z-max:2147483647;
+	--dur-fast:120ms;
+	--dur-normal:200ms;
+	--dur-slow:320ms;
+	--ease-standard:cubic-bezier(0.2,0,0,1);
+	--ease-emphasized:cubic-bezier(0.3,0,0.1,1);
+}
+@media (prefers-reduced-motion: reduce){
+:root{
+	--dur-fast:0ms;
+	--dur-normal:0ms;
+	--dur-slow:0ms;
+}
 }
 body[data-theme="daylight"]{
 	--bg:#f4f6fb;
@@ -137,3 +168,14 @@ body[data-ui-style="fluent"][data-theme="daylight"]{
 body[data-ui-style="fluent"][data-theme="rainbow"]{
 	--t3-aa:#6f5f7d;
 }
+/* platform: glass */
+body[data-ui-style="glass"]{
+	--glass-blur:24px;
+	--glass-tint:72%;
+	--glass-shadow:0px 8px 32px rgba(0,0,0,0.18), 0px 1px 2px rgba(0,0,0,0.08);
+	--glass-stroke:color-mix(in srgb,var(--t1) 14%,transparent);
+	--glass-backdrop-from:var(--bg);
+	--glass-backdrop-to:color-mix(in srgb,var(--bg) 65%,var(--accent));
+}
+body[data-ui-style="glass"][data-theme="daylight"]{--glass-tint:73%;}
+body[data-ui-style="glass"][data-theme="rainbow"]{--glass-tint:76%;}
