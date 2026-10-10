@@ -27,6 +27,10 @@ function transferErrToast(r) {
     bad_payload: 'trxErrBadPayload',
     invalid_url: 'trxErrInvalidUrl',
     not_found: 'trxErrNotFound',
+    send_key_required: 'trxErrSendKeyRequired',
+    bad_send_key: 'trxErrBadSendKey',
+    send_key_locked: 'trxErrSendKeyLocked',
+    send_key_unavailable: 'trxErrSendKeyUnavailable',
   };
   toast(t(map[r?.code] || 'trxErrServer'), 'error');
 }
@@ -74,6 +78,9 @@ async function transferSaveConfig(){
 // polling it. Only ever one at a time — the modal is the only way in.
 let _trxSend = null;
 let _trxPoll = null;
+// The week's send key, remembered for this run of the app only — it is a
+// shared secret that changes every Monday, so it is never written to disk.
+let _trxSendKey = '';
 
 function openTransferSendModal(){
   if (!S.nexus) return toast(t('nexusSelectFirst'), 'error');
@@ -86,6 +93,12 @@ function openTransferSendModal(){
         <span class="modal-hint" style="display:block">${t('trxAllowTypedHint')}</span>
       </span>
     </label>
+    <div class="fg" style="margin-top:12px">
+      <label for="trx-sendkey">${t('trxSendKey')}</label>
+      <input id="trx-sendkey" type="text" autocomplete="off" spellcheck="false" maxlength="16"
+        placeholder="XXXX-XXXX-XXXX" value="${x(_trxSendKey)}" oninput="transferFormatSendKey(this)" data-no-i18n>
+      <div class="modal-hint">${I.info}<span>${t('trxSendKeyHint')}</span></div>
+    </div>
     <div id="trx-send-body" style="margin-top:14px"></div>
     <div class="modal-actions">
       <button class="btn btn-p" id="trx-send-go" onclick="transferSendGo()">${t('trxGenerate')}</button>
@@ -124,16 +137,25 @@ function transferSendCleanup(){
   _trxSend = null;
 }
 
+// XXXX-XXXX-XXXX as it is typed; the service forgives case, spaces and I/L/O.
+function transferFormatSendKey(input){
+  const raw = String(input.value || '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 12);
+  input.value = (raw.match(/.{1,4}/g) || []).join('-');
+}
+
 async function transferSendGo(){
   const btn = q('#trx-send-go');
   if (btn) { btn.disabled = true; btn.textContent = t('syncWorking'); }
   const allowTypedCode = !!q('#trx-typed')?.checked;
+  const sendKey = q('#trx-sendkey')?.value || '';
 
-  const r = await api.transfer.send(S.nexus.id, { allowTypedCode });
+  const r = await api.transfer.send(S.nexus.id, { allowTypedCode, sendKey });
   if (!r.ok) {
     if (btn) { btn.disabled = false; btn.textContent = t('trxGenerate'); }
+    if (r.code === 'send_key_required' || r.code === 'bad_send_key') { _trxSendKey = ''; q('#trx-sendkey')?.focus(); }
     return transferErrToast(r);
   }
+  _trxSendKey = sendKey;
   _trxSend = { transferId: r.transferId, done: false };
 
   const body = q('#trx-send-body');
