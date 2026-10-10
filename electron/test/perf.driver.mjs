@@ -7,7 +7,24 @@
 //   node electron/test/perf.driver.mjs
 //
 // A tool, not a CI test (it prints, it does not assert) — no test glob runs it.
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
 import { launchWithVault } from './ui-app.mjs';
+
+// Procress 19 F8: i18n.js is ~45 % of the JS every window parses. Measured in
+// this Node (same V8 as the renderer, no window needed): compile + run, best
+// of 5. Each pass gets a distinct trailing comment, or V8's in-isolate
+// compilation cache answers passes 2–5 and the number means nothing.
+{
+  const src = readFileSync(new URL('../src/renderer/i18n.js', import.meta.url), 'utf8');
+  let best = Infinity;
+  for (let i = 0; i < 5; i++) {
+    const t0 = performance.now();
+    new vm.Script(`${src}\n// pass ${i}`, { filename: 'i18n.js' }).runInNewContext({});
+    best = Math.min(best, performance.now() - t0);
+  }
+  console.log(`${'i18n.js parse + run'.padEnd(46)} ${`${Math.round(best)} ms · ${(src.length / 1e6).toFixed(2)} MB`.padEnd(18)} (Procress 19 F8)`);
+}
 
 const ui = await launchWithVault('Perf');
 const { win } = ui;
@@ -24,8 +41,10 @@ try {
     for (const m of out) { const t0 = performance.now(); await openModuleNode(m.id); res.push([m.kind, performance.now() - t0]); }
     return res;
   });
+  const drafter = kinds.find(([k]) => k === 'drafter');
   const slowest = kinds.sort((a, b) => b[1] - a[1])[0];
   row('open each kind (sample vault), slowest', `${Math.round(slowest[1])} ms (${slowest[0]})`, '< 200 ms');
+  if (drafter) row('Drafter: first open in a window', `${Math.round(drafter[1])} ms`, '< 200 ms (F10)');
 
   // the stress vault — built with the batch APIs (B1)
   const seed = await win.evaluate(async () => {
@@ -85,6 +104,28 @@ try {
     }, [seed.cls, view]);
     row(`Classifier 3,000: ${view}`, `${Math.round(r.ms)} ms · ${r.dom} nodes`, '< 300 ms · < 3,000');
   }
+
+  // F10: lazyRows grows and never recycles — scroll the table to its end and
+  // count what the DOM holds then.
+  const scrolled = await win.evaluate(async (cls) => {
+    await openModuleNode(cls);
+    const iid = document.querySelector('[onclick*="setClassifierView"]')?.getAttribute('onclick').match(/setClassifierView\(["']([^"']+)["']/)?.[1];
+    if (iid) await setClassifierView(iid, 'table');
+    await openModuleNode(cls);
+    const before = document.querySelectorAll('#main-inner *').length;
+    const frame = () => new Promise((res) => requestAnimationFrame(() => res()));
+    const t0 = performance.now();
+    let worst = 0;
+    for (let i = 0; i < 200 && document.querySelector('[data-lazy]'); i++) {
+      const s = performance.now();
+      document.querySelector('[data-lazy]').scrollIntoView();
+      await frame(); await frame();
+      worst = Math.max(worst, performance.now() - s);
+    }
+    return { ms: performance.now() - t0, worst, before, dom: document.querySelectorAll('#main-inner *').length };
+  }, seed.cls);
+  row('Classifier 3,000: table scrolled to the end', `${scrolled.before} → ${scrolled.dom} nodes · ${Math.round(scrolled.ms)} ms`, '< 3,000 nodes (F10)');
+  row('  worst step while scrolling', `${Math.round(scrolled.worst)} ms`, '< 32 ms');
 
   // Home of the big vault, and search
   const home = await win.evaluate(async () => { const t0 = performance.now(); await builderOpenPage(null); return performance.now() - t0; });

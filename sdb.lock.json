@@ -3,8 +3,8 @@
   "self": "EXE",
   "source": {
     "repo": "ZYDRAXYL/DraconDex-SDB",
-    "ref": "sdb-v2.1.0",
-    "version": "2.1.0"
+    "ref": "claude/amazing-fermat-z240ex",
+    "version": "2.1.1"
   },
   "expect": {
     "vaultSchemaVersion": 7,
@@ -13,7 +13,7 @@
   "vendored": {
     "src/schema/generated/vault-ddl.electron.js": {
       "artifact": "generated/electron/vault-ddl.electron.js",
-      "sha256": "0c4b4244de687094f260cb1729bc94b712eb3552777461c293463e1c245438f6"
+      "sha256": "2ba36445b6b93ffd9d61f09ccb6cc6a969cff78189345e6c7c99b1e4e9214756"
     },
     "electron/src/db/supabase-schema.js": {
       "artifact": "generated/electron/supabase-schema.js",
@@ -66,6 +66,10 @@
     "electron/test/fixtures/snapshot-v2.json": {
       "artifact": "fixtures/snapshot-v2.json",
       "sha256": "468eee3ad95e58a56404b81d65d0eb7a0ff21292540ecb6ca534268103f0d9e2"
+    },
+    "electron/test/fixtures/stress-v2.json": {
+      "artifact": "fixtures/stress-v2.json",
+      "sha256": "4e9d5190388af2d4c194cf29a6a3d28a9399af148d73cfa0d5c6d5624aa7d5d9"
     },
     "electron/guide/en.json": {
       "artifact": "templates/guide/en.json",
