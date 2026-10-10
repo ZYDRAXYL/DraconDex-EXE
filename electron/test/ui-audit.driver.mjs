@@ -14,13 +14,17 @@
 //
 // Needs a display, like ui-smoke.driver.mjs. BUDGET_MS is a ceiling against
 // regressions, not the target (Plan.md Procress 17 asks < 200 ms per kind) —
-// CI machines vary too much to fail a build on the target itself.
+// CI machines vary too much to fail a build on the target itself. Procress 19
+// part 8 brought it down from 1,500 to about twice the slowest open measured
+// (Drafter: 211 ms on the Windows machine of Procress 17, 63 ms on Linux CI
+// containers); the test prints the three slowest opens so the next
+// tightening follows a number, not a guess.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { launchWithVault } from './ui-app.mjs';
 import { contrastProbe } from './ui-contrast.mjs';
 
-const BUDGET_MS = 1500;
+const BUDGET_MS = 400;
 let ui, win;
 const pageErrors = [];
 
@@ -85,12 +89,16 @@ test('every module of the sample vault opens clean and in budget', async () => {
   });
   assert.ok(mods.length >= 10, 'the sample vault has one module of most kinds');
   const slow = [];
+  const times = [];
   for (const m of mods) {
     const ms = await win.evaluate(async (id) => { const t0 = performance.now(); await openModuleNode(id); return performance.now() - t0; }, m.id);
     await win.waitForTimeout(150); // mounts that run after the open resolves
+    times.push([Math.round(ms), m.kind]);
     if (ms > BUDGET_MS) slow.push(`${m.kind} "${m.name}" ${Math.round(ms)} ms`);
     audit(`${m.kind} "${m.name}"`, await snapshot());
   }
+  // Printed so the budget can follow the numbers (Procress 19 part 8).
+  console.log(`slowest opens: ${times.sort((a, b) => b[0] - a[0]).slice(0, 3).map(([t, k]) => `${k} ${t} ms`).join(' · ')} (budget ${BUDGET_MS})`);
   assert.deepEqual(slow, [], `over ${BUDGET_MS} ms`);
 });
 

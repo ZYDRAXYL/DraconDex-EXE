@@ -7,7 +7,30 @@
 //   node electron/test/perf.driver.mjs
 //
 // A tool, not a CI test (it prints, it does not assert) — no test glob runs it.
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
 import { launchWithVault } from './ui-app.mjs';
+
+// Procress 19 F8: i18n.js was ~45 % of the JS every window parses (1.9 MB,
+// 18 languages). Now a window parses i18n.js + en.js + its own language —
+// measured for the default, Thai. In this Node (same V8 as the renderer, no
+// window needed): compile + run, best of 5. Each pass gets a distinct trailing
+// comment, or V8's in-isolate compilation cache answers passes 2–5 and the
+// number means nothing.
+{
+  const files = ['i18n.js', 'i18n/en.js', 'i18n/th.js'].map((f) => readFileSync(new URL(`../src/renderer/${f}`, import.meta.url), 'utf8'));
+  const stub = { localStorage: { getItem: () => '{}' }, document: { write() {} } };
+  let best = Infinity;
+  for (let i = 0; i < 5; i++) {
+    const t0 = performance.now();
+    const ctx = vm.createContext({ ...stub });
+    // one realm, like the page: i18n.js's top-level const/function stay visible to the language files
+    for (const src of files) new vm.Script(`${src}\n// pass ${i}`).runInContext(ctx);
+    best = Math.min(best, performance.now() - t0);
+  }
+  const mb = files.reduce((n, s) => n + s.length, 0) / 1e6;
+  console.log(`${'i18n parse + run (i18n.js + en + th)'.padEnd(46)} ${`${Math.round(best)} ms · ${mb.toFixed(2)} MB`.padEnd(18)} (Procress 19 F8)`);
+}
 
 const ui = await launchWithVault('Perf');
 const { win } = ui;
@@ -24,8 +47,22 @@ try {
     for (const m of out) { const t0 = performance.now(); await openModuleNode(m.id); res.push([m.kind, performance.now() - t0]); }
     return res;
   });
+  const drafter = kinds.find(([k]) => k === 'drafter');
   const slowest = kinds.sort((a, b) => b[1] - a[1])[0];
   row('open each kind (sample vault), slowest', `${Math.round(slowest[1])} ms (${slowest[0]})`, '< 200 ms');
+  if (drafter) row('Drafter: first open in a window', `${Math.round(drafter[1])} ms`, '< 200 ms (F10)');
+
+  // Procress 19 F9: a second window on the same vault, open → Nest drawn.
+  // Measured from the window's own navigation start, so process launch is out.
+  {
+    const next = ui.app.waitForEvent('window');
+    await win.evaluate(() => api.window.openNexus(S.nexus.id));
+    const w2 = await next;
+    await w2.waitForSelector('#hub-body', { timeout: 20000 });
+    const t = await w2.evaluate(() => ({ dcl: performance.getEntriesByType('navigation')[0].domContentLoadedEventEnd, ready: performance.now() }));
+    await w2.close();
+    row('second vault window: parsed / ready', `${Math.round(t.dcl)} / ${Math.round(t.ready)} ms`, '(F9)');
+  }
 
   // the stress vault — built with the batch APIs (B1)
   const seed = await win.evaluate(async () => {
@@ -97,6 +134,36 @@ try {
     return { rebuild, query };
   });
   row('search: rebuild / query', `${Math.round(search.rebuild)} / ${Math.round(search.query)} ms`, '(146 / 10 ms)');
+  // Last, because it leaves 50k nodes behind that every later number would pay
+  // to tear down (before Procress 19 F10 — lazyRows recycles rows now). Scroll
+  // the table to its end and count what the DOM holds then.
+  const scrolled = await win.evaluate(async (cls) => {
+    await openModuleNode(cls);
+    const iid = document.querySelector('[onclick*="setClassifierView"]')?.getAttribute('onclick').match(/setClassifierView\(["']([^"']+)["']/)?.[1];
+    if (iid) await setClassifierView(iid, 'table');
+    await openModuleNode(cls);
+    const before = document.querySelectorAll('#main-inner *').length;
+    const frame = () => new Promise((res) => requestAnimationFrame(() => res()));
+    const t0 = performance.now();
+    let worst = 0;
+    // A step waits two frames, so it can never read under ~33 ms at 60 Hz —
+    // the longest gap between frames is the number that shows jank.
+    let frameWorst = 0, last = performance.now(), on = true;
+    const tick = (t) => { frameWorst = Math.max(frameWorst, t - last); last = t; if (on) requestAnimationFrame(tick); };
+    requestAnimationFrame((t) => { last = t; requestAnimationFrame(tick); });
+    for (let i = 0; i < 200 && document.querySelector('[data-lazy]'); i++) {
+      const s = performance.now();
+      document.querySelector('[data-lazy]').scrollIntoView();
+      await frame(); await frame();
+      worst = Math.max(worst, performance.now() - s);
+    }
+    on = false;
+    return { ms: performance.now() - t0, worst, frameWorst, before, dom: document.querySelectorAll('#main-inner *').length };
+  }, seed.cls);
+  row('Classifier 3,000: table scrolled to the end', `${scrolled.before} → ${scrolled.dom} nodes · ${Math.round(scrolled.ms)} ms`, '< 3,000 nodes (F10)');
+  row('  worst step while scrolling (2 frames)', `${Math.round(scrolled.worst)} ms`, '< 32 ms');
+  row('  longest frame while scrolling', `${Math.round(scrolled.frameWorst)} ms`, '< 32 ms (F10)');
+
   const mem = await ui.app.evaluate(() => process.memoryUsage().rss / 1e6);
   row('RAM main process', `${Math.round(mem)} MB`, '(237–260 MB)');
 } finally {

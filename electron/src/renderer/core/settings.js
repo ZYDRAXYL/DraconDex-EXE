@@ -116,6 +116,10 @@ function setUiSetting(key, value){
     value = Math.min(130, Math.max(80, Math.round(Number(value) || 100)));
   }
   if(key === 'language' && !UI_LANGUAGE_OPTIONS.includes(value)) return;
+  // Procress 19 F8: a language is its own file now — fetch it first, then apply
+  // as if it had always been there. Callers that re-render after this (the
+  // welcome wizard) get the promise to wait on.
+  if(key === 'language' && !i18nLoaded(value)) return i18nLoad(value).then(() => setUiSetting(key, value));
   if(key === 'size'){
     value = Number(value);
     if(!Number.isFinite(value)) return;

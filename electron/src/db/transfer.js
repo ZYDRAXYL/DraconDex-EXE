@@ -139,7 +139,7 @@ function sweepSessions() {
  * what makes the transfer end-to-end: with no wrapped key on the service, the
  * QR/link fragment is the only copy of it in existence.
  */
-async function transferSend(nexusId, { allowTypedCode = true, name = null } = {}) {
+async function transferSend(nexusId, { allowTypedCode = true, name = null, sendKey = '' } = {}) {
   sweepSessions();
 
   const snapshot = serializeVault(nexusId);
@@ -159,7 +159,17 @@ async function transferSend(nexusId, { allowTypedCode = true, name = null } = {}
   } catch (_) { /* uncompressed */ }
 
   const key = newKey();
-  const created = await call('/api/create', { method: 'POST', json: { sizeBytes: gz.length } });
+  // sendKey: this week's send key (DraconDex-TRX _lib/sendkey.mts). Always
+  // sent; a service with the gate off ignores it. `locked` from create means
+  // too many wrong KEYS from this machine, not PINs, so it is renamed for the
+  // renderer to say the right thing.
+  let created;
+  try {
+    created = await call('/api/create', { method: 'POST', json: { sizeBytes: gz.length, sendKey: String(sendKey || '') } });
+  } catch (err) {
+    if (err instanceof TransferError && err.code === 'locked') throw new TransferError('send_key_locked');
+    throw err;
+  }
 
   // The framing costs an IV and a tag per chunk, so the plaintext slice has
   // to be smaller than the server's cap by exactly that much — otherwise the

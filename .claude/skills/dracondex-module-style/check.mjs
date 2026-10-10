@@ -14,6 +14,7 @@
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -87,51 +88,32 @@ const mainChannels = new Set();
 for (const m of mainSrc.matchAll(/\bh\('([^']+)'/g)) mainChannels.add(m[1]);
 for (const m of mainSrc.matchAll(/ipcMain\.(?:handle|on)\('([^']+)'/g)) mainChannels.add(m[1]);
 
-// --- parse i18n dict L in src/renderer/i18n.js ---
-function parseLocales(src) {
-  const start = src.indexOf('const L = {');
-  const locales = {}; // name -> Set(keys)
-  let depth = 0, current = null;
-  for (const line of src.slice(start).split('\n')) {
-    const localeOpen = line.match(/^  ([A-Za-z_]+): \{/);
-    if (depth === 1 && localeOpen) { current = localeOpen[1]; locales[current] = new Set(); }
-    if (depth >= 2 || (depth === 1 && localeOpen)) {
-      const inBlock = stripStrings(line);
-      for (const m of inBlock.matchAll(/([A-Za-z0-9_]+)\s*:/g)) {
-        if (current && m[1] !== current) locales[current].add(m[1]);
-      }
-    }
-    depth += (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
-    if (depth <= 0 && current) break; // closed const L
-  }
-  return locales;
+// --- the i18n tables: src/renderer/i18n/<lang>.js ---
+// Procress 19 F8: src/renderer/i18n.js holds only the loader now. Each
+// language is its own file, one call: i18nAdd(lang, keys, common) — the
+// t('key') table, then that language's column of COMMON_UI_TEXT. Run each
+// file against a stub i18nAdd and read back exactly what the app would get
+// (the old brace-counting parse of one 1.9 MB literal could only approximate).
+const I18N_DIR = app('src/renderer/i18n');
+const i18nFiles = existsSync(path.join(root, I18N_DIR))
+  ? readdirSync(path.join(root, I18N_DIR)).filter(f => f.endsWith('.js'))
+    .sort((a, b) => (a === 'en.js' ? -1 : b === 'en.js' ? 1 : a.localeCompare(b))) : [];
+const locales = {}; // name -> Set(keys)
+const commonUi = new Map(); // COMMON_UI_TEXT source string -> Set(locales that translate it)
+const i18nFileErrors = [];
+for (const f of i18nFiles) {
+  try {
+    vm.runInNewContext(read(`${I18N_DIR}/${f}`), {
+      i18nAdd: (lang, keys, common) => {
+        // the loader fetches i18n/<code>.js by the code it was asked for
+        if (`${lang}.js` !== f) i18nFileErrors.push(`${I18N_DIR}/${f} registers '${lang}' — the loader would never find it`);
+        locales[lang] = new Set(Object.keys(keys || {}));
+        for (const k of Object.keys(common || {})) (commonUi.get(k) ?? commonUi.set(k, new Set()).get(k)).add(lang);
+      },
+    }, { filename: f });
+  } catch (e) { i18nFileErrors.push(`${I18N_DIR}/${f} does not run: ${e.message}`); }
 }
-const locales = parseLocales(i18nSrc);
 const localeNames = Object.keys(locales);
-
-// --- parse the COMMON_UI_TEXT fallback dict in src/renderer/i18n.js ---
-// Entries are one per line: `'source': { en:'…', ja:'…', … },`. Unlike `L`,
-// the dict key is itself the source string, so the locale it is already
-// written in needs no field — but every *other* shipped locale does, or
-// tr()/translateCommonUiText() silently serve English instead.
-function parseCommonUiText(src) {
-  const start = src.indexOf('const COMMON_UI_TEXT = {');
-  if (start < 0) return null;
-  const entries = [];
-  let depth = 0;
-  for (const line of src.slice(start).split('\n')) {
-    const entry = depth === 1 && line.match(/^\s*('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")\s*:\s*\{/);
-    if (entry) {
-      const tags = new Set();
-      for (const m of stripStrings(line.slice(entry[0].length - 1)).matchAll(/([A-Za-z0-9_]+)\s*:/g)) tags.add(m[1]);
-      entries.push({ key: entry[1].slice(1, -1), locales: tags });
-    }
-    const bare = stripStrings(line);
-    depth += (bare.match(/\{/g) || []).length - (bare.match(/\}/g) || []).length;
-    if (depth <= 0 && entries.length) break; // closed const COMMON_UI_TEXT
-  }
-  return entries;
-}
 
 // --- CSS classes defined in style.css ---
 const cssClasses = new Set();
@@ -148,6 +130,14 @@ console.log('=== IPC chain (preload -> main.js) ===');
 // ═══ Global check 2: i18n locale parity vs en ═══
 console.log(`=== i18n parity (${localeNames.length} locales: ${localeNames.join(', ')}) ===`);
 {
+  i18nFileErrors.forEach(err);
+  if (!i18nFiles.length) err(`no language files in ${I18N_DIR}/ — t() would return every key verbatim`);
+  // i18n.js picks the file to load from LANGUAGE_LABELS' codes; a picker
+  // entry with no file 404s at boot and leaves that language on English.
+  const labels = /const LANGUAGE_LABELS = \{([^\n]*)\}/.exec(i18nSrc);
+  const codes = labels ? [...labels[1].matchAll(/(?:^|,)\s*([a-z]{2,8})\s*:/g)].map(m => m[1]) : [];
+  if (!labels) warn(`could not locate \`const LANGUAGE_LABELS\` in ${app('src/renderer/i18n.js')}`);
+  for (const code of codes) if (!locales[code]) err(`LANGUAGE_LABELS offers '${code}' but ${I18N_DIR}/${code}.js does not exist`);
   const en = locales.en || new Set();
   let gaps = 0;
   for (const name of localeNames) {
@@ -165,8 +155,8 @@ console.log(`=== i18n parity (${localeNames.length} locales: ${localeNames.join(
 // check (it is how it/nl/pl/uk/tr shipped in the picker but not in this dict).
 console.log('=== i18n parity (COMMON_UI_TEXT fallback dict) ===');
 {
-  const entries = parseCommonUiText(i18nSrc);
-  if (!entries) warn('could not locate `const COMMON_UI_TEXT` in src/renderer/i18n.js');
+  const entries = [...commonUi].map(([key, tags]) => ({ key, locales: tags }));
+  if (!entries.length) warn(`no COMMON_UI_TEXT entries in ${I18N_DIR}/*.js`);
   else {
     const isThai = s => /[฀-๿]/.test(s);
     const gaps = new Map(); // locale -> [keys]
@@ -352,7 +342,9 @@ const walkJs = (dir) => readdirSync(path.join(root, dir), { withFileTypes: true 
   .sort((a, b) => a.name.localeCompare(b.name))
   .flatMap(e => e.isDirectory() ? walkJs(`${dir}/${e.name}`) : (e.name.endsWith('.js') ? [`${dir}/${e.name}`] : []));
 
-const targets = files.length ? files : walkJs(app('src/renderer'));
+// The language files are translations, not UI code — every Thai line in them
+// is meant to be there, and none has t() calls or markup to check.
+const targets = files.length ? files : walkJs(app('src/renderer')).filter(f => !f.startsWith(`${I18N_DIR}/`));
 
 const usedT = new Set();
 for (const file of targets) {
@@ -414,7 +406,7 @@ for (const file of targets) {
   // Thai literals = untranslated UI strings
   const thai = [];
   lines.forEach((l, i) => { if (/[฀-๿]/.test(l)) thai.push(i + 1); });
-  if (thai.length) warn(`${thai.length} line(s) with hardcoded Thai text (use t() + add key to all locales in ${app('src/renderer/i18n.js')}): L${thai.slice(0, 8).join(' L')}${thai.length > 8 ? ' …' : ''}`);
+  if (thai.length) warn(`${thai.length} line(s) with hardcoded Thai text (use t() + add key to every ${I18N_DIR}/<lang>.js): L${thai.slice(0, 8).join(' L')}${thai.length > 8 ? ' …' : ''}`);
 
   // CSS classes used but not defined in style.css
   const unknown = new Set();

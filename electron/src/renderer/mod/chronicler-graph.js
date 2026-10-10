@@ -131,9 +131,7 @@ function bindChroniclerDownlineInteractions() {
   const board = pbQ('#chr-downline-board');
   if (!board || !pbQ('#chr-downline-content')) return;
   // One binding per board element (v5 Part 8: several boards may be live).
-  board._dlAbort?.abort();
-  const ac = new AbortController();
-  board._dlAbort = ac;
+  const signal = boardSignal(board, '_dlAbort');
   canvasEngage(board);
   const st = (S.chroniclerData.downlineView ||= { scale: 1, ty: 0 });
   const iid = pbCurrent();
@@ -150,7 +148,7 @@ function bindChroniclerDownlineInteractions() {
     // oneline wheel handler uses.
     st.ty = my - ((my - st.ty) / old) * st.scale;
     updateChroniclerDownlineY(st);
-  }, { signal: ac.signal, passive: false });
+  }, { signal, passive: false });
 
   // Right-button drag, matching Oneline's pan gesture — left-drag stays free
   // for text selection and for clicking a node.
@@ -160,16 +158,16 @@ function bindChroniclerDownlineInteractions() {
     panning = true; lastY = e.clientY;
     board.classList.add('is-panning');
     e.preventDefault();
-  }, { signal: ac.signal });
+  }, { signal });
   window.addEventListener('mousemove', (e) => {
     if (!panning) return;
     pbUse(iid);
     st.ty += e.clientY - lastY; lastY = e.clientY; updateChroniclerDownlineY(st);
-  }, { signal: ac.signal });
+  }, { signal });
   window.addEventListener('mouseup', () => {
     panning = false; board.classList.remove('is-panning');
-  }, { signal: ac.signal });
-  bindCanvasCtx(board, 'chronicler.graph', { resettable: true }, { signal: ac.signal });
+  }, { signal });
+  bindCanvasCtx(board, 'chronicler.graph', { resettable: true }, { signal });
 }
 
 function resetChroniclerDownlineView() {

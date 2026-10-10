@@ -28,14 +28,14 @@
 .nav-logo-btn.is-return{color:var(--accent-text,var(--accent))}
 .nav-logo-btn .brand-img{width:70%;height:70%}
 .nav-logo-btn .icon{width:24px;height:24px}
-.brand-img{height:30px;width:30px;object-fit:contain;display:block;content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="daylight"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
-body[data-theme="moonlight"] .brand-img{content:url('../../src/assets/brand/DraconDex_Color.png')}
-body[data-theme="midnight"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="rainbow"] .brand-img{content:url('../../src/assets/brand/DraconDex_Color.png')}
+.brand-img{height:30px;width:30px;object-fit:contain;display:block;content:url('../../src/assets/brand/web/DraconDex_WhiteOut.webp')}
+body[data-theme="daylight"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_WhiteIn.webp')}
+body[data-theme="moonlight"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_Color.webp')}
+body[data-theme="midnight"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_WhiteOut.webp')}
+body[data-theme="rainbow"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_Color.webp')}
 /* A custom or package theme is only a palette, so applyUiSettings() stamps
    data-theme-tone from its --bg; the default above already covers dark. */
-body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
+body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_WhiteIn.webp')}
 .nav-btn{
 	position:relative;
 	width:70%;aspect-ratio:1;height:auto;border:none;

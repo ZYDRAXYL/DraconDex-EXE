@@ -212,6 +212,7 @@ function initNarratorPan() {
   const d = S.narratorData;
   if (!wrap || !graph || !d) return;
   bindCanvasCtx(wrap, 'narrator.canvas');
+  const signal = boardSignal(wrap, '_narAbort'); // window listeners die with this wrap (Procress 19 RAM)
   let panning = false, sx = 0, sy = 0, s0 = { x: 0, y: 0 };
   wrap.addEventListener('mousedown', (e) => {
     if (e.button !== 2) return;
@@ -224,8 +225,8 @@ function initNarratorPan() {
     if (!panning) return;
     narratorPan[d.moduleId] = { x: s0.x + (e.clientX - sx), y: s0.y + (e.clientY - sy) };
     graph.style.transform = narratorTransform(d.moduleId);
-  });
-  window.addEventListener('mouseup', () => { panning = false; wrap.classList.remove('is-panning'); });
+  }, { signal });
+  window.addEventListener('mouseup', () => { panning = false; wrap.classList.remove('is-panning'); }, { signal });
   wrap.addEventListener('wheel', (e) => { if (e.ctrlKey) { e.preventDefault(); zoomNarrator(e.deltaY < 0 ? 1 : -1); } }, { passive: false });
 }
 

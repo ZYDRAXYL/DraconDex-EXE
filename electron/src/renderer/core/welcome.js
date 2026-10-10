@@ -42,7 +42,7 @@ function renderWelcomeWindow() {
   q('#left-panel-foot').innerHTML = '';
   q('#main-inner').innerHTML = `
     <div class="welcome-hero">
-      <div class="ei"><img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img" alt="DraconDex" style="height:72px;width:72px;opacity:.4"></div>
+      <div class="ei"><img src="../src/assets/brand/web/DraconDex_WhiteOut.webp" class="brand-img" alt="DraconDex" style="height:72px;width:72px;opacity:.4"></div>
       <h2 class="welcome-title">${t('wmTitle')}</h2>
       <p class="welcome-text">${hasVaults ? t('nexusSelect') : t('wmText')}</p>
       ${recent.length ? `
@@ -178,7 +178,8 @@ function welcomeWizardFinish() {
 // calls applyUiSettings(), so the ✓ would not move). Re-rendering here means
 // the wizard never depends on which branch it happened to take.
 function welcomeSetUi(key, value) {
-  setUiSetting(key, value);
+  const loading = setUiSetting(key, value); // a language not loaded yet (F8)
+  if (loading) return loading.then(renderWelcomeWindow);
   renderWelcomeWindow();
 }
 
