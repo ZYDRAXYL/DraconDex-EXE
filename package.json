@@ -26,6 +26,8 @@
     "postinstall": "node ./electron/ensure-electron.js",
     "sdb:check": "node tools/sdb-check.mjs",
     "sdb:vendor": "node tools/sdb-vendor.mjs",
+    "ui:inventory": "node tools/ui-inventory.mjs",
+    "ui:check": "node tools/ui-inventory.mjs --check",
     "chain:survey": "node tools/chain-survey.mjs",
     "chain:propagate": "node tools/chain-propagate.mjs",
     "build:portable": "electron-builder --win dir --publish never && node electron/scripts/finish-portable.mjs",

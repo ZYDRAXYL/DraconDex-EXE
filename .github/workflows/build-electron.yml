@@ -90,6 +90,12 @@ jobs:
       - name: Run regression tests
         run: node --test "electron/test/*.test.mjs"
 
+      # Procress 22 part 4: component variants, hard-coded hex, inline style,
+      # raw z-index and character icons may only go down (ui-inventory.json is
+      # the baseline; APP docs/COMPONENTS.md is the registry they count against).
+      - name: UI inventory does not grow
+        run: npm run ui:check
+
       # Procress 16 part 1: clicks the real app (rail, Create flyout, presets,
       # Exhibitor, tabs) — the data-layer tests above all passed while those
       # buttons were dead. windows-latest has a display, so no Xvfb here.
