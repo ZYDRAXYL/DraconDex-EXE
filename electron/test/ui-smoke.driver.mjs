@@ -195,7 +195,7 @@ test('P1: a long list renders its first rows and grows as it is scrolled', async
     return id;
   });
   await sleep(300);
-  const rows = () => win.locator('.cls-list .li').count();
+  const rows = () => win.locator('.cls-list .ls-row').count();
   const first = await rows();
   assert.ok(first >= 100 && first < 300, `first render ${first} rows`);
   for (let i = 0; i < 6; i++) { await win.evaluate(() => document.querySelector('.cls-list [data-lazy]')?.scrollIntoView()); await sleep(250); }
@@ -204,7 +204,7 @@ test('P1: a long list renders its first rows and grows as it is scrolled', async
   // selecting a far row keeps it on screen through the re-render
   const far = await win.evaluate(async (id) => { const o = (await api.classifier.getObjects(id))[550]; const iid = document.querySelector('[onclick*="selectClassifierObject"]').getAttribute('onclick').match(/selectClassifierObject\(["']([^"']+)["']/)[1]; selectClassifierObject(iid, o.id); return o.name; }, cls);
   await sleep(300);
-  assert.equal(await win.locator('.cls-list .li.sel .name').innerText(), far);
+  assert.equal(await win.locator('.cls-list .ls-row.sel .ls-title').innerText(), far);
 });
 
 // ── Procress 18 part 1 + 16 B6/B8 ────────────────────────────────────────

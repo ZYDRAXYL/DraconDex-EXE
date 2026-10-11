@@ -14,8 +14,6 @@
 	vertical-align:2px;margin-left:6px;
 }
 /* ── Chronicler: one-line event rows, side-by-side dates, graph icons ── */
-.chr-ev-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.chr-ev-date{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));flex-shrink:0;margin-right:6px}
 .chr-daterow{display:flex;gap:14px;flex-wrap:wrap}
 /* 300px is the width a full 5-box date row actually needs (52+52+70+52+52 plus
    separators). Below that the two dates wrap to their own lines instead of
@@ -47,7 +45,6 @@
 /* Chronicler event inspector (Plan part3 #2/#2.1/#2.2): shared below-graph
    (One-line) and per-row dropdown (Down-line) editable panel, one open at a time */
 .chr-insp-row{margin-bottom:8px}
-.chr-insp-row .objrow .tree-chev{margin-left:2px}
 .chr-insp-body{
 	padding:14px 16px 4px;margin-top:6px;
 	background:var(--raised);border:1px solid var(--border);border-radius:var(--r);
@@ -210,10 +207,9 @@
 
 /* Book "Author" (Phase 11, mockup 12) */
 .author-layout{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;min-height:480px}
-.author-chapters{width:230px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:10px 0;overflow-y:auto}
+.author-chapters{width:230px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:10px 6px;overflow-y:auto}
+.sk-pages{max-width:560px}
 .au-col-label{padding:0 14px 8px;font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:700;letter-spacing:.05em;color:var(--t2)}
-.author-chapters .li{margin:0 6px}
-.author-chapters .li.au-add{color:var(--t3-aa,var(--t2));gap:6px}
 .author-main{flex:1;min-width:0;padding:14px 18px;overflow-y:auto;background:var(--bg)}
 .au-editor{height:calc(100vh - 300px);min-height:420px;display:flex;flex-direction:column}
 /* Author rich-text (contenteditable) editor (Plan part5 Author #1/#2) */
@@ -272,8 +268,6 @@
 .chs-inputrow input:focus{outline:none;border-color:var(--accent)}
 .chs-snippet{display:block;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));font-weight:400;
 	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.author-chapters .li .cnt{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));background:var(--raised);
-	border-radius:var(--r);padding:1px 7px;flex-shrink:0}
 .chs-transcript{padding:14px 18px}
 .chs-tr-row{display:flex;gap:12px;padding:5px 0;border-bottom:1px dashed var(--border);font-size:calc(var(--fs-body) * var(--fsc,1))}
 .chs-tr-time{color:var(--t3-aa,var(--t2));flex-shrink:0;font-size:calc(var(--fs-meta) * var(--fsc,1));padding-top:1px;min-width:110px}

@@ -248,14 +248,6 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .cls-lv-empty{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));padding:3px 2px}
 .cls-link-label{margin-top:10px}
 .cls-link-list{padding:0 14px}
-.cls-link-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
-.cls-link-row:last-child{border-bottom:none}
-.cls-link-name{flex:1;min-width:0;font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t1);cursor:pointer;
-	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cls-link-name:hover{color:var(--accentH);text-decoration:underline}
-.cls-link-mod{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));flex-shrink:0}
-.cls-link-lbl{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);border:1px solid var(--accent);
-	border-radius:var(--rl);padding:0 7px;flex-shrink:0}
 .cls-tpl-editing{border-left:2px solid var(--accent)}
 /* v5 Part 3 (V5.md §7.4): folded level tables, inline "+ field", private
    fields and the Level & Condition disclosure in the fields modal. */

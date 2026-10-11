@@ -53,7 +53,10 @@ const _lsAttr = (v) => x(v == null ? '' : String(v));
 // A row's ⋯ / act button. `key` binds a keyboard key to it (Delete, F2).
 // Text buttons ('Restore') and icon buttons are both ctl-sm, so they fit a
 // compact row and never grow a comfy one.
-function listActHtml({ icon = '', name = '', onclick = '', key = '', text = false, danger = false, disabled = false, tip = '' } = {}) {
+// `hidden`: a key binding only — no button on the row (a compact row in a
+// panel whose ⋯ already carries the command), still clicked by its key.
+function listActHtml({ icon = '', name = '', onclick = '', key = '', text = false, danger = false, disabled = false, tip = '', hidden = false } = {}) {
+  if (hidden) return `<button class="btn btn-g btn-i ls-act" hidden tabindex="-1" data-ls-key="${_lsAttr(key)}" onclick="event.stopPropagation();${onclick}" aria-label="${_lsAttr(name)}"></button>`;
   const cls = text ? 'btn btn-s btn-sm' : 'btn btn-g btn-i';
   const aria = tip || name;
   return `<button class="${cls} ls-act${danger ? ' ls-danger' : ''}" tabindex="-1"${key ? ` data-ls-key="${_lsAttr(key)}"` : ''}
@@ -77,9 +80,11 @@ function listActHtml({ icon = '', name = '', onclick = '', key = '', text = fals
 //   attrs      extra attributes (data-*, draggable + drag handlers)
 //   cls        extra classes (a page's own hook)
 //   drag       a drag handle first in the row (reorderable lists, §12 part 3)
+//   lead       HTML before the icon (a tree's fold chevron)
+//   expanded   true / false: the row opens a body under it (an accordion)
 function listRowHtml({
   icon = null, title = '', titleHtml = null, meta = '', metaHtml = null, count = null, trailing = '',
-  actions = '', menu = '', state = {}, density = 'comfy', onclick = '', attrs = '', cls = '', tip = null, drag = false,
+  actions = '', menu = '', state = {}, density = 'comfy', onclick = '', attrs = '', cls = '', tip = null, drag = false, lead = '', expanded = null,
 } = {}) {
   const compact = density === 'compact';
   const titleIn = titleHtml ?? x(title);
@@ -91,12 +96,28 @@ function listRowHtml({
       title="${_lsAttr(t('moreActions'))}" aria-label="${_lsAttr(t('moreActions'))}" aria-haspopup="menu">${I.options}</button>` : '';
   const rowCls = ['ls-row', compact ? 'ls-compact' : 'ls-comfy', st.trim(), cls].filter(Boolean).join(' ');
   return `<div class="${rowCls}" role="option" tabindex="-1"
-    aria-selected="${state.selected ? 'true' : 'false'}"${state.disabled ? ' aria-disabled="true"' : ''} aria-label="${_lsAttr(label)}"${tipText ? ` title="${_lsAttr(tipText)}"` : ''}
+    aria-selected="${state.selected ? 'true' : 'false'}"${state.disabled ? ' aria-disabled="true"' : ''} aria-label="${_lsAttr(label)}"${tipText ? ` title="${_lsAttr(tipText)}"` : ''}${expanded == null ? '' : ` aria-expanded="${!!expanded}"`}
     ${onclick && !state.disabled ? `onclick="${onclick}"` : ''}${menu ? ` oncontextmenu="${menu}"` : ''} ${attrs}>
-    ${drag ? `<span class="ls-grip" aria-hidden="true">${I.list}</span>` : ''}${icon == null ? '' : `<span class="ls-icon" aria-hidden="true">${icon}</span>`}
+    ${drag ? `<span class="ls-grip" aria-hidden="true">${I.list}</span>` : ''}${lead}${icon == null ? '' : `<span class="ls-icon" aria-hidden="true">${icon}</span>`}
     <span class="ls-main"><span class="ls-title">${titleIn}</span>${!compact && metaIn ? `<span class="ls-meta">${metaIn}</span>` : ''}</span>
-    ${compact && metaIn ? `<span class="ls-meta ls-side">${metaIn}</span>` : ''}${count != null && count !== '' ? `<span class="ls-count" data-no-i18n>${x(count)}</span>` : ''}${trailing}${actions || more ? `<span class="ls-acts">${actions}${more}</span>` : ''}
+    ${compact && metaIn ? `<span class="ls-meta ls-side">${metaIn}</span>` : ''}${count != null && count !== '' ? `<span class="ls-count" data-no-i18n>${x(count)}</span>` : ''}${trailing}${expanded == null ? '' : `<span class="ls-chev${expanded ? '' : ' ls-shut'}" aria-hidden="true">${I.chevronDown}</span>`}${actions || more ? `<span class="ls-acts">${actions}${more}</span>` : ''}
   </div>`;
+}
+
+// A relation row (Classifier, Chronicler, Exhibitor, Narrator — the one
+// relation surface): arrow · the other end (the row opens it) · where it
+// lives (meta) · the relation's label (chip). `own` is this end, named when
+// one list holds the relations of many (the Classifier's Relations view).
+function listLinkRowHtml({ arrow = '', name = '', onclick = '', meta = '', label = '', own = null, actions = '' }) {
+  const ownHtml = own ? `<span class="ls-link-own" onclick="event.stopPropagation();${own.onclick}">${x(own.name)}</span> ` : '';
+  return listRowHtml({ density: 'compact', onclick, meta, actions, attrs: 'data-no-i18n',
+    title: [own?.name, arrow, name].filter(Boolean).join(' '),
+    titleHtml: `${ownHtml}${arrow ? `<span class="ls-link-arrow" aria-hidden="true">${x(arrow)}</span> ` : ''}${x(name)}`,
+    trailing: label ? `<span class="ls-chip ls-on">${x(label)}</span>` : '' });
+}
+// The box a relation list sits in, with its empty state.
+function listLinksHtml(rows) {
+  return `<div class="cls-link-list ls-list" role="listbox" aria-label="${_lsAttr(t('linkedElements'))}">${rows || emptyStateHtml({ icon: I.relation, text: t('noLinkedElements') })}</div>`;
 }
 
 // Which groups of a list are folded, kept across sessions (§12.4).

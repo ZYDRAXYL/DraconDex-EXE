@@ -299,16 +299,14 @@ function sketchZoomBy(dz) {
 
 // ── Pages view ──────────────────────────────────────────────────────────
 function buildSketchPagesHtml(d) {
-  return `<div class="hlist" style="max-width:560px">${d.pages.map((p, i) => `
-    <div class="li${p.id === d.pageId ? ' sel' : ''}" onclick="selectSketchPage(${p.id}).then(()=>setSketcherView('canvas'))">
-      <span class="name">${i + 1}. ${x(p.name)}</span>
-      <span class="cnt" data-no-i18n>${p.stroke_count}</span>
-      <span class="acts">
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();moveSketchPageRow(${p.id},-1)" title="↑">↑</button>
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();moveSketchPageRow(${p.id},1)" title="↓">↓</button>
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();openSketchPageModal(${d.moduleId},${p.id})" title="${t('edit')}">${I.edit}</button>
-      </span>
-    </div>`).join('')}</div>`;
+  // Procress 21: the shared list (core/list.js); ↑ ↓ stay this list's way to
+  // reorder, F2 = Edit.
+  return listHtml({ list: 'sketch-pages', aria: SKETCHER_VIEW_LABEL.pages, cls: 'sk-pages', body: d.pages.map((p, i) => listRowHtml({
+    icon: I.sketcher, title: `${i + 1}. ${p.name}`, count: p.stroke_count, state: { selected: p.id === d.pageId }, attrs: 'data-no-i18n',
+    onclick: `selectSketchPage(${p.id}).then(()=>setSketcherView('canvas'))`,
+    actions: listActHtml({ icon: I.chevronUp, name: '↑', onclick: `moveSketchPageRow(${p.id},-1)` })
+      + listActHtml({ icon: I.chevronDown, name: '↓', onclick: `moveSketchPageRow(${p.id},1)` })
+      + listActHtml({ icon: I.edit, name: t('edit'), key: 'F2', onclick: `openSketchPageModal(${d.moduleId},${p.id})` }) })).join('') });
 }
 
 async function moveSketchPageRow(id, dir) {

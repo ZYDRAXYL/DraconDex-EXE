@@ -65,11 +65,8 @@ function buildNarratorTalkHtml(d, tk) {
   // same two-part label Classifier/Chronicler link rows use.
   const le = narratorEntityByKey(d, tk.linker_key);
   const linkRow = tk.linker_key ? `
-    <div class="cls-link-row">
-      <span class="cls-link-name" onclick="openEntityByKey('${x(tk.linker_key)}')">${x(le ? le.name : tk.linker_key)}</span>
-      <span class="cls-link-mod">${x(narratorEntityModuleLabel(le))}</span>
-      <button class="btn btn-g btn-i" onclick="clearNarratorTalkLink(${tk.id})" title="${t('delete')}">${I.delete}</button>
-    </div>` : '';
+    ${listLinkRowHtml({ name: le ? le.name : tk.linker_key, onclick: `openEntityByKey(${xj(tk.linker_key)})`, meta: narratorEntityModuleLabel(le),
+      actions: listActHtml({ icon: I.delete, name: t('delete'), key: 'Delete', onclick: `clearNarratorTalkLink(${tk.id})` }) })}` : '';
   return `<div class="nar-row" ${narratorRowDropAttrs(tk)}>
     <div class="nar-talk">
       ${narratorRowGripHtml(tk)}

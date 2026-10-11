@@ -151,6 +151,16 @@ const LIST_SCREENS = {
   labels: async () => { openCategoryPage(''); await new Promise((res) => setTimeout(res, 300)); const tag = document.querySelector('[data-ls="cat-subs"] .ls-row'); tag?.click(); },
   quickswitch: async () => { await loadModule('src/renderer/quickswitch.js'); await openQuickSwitcher(''); },
   switcher: async () => { showLeftDest('nest'); document.querySelector('[onclick*="toggleNexusSwitcher"]')?.click(); },
+  // in a module (the sample vault has one of each kind)
+  classifier: async () => { await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'classifier').id); document.querySelector('[onclick*="setClassifierView"][onclick*="\'detail\'"]')?.click(); },
+  relations: async () => { await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'classifier').id); document.querySelector('[onclick*="setClassifierView"][onclick*="\'relation\'"]')?.click(); },
+  manager: async () => { await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'manager').id); await setManagerView('list'); },
+  chronicler: async () => { await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'chronicler').id); await setChroniclerView('downline'); },
+  narrator: async () => { await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'narrator').id); await setNarratorView('dialogue'); },
+  author: async () => { await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'author').id); },
+  sketcher: async () => { await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'sketcher').id); await setSketcherView('pages'); },
+  diviner: async () => { await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'diviner').id); },
+  props: async () => { localStorage.setItem('dracondex-props-open', '1'); await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'drafter').id); renderSidePanel(); await new Promise((res) => setTimeout(res, 400)); localStorage.setItem('dracondex-props-open', '0'); },
 };
 const openListScreen = async (name) => {
   await win.evaluate(() => { closeFloatingPanel('setting-window'); closeSidePanel(); closeModal(); closeAllPopups(); document.getElementById('qs-overlay')?.remove(); S.leftTool = null; });
@@ -192,7 +202,7 @@ test('list rows: 28 or 40 px × UI Size, focusable and named, on every list scre
       await openListScreen(name);
       const r = await rowAudit();
       seen += r.n;
-      if (name !== 'plugins' && !r.n) bad.push(`${name}: no rows to measure`);
+      if (!['plugins', 'props', 'relations'].includes(name) && !r.n) bad.push(`${name}: no rows to measure`);
       bad.push(...r.bad.map((b) => `${size}% ${name}: ${b}`));
     }
   }

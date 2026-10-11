@@ -67,14 +67,11 @@ function buildDivinerMainHtml(m, ic) {
     </span>
   </div>`;
   if (!d.tables.length) return toolbar + kindEmptyStateHtml(m);
-  const rows = d.tables.map(tb => `
-    <div class="li${tb.id === d.selectedId ? ' sel' : ''}" onclick="selectDivinerTable(${tb.id})">
-      <span class="name">${x(tb.name)}<small class="chs-snippet" data-no-i18n>${x(tb.mode === 'join' ? t('divModeJoin') : tb.dice || t('divWeighted'))}</small></span>
-      <span class="cnt" data-no-i18n>${tb.entry_count}</span>
-    </div>`).join('');
+  // Procress 21: the tables are compact rows of the shared list (core/list.js)
+  const rows = d.tables.map(tb => listRowHtml({ density: 'compact', state: { selected: tb.id === d.selectedId }, onclick: `selectDivinerTable(${tb.id})`,
+    title: tb.name, meta: tb.mode === 'join' ? t('divModeJoin') : tb.dice || t('divWeighted'), count: tb.entry_count, attrs: 'data-no-i18n' })).join('');
   const column = `<div class="author-chapters">
-    ${rows}
-    <div class="li au-add" onclick="openDivinerTableModal(${m.id})">${I.plus}<span class="name">${t('divNewTable')}</span></div>
+    ${listHtml({ list: 'diviner-tables', aria: m.name, body: rows + listRowHtml({ density: 'compact', icon: I.plus, title: t('divNewTable'), cls: 'ls-add', onclick: `openDivinerTableModal(${m.id})` }) })}
   </div>`;
   const tb = divTable();
   return `${toolbar}<div class="author-layout">${column}<div class="author-main div-main">${tb ? divinerTableHtml(tb, d) : ''}</div></div>`;
@@ -107,7 +104,7 @@ function divinerTableHtml(tb, d) {
         <span>${dice ? t('divRange') : tb.mode === 'join' ? '#' : t('divWeight')}</span><span>${t('divEntryText')}</span><span></span>
       </div>
       ${entries}
-      <div class="li au-add" onclick="addDivinerEntry()">${I.plus}<span class="name">${t('divNewEntry')}</span></div>
+      ${listRowHtml({ density: 'compact', icon: I.plus, title: t('divNewEntry'), cls: 'ls-add', onclick: 'addDivinerEntry()' })}
     </div>
     ${hist}`;
 }

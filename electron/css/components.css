@@ -495,8 +495,7 @@
 .props-row{display:grid;grid-template-columns:92px 1fr;gap:8px;align-items:center;padding:3px 0;font-size:calc(var(--fs-body) * var(--fsc,1))}
 .props-k{color:var(--t3-aa,var(--t2));font-size:calc(12px * var(--fsc,1))}
 .props-v{min-width:0;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
-.props-links .li{padding:3px 6px}
-.props-unresolved .name{color:var(--danger)}
+.props-unresolved .ls-title{color:var(--danger)}
 .props-acts{flex-direction:row;display:flex;gap:6px;flex-wrap:wrap}
 
 /* Procress 18 part 5: no state is told by colour alone. A toast says what

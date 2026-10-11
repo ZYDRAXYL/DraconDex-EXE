@@ -31,11 +31,8 @@ function buildExhibitorInspectorHtml(d, n) {
     const out = r.from_key === n.linker_key;
     const other = out ? r.to_key : r.from_key;
     const arrow = r.directed === 0 ? '—' : out ? '→' : '←';
-    return `<div class="cls-link-row">
-      <span data-no-i18n>${arrow}</span>
-      <span class="cls-link-name" onclick="openExhibitorRelationModal(${r.id})">${x(exhNameOf(other))}</span>
-      ${r.label || r.rel_type ? `<span class="cls-link-lbl">${x([r.label, r.rel_type && `(${exhRelTypeText(r.rel_type)})`, exhSpanText(r)].filter(Boolean).join(' '))}</span>` : ''}
-    </div>`;
+    return listLinkRowHtml({ arrow, name: exhNameOf(other), onclick: `openExhibitorRelationModal(${r.id})`,
+      label: r.label || r.rel_type ? [r.label, r.rel_type && `(${exhRelTypeText(r.rel_type)})`, exhSpanText(r)].filter(Boolean).join(' ') : '' });
   }).join('');
   return `<aside class="exh-insp">
     <div class="exh-hier-head"><span data-no-i18n>${x(exhNodeTitle(n))}</span>
@@ -58,7 +55,7 @@ function buildExhibitorInspectorHtml(d, n) {
     <label class="fv-useimg"><input type="checkbox" ${n.locked ? 'checked' : ''} onchange="patchExhibitorNode(${n.id},{locked:this.checked?1:0})"> ${t('exhibitorLocked')}</label>
     <label class="fv-useimg"><input type="checkbox" ${n.hidden ? 'checked' : ''} onchange="patchExhibitorNode(${n.id},{hidden:this.checked?1:0})"> ${t('exhibitorHidden')}</label>
     ${n.linker_key ? `<div class="insp-label cls-link-label">${t('linkedElements')}</div>
-      <div class="cls-link-list">${relRows || `<div class="cls-lv-empty">${t('noLinkedElements')}</div>`}</div>
+      ${listLinksHtml(relRows)}
       <button class="btn btn-p btn-sm" onclick="startExhibitorLink(${n.id})">${I.relation} ${t('exhibitorLinkTo')}</button>` : ''}
     <button class="btn btn-d btn-sm" onclick="removeExhibitorNode(${n.id})">${t('exhibitorRemoveNode')}</button>
   </aside>`;

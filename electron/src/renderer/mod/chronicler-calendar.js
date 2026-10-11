@@ -596,12 +596,11 @@ async function openChroniclerCalTemplates() {
   await api.calendar.ensureBuiltin(nx, t('calInternational'), JSON.stringify(calSpecNormalize(null)));
   const list = await api.calendar.listTemplates(nx);
   openModal(t('calTemplates'), `
-    <div class="cls-link-list">${list.map(tp => `<div class="cls-link-row">
-      <span class="cls-link-name" data-no-i18n>${x(tp.name)}</span>
-      ${tp.builtin ? `<span class="cls-link-lbl">${t('calBuiltin')}</span>` : ''}
-      <button class="btn btn-g" onclick="applyChroniclerCalTemplate(${tp.id})">${t('calApply')}</button>
-      ${tp.builtin ? '' : `<button class="btn btn-g btn-i" onclick="deleteChroniclerCalTemplate(${tp.id})" title="${t('delete')}">${I.delete}</button>`}
-    </div>`).join('') || `<div class="cls-lv-empty">${t('nestEmpty')}</div>`}</div>
+    ${listHtml({ list: 'cal-templates', aria: t('calTemplates'), body: list.map(tp => listRowHtml({ density: 'compact', icon: I.timeline, title: tp.name, attrs: 'data-no-i18n',
+      trailing: tp.builtin ? `<span class="ls-chip ls-on">${t('calBuiltin')}</span>` : '',
+      actions: listActHtml({ name: t('calApply'), text: true, key: 'Enter', onclick: `applyChroniclerCalTemplate(${tp.id})` })
+        + (tp.builtin ? '' : listActHtml({ icon: I.delete, name: t('delete'), danger: true, key: 'Delete', onclick: `deleteChroniclerCalTemplate(${tp.id})` })) })).join('')
+      || emptyStateHtml({ icon: I.timeline, text: t('nestEmpty') }) })}
     <div class="fg" style="margin-top:10px"><label>${t('calSaveAsTemplate')}</label>
       <input id="chr-cal-tpl-name" placeholder="${t('name')}"></div>
     <div class="mfoot">

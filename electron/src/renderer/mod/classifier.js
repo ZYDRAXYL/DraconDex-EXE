@@ -194,11 +194,17 @@ function renderClassifierGrid(m, d, inst) {
 // ── Detail view (list + detail, default) ────────────────────────────────
 function renderClassifierListDetail(m, d, c) {
   const sel = clsSelectedOf(c, d);
-  const list = lazyRows(d.objects, o => `<div class="li${sel && o.id === sel.id ? ' sel' : ''}" onclick="selectClassifierObject(${xj(c.iid)},${o.id})"
-      oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})">
-    <span class="kicon" aria-hidden="true" style="color:${x(o.color_code || 'var(--accent)')}">${classifierObjectIconHtml(o, m)}</span><span class="name">${x(o.name)}</span></div>`, clsLazy(c, 'list'), { keep: sel ? d.objects.indexOf(sel) : -1 });
+  // Procress 21: compact rows of the shared list (core/list.js) — ⋯ and a
+  // right click are the object menu; F2 renames, Delete deletes (with Undo).
+  const list = lazyRows(d.objects, o => listRowHtml({
+    density: 'compact', state: { selected: !!(sel && o.id === sel.id) }, onclick: `selectClassifierObject(${xj(c.iid)},${o.id})`,
+    icon: `<span style="color:${x(o.color_code || 'var(--accent)')}">${classifierObjectIconHtml(o, m)}</span>`, title: o.name,
+    menu: `openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})`, attrs: 'data-no-i18n',
+    actions: listActHtml({ hidden: true, key: 'F2', name: t('rename'), onclick: `openClassifierObjectModal(${m.id},${o.id})` })
+      + listActHtml({ hidden: true, key: 'Delete', name: t('delete'), onclick: `deleteClassifierObjectRow(${o.id})` }),
+  }), clsLazy(c, 'list'), { keep: sel ? d.objects.indexOf(sel) : -1 });
   const detail = sel ? renderClassifierObjectDetail(m, sel, d.templates) : '';
-  return `<div class="cls-listdetail"><div class="cls-list" oncontextmenu="if(event.target===this)openCtx('classifier.category',event,{moduleId:${m.id}})">${list}</div><div class="cls-detail">${detail}</div></div>`;
+  return `<div class="cls-listdetail"><div class="cls-list ls-list" role="listbox" aria-label="${x(m.name)}" oncontextmenu="if(event.target===this)openCtx('classifier.category',event,{moduleId:${m.id}})">${list}</div><div class="cls-detail">${detail}</div></div>`;
 }
 
 function selectClassifierObject(iid, id) {
@@ -226,7 +232,7 @@ function renderClassifierRelation(m, d) {
   return `<div class="cls-rel-wrap">
     <div class="cls-rel-graph" data-r="rel-graph"></div>
     <button class="btn btn-p cls-rel-add" onclick="openExhibitorFor(${m.id})">${I.relation} ${t('openInExhibitor')}</button>
-    <div class="cls-link-list">${classifierRelationRowsHtml(keys) || `<div class="cls-lv-empty">${t('noLinkedElements')}</div>`}</div>
+    ${listLinksHtml(classifierRelationRowsHtml(keys))}
   </div>`;
 }
 
