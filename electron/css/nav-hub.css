@@ -287,6 +287,9 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 #hub-body > .nest-create{padding:0 8px 6px;flex-shrink:0}
 #hub-body > .nest-create .split-btn{display:flex}
 #hub-body > .nest-create .split-main{flex:1;justify-content:center}
+/* Procress 20: the Nexus's folder is on a drive that is not connected */
+#hub-body > .nest-locate-warn{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 8px 6px;padding:6px 8px;border:1px solid var(--border);border-left:3px solid var(--warn);border-radius:var(--rs);background:var(--raised);color:var(--t2);font-size:calc(var(--fs-meta) * var(--fsc,1));line-height:1.4;flex-shrink:0}
+#hub-body > .nest-locate-warn span{flex:1;min-width:120px}
 #hub-body > .nest-filter{flex-shrink:0}
 .nest-filter-box{position:relative;display:flex;align-items:center}
 .nest-filter-box input{flex:1;padding-right:28px}

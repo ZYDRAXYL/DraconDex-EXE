@@ -162,8 +162,10 @@ function closeFloatingPanel(id) {
 // Electron leaves the renderer unable to receive mouse input until the window
 // is re-focused (or DevTools is opened) — the long-standing "UI frozen after
 // delete" bug. Returns a Promise<boolean>; call sites use `await uiConfirm(...)`.
+// opts.defaultCancel: Enter and the initial focus answer Cancel — for a
+// question whose safe answer is "no" (Procress 20: trash a Nexus's folder?).
 function uiConfirm(message, opts = {}) {
-  const { okText = 'OK', cancelText = 'Cancel', danger = true } = opts;
+  const { okText = 'OK', cancelText = 'Cancel', danger = true, defaultCancel = false } = opts;
   return new Promise(resolve => {
     document.getElementById('confirm-overlay')?.remove();
     const ov = document.createElement('div');
@@ -197,13 +199,13 @@ function uiConfirm(message, opts = {}) {
     // quickswitch.js already stop their own keys; this was the odd one out.
     const onKey = (e) => {
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); }
-      else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); finish(true); }
+      else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); finish(!defaultCancel); }
     };
     okBtn.addEventListener('click', () => finish(true));
     cancelBtn.addEventListener('click', () => finish(false));
     ov.addEventListener('mousedown', (e) => { if (e.target === ov) finish(false); });
     document.addEventListener('keydown', onKey, true);
-    setTimeout(() => { try { okBtn.focus(); } catch (e) {} }, 20);
+    setTimeout(() => { try { (defaultCancel ? cancelBtn : okBtn).focus(); } catch (e) {} }, 20);
   });
 }
 

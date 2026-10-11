@@ -181,6 +181,7 @@ function buildHubHtml() {
     <div class="nest-create"><span class="split-btn">
       <button class="btn btn-p btn-sm split-main" data-cmd="app.newModule" onclick="event.stopPropagation();nestNewHere(this)" title="${x(nestNewHereLabel())}">${I.plus} ${t('nestNew')}</button><button class="btn btn-p btn-sm split-more" aria-haspopup="menu" title="${t('nestNewMore')}" aria-label="${t('nestNewMore')}" onclick="event.stopPropagation();openNestCreateMenu(this)">${I.chevronDown}</button>
     </span></div>
+    ${nestLocateWarnHtml()}
     ${nestFilterHtml()}
     <div class="acc-body" data-key="nest"><div id="nest-tree-body" role="tree" aria-label="${x(S.nexus.name)}">${nestTreeBodyHtml()}</div></div>
   </div>`;

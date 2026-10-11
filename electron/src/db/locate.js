@@ -4,8 +4,9 @@
 // Nexus has one, made by the app — `<root>/<Nexus name>`, root being
 // `<Documents>/DraconDex` unless the user moved it (Settings → App data).
 // The .ddx stays the truth (§8.1): the folder mirrors it and holds the asset
-// files. This file owns the folder's life and the two signals that keep a
-// sync from redoing work nothing asked for:
+// files. This file owns the folder's life — where it goes, what happens
+// when it vanishes, is renamed, moved or deleted — and the two signals that
+// keep a sync from redoing work nothing asked for:
 //   - which modules changed since the last mirror (vault side), from TEMP
 //     triggers on the vault connection (never written into the .ddx)
 //   - whether anything changed in the folder (disk side), from fs.watch
@@ -248,6 +249,88 @@ function ensureLocateDir(nx) {
   }
 }
 
+// Is the drive (or mount) the folder lived on still there? Then a missing
+// folder was deleted and is made again; if not (a USB stick pulled out) it is
+// NOT made again — that would put an empty folder on whatever disk now sits
+// at that mount point.
+const MOUNT_DEPTH = { Volumes: 2, media: 3, mnt: 2 };
+function driveAvailable(dir) {
+  const abs = path.resolve(dir);
+  if (process.platform === 'win32') return fs.existsSync(path.parse(abs).root);
+  const segs = abs.split(path.sep).filter(Boolean);
+  const depth = segs[0] === 'run' && segs[1] === 'media' ? 4 : MOUNT_DEPTH[segs[0]] || 0;
+  if (!depth) return true;
+  if (segs.length <= depth) return fs.existsSync(abs);
+  return fs.existsSync(path.sep + segs.slice(0, depth).join(path.sep));
+}
+
+// Folder gone (locate_missing): drive there → make it again (the next sync
+// writes the mirror back from the .ddx; assets that were inside are missing
+// and show in Problems); drive gone → leave it, say so.
+function repairLocate(nx) {
+  const v = getVault(nx);
+  if (!v?.locate_dir) return { ok: false, code: 'no_dir' };
+  if (!v.locate_missing) return { ok: true, recreated: false };
+  if (!driveAvailable(v.locate_dir)) return { ok: false, code: 'missing', driveGone: true };
+  try { fs.mkdirSync(v.locate_dir, { recursive: true }); } catch (_) { return { ok: false, code: 'missing', driveGone: true }; }
+  return { ok: true, recreated: true };
+}
+
+// The Nexus was renamed: a folder that still has the name the app gave it
+// follows (and the assets inside are re-pointed, as a moved collector's are).
+function followRename(nx) {
+  const v = getVault(nx);
+  if (!v?.locate_dir || v.locate_missing) return null;
+  const from = path.resolve(v.locate_dir);
+  const auto = autoNameOf(from);
+  if (!auto || auto !== path.basename(from)) return null;
+  const { dirNameOf, repointAssets } = require('./mirror');
+  const want = dirNameOf(v.name || 'Nexus');
+  if (want === path.basename(from)) return null;
+  const parent = path.dirname(from);
+  const to = want.toLowerCase() === path.basename(from).toLowerCase() ? path.join(parent, want) : freeDir(parent, want);
+  unwatchFolder(nx);
+  try { fs.renameSync(from, to); } catch (_) { return null; } // in use: keep the old name
+  setVaultLocateDir(nx, to);
+  setAutoName(to, path.basename(to));
+  try { repointAssets(getVaultDB(nx), nx, from, to); } catch (_) {}
+  return { from, to };
+}
+
+// "Move folder…": the user picked a new parent. The folder goes there with
+// everything in it; across drives that is copy-then-remove, and the old copy
+// is removed only once the new one is complete. A folder whose drive is gone
+// starts fresh at the new place (the mirror is rebuilt from the .ddx).
+function moveLocate(nx, parent) {
+  const v = getVault(nx);
+  if (!v) return { ok: false, code: 'not_found' };
+  const { dirNameOf, repointAssets } = require('./mirror');
+  const from = v.locate_dir ? path.resolve(v.locate_dir) : null;
+  const name = from ? path.basename(from) : dirNameOf(v.name || 'Nexus');
+  const dest = path.resolve(parent);
+  if (from && (dest === from || dest.startsWith(from + path.sep))) return { ok: false, code: 'inside' };
+  if (from && path.dirname(from) === dest) return { ok: true, dir: from, moved: false };
+  const to = freeDir(dest, name);
+  unwatchFolder(nx);
+  try {
+    if (from && fs.existsSync(from)) {
+      try { fs.renameSync(from, to); } catch (e) {
+        if (e?.code !== 'EXDEV') throw e;
+        fs.cpSync(from, to, { recursive: true, errorOnExist: true });
+        fs.rmSync(from, { recursive: true, force: true });
+      }
+    } else {
+      fs.mkdirSync(to, { recursive: true });
+    }
+  } catch (e) {
+    return { ok: false, code: 'move_failed', error: String(e?.message || e) };
+  }
+  setVaultLocateDir(nx, to);
+  setAutoName(to, null); // the user chose this place: a rename no longer follows
+  if (from) { try { repointAssets(getVaultDB(nx), nx, from, to); } catch (_) {} }
+  return { ok: true, dir: to, moved: true, from };
+}
+
 // Asset files that live outside the folder (a Nexus from before Procress 20
 // referenced them where they were). Never moved on their own — "Gather into
 // the folder" COPIES them in, next to their module's folder, and points the
@@ -303,24 +386,29 @@ function gatherAssets(nx) {
 //   reason 'open' / 'create' / 'manual'  walk the whole folder, check every file
 //   'focus' / 'tree'                     walk only if the watcher saw a change
 //   'edit'  (main's own, after a write)  mirror the changed modules, no walk
-// A Nexus with no folder gets one. Runs inside the Nexus's vault context
-// (importFolderTree uses it).
-// → the mirror's counts + { imported, created, dir } · { ok:false, code:'missing' }
+// A Nexus with no folder gets one; a missing one is made again if its drive
+// is there. Runs inside the Nexus's vault context (importFolderTree uses it).
+// → the mirror's counts + { imported, created, recreated, dir } ·
+//   { ok:false, code:'missing', driveGone } when the folder's drive is gone.
 function syncLocate(nx, { reason = 'manual' } = {}) {
   const { walkImportFolder, importFolderTree } = require('./importdock');
   const { syncNexusMirror } = require('./mirror');
   let v = getVault(nx);
   if (!v) return { ok: false, code: 'not_found' };
-  let created = false;
+  let created = false, recreated = false;
   if (!v.locate_dir) {
     const e = ensureLocateDir(nx);
     if (!e.ok) return e;
     created = e.created;
     v = getVault(nx);
   }
-  if (v.locate_missing) { unwatchFolder(nx); return { ok: false, code: 'missing' }; }
+  if (v.locate_missing) {
+    const r = repairLocate(nx);
+    if (!r.ok) { unwatchFolder(nx); return { ...r, dir: v.locate_dir }; }
+    recreated = r.recreated;
+  }
   const root = path.resolve(v.locate_dir);
-  const full = created || ['open', 'create', 'manual'].includes(reason);
+  const full = created || recreated || ['open', 'create', 'manual'].includes(reason);
   watchFolder(nx, root);
   // read (and reset) even on a full walk, so this walk is not redone on the next focus
   const changed = folderChanged(nx);
@@ -334,12 +422,52 @@ function syncLocate(nx, { reason = 'manual' } = {}) {
     imported = sub.length || inFolders.length ? importFolderTree(nx, null, sub, inFolders) : null;
   }
   const verify = full ? null : takeVerify(nx);
-  return { ...syncNexusMirror(nx, { full, verify }), imported, created, dir: root };
+  return { ...syncNexusMirror(nx, { full, verify }), imported, created, recreated, dir: root };
+}
+
+// The Nexus's folder, made — or made again — if it has to be; null when it
+// cannot be (the drive it lived on is gone).
+function locateRootOf(nx) {
+  if (!getVault(nx)?.locate_dir) ensureLocateDir(nx);
+  if (getVault(nx)?.locate_missing && !repairLocate(nx).ok) return null;
+  const dir = getVault(nx)?.locate_dir;
+  return dir ? path.resolve(dir) : null;
+}
+
+// Procress 16 B7: files / folders dropped from the OS onto the Nest are
+// COPIED into the folder of the collector they were dropped on (planMirror's
+// layout); "name (2).ext" when the name is taken. The sync files them.
+// → { ok, copied:[abs file paths], target } · { ok:false, code:'no_dir' }
+function copyIntoFolder(nx, paths, targetId) {
+  const root = locateRootOf(nx);
+  if (!root) return { ok: false, code: 'no_dir' };
+  const src = (Array.isArray(paths) ? paths : []).slice(0, 200)
+    .filter((p) => typeof p === 'string' && path.isAbsolute(p) && fs.existsSync(p));
+  if (!src.length) return { ok: true, copied: [], target: null };
+  const { planMirror } = require('./mirror');
+  const mods = getVaultDB(nx).prepare(`SELECT id, parent_id, name, kind, display_order FROM module WHERE nexus_ref=?`).all(nx);
+  const target = mods.find((m) => m.id === targetId) || null;
+  const folderId = !target ? null : target.kind === 'collector' ? target.id : target.parent_id;
+  const rel = folderId == null ? '' : (planMirror(mods).dirs.find((d) => d.id === folderId)?.rel || '');
+  const dest = path.join(root, ...rel.split('/').filter(Boolean));
+  fs.mkdirSync(dest, { recursive: true });
+  const filesUnder = (p) => (fs.statSync(p).isDirectory() ? fs.readdirSync(p).flatMap((n) => filesUnder(path.join(p, n))) : [p]);
+  const copied = [];
+  for (const p of src) {
+    const base = path.basename(p);
+    const ext = path.extname(base), stem = base.slice(0, base.length - ext.length);
+    let to = path.join(dest, base);
+    for (let n = 2; fs.existsSync(to); n++) to = path.join(dest, `${stem} (${n})${ext}`);
+    fs.cpSync(p, to, { recursive: true });
+    copied.push(...filesUnder(to));
+  }
+  return { ok: true, copied, target };
 }
 
 module.exports = {
   trackVault, takeDirty, giveBackDirty, hasDirty,
   watchFolder, unwatchFolder, folderChanged, takeVerify, ignoreOwn, isWatching, markActive, isActive, forget,
-  defaultLocateRoot, locateRoot, setLocateRoot, ensureLocateDir, outsideAssets, gatherAssets, freeDir, autoNameOf,
-  syncLocate,
+  defaultLocateRoot, locateRoot, setLocateRoot, ensureLocateDir, driveAvailable, repairLocate,
+  followRename, moveLocate, outsideAssets, gatherAssets, freeDir, autoNameOf,
+  syncLocate, locateRootOf, copyIntoFolder,
 };

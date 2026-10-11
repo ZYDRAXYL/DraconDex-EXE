@@ -666,7 +666,6 @@ h('nexus:create', (n,m,c,fp) => {
   db.locate.forget(id);
   return id;
 });
-
 // ─── The Nexus ... menu (v4.9.0) ───────────────────────────────────────────
 // Duplicate / Export / Share / Open in Explorer. These are real file
 // operations now that a Nexus is a real file.
@@ -751,8 +750,35 @@ h('nexus:relink', async (id) => {
   if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true };
   return db.relinkNexusFile(id, result.filePaths[0]);
 });
-h('nexus:update', (id,n,m,c)     => db.updateNexus(id,n,m,c));
-h('nexus:delete', (id)           => db.deleteNexus(id));
+h('nexus:update', (id,n,m,c) => {
+  const before = db.getNexus(id)?.name;
+  const out = db.updateNexus(id,n,m,c);
+  // Procress 20: a folder that still has the name the app gave it follows
+  // the rename; one the user moved or named stays as it is.
+  if (before != null && before !== n) {
+    const r = db.locate.followRename(id);
+    if (r) pickedImportRoots.add(path.resolve(r.to));
+  }
+  return out;
+});
+// The folders of Nexuses deleted this session — the only ones nexus:trashLocate
+// will send to the OS trash, and only when the user said so (it holds their files).
+const deletedLocateDirs = new Set();
+h('nexus:delete', (id) => {
+  const dir = db.getNexus(id)?.locate_dir || null;
+  const r = db.deleteNexus(id);
+  if (r?.blocked) return r;
+  db.locate.forget(id);
+  if (dir && fs.existsSync(dir)) { deletedLocateDirs.add(path.resolve(dir)); return { ...r, locateDir: dir }; }
+  return r;
+});
+h('nexus:trashLocate', async (dir) => {
+  const abs = path.resolve(String(dir || ''));
+  if (!deletedLocateDirs.has(abs)) return { ok: false, code: 'not_found' };
+  try { await shell.trashItem(abs); } catch (e) { return { ok: false, code: 'trash_failed' }; }
+  deletedLocateDirs.delete(abs);
+  return { ok: true };
+});
 h('nexus:taught',     (nx)         => db.getTaught(nx));
 h('nexus:markTaught', (nx, tip, st) => db.markTaught(nx, tip, st));
 // v5 Part 6 (§10.8): the user's own module presets. Built-ins live in the
@@ -1230,15 +1256,16 @@ h('importdock:importFolder', async (nx, parentModuleId) => {
   return db.importFolderTree(nx, parentModuleId ?? null, dirs, files);
 });
 // ─── Locate Nexus (v5 Part 4, APP docs/V5.md §8.5–§8.6; Procress 20) ──────
-// The sync itself — walk the folder, mirror the vault into it, doing only the
-// work something asked for — is db/locate.js syncLocate; main adds the folder
-// to pickedImportRoots, the guard every other folder the user stands behind
-// goes through.
+// Every Nexus is a folder. The sync itself — make the folder if it has none,
+// walk it, mirror the vault into it, doing only the work something asked for
+// — is db/locate.js syncLocate; main adds the folder to pickedImportRoots,
+// the guard every other folder the user stands behind goes through.
 function syncLocate(nx, opts = {}) {
   const r = db.locate.syncLocate(nx, opts);
   if (r?.ok && r.dir) pickedImportRoots.add(path.resolve(r.dir));
   return r;
 }
+h('nexus:locateSync', (nx, opts) => syncLocate(nx, { reason: ['open', 'focus', 'tree', 'manual'].includes(opts?.reason) ? opts.reason : 'manual' }));
 
 // "Mirror keeps up with content" (Procress 20 part 1): a write handler that
 // changed modules of a Nexus with a folder schedules one mirror of just those
@@ -1255,57 +1282,23 @@ function scheduleEditMirror(nx) {
     catch (e) { console.error('Locate mirror after edit failed:', e); }
   }, 2000));
 }
-h('nexus:locatePick', async (nx) => {
-  const root = await pickDirectory();
-  if (!root) return { canceled: true };
-  db.setVaultLocateDir(nx, path.resolve(root));
-  return syncLocate(nx);
-});
-h('nexus:locateSync', (nx, opts) => syncLocate(nx, { reason: ['open', 'focus', 'tree', 'manual'].includes(opts?.reason) ? opts.reason : 'manual' }));
+
 // Procress 16 B7 + Suggestion.md: files / folders dragged from the OS onto the
 // Nest (or pasted) are COPIED into the Nexus's Locate folder — into the folder
 // of the collector they were dropped on, by planMirror's layout — and the
 // Locate sync above files them, exactly as copying them there in Explorer
 // would. Dropped on a module that is not a folder: the new files are filed
 // under that module. A name already there becomes "name (2).ext".
-// → { ok, added } · { ok:false, code:'no_dir' } when the Nexus has no Locate
-//   folder yet (the renderer offers one, importdock:locateDefault, then retries).
-function freeName(dir, base) {
-  const ext = path.extname(base), stem = base.slice(0, base.length - ext.length);
-  let name = base;
-  for (let n = 2; fs.existsSync(path.join(dir, name)); n++) name = `${stem} (${n})${ext}`;
-  return path.join(dir, name);
-}
-function filesUnder(p) {
-  const st = fs.statSync(p);
-  if (!st.isDirectory()) return [p];
-  return fs.readdirSync(p).flatMap((n) => filesUnder(path.join(p, n)));
-}
+// → { ok, added } · { ok:false, code:'no_dir' } only when the folder cannot
+//   be made (its drive is gone) — a Nexus without one gets one here, unasked.
 h('importdock:dropToNest', (nx, paths, targetId) => {
-  const v = db.getNexus(nx);
-  if (!v?.locate_dir || v.locate_missing) return { ok: false, code: 'no_dir' };
-  const src = (Array.isArray(paths) ? paths : []).slice(0, 200)
-    .filter((p) => typeof p === 'string' && path.isAbsolute(p) && fs.existsSync(p));
-  if (!src.length) return { ok: true, added: 0 };
-  const mods = vaultDB().prepare(`SELECT id, parent_id, name, kind, display_order FROM module WHERE nexus_ref=?`).all(nx);
-  const target = mods.find((m) => m.id === targetId) || null;
-  const folderId = !target ? null : target.kind === 'collector' ? target.id : target.parent_id;
-  const { planMirror } = require('./src/db/mirror');
-  const rel = folderId == null ? '' : (planMirror(mods).dirs.find((d) => d.id === folderId)?.rel || '');
-  const root = path.resolve(v.locate_dir);
-  const dest = path.join(root, ...rel.split('/').filter(Boolean));
-  fs.mkdirSync(dest, { recursive: true });
-  const copied = [];
-  for (const p of src) {
-    const to = freeName(dest, path.basename(p));
-    fs.cpSync(p, to, { recursive: true });
-    copied.push(...filesUnder(to));
+  const c = db.locate.copyIntoFolder(nx, paths, targetId);
+  if (!c.ok || !c.copied.length) return c.ok ? { ok: true, added: 0 } : c;
+  const r = syncLocate(nx, { reason: 'manual' });
+  if (c.target && c.target.kind !== 'collector') {
+    for (const id of db.importIdsByPath(nx, c.copied)) db.setImportModule(id, c.target.id);
   }
-  const r = syncLocate(nx);
-  if (target && target.kind !== 'collector') {
-    for (const id of db.importIdsByPath(nx, copied)) db.setImportModule(id, target.id);
-  }
-  return { ok: true, added: copied.length, imported: r.imported || null };
+  return { ok: true, added: c.copied.length, imported: r.imported || null };
 });
 // "Show in Explorer" (Procress 16 part 2): a file where it is, or a folder's
 // own directory inside the Locate folder (planMirror's layout).
@@ -1326,42 +1319,36 @@ h('importdock:reveal', (nx, target) => {
   return { ok: true };
 });
 const planMirrorDirs = (mods) => require('./src/db/mirror').planMirror(mods).dirs;
-// The Locate folder a first drop offers: "<vault name>" beside the .ddx.
-h('importdock:locateDefault', (nx, create) => {
-  const v = db.getNexus(nx);
-  if (!v?.file_path) return { ok: false };
-  const dir = path.join(path.dirname(v.file_path), String(v.name || 'Nexus').replace(/[\\/:*?"<>|]/g, '_').trim() || 'Nexus');
-  if (!create) return { ok: true, dir };
-  fs.mkdirSync(dir, { recursive: true });
-  db.setVaultLocateDir(nx, dir);
-  return { ok: true, dir, ...syncLocate(nx) };
-});
 // .dxpack (APP docs/ASSET-PACK.md): modules + files the APK / PWA sorted into
 // folders. The files land in the Nexus's Locate folder, laid out by the
-// collector tree — so a Nexus with no Locate folder yet is asked for one
-// first, and that folder becomes its Locate folder (the pack's layout IS a
-// Locate layout; putting it anywhere else would leave the next sync to
-// import it all a second time). The pack path went through db:pickImportFile.
+// collector tree (the pack's layout IS a Locate layout; putting it anywhere
+// else would leave the next sync to import it all a second time). Every Nexus
+// has that folder now, so nothing is asked. The pack path went through
+// db:pickImportFile.
 h('db:importAssetPackAt', async (nx, parentModuleId, filePath) => {
   if (!filePath || !pickedImportDbPaths.has(path.resolve(String(filePath)))) return { ok: false, canceled: true };
-  const v = db.getNexus(nx);
-  if (!v) return { ok: false, code: 'not_found' };
-  let root = v.locate_dir && !v.locate_missing ? path.resolve(v.locate_dir) : null;
-  if (!root) {
-    const picked = await pickDirectory();
-    if (!picked) return { ok: false, canceled: true };
-    root = path.resolve(picked);
-    db.setVaultLocateDir(nx, root);
-  }
+  if (!db.getNexus(nx)) return { ok: false, code: 'not_found' };
+  const root = db.locate.locateRootOf(nx);
+  if (!root) return { ok: false, code: 'no_dir' };
   pickedImportRoots.add(root);
   return db.importAssetPack(nx, path.resolve(String(filePath)), { parentModuleId: parentModuleId ?? null, destRoot: root });
 });
-h('nexus:locateForget', (nx) => { db.setVaultLocateDir(nx, null); return true; });
 // Opens only the folder the registry holds, never a path from the renderer.
 h('nexus:locateOpen', async (nx) => {
   const v = db.getNexus(nx);
   if (!v?.locate_dir || v.locate_missing) return false;
   return (await shell.openPath(v.locate_dir)) === '';
+});
+// "Move folder…" (Procress 20 part 3) — the only way to change where a
+// Nexus's folder is. The user picks the new parent in main's dialog; the
+// folder moves there with everything in it, and its assets are re-pointed.
+h('nexus:locateMove', async (nx) => {
+  const res = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), { title: 'Move Nexus folder to…', properties: ['openDirectory', 'createDirectory'] });
+  if (res.canceled || !res.filePaths?.length) return { ok: false, canceled: true };
+  const r = db.locate.moveLocate(nx, res.filePaths[0]);
+  if (!r.ok) return r;
+  pickedImportRoots.add(path.resolve(r.dir));
+  return { ...r, ...syncLocate(nx, { reason: 'manual' }) };
 });
 // Problems / Settings: is the folder there, and how many assets live outside it.
 h('nexus:locateStatus', (nx) => {
@@ -1370,6 +1357,7 @@ h('nexus:locateStatus', (nx) => {
   const missing = !!v.locate_missing;
   return {
     dir: v.locate_dir || null, missing,
+    driveGone: missing && !!v.locate_dir && !db.locate.driveAvailable(v.locate_dir),
     outside: v.locate_dir && !missing ? db.locate.outsideAssets(nx).length : 0,
   };
 });

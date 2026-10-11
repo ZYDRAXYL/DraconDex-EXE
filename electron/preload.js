@@ -15,15 +15,15 @@ contextBridge.exposeInMainWorld('api', {
     importAssetPackAt:  (nexusId,parentId,filePath) => inv('db:importAssetPackAt', nexusId,parentId,filePath),
   },
   nexus: {
-    locatePick:   (nx) => inv('nexus:locatePick', nx),
+    // Procress 20: every Nexus is a folder — no pick / forget, only move
     locateSync:   (nx,opts) => inv('nexus:locateSync', nx, opts),
-    locateForget: (nx) => inv('nexus:locateForget', nx),
     locateOpen:   (nx) => inv('nexus:locateOpen', nx),
-    // Procress 20: every Nexus is a folder — where new ones go, and assets kept outside
+    locateMove:   (nx) => inv('nexus:locateMove', nx),
     locateStatus: (nx) => inv('nexus:locateStatus', nx),
     locateGather: (nx) => inv('nexus:locateGather', nx),
     locateRoot:   ()   => inv('locate:root'),
     locatePickRoot: () => inv('locate:pickRoot'),
+    trashLocate:  (dir) => inv('nexus:trashLocate', dir),
     getAll:  ()            => inv('nexus:getAll'),
     get:     (id)          => inv('nexus:get', id),
     create:  (n,m,c,fp)    => inv('nexus:create', n,m,c,fp),
@@ -406,7 +406,6 @@ contextBridge.exposeInMainWorld('api', {
     // page never names a path (MEDIA-EMBED M7).
     dropFiles:     (nx,files,m) => inv('importdock:dropped', nx, [...(files || [])].map((f) => { try { return webUtils?.getPathForFile(f) || ''; } catch (_) { return ''; } }).filter(Boolean), m),
     dropToNest:    (nx,files,target) => inv('importdock:dropToNest', nx, [...(files || [])].map((f) => { try { return webUtils?.getPathForFile(f) || ''; } catch (_) { return ''; } }).filter(Boolean), target),
-    locateDefault: (nx,create)  => inv('importdock:locateDefault', nx, create),
     reveal:        (nx,target)  => inv('importdock:reveal', nx, target),
     readBinary:    (id)     => inv('importdock:readBinary', id),
     setPoster:     (id,d)   => inv('importdock:setPoster', id,d),

@@ -436,16 +436,10 @@ document.addEventListener('paste', (e) => {
 async function nestAddFiles(files, targetId) {
   if (!S.nexus || !files?.length) return;
   files = [...files]; // a FileList loses its iterator crossing the context bridge; an array of File does not
-  let r = await api.importdock.dropToNest(S.nexus.id, files, targetId);
-  if (r?.code === 'no_dir') {
-    // the first time: this Nexus gets a Locate folder — beside its .ddx, or one the user picks
-    const d = await api.importdock.locateDefault(S.nexus.id, false);
-    if (d?.ok && await uiConfirm(t('nestLocateAsk').replace('{dir}', d.dir))) await api.importdock.locateDefault(S.nexus.id, true);
-    else if (!(await api.nexus.locatePick(S.nexus.id))?.ok) return;
-    await reloadNexuses();
-    r = await api.importdock.dropToNest(S.nexus.id, files, targetId);
-  }
-  if (!r?.ok) { toast(t('driveErrServer'), 'err'); return; }
+  // Procress 20: every Nexus has its folder (main makes one if it is
+  // missing), so nothing is asked — no_dir only means its drive is gone.
+  const r = await api.importdock.dropToNest(S.nexus.id, files, targetId);
+  if (!r?.ok) { toast(t(r?.code === 'no_dir' ? 'nexusLocalFolderDriveGone' : 'driveErrServer'), 'err'); return; }
   S.importFiles = undefined;
   if (targetId != null) S.moduleCollapsed.delete(targetId);
   await reloadModuleTree({ skipMirror: true });

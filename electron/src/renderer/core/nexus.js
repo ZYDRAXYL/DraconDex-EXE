@@ -154,7 +154,7 @@ async function selectNexus(id) {
   S.moduleCollapsed.load(S.nexus.id); // and its fold state (core/state.js)
   if (typeof reportRelationDedupe === 'function') reportRelationDedupe();
   reportParentNormalize();
-  scheduleMirrorSync(3000, 'open'); // v5 Part 4: bring a located folder up to date, in the background (a full check)
+  scheduleMirrorSync(3000, 'open'); // v5 Part 4 / Procress 20: the Nexus's folder — made if it has none — brought up to date, in the background
   renderNexusHome();
   renderModuleRail();
   updateStatusBar({ item: null, words: null, saveState: null });
@@ -292,6 +292,7 @@ async function delNexus(id) {
   const r = await api.nexus.delete(id);
   if (r?.blocked) { toast(t('nexusDeleteBlocked'), 'error'); return; }
   closeModal();
+  await offerTrashNexusFolder(r?.locateDir); // Procress 20: its folder stays unless the user says so
   if (S.nexus?.id === id) { S.nexus = null; localStorage.removeItem(NEXUS_ACTIVE_KEY); clearWorkspaceTabs(); }
   dropRecentNexus(id);
   await reloadNexuses();
