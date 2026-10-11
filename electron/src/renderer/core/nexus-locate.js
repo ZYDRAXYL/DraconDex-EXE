@@ -1,5 +1,7 @@
 'use strict';
 // ═══ Locate Nexus — the folder mirror, renderer side (v5 Part 4, §8.5–§8.6)
+// Since Procress 20 every Nexus has a folder: main makes it at create, or the
+// first time a Nexus from before then opens (toasted once, below).
 // The Nexus modal's "Local folder" row, and the syncs that keep the mirror
 // current. Main does the work (main.js syncLocate → db/mirror.js); this file
 // only decides when to ask. EXE only: in the PWA build the preload has no
@@ -43,6 +45,12 @@ function reportLocateSync(r, quiet) {
     if (!quiet) toast(t(r.code === 'missing' ? 'nexusLocalFolderMissing' : 'nexusLocalFolderNone'), 'err');
     return;
   }
+  // Procress 20: a Nexus from before then, opened for the first time, gets
+  // its folder — told once, since the folder is made once.
+  if (r.created) {
+    toastAction(t('nexusLocalFolderCreated').replace('{dir}', r.dir || ''), t('nexusLocalFolderOpen'), () => api.nexus.locateOpen(S.nexus?.id), 'ok', 9000);
+    return;
+  }
   if (quiet && !r.imported?.collectors && !r.imported?.added) return;
   toast(`${t('nexusLocalFolderSynced')} ${r.files} · ${r.dirs}`, 'ok');
 }
@@ -57,6 +65,7 @@ async function pickNexusLocate(id) {
 async function syncNexusLocate(id, quiet = false, reason = 'manual') {
   const r = await api.nexus.locateSync(id, { reason });
   reportLocateSync(r, quiet);
+  if (r?.created) await reloadNexuses(); // the registry row has its folder now
   // The folder side may have brought collectors / assets in.
   if (r?.imported && (r.imported.collectors || r.imported.added)) await reloadModuleTree({ skipMirror: true });
   return r;
@@ -77,10 +86,22 @@ async function afterLocateChange(id, r) {
 
 // One timer per window. A pending 'open' (the full check) is never
 // downgraded by a focus or tree change landing before it fires.
+// Asset files a Nexus from before Procress 20 keeps outside its folder are
+// left where they are until the user asks: this COPIES them in.
+async function gatherNexusAssets(id, n) {
+  if (!await uiConfirm(t('locateGatherConfirm').replace('{n}', n), { okText: t('locateGather'), danger: false })) return;
+  const r = await api.nexus.locateGather(id);
+  if (!r?.ok) { toast(t('driveErrServer'), 'error'); return; }
+  S.importFiles = undefined;
+  toast(t('locateGathered').replace('{n}', r.copied), r.failed ? 'warn' : 'ok');
+  if (S.leftTool === 'problems' && typeof loadProblemsPanel === 'function') loadProblemsPanel();
+  if (typeof settingRefreshLocateSection === 'function') settingRefreshLocateSection();
+}
+
 let _mirrorTimer = null;
 let _mirrorReason = null;
 function scheduleMirrorSync(delay = 2000, reason = 'tree') {
-  if (!hasLocate() || !S.nexus?.locate_dir || S.nexus.locate_missing) return;
+  if (!hasLocate() || !S.nexus || S.nexus.locate_missing) return; // no folder yet: the sync makes one
   clearTimeout(_mirrorTimer);
   if (_mirrorReason !== 'open') _mirrorReason = reason;
   const id = S.nexus.id;

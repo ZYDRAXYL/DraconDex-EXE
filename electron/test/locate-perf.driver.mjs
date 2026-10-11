@@ -27,8 +27,6 @@ try {
     return { nx, doc: docs[7] };
   });
   await win.waitForTimeout(2600); // let main's own after-write mirror (2 s debounce) run first
-  // a Nexus without a folder (before Procress 20 part 2 made one at create) gets one
-  await win.evaluate(async (nx) => { if (!(await api.nexus.get(nx)).locate_dir) await api.importdock.locateDefault(nx, true); }, seed.nx);
 
   // what the Nexus opening runs: walk the folder, check every module
   const first = await win.evaluate(async (nx) => {

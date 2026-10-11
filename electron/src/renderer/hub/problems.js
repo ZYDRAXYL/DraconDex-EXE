@@ -52,6 +52,15 @@ async function loadProblemsPanel() {
         </div>`).join('')
       + `<div class="li prob-row" data-cmd="dock.relinkFolder" onclick="runCommand('dock.relinkFolder')"><span class="kicon" aria-hidden="true">${I.folder || ''}</span><span class="name">${t('assetRelinkFolder')}</span></div>`;
   }
+  // Procress 20: asset files a Nexus from before then still keeps outside its
+  // folder — gathered in (copied) only when asked.
+  const ls = typeof hasLocate === 'function' && hasLocate() ? await api.nexus.locateStatus(S.nexus.id).catch(() => null) : null;
+  if (ls?.outside) {
+    if (html.includes('class="empty"')) html = '';
+    html += `<div class="kind-list-head">${t('probLocate')}</div>`
+      + `<div class="li prob-row" onclick="gatherNexusAssets(S.nexus.id, ${Number(ls.outside)})"><span class="kicon" aria-hidden="true">${I.import || ''}</span>
+          <span class="name">${t('locateGather')}<small class="chs-snippet">${t('locateOutside').replace('{n}', ls.outside)}</small></span></div>`;
+  }
   box.innerHTML = html;
 }
 

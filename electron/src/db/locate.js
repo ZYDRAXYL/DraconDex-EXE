@@ -1,15 +1,19 @@
 'use strict';
-// ═══ The Locate folder's sync (Procress 20 part 1; APP docs/V5.md §8.5) ════
+// ═══ Every Nexus is a folder (Procress 20; APP docs/V5.md §8.5) ═══════════
+// Before Procress 20 a Locate folder was something the user chose; now every
+// Nexus has one, made by the app — `<root>/<Nexus name>`, root being
+// `<Documents>/DraconDex` unless the user moved it (Settings → App data).
 // The .ddx stays the truth (§8.1): the folder mirrors it and holds the asset
-// files. This file keeps a sync from redoing work nothing asked for, with
-// two signals:
+// files. This file owns the folder's life and the two signals that keep a
+// sync from redoing work nothing asked for:
 //   - which modules changed since the last mirror (vault side), from TEMP
 //     triggers on the vault connection (never written into the .ddx)
 //   - whether anything changed in the folder (disk side), from fs.watch
 // db/mirror.js writes the mirror; main.js's syncLocate walks the folder.
 const fs = require('fs');
 const path = require('path');
-const { getVault } = require('./vaults');
+const { getAppDB, getVaultDB, dataDir } = require('./conn');
+const { getVault, setVaultLocateDir } = require('./vaults');
 
 // ── What changed in the vault (part 1a) ────────────────────────────────────
 // Each row a write touches names its module through the expression below
@@ -173,6 +177,124 @@ function forget(nx) {
   dirty.delete(nx);
 }
 
+// ── Where a Nexus's folder goes (part 2) ────────────────────────────────────
+// `<Documents>/DraconDex`, where a person finds it in Explorer — not AppData
+// beside the .ddx. A run with DRACONDEX_DATA_DIR (the tests, the driver) or an
+// unpackaged dev run keeps it under its data dir instead, so they never write
+// into the real Documents folder; DRACONDEX_LOCATE_ROOT overrides both.
+function defaultLocateRoot() {
+  if (process.env.DRACONDEX_LOCATE_ROOT) return path.resolve(process.env.DRACONDEX_LOCATE_ROOT);
+  const { app } = require('electron');
+  if (process.env.DRACONDEX_DATA_DIR || !app?.isPackaged) return path.join(dataDir(), 'Documents', 'DraconDex');
+  return path.join(app.getPath('documents'), 'DraconDex');
+}
+const ROOT_KEY = 'locateRoot';
+function locateRoot() {
+  try {
+    const v = getAppDB().prepare(`SELECT value FROM app_setting WHERE key=?`).get(ROOT_KEY)?.value;
+    if (v && path.isAbsolute(v)) return v;
+  } catch (_) {}
+  return defaultLocateRoot();
+}
+// Only main's folder dialog calls this — the renderer never names a path.
+function setLocateRoot(dir) {
+  getAppDB().prepare(`INSERT INTO app_setting (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`)
+    .run(ROOT_KEY, path.resolve(dir));
+}
+
+// "<name>", or "<name> (2)", (3)… — never a folder that is already there, or
+// one another Nexus has (even if it is missing right now).
+function freeDir(parent, name) {
+  const taken = new Set(getAppDB().prepare(`SELECT locate_dir FROM nexus_file WHERE locate_dir IS NOT NULL`).all()
+    .map((r) => path.resolve(r.locate_dir).toLowerCase()));
+  const free = (p) => !fs.existsSync(p) && !taken.has(path.resolve(p).toLowerCase());
+  let p = path.join(parent, name);
+  for (let n = 2; !free(p); n++) p = path.join(parent, `${name} (${n})`);
+  return p;
+}
+
+// The folder name the app gave is remembered in the manifest (autoName), so a
+// rename can follow it — and a folder the user moved or named is left alone.
+function setAutoName(dir, autoName) {
+  const { MANIFEST } = require('./mirror');
+  const f = path.join(dir, MANIFEST);
+  let j = {};
+  try { j = JSON.parse(fs.readFileSync(f, 'utf8')); } catch (_) {}
+  j.note = j.note || 'Written by DraconDex. The .ddx is the source of truth; this folder mirrors it.';
+  j.autoName = autoName || null;
+  try { fs.writeFileSync(f, JSON.stringify(j, null, 1)); } catch (_) {}
+}
+function autoNameOf(dir) {
+  const { MANIFEST } = require('./mirror');
+  try { return JSON.parse(fs.readFileSync(path.join(dir, MANIFEST), 'utf8')).autoName || null; } catch (_) { return null; }
+}
+
+// A Nexus without a folder gets one — at create, and for a Nexus from before
+// Procress 20, the first time it opens. → { ok, dir, created }
+function ensureLocateDir(nx) {
+  const v = getVault(nx);
+  if (!v) return { ok: false, code: 'not_found' };
+  if (v.locate_dir) return { ok: true, dir: v.locate_dir, created: false };
+  const { dirNameOf } = require('./mirror');
+  const base = locateRoot();
+  try {
+    const dir = freeDir(base, dirNameOf(v.name || 'Nexus'));
+    fs.mkdirSync(dir, { recursive: true });
+    setVaultLocateDir(nx, dir);
+    setAutoName(dir, path.basename(dir));
+    return { ok: true, dir, created: true };
+  } catch (e) {
+    return { ok: false, code: 'no_dir', error: String(e?.message || e) };
+  }
+}
+
+// Asset files that live outside the folder (a Nexus from before Procress 20
+// referenced them where they were). Never moved on their own — "Gather into
+// the folder" COPIES them in, next to their module's folder, and points the
+// asset at the copy. The originals stay where they are.
+function outsideAssets(nx) {
+  const v = getVault(nx);
+  if (!v?.locate_dir) return [];
+  const root = path.resolve(v.locate_dir);
+  return getVaultDB(nx).prepare(`SELECT id, file_name, file_path, module_ref FROM import_file WHERE nexus_ref=? AND source_kind='file' AND missing=0`).all(nx)
+    .filter((r) => {
+      const rel = path.relative(root, path.resolve(String(r.file_path || '')));
+      return !rel || rel.startsWith('..') || path.isAbsolute(rel);
+    });
+}
+function gatherAssets(nx) {
+  const v = getVault(nx);
+  if (!v?.locate_dir || v.locate_missing) return { ok: false, code: 'no_dir' };
+  const db = getVaultDB(nx);
+  const { planMirror } = require('./mirror');
+  const mods = db.prepare(`SELECT id, parent_id, name, kind, display_order FROM module WHERE nexus_ref=?`).all(nx);
+  const byId = new Map(mods.map((m) => [m.id, m]));
+  const dirOf = new Map(planMirror(mods).dirs.map((d) => [d.id, d.rel]));
+  const folderOf = (id) => { // the module's own folder, or its nearest collector's
+    for (let m = byId.get(id); m; m = byId.get(m.parent_id)) if (dirOf.has(m.id)) return dirOf.get(m.id);
+    return '';
+  };
+  const root = path.resolve(v.locate_dir);
+  const upd = db.prepare(`UPDATE import_file SET file_path=? WHERE id=?`);
+  const done = [];
+  let failed = 0;
+  for (const r of outsideAssets(nx)) {
+    try {
+      if (!fs.statSync(r.file_path).isFile()) { failed++; continue; }
+      const dir = path.join(root, ...folderOf(r.module_ref).split('/').filter(Boolean));
+      fs.mkdirSync(dir, { recursive: true });
+      const base = path.basename(r.file_path);
+      const ext = path.extname(base), stem = base.slice(0, base.length - ext.length);
+      let to = path.join(dir, base);
+      for (let n = 2; fs.existsSync(to); n++) to = path.join(dir, `${stem} (${n})${ext}`);
+      fs.copyFileSync(r.file_path, to, fs.constants.COPYFILE_EXCL);
+      done.push([to, r.id]);
+    } catch (_) { failed++; }
+  }
+  db.transaction(() => { for (const [to, id] of done) upd.run(to, id); })();
+  return { ok: true, copied: done.length, failed };
+}
+
 // ── The sync (main.js's syncLocate wraps this) ─────────────────────────────
 // One sync, both directions (§8.11.4): folders the user made on disk come in
 // as collectors — and their files as assets — through importFolderTree, the
@@ -181,17 +303,24 @@ function forget(nx) {
 //   reason 'open' / 'create' / 'manual'  walk the whole folder, check every file
 //   'focus' / 'tree'                     walk only if the watcher saw a change
 //   'edit'  (main's own, after a write)  mirror the changed modules, no walk
-// Runs inside the Nexus's vault context (importFolderTree uses it).
-// → the mirror's counts + { imported, dir } · { ok:false, code:'no_dir' | 'missing' }
+// A Nexus with no folder gets one. Runs inside the Nexus's vault context
+// (importFolderTree uses it).
+// → the mirror's counts + { imported, created, dir } · { ok:false, code:'missing' }
 function syncLocate(nx, { reason = 'manual' } = {}) {
   const { walkImportFolder, importFolderTree } = require('./importdock');
   const { syncNexusMirror } = require('./mirror');
-  const v = getVault(nx);
+  let v = getVault(nx);
   if (!v) return { ok: false, code: 'not_found' };
-  if (!v.locate_dir) return { ok: false, code: 'no_dir' };
+  let created = false;
+  if (!v.locate_dir) {
+    const e = ensureLocateDir(nx);
+    if (!e.ok) return e;
+    created = e.created;
+    v = getVault(nx);
+  }
   if (v.locate_missing) { unwatchFolder(nx); return { ok: false, code: 'missing' }; }
   const root = path.resolve(v.locate_dir);
-  const full = ['open', 'create', 'manual'].includes(reason);
+  const full = created || ['open', 'create', 'manual'].includes(reason);
   watchFolder(nx, root);
   // read (and reset) even on a full walk, so this walk is not redone on the next focus
   const changed = folderChanged(nx);
@@ -205,11 +334,12 @@ function syncLocate(nx, { reason = 'manual' } = {}) {
     imported = sub.length || inFolders.length ? importFolderTree(nx, null, sub, inFolders) : null;
   }
   const verify = full ? null : takeVerify(nx);
-  return { ...syncNexusMirror(nx, { full, verify }), imported, dir: root };
+  return { ...syncNexusMirror(nx, { full, verify }), imported, created, dir: root };
 }
 
 module.exports = {
   trackVault, takeDirty, giveBackDirty, hasDirty,
   watchFolder, unwatchFolder, folderChanged, takeVerify, ignoreOwn, isWatching, markActive, isActive, forget,
+  defaultLocateRoot, locateRoot, setLocateRoot, ensureLocateDir, outsideAssets, gatherAssets, freeDir, autoNameOf,
   syncLocate,
 };

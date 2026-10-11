@@ -19,6 +19,11 @@ contextBridge.exposeInMainWorld('api', {
     locateSync:   (nx,opts) => inv('nexus:locateSync', nx, opts),
     locateForget: (nx) => inv('nexus:locateForget', nx),
     locateOpen:   (nx) => inv('nexus:locateOpen', nx),
+    // Procress 20: every Nexus is a folder — where new ones go, and assets kept outside
+    locateStatus: (nx) => inv('nexus:locateStatus', nx),
+    locateGather: (nx) => inv('nexus:locateGather', nx),
+    locateRoot:   ()   => inv('locate:root'),
+    locatePickRoot: () => inv('locate:pickRoot'),
     getAll:  ()            => inv('nexus:getAll'),
     get:     (id)          => inv('nexus:get', id),
     create:  (n,m,c,fp)    => inv('nexus:create', n,m,c,fp),

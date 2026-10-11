@@ -658,8 +658,15 @@ h('nexus:pickLocation', async (name) => {
 // pickedImportRoots already apply. Anything else falls back to the default.
 h('nexus:create', (n,m,c,fp) => {
   const chosen = fp && pickedVaultPaths.has(path.resolve(String(fp))) ? path.resolve(String(fp)) : null;
-  return db.createNexus(n, m, c, chosen);
+  const id = db.createNexus(n, m, c, chosen);
+  // Procress 20: a new Nexus is a folder from the start — <root>/<name>, made
+  // and mirrored now, unasked. Its window, when it opens, starts the watcher.
+  try { runWithVault(id, () => syncLocate(id, { reason: 'create' })); }
+  catch (e) { console.error('Locate folder for a new Nexus:', e); }
+  db.locate.forget(id);
+  return id;
 });
+
 // ─── The Nexus ... menu (v4.9.0) ───────────────────────────────────────────
 // Duplicate / Export / Share / Open in Explorer. These are real file
 // operations now that a Nexus is a real file.
@@ -1355,6 +1362,30 @@ h('nexus:locateOpen', async (nx) => {
   const v = db.getNexus(nx);
   if (!v?.locate_dir || v.locate_missing) return false;
   return (await shell.openPath(v.locate_dir)) === '';
+});
+// Problems / Settings: is the folder there, and how many assets live outside it.
+h('nexus:locateStatus', (nx) => {
+  const v = db.getNexus(nx);
+  if (!v) return null;
+  const missing = !!v.locate_missing;
+  return {
+    dir: v.locate_dir || null, missing,
+    outside: v.locate_dir && !missing ? db.locate.outsideAssets(nx).length : 0,
+  };
+});
+// "Gather asset files into the folder": copies, never moves (db/locate.js).
+h('nexus:locateGather', (nx) => {
+  const r = db.locate.gatherAssets(nx);
+  if (r.ok && r.copied) syncLocate(nx, { reason: 'manual' });
+  return r;
+});
+// Where NEW Nexus folders go (Settings → App data). Existing ones stay put.
+h('locate:root', () => db.locate.locateRoot());
+h('locate:pickRoot', async () => {
+  const res = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), { properties: ['openDirectory', 'createDirectory'] });
+  if (res.canceled || !res.filePaths?.length) return { canceled: true };
+  db.locate.setLocateRoot(res.filePaths[0]);
+  return { dir: db.locate.locateRoot() };
 });
 
 // URL assets (§2.6): metadata + shell.openExternal only. connect-src 'none'
