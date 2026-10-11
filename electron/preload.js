@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   nexus: {
     locatePick:   (nx) => inv('nexus:locatePick', nx),
-    locateSync:   (nx) => inv('nexus:locateSync', nx),
+    locateSync:   (nx,opts) => inv('nexus:locateSync', nx, opts),
     locateForget: (nx) => inv('nexus:locateForget', nx),
     locateOpen:   (nx) => inv('nexus:locateOpen', nx),
     getAll:  ()            => inv('nexus:getAll'),

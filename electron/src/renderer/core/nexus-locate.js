@@ -7,11 +7,13 @@
 //
 // When the mirror syncs:
 //   - when the folder is picked, and from the row's Sync button
-//   - once in the background after a Nexus opens
-//   - after the module tree changes (create / rename / move / delete),
-//     debounced — reloadModuleTree() is the one place all of those end
-// Content edits inside a module do not trigger it on their own; the next
-// open or tree change carries them. The .ddx is the truth either way (§8.1).
+//   - once in the background after a Nexus opens ('open': a full check)
+//   - when the window comes back to the front ('focus') and after the tree
+//     changes ('tree') — both cheap since Procress 20 part 1: main walks the
+//     folder only when its watcher saw something, and mirrors only the
+//     modules that changed
+//   - ~2 s after any write, by main itself, without a call from here
+// The .ddx is the truth either way (§8.1).
 
 const hasLocate = () => typeof api.nexus?.locatePick === 'function';
 const nexusRow = (id) => S.nexuses?.find(v => v.id === id) || null;
@@ -52,8 +54,8 @@ async function pickNexusLocate(id) {
   await afterLocateChange(id, r);
 }
 
-async function syncNexusLocate(id, quiet = false) {
-  const r = await api.nexus.locateSync(id);
+async function syncNexusLocate(id, quiet = false, reason = 'manual') {
+  const r = await api.nexus.locateSync(id, { reason });
   reportLocateSync(r, quiet);
   // The folder side may have brought collectors / assets in.
   if (r?.imported && (r.imported.collectors || r.imported.added)) await reloadModuleTree({ skipMirror: true });
@@ -73,15 +75,23 @@ async function afterLocateChange(id, r) {
   openNexusModal(id); // every caller is a button in this modal — redraw it
 }
 
+// One timer per window. A pending 'open' (the full check) is never
+// downgraded by a focus or tree change landing before it fires.
 let _mirrorTimer = null;
-function scheduleMirrorSync(delay = 2000) {
+let _mirrorReason = null;
+function scheduleMirrorSync(delay = 2000, reason = 'tree') {
   if (!hasLocate() || !S.nexus?.locate_dir || S.nexus.locate_missing) return;
   clearTimeout(_mirrorTimer);
+  if (_mirrorReason !== 'open') _mirrorReason = reason;
   const id = S.nexus.id;
-  _mirrorTimer = setTimeout(() => { if (S.nexus?.id === id) syncNexusLocate(id, true); }, delay);
+  _mirrorTimer = setTimeout(() => {
+    const why = _mirrorReason;
+    _mirrorReason = null;
+    if (S.nexus?.id === id) syncNexusLocate(id, true, why);
+  }, delay);
 }
 
 // Procress 16 part 2 (Suggestion.md): files the user puts into the project
 // folder from Explorer show up in the Nest — the Locate sync runs again when
 // the window comes back to the front, not only when the vault opens.
-window.addEventListener('focus', () => scheduleMirrorSync(400));
+window.addEventListener('focus', () => scheduleMirrorSync(400, 'focus'));

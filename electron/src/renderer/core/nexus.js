@@ -154,7 +154,7 @@ async function selectNexus(id) {
   S.moduleCollapsed.load(S.nexus.id); // and its fold state (core/state.js)
   if (typeof reportRelationDedupe === 'function') reportRelationDedupe();
   reportParentNormalize();
-  scheduleMirrorSync(3000); // v5 Part 4: bring a located folder up to date, in the background
+  scheduleMirrorSync(3000, 'open'); // v5 Part 4: bring a located folder up to date, in the background (a full check)
   renderNexusHome();
   renderModuleRail();
   updateStatusBar({ item: null, words: null, saveState: null });

@@ -115,7 +115,7 @@ async function init() {
   S.moduleCollapsed.load(S.nexus.id); // and its fold state (core/state.js)
   if (S.nexus && typeof reportRelationDedupe === 'function') reportRelationDedupe();
   if (S.nexus) reportParentNormalize();
-  if (S.nexus) scheduleMirrorSync(3000);
+  if (S.nexus) scheduleMirrorSync(3000, 'open');
   window.__splash?.set(88);
   // Set before the first render below — builderPaneHeadHtml (builder.js)
   // reads S.isPopup to decide whether to show the "move to main window" tab

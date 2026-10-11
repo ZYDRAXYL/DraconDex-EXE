@@ -53,6 +53,7 @@ const extension = require('./src/db/extension');
 const pkg       = require('./src/db/pkg');
 const dbTransfer = require('./src/db/db-transfer');
 const mirror    = require('./src/db/mirror');
+const locate    = require('./src/db/locate');
 const assetPack = require('./src/db/asset-pack');
 const vaults    = require('./src/db/vaults');
 const transfer  = require('./src/db/transfer');
@@ -117,6 +118,7 @@ module.exports = {
   ...mirror,
   importAssetPack: assetPack.importAssetPack,
   setVaultLocateDir: vaults.setVaultLocateDir,
+  locate, // Procress 20: every Nexus is a folder — db.locate.*
   ...transfer,
   ...cloud,
 };

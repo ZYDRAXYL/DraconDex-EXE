@@ -7,9 +7,11 @@
 // import_file.module_ref files an asset into a module node; NULL = unfiled,
 // and the Import Dock is now just the tray for those. folder stays as
 // provenance only.
+const fs = require('fs');
+const path = require('path');
 const { getDB } = require('./core');
 const { collectorNameOfDir } = require('./mirror');
-const { PROXY_VAULT_BUDGET } = require('./asset-media');
+const { PROXY_VAULT_BUDGET, ASSET_CLASS } = require('./asset-media');
 
 // Every column except the proxy BLOB — a folder of images would otherwise
 // ship megabytes of thumbnails across IPC on every list. has_proxy tells the
@@ -227,8 +229,50 @@ function importIdsByPath(nexusId, paths) {
   return (paths || []).map((p) => q.get(nexusId, p)?.id).filter((id) => id != null);
 }
 
+// Procress 20: moved here from main.js, so db/locate.js walks the same way.
+const IMPORT_EXTS = new Set(Object.keys(ASSET_CLASS));
+// Walk a picked folder. Every file carries `folder` (the provenance string
+// the flat Dock always stored) and `dir` (its directory as a path array
+// starting at the root's own name) — importFolderTree turns the latter into
+// collector modules. dirs lists only directories that hold an importable
+// file somewhere below them, and dot-directories are skipped, so a picked
+// project folder does not sprout a collector per .git subfolder.
+function walkImportFolder(root) {
+  const rootName = path.basename(root);
+  const files = [];
+  const dirs = [];
+  const walk = (dir, segs) => {
+    let found = false;
+    let ents;
+    try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return false; }
+    for (const ent of ents) {
+      const p = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        if (ent.name.startsWith('.')) continue;
+        if (walk(p, [...segs, ent.name])) found = true;
+        continue;
+      }
+      const ext = path.extname(ent.name).slice(1).toLowerCase();
+      if (!IMPORT_EXTS.has(ext)) continue;
+      let size = 0;
+      try { size = fs.statSync(p).size; } catch (_) {}
+      files.push({
+        name: ent.name, path: p, type: ext, size, dir: segs,
+        folder: rootName + (dir === root ? '' : '/' + path.relative(root, dir).replace(/\\/g, '/')),
+      });
+      found = true;
+    }
+    if (found) dirs.push(segs);
+    return found;
+  };
+  walk(root, [rootName]);
+  // Parents before children, so a collector's parent always exists first.
+  dirs.sort((a, b) => a.length - b.length);
+  return { rootName, dirs, files };
+}
+
 module.exports = {
-  importIdsByPath,
+  importIdsByPath, walkImportFolder,
   getImportFiles, getImportFile, addImportFiles, importFolderTree, addImportUrl,
   getModuleAssets, getNestAssets, setImportModule,
   setImportLinker, setImportUseAsImage, deleteImportFile, getDisplayImages,

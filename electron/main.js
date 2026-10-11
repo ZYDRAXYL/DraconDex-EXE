@@ -138,6 +138,12 @@ function createWindow(bootstrapNexusId, bootstrapTabKey) {
       // Only unpin once NO window is left on this vault — two windows on one
       // vault is a supported thing (window:openNexus).
       if (![...windowNexus.values()].includes(nexusId)) {
+        // Procress 20: whatever the 2 s edit timer had not mirrored yet goes
+        // out now, then the folder watcher stops with the vault.
+        if (db.locate.isActive(nexusId) && db.locate.hasDirty(nexusId)) {
+          try { runWithVault(nexusId, () => db.syncNexusMirror(nexusId)); } catch (_) {}
+        }
+        db.locate.forget(nexusId);
         db.unpinVault(nexusId);
         db.closeVault(nexusId);
       }
@@ -498,7 +504,9 @@ const h = (ch, fn) => {
     try { d = vaultDB(); } catch (_) { /* no vault open: an app-level write */ }
     return d ? d.transaction(() => fn(...a))() : fn(...a);
   };
-  const run = !dirty ? body : async (...a) => { try { return await body(...a); } finally { db.markSearchDirty(); } };
+  // B3: the search index is stale after any write · Procress 20: so is the
+  // Locate folder's copy of the modules it touched
+  const run = !dirty ? body : async (...a) => { try { return await body(...a); } finally { db.markSearchDirty(); scheduleEditMirror(currentNexusId()); } };
   return hRaw(ch, run);
 };
 const hRaw = (ch, fn) => ipcMain.handle(ch, async (event, ...a) => {
@@ -1127,45 +1135,9 @@ const pickDirectory = async () => {
   return res.canceled || !res.filePaths?.length ? null : res.filePaths[0];
 };
 
-// Walk a picked folder. Every file carries `folder` (the provenance string
-// the flat Dock always stored) and `dir` (its directory as a path array
-// starting at the root's own name) — importFolderTree turns the latter into
-// collector modules. dirs lists only directories that hold an importable
-// file somewhere below them, and dot-directories are skipped, so a picked
-// project folder does not sprout a collector per .git subfolder.
-function walkImportFolder(root) {
-  const rootName = path.basename(root);
-  const files = [];
-  const dirs = [];
-  const walk = (dir, segs) => {
-    let found = false;
-    let ents;
-    try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return false; }
-    for (const ent of ents) {
-      const p = path.join(dir, ent.name);
-      if (ent.isDirectory()) {
-        if (ent.name.startsWith('.')) continue;
-        if (walk(p, [...segs, ent.name])) found = true;
-        continue;
-      }
-      const ext = path.extname(ent.name).slice(1).toLowerCase();
-      if (!IMPORT_EXTS.has(ext)) continue;
-      let size = 0;
-      try { size = fs.statSync(p).size; } catch (_) {}
-      files.push({
-        name: ent.name, path: p, type: ext, size, dir: segs,
-        folder: rootName + (dir === root ? '' : '/' + path.relative(root, dir).replace(/\\/g, '/')),
-      });
-      found = true;
-    }
-    if (found) dirs.push(segs);
-    return found;
-  };
-  walk(root, [rootName]);
-  // Parents before children, so a collector's parent always exists first.
-  dirs.sort((a, b) => a.length - b.length);
-  return { rootName, dirs, files };
-}
+// Walk a picked folder — db/importdock.js walkImportFolder (moved there in
+// Procress 20 so db/locate.js's sync walks the Nexus folder the same way).
+const walkImportFolder = (root) => db.walkImportFolder(root);
 
 h('importdock:list',          (nx)     => db.getImportFiles(nx));
 h('importdock:get',           (id)     => db.getImportFile(id));
@@ -1250,25 +1222,31 @@ h('importdock:importFolder', async (nx, parentModuleId) => {
   const { dirs, files } = walkImportFolder(root);
   return db.importFolderTree(nx, parentModuleId ?? null, dirs, files);
 });
-// ─── Locate Nexus (v5 Part 4, APP docs/V5.md §8.5–§8.6) ──────────────────
-// One sync, both directions (§8.11.4): folders the user made on disk come in
-// as collectors — and their files as assets — through the same
-// importFolderTree the Dock's folder import uses, then the vault is written
-// back out as folders + .mddx files (db/mirror.js). The locate root joins
-// pickedImportRoots, the same guard every other picked folder goes through.
-function syncLocate(nx) {
-  const v = db.getNexus(nx);
-  if (!v?.locate_dir) return { ok: false, code: 'no_dir' };
-  if (v.locate_missing) return { ok: false, code: 'missing' };
-  const root = path.resolve(v.locate_dir);
-  pickedImportRoots.add(root);
-  // walkImportFolder names its first segment after the root; the root IS
-  // the Nexus top level here, so that segment is dropped.
-  const { dirs, files } = walkImportFolder(root);
-  const sub = dirs.map((segs) => segs.slice(1)).filter((segs) => segs.length);
-  const inFolders = files.map((f) => ({ ...f, dir: f.dir.slice(1) }));
-  const imported = sub.length || inFolders.length ? db.importFolderTree(nx, null, sub, inFolders) : null;
-  return { ...db.syncNexusMirror(nx), imported };
+// ─── Locate Nexus (v5 Part 4, APP docs/V5.md §8.5–§8.6; Procress 20) ──────
+// The sync itself — walk the folder, mirror the vault into it, doing only the
+// work something asked for — is db/locate.js syncLocate; main adds the folder
+// to pickedImportRoots, the guard every other folder the user stands behind
+// goes through.
+function syncLocate(nx, opts = {}) {
+  const r = db.locate.syncLocate(nx, opts);
+  if (r?.ok && r.dir) pickedImportRoots.add(path.resolve(r.dir));
+  return r;
+}
+
+// "Mirror keeps up with content" (Procress 20 part 1): a write handler that
+// changed modules of a Nexus with a folder schedules one mirror of just those
+// modules ~2 s after the last write — typing in a page is one sync, not one
+// per autosave. h() calls this after every write.
+const mirrorTimers = new Map();
+function scheduleEditMirror(nx) {
+  if (nx == null || !db.locate.isActive(nx) || !db.locate.hasDirty(nx)) return;
+  clearTimeout(mirrorTimers.get(nx));
+  mirrorTimers.set(nx, setTimeout(() => {
+    mirrorTimers.delete(nx);
+    if (![...windowNexus.values()].includes(nx)) return; // the vault closed meanwhile
+    try { runWithVault(nx, () => syncLocate(nx, { reason: 'edit' })); }
+    catch (e) { console.error('Locate mirror after edit failed:', e); }
+  }, 2000));
 }
 h('nexus:locatePick', async (nx) => {
   const root = await pickDirectory();
@@ -1276,7 +1254,7 @@ h('nexus:locatePick', async (nx) => {
   db.setVaultLocateDir(nx, path.resolve(root));
   return syncLocate(nx);
 });
-h('nexus:locateSync',   (nx) => syncLocate(nx));
+h('nexus:locateSync', (nx, opts) => syncLocate(nx, { reason: ['open', 'focus', 'tree', 'manual'].includes(opts?.reason) ? opts.reason : 'manual' }));
 // Procress 16 B7 + Suggestion.md: files / folders dragged from the OS onto the
 // Nest (or pasted) are COPIED into the Nexus's Locate folder — into the folder
 // of the collector they were dropped on, by planMirror's layout — and the
