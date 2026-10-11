@@ -139,7 +139,7 @@ async function openBundlePicker(parentId = null, tab = null, sel = null) {
   openModal(t('bundleTitle'), `<div class="art">
       <div class="art-left"><div class="bundle-tabs">${tabs}</div><div class="art-grid">${cards}${guide}</div></div>
       <aside class="art-detail">${pick ? bundleDetailHtml(pick, pid) : empty}</aside>
-    </div>`, { size: 'xl', focus: '.art-card.on' });
+    </div>`, { size: 'lg', focus: '.art-card.on' });
 }
 
 // What the selected bundle will build: the tree, the links, and the one

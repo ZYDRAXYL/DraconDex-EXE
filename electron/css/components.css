@@ -114,7 +114,7 @@
 #modal-overlay.hidden{display:none}
 #modal{
 	background:var(--surface);border:1px solid var(--border);
-	border-radius:var(--rl);width:480px;max-width:95vw;
+	border-radius:var(--rl);width:var(--modal-md);max-width:95vw;
 	max-height:88vh;display:flex;flex-direction:column;
 	box-shadow:var(--shadow-modal);
 }
@@ -123,14 +123,19 @@
 	border-bottom:1px solid var(--border);
 }
 #modal-title{flex:1;font-size:calc(14px * var(--fsc,1));font-weight:700}
-#modal-close{
-	background:none;border:none;color:var(--t3-aa,var(--t2));cursor:pointer;
-	font-size:calc(15px * var(--fsc,1));padding:3px 6px;border-radius:var(--rs);line-height:1;
-}
+#modal-close{color:var(--t3-aa,var(--t2))}
 #modal-close:hover{color:var(--t1)}
 #modal-body{padding:18px;overflow-y:auto;flex:1}
-#modal[data-size="xl"]{width:min(1100px,95vw);height:min(760px,88vh)}
+/* three sizes, from the tokens (Procress 22) */
+#modal[data-size="sm"]{width:var(--modal-sm)}
+#modal[data-size="md"]{width:var(--modal-md)}
+#modal[data-size="lg"]{width:min(var(--modal-lg),95vw);height:min(760px,88vh)}
+/* the foot: buttons, primary rightmost; a destructive one on the far left */
+#modal-foot{padding:12px 18px;border-top:1px solid var(--border)}
+#modal-foot[hidden]{display:none}
+#modal-foot > .mfoot{margin:0;padding:0;border:0;align-items:center}
 .mfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+.mfoot > .btn-d:first-child:not(:last-child){margin-right:auto}
 
 /* FLOATING (MODELESS) PANEL — like #modal but no backdrop, so the app below
    stays interactive (Plan part3 setting#2). */

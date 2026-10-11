@@ -74,7 +74,7 @@ async function openExportModal(moduleId, itemKey = null) {
       <span class="exd-file" id="ex-file"></span>
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" id="ex-go" onclick="runExport()">${t('exportGo')}</button>
-    </div>`, { size: 'xl', focus: '.ex-card.active' });
+    </div>`, { size: 'lg', focus: '.ex-card.active' });
   exportPick(_ex.prefs.fmt);
   // The element names the preview lists — the same walk a module PDF takes.
   try {

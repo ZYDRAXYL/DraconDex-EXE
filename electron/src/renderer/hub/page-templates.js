@@ -117,7 +117,7 @@ function tplGalleryOpen() {
       <label class="fv-useimg tpg-fields" id="tpg-fields"><input type="checkbox" checked onchange="_tg.fields=this.checked"> ${t('tplFields')}</label>
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" id="tpg-go" onclick="tplGalleryGo()">${create ? t('create') : t('apply')}</button>
-    </div>`, { size: 'xl', focus: '.tpg-card.on' });
+    </div>`, { size: 'lg', focus: '.tpg-card.on' });
   tplGalleryRender();
 }
 
