@@ -232,23 +232,39 @@ test('18 part 1: Nest head order, Home phase A, Recent, / and [+ New] in context
 });
 
 // ── Procress 16 part 2 ───────────────────────────────────────────────────
+// Procress 20: every Nexus is a folder, made by the app — never asked for.
+test('20: a new Nexus is a folder from the start; its modal offers where · open · move, nothing to pick or forget', async () => {
+  const n = await win.evaluate(async () => { await reloadNexuses(); return { dir: S.nexus.locate_dir, missing: S.nexus.locate_missing, data: await api.nexus.defaultPath() }; });
+  assert.ok(n.dir, 'the Nexus has its folder');
+  assert.equal(n.missing, 0);
+  assert.match(n.dir, /[\\/]DraconDex[\\/]Smoke$/, '<root>/DraconDex/<name>');
+  assert.ok(n.dir.startsWith(n.data.replace(/[\\/]vaults$/, '')), 'a test run keeps it under its data dir, never in the real Documents');
+  const row = await win.evaluate(async () => { await openNexusModal(S.nexus.id); const fg = [...document.querySelectorAll('#modal .fg')].find((e) => e.querySelector('input')?.value === S.nexus.locate_dir); const out = fg ? [...fg.querySelectorAll('button')].map((b) => b.getAttribute('onclick')) : null; closeModal(); return out; });
+  assert.ok(row, 'the Local folder row shows the folder');
+  assert.ok(row.some((c) => /moveNexusLocate/.test(c)) && row.some((c) => /locateOpen/.test(c)));
+  assert.ok(!row.some((c) => /pick|forget/i.test(c)), 'no Choose / Forget');
+});
+
 test('16 part 2: a real file dropped on a folder is copied into it on disk and filed; k: l: t: filter', async () => {
   const png = new URL('../../src/assets/brand/DraconDex_WhiteOut.png', import.meta.url);
-  await win.evaluate(() => { const i = document.createElement('input'); i.type = 'file'; i.id = 't-in'; document.body.appendChild(i); window.uiConfirm = async () => true; });
+  // Procress 20: nothing may ask anything on the way — count every question.
+  await win.evaluate(() => { const i = document.createElement('input'); i.type = 'file'; i.id = 't-in'; document.body.appendChild(i); window.__asked = 0; const ask = window.uiConfirm; window.uiConfirm = async (...a) => { window.__asked++; return ask(...a); }; });
   await win.setInputFiles('#t-in', decodeURIComponent(png.pathname.replace(/^\/([A-Za-z]:)/, '$1')));
   const r = await win.evaluate(async () => {
     const files = document.getElementById('t-in').files;
     const dt = new DataTransfer(); for (const f of files) dt.items.add(f);
     const row = document.querySelector('#left-panel-inner [data-mid="1"]'); // the Guide folder
     row.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: dt }));
-    // Wait for the file to land rather than a fixed 3 s: the first drop makes
-    // the Locate folder, mirrors the whole Nexus, copies, mirrors again and
-    // reloads the tree — over 3 s on a slow Windows runner disk.
+    // Wait for the file to land rather than a fixed 3 s: the drop copies,
+    // walks the folder, mirrors and reloads the tree — slow on a Windows
+    // runner disk.
     for (let i = 0; i < 100 && !nestAssetsOf(1).length; i++) await new Promise((res) => setTimeout(res, 200));
     return nestAssetsOf(1).map((f) => f.file_path);
   });
   assert.equal(r.length, 1);
   assert.match(r[0], /[\\/]Guide[\\/]DraconDex_WhiteOut\.png$/,'copied into the folder of the collector it was dropped on');
+  assert.equal(await win.evaluate(() => window.__asked), 0, 'no dialog on the way (Procress 20)');
+  assert.ok(r[0].startsWith(await win.evaluate(() => S.nexus.locate_dir)), 'into the Nexus\'s own folder');
   const hits = (q) => win.evaluate(async (qq) => { setNestFilter(qq); await new Promise((res) => setTimeout(res, 400)); return [...document.querySelectorAll('.nest-filter-hit .name')].map((e) => e.textContent); }, q);
   assert.deepEqual(await hits('t:image'), ['DraconDex_WhiteOut.png']);
   assert.ok((await hits('k:classifier')).includes('Characters'));
