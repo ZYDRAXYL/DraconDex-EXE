@@ -338,26 +338,27 @@ console.log('=== command registry (core/commands.js) ===');
 // APP docs/UX-LAYOUT.md §12. Every list row is listRowHtml() (class ls-row);
 // a NEW `*-row` / `*-item` class written by hand, without .ls-row beside it,
 // is a list nobody can learn once (L1: ~60 such classes, each its own size).
-// The classes below were there before the shared list (2026-10-11) — many
+// The classes below were there before the shared list (2026-10-11) and are
+// not migrated yet — many
 // are not list rows at all (form rows, toolbars) and stay. The list only
 // shrinks: when a class is migrated or deleted, take it out (the checker
 // prints a note for every entry it no longer finds).
 const LEGACY_ROW_CLASSES = new Set([
   'addr-row', 'art-row', 'bundle-adj-row', 'chr-cal-row', 'chr-insp-row', 'chs-row', 'chs-tr-row',
-  'cls-link-row', 'crecent-row', 'ctm-row', 'div-hist-row', 'ex-row', 'exh-pal-row', 'fp-rule-row',
+  'crecent-row', 'ctm-row', 'div-hist-row', 'ex-row', 'exh-pal-row', 'fp-rule-row',
   'htag-item', 'htag-row', 'hx-row', 'ipk-color-row', 'ipk-preview-row', 'kind-artisan-row',
-  'kind-list-item', 'lang-item', 'layout-menu-item', 'left-search-row', 'mded-ac-item', 'mgr-pick-row',
-  'module-item', 'module-rail-item', 'nar-logic-row', 'nar-row', 'navbar-row', 'nest-asset-row',
-  'nest-item-row', 'nest-opt-row', 'nest-sig-row', 'nexus-item', 'nexus-switcher-item', 'palette-item',
+  'kind-list-item', 'layout-menu-item', 'mded-ac-item', 'mgr-pick-row',
+  'module-rail-item', 'nar-logic-row', 'nar-row', 'navbar-row', 'nest-asset-row',
+  'nest-item-row', 'nest-opt-row', 'nest-sig-row', 'palette-item',
   'pb-ii-row', 'pb-le-row', 'pb-props-row', 'pc-bar-row', 'pc-gal-item', 'pc-ib-row', 'pc-navbox-row',
-  'pc-toc-row', 'plugin-preview-row', 'prob-row', 'props-row', 'qs-item', 'sb-item', 'setting-hit-row',
-  'setting-nav-item', 'settings-label-row', 'sh-bar-row', 'size-slider-row', 'sync-key-row',
-  'sync-status-row', 'sync-upload-row', 'theme-item', 'tpt-row', 'tpv-row', 'vh-row', 'welcome-name-row',
-  'welcome-recent-row', 'wnd-area-row',
+  'pc-toc-row', 'plugin-preview-row', 'props-row', 'sb-item', 'setting-hit-row',
+  'settings-label-row', 'sh-bar-row', 'size-slider-row', 'sync-key-row',
+  'sync-status-row', 'sync-upload-row', 'tpt-row', 'tpv-row', 'welcome-name-row',
+  'wnd-area-row',
 ]);
 // …and no raw px font-size in a row's own rule (§12.1: --fs-body / --fs-sm),
 // or UI Size moves one list and not the next (L2). Selectors grandfathered:
-const LEGACY_ROW_PX = new Set(['.plugin-preview-row', '.setting-nav-item', '.lang-item', '.div-hist-row', '.module-item', '.theme-item']);
+const LEGACY_ROW_PX = new Set(['.plugin-preview-row', '.div-hist-row']);
 const ROW_CLASS = /^[a-z][\w-]*-(row|item)$/;
 const rowClassesSeen = new Set();
 
