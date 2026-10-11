@@ -88,18 +88,6 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 .split-btn .split-more{padding:0 5px;border-left:1px solid color-mix(in srgb,var(--on-accent,#fff) 30%,transparent)}
 .split-btn .icon{width:14px;height:14px}
 
-/* MODULE ITEM (nexus left panel) */
-.module-item{
-  display:flex;align-items:center;gap:10px;
-  padding:9px 12px;border-radius:var(--r);
-  cursor:pointer;color:var(--t1);font-size:calc(14px * var(--fsc,1));font-weight:500;
-  transition:all var(--ease);
-}
-.module-item:hover{background:var(--hover)}
-.module-icon{display:flex;align-items:center;color:var(--accent-text,var(--accent));flex-shrink:0}
-.module-name{flex:1}
-.module-chevron{width:14px;height:14px;color:var(--t3-aa,var(--t2));flex-shrink:0}
-
 /* NEXUS VAULT PICKER */
 .nexus-vault-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .nexus-vault-head h4{display:flex;align-items:center;gap:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -115,18 +103,10 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 /* Workspace switcher — dropdown of every Nexus, opened above the vault-head
    name (hub.js's positionPopupNear flips it upward near the panel bottom) */
 .nexus-switcher-popup{width:220px;max-height:300px;overflow-y:auto;padding:6px}
-.nexus-switcher-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--rs);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.nexus-switcher-item:hover{background:var(--hover)}
-.nexus-switcher-item.active{color:var(--accent-text,var(--accent))}
 /* Last row of the dropdown (v4.6.0): the list stops at 3 recent vaults, and
    this is the way to the full list — the Welcome window. */
-.nexus-switcher-more{border-top:1px solid var(--border);margin-top:6px;padding-top:9px;color:var(--t2)}
-.nexus-switcher-more:hover{color:var(--t1)}
-.nexus-item .btn-icon{opacity:0;border:none;background:none;color:var(--t3-aa,var(--t2));cursor:pointer;padding:2px;border-radius:var(--rs);display:flex;align-items:center}
-.nexus-item:hover .btn-icon{opacity:1}
-.nexus-item .btn-icon:hover{color:var(--t1)}
-.nexus-item .btn-icon .icon{width:14px;height:14px}
-.nexus-count{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));background:var(--hover);border-radius:var(--rl);padding:1px 8px;flex-shrink:0}
+.nexus-switcher-popup .nexus-switcher-more{border-top:1px solid var(--border);margin-top:var(--sp-1);border-radius:0}
+.nexus-switcher-popup .nexus-switcher-more:first-child{border-top:0;margin-top:0}
 
 /* ═══ V3 MODULE SYSTEM — Nexus nest hub (progress.md Phases 1-3) ═══ */
 .hub-toggle{
@@ -262,7 +242,6 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 .left-dest-body{flex:1;min-height:0;overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:4px}
 .left-search-input{width:100%}
 .left-search-res{display:flex;flex-direction:column;gap:2px}
-.left-search-row .name{white-space:normal}
 .left-search-row b{color:var(--accent-text,var(--accent))}
 .setting-db-io{display:flex;gap:8px;margin-bottom:14px}
 .csv-preview{max-height:320px;overflow:auto;border:1px solid var(--border);border-radius:var(--rs,6px)}
@@ -305,7 +284,9 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 .nest-thumb{width:16px;height:16px;object-fit:cover;border-radius:var(--rs);display:block}
 /* Procress 18 part 2 — Nest rows: 12 px per level (was 16, guides moved with
    it), ⋯ at the end on hover / keyboard focus, a count badge, a grab cursor */
-#nest-tree-body .li{cursor:grab}
+/* Procress 21 (UX-LAYOUT §12.2): the tree is a compact list — every row,
+   module, element or file, is --row-compact tall, at any UI Size. */
+#nest-tree-body .li{cursor:grab;min-height:var(--row-compact);padding-top:0;padding-bottom:0}
 #nest-tree-body .li:active{cursor:grabbing}
 #nest-tree-body .li:focus-visible{outline:2px solid var(--accentH,var(--accent));outline-offset:-2px}
 .li .nest-row-more{visibility:hidden;width:22px;height:22px;margin-left:2px;flex-shrink:0}

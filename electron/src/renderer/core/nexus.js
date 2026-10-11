@@ -53,11 +53,11 @@ function toggleNexusSwitcher(e) {
   const anchor = e.currentTarget;
   const pop = document.createElement('div');
   pop.className = 'kind-popup nexus-switcher-popup';
-  pop.innerHTML = recentNexuses(3).map(n => `
-    <div class="nexus-switcher-item" onclick="openNexusWindow(${n.id})">
-      <span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>${x(n.name)}
-    </div>`).join('') + `
-    <div class="nexus-switcher-item nexus-switcher-more" onclick="openWelcomeWindow()">${t('wmChangeNexus')}</div>`;
+  // Procress 21: a menu, so compact rows of the shared list (core/list.js)
+  pop.innerHTML = listHtml({ list: 'nexus-switcher', aria: t('wmChangeNexus'), body: recentNexuses(3).map(n => listRowHtml({ density: 'compact',
+    icon: `<span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>`,
+    title: n.name, state: { current: n.id === S.nexus?.id }, onclick: `openNexusWindow(${n.id})`, attrs: 'data-no-i18n' })).join('')
+    + listRowHtml({ density: 'compact', icon: I.projects, title: t('wmChangeNexus'), cls: 'nexus-switcher-more', onclick: 'openWelcomeWindow()' }) });
   document.body.appendChild(pop);
   pop.addEventListener('click', ev => ev.stopPropagation());
   positionPopupNear(pop, anchor.getBoundingClientRect());
@@ -105,13 +105,7 @@ function renderNexusPicker() {
     <div class="ph"><h4>${t('nexus')}</h4>
       <button class="btn btn-p btn-sm" onclick="openNexusModal()">+ ${t('nexusNew')}</button>
     </div>
-    ${S.nexuses.map(n => `
-      <div class="module-item nexus-item" onclick="selectNexus(${n.id})">
-        <span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>
-        <span class="module-name">${x(n.name)}</span>
-        <span class="nexus-count">${n.project_count}</span>
-        ${nexusRowButtonsHtml(n)}
-      </div>`).join('')}`;
+    ${listHtml({ list: 'nexuses', aria: t('nexus'), body: S.nexuses.map(n => nexusRowHtml(n, `selectNexus(${n.id})`)).join('') })}`;
   q('#main-inner').innerHTML = `<div class="empty" style="margin-top:80px">
     <div class="ei"><img src="../src/assets/brand/web/DraconDex_WhiteOut.webp" class="brand-img" alt="DraconDex" style="height:64px;width:64px;opacity:.35"></div>
     <h3>${t('nexusWelcomeTitle')}</h3>

@@ -530,10 +530,10 @@ test('16 part 5: a label is a category — its page lists members and subcategor
     await openModuleNode(id); await wait(500);
     const bar = [...document.querySelectorAll('.pc-cats .pc-cat')].map((e) => e.textContent.trim());
     document.querySelector('.pc-cats .pc-cat')?.click(); await wait(600);
-    const sub = { tab: builderState().panes[builderState().focused].active, members: [...document.querySelectorAll('.cat-members .name')].map((e) => e.textContent) };
+    const sub = { tab: builderState().panes[builderState().focused].active, members: [...document.querySelectorAll('[data-ls="cat-members"] .ls-title')].map((e) => e.textContent) };
     openCategoryPage('places'); await wait(500);
-    return { bar, folder: folder.name, sub, subs: [...document.querySelectorAll('.cat-subs .pc-cat')].map((e) => e.textContent.trim()),
-      members: [...document.querySelectorAll('.cat-members .name')].map((e) => e.textContent) };
+    return { bar, folder: folder.name, sub, subs: [...document.querySelectorAll('[data-ls="cat-subs"] .ls-title')].map((e) => e.textContent.trim()),
+      members: [...document.querySelectorAll('[data-ls="cat-members"] .ls-title')].map((e) => e.textContent) };
   });
   assert.deepEqual(r.bar, ['#places/ports', r.folder], 'the bar: its label, then its folder');
   assert.equal(r.sub.tab, 'category:places/ports');
@@ -545,13 +545,13 @@ test('16 part 5: search narrows with k: / l: / in:, and remembers what was searc
   const r = await win.evaluate(async () => {
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
     showLeftDest('search'); await wait(300);
-    const run = async (qy) => { q('#left-search-q').value = qy; await runLeftSearch(qy); return [...document.querySelectorAll('#left-search-res .left-search-row .name')].map((e) => e.firstChild.textContent.trim()); };
+    const run = async (qy) => { q('#left-search-q').value = qy; await runLeftSearch(qy); return [...document.querySelectorAll('#left-search-res .left-search-row .ls-title')].map((e) => e.textContent.trim()); };
     const all = await run('harbor');
     const cls = await run('harbor k:classifier');
     const onlyK = await run('k:chronicler');
     const inGuide = await run('k:classifier in:Guide');
     q('#left-search-q').value = ''; await runLeftSearch('');
-    const hist = [...document.querySelectorAll('#left-search-res .li .name')].map((e) => e.textContent);
+    const hist = [...document.querySelectorAll('#left-search-res .ls-row .ls-title')].map((e) => e.textContent);
     showLeftDest('nest');
     return { all, cls, onlyK, inGuide, hist };
   });
@@ -581,7 +581,7 @@ test('16 part 5: an element\'s infobox shows its page picture over its fields', 
 test('16 part 5: Home phase B — the most linked page, what changed, counts and a random page', async () => {
   const r = await win.evaluate(async () => {
     await builderOpenPage(null); await new Promise((res) => setTimeout(res, 1200));
-    return { secs: [...document.querySelectorAll('#home-portal h3')].length, changed: document.querySelectorAll('#home-portal .home-list .li').length,
+    return { secs: [...document.querySelectorAll('#home-portal h3')].length, changed: document.querySelectorAll("#home-portal .ls-row").length,
       featured: !!document.querySelector('#home-portal .home-featured'), random: !!document.querySelector('#home-portal [onclick="openRandomPage()"]') };
   });
   assert.ok(r.featured && r.changed > 0 && r.random, JSON.stringify(r));

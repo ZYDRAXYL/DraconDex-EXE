@@ -470,7 +470,6 @@
 .home-start h2{font-size:calc(22px * var(--fsc,1));font-weight:650;margin:0}
 .home-actions{display:flex;gap:8px;flex-wrap:wrap}
 .home-sec h3{font-size:calc(var(--fs-body) * var(--fsc,1));font-weight:600;color:var(--t2);margin:0 0 6px;text-transform:none}
-.home-list .li{border-radius:var(--r)}
 .home-organise{align-self:flex-start}
 /* Procress 18 part 1: identity row = icon · name · kind · save state · primary · ⋯ */
 .page-title .navbar-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}

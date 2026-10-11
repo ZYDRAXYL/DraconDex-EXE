@@ -42,16 +42,8 @@ body.welcome-mode #main-inner{display:flex;align-items:center;justify-content:ce
 	font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));text-transform:uppercase;
 	letter-spacing:.06em;text-align:left;
 }
-.welcome-recent-row{display:flex;flex-direction:column;gap:var(--sp-1)}
-.welcome-recent-card{
-	display:flex;align-items:center;gap:var(--sp-3);width:100%;
-	padding:var(--sp-4) var(--sp-5);
-	background:var(--raised);border:1px solid var(--border);border-radius:var(--r);
-	color:var(--t1);font-size:var(--fs-body);font-family:inherit;text-align:left;
-	cursor:pointer;transition:background var(--ease),border-color var(--ease);
-}
-.welcome-recent-card:hover{background:var(--hover);border-color:var(--accent)}
-.welcome-recent-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* the rows are the shared list's (core/list.js, Procress 21) */
+.welcome-recent-list .ls-row{background:var(--raised)}
 
 /* ── First-run setup wizard ─────────────────────────────────────────── */
 /* The wizard has no left panel — it is one centered column, so the step lists

@@ -31,13 +31,7 @@ function renderWelcomeWindow() {
     <div class="ph"><h4>${t('nexus')}</h4>
       <button class="btn btn-p btn-sm" onclick="welcomeCreateNexus()">+ ${t('nexusNew')}</button>
     </div>
-    ${ordered.map(n => `
-      <div class="module-item nexus-item" onclick="welcomeOpenNexus(${n.id})" title="${t('wmOpenNexus')}">
-        <span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>
-        <span class="module-name">${x(n.name)}</span>
-        <span class="nexus-count">${n.project_count}</span>
-        ${nexusRowButtonsHtml(n)}
-      </div>`).join('')}
+    ${hasVaults ? listHtml({ list: 'nexuses', aria: t('nexus'), body: ordered.map(n => nexusRowHtml(n, `welcomeOpenNexus(${n.id})`, t('wmOpenNexus'))).join('') }) : ''}
     ${hasVaults ? '' : `<div class="welcome-side-empty">${t('nexusEmpty')}</div>`}`;
   q('#left-panel-foot').innerHTML = '';
   q('#main-inner').innerHTML = `
@@ -48,14 +42,9 @@ function renderWelcomeWindow() {
       ${recent.length ? `
         <div class="welcome-recent">
           <div class="welcome-recent-label">${t('wmRecent')}</div>
-          <div class="welcome-recent-row">
-            ${recent.map(n => `
-              <div class="welcome-recent-card" onclick="welcomeOpenNexus(${n.id})" title="${t('wmOpenNexus')}">
-                <span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>
-                <span class="welcome-recent-name">${x(n.name)}</span>
-                <span class="nexus-count">${n.project_count}</span>
-              </div>`).join('')}
-          </div>
+          ${listHtml({ list: 'nexus-recent', aria: t('wmRecent'), cls: 'welcome-recent-list', body: recent.map(n => listRowHtml({
+            icon: `<span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>`,
+            title: n.name, count: n.project_count, onclick: `welcomeOpenNexus(${n.id})`, tip: t('wmOpenNexus'), attrs: 'data-no-i18n' })).join('') })}
         </div>` : ''}
       <div class="welcome-actions">
         <button class="btn btn-p" onclick="welcomeCreateNexus()">${t('wmCreateNew')}</button>

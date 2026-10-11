@@ -145,9 +145,15 @@ const LIST_SCREENS = {
   assets: async () => { showLeftDest('nest'); if (!S.importFolderCollapsed.has('#unsorted:open')) toggleImportFolder('#unsorted:open'); },
   versions: async () => { const m = flattenModulesByKind(S.moduleTree, []).find((x2) => x2.kind === 'classifier'); await openModuleNode(m.id); await openVersionPanel(m.id); },
   plugins: async () => { openSettingWindow('plugin', 'plugin'); },
+  nest: async () => { showLeftDest('nest'); await builderOpenPage(null); },
+  search: async () => { showLeftDest('search'); await new Promise((res) => setTimeout(res, 200)); q('#left-search-q').value = 'harbor'; await runLeftSearch('harbor'); },
+  recent: async () => { showLeftDest('recent'); },
+  labels: async () => { openCategoryPage(''); await new Promise((res) => setTimeout(res, 300)); const tag = document.querySelector('[data-ls="cat-subs"] .ls-row'); tag?.click(); },
+  quickswitch: async () => { await loadModule('src/renderer/quickswitch.js'); await openQuickSwitcher(''); },
+  switcher: async () => { showLeftDest('nest'); document.querySelector('[onclick*="toggleNexusSwitcher"]')?.click(); },
 };
 const openListScreen = async (name) => {
-  await win.evaluate(() => { closeFloatingPanel('setting-window'); closeSidePanel(); closeModal(); S.leftTool = null; });
+  await win.evaluate(() => { closeFloatingPanel('setting-window'); closeSidePanel(); closeModal(); closeAllPopups(); document.getElementById('qs-overlay')?.remove(); S.leftTool = null; });
   await win.evaluate(`(${LIST_SCREENS[name]})()`);
   await win.waitForTimeout(500);
 };
@@ -155,12 +161,13 @@ const rowAudit = () => win.evaluate(() => {
   const cs = getComputedStyle(document.documentElement);
   const zoom = Number(getComputedStyle(document.body).zoom) || 1;
   const h = { compact: parseFloat(cs.getPropertyValue('--row-compact')), comfy: parseFloat(cs.getPropertyValue('--row-comfy')) };
-  const rows = [...document.querySelectorAll('.ls-row')].filter((r) => r.offsetParent && r.getBoundingClientRect().height);
+  // the Nest tree is a compact list too (its rows are tree items, not .ls-row)
+  const rows = [...document.querySelectorAll('.ls-row, #nest-tree-body [role="treeitem"]')].filter((r) => r.offsetParent && r.getBoundingClientRect().height);
   const bad = [];
   for (const r of rows) {
-    const want = (r.classList.contains('ls-compact') ? h.compact : h.comfy) * zoom;
+    const want = (r.classList.contains('ls-compact') || r.getAttribute('role') === 'treeitem' ? h.compact : h.comfy) * zoom;
     const got = r.getBoundingClientRect().height;
-    const name = r.getAttribute('aria-label') || '';
+    const name = r.getAttribute('aria-label') || r.querySelector('.name')?.textContent || '';
     if (Math.abs(got - want) > 0.5) bad.push(`${name}: ${got.toFixed(1)} px, wants ${want}`);
     if (!r.hasAttribute('tabindex')) bad.push(`${name}: not focusable`);
     if (!name.trim()) bad.push(`a row with no name: ${r.outerHTML.slice(0, 80)}`);

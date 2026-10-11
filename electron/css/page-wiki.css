@@ -160,7 +160,6 @@ body.ddx-site .pc-toggle-chev{display:none}
 .cat-page .cat-sec{margin-top:var(--sp-5)}
 .cat-page .cat-sec h3{font-size:calc(var(--fs-section) * var(--fsc,1));margin:0 0 var(--sp-2)}
 .cat-subs{display:flex;flex-wrap:wrap;gap:var(--sp-3)}
-.cat-members{display:flex;flex-direction:column;max-width:72ch}
-.cat-members .li.cat-member{text-decoration:none;color:var(--t1)}
+.cat-sec .ls{max-width:72ch}
 .cat-up{margin:var(--sp-2) 0 0}
 .page-foot-cats{margin-top:var(--sp-5)}

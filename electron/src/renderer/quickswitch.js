@@ -230,7 +230,7 @@ async function openQuickSwitcher(seed = '', { newTab = false } = {}) {
           ${badges.map(b => `<option value="${x(b)}" ${b === _qsKind ? 'selected' : ''}>${x(b)}</option>`).join('')}
         </select>
       </div>
-      <div id="qs-list"></div>
+      <div id="qs-list" class="ls-list" role="listbox" aria-label="${x(t('qsPlaceholder'))}"></div>
       <div class="qs-foot">
         <span data-no-i18n>↑↓ ${t('qsSelectHint')}</span>
         <span><b data-no-i18n>Enter</b> ${t('qsOpenHint')}</span>
@@ -257,23 +257,17 @@ async function openQuickSwitcher(seed = '', { newTab = false } = {}) {
 
   const paint = () => {
     if (!_qsShown.length) {
-      list.innerHTML = `<div class="qs-empty">${t('qsNoResults')}</div>`;
+      list.innerHTML = emptyStateHtml({ icon: I.search, text: t('qsNoResults') });
     } else {
-      list.innerHTML = _qsShown.map((e, i) => `
-        <div class="qs-item ${i === _qsIdx ? 'active' : ''}" data-i="${i}">
-          <span class="qs-icon">${e.icon}</span>
-          <span class="dot" style="background:${e.color || 'var(--accent)'}"></span>
-          <span class="name">${x(e.name)}</span>
-          ${e.handle ? `<span class="qs-handle" data-no-i18n>@${x(e.handle)}</span>` : ''}
-          ${e.hint ? `<span class="qs-keys" data-no-i18n>${e.hint.split('+').map(k => `<kbd>${x(k)}</kbd>`).join('')}</span>` : ''}
-          ${e.recent ? `<span class="qs-recent" title="${x(t('qsRecent'))}">${I.return}</span>` : ''}
-          ${e.count ? `<span class="qs-lc" data-no-i18n>🔗 ${e.count}</span>` : ''}
-          ${canPin && !e.cmd && !e.act ? `<span class="qs-pin" data-i="${i}" title="${t('qsPinHint')}">📌</span>` : ''}
-          ${e.cmd && COMMANDS[e.cmd.id]?.scope === 'app' ? (() => { const on = quickAccess().includes(e.cmd.id); return `<span class="qs-qa${on ? ' on' : ''}" role="button" tabindex="-1" data-qa="${e.cmd.id}" aria-pressed="${on}" title="${x(t(on ? 'qaUnpin' : 'qaPin'))}">${on ? '★' : '☆'}</span>`; })() : ''}
-          <span class="qs-crumb" data-no-i18n>${x(e.crumb)}</span>
-          <span class="ek" data-no-i18n>${x(e.badge)}</span>
-        </div>`).join('');
-      list.querySelector('.qs-item.active')?.scrollIntoView({ block: 'nearest' });
+      // Procress 21: rows of the shared list (core/list.js), compact like a
+      // menu; the active pick is the selected row. Focus stays in the input
+      // (a combobox), so this list keeps its own keys below.
+      list.innerHTML = _qsShown.map((e, i) => listRowHtml({
+        density: 'compact', cls: 'qs-item', state: { selected: i === _qsIdx }, attrs: `data-i="${i}" data-no-i18n`,
+        icon: `<span class="qs-icon" style="color:${x(e.color || 'var(--accent)')}">${e.icon}</span>`, title: e.name, meta: e.crumb,
+        trailing: `${e.handle ? `<span class="qs-handle" data-no-i18n>@${x(e.handle)}</span>` : ''}${e.hint ? `<span class="qs-keys" data-no-i18n>${e.hint.split('+').map(k => `<kbd>${x(k)}</kbd>`).join('')}</span>` : ''}${e.recent ? `<span class="qs-recent" title="${x(t('qsRecent'))}">${I.return}</span>` : ''}${e.count ? `<span class="qs-lc" data-no-i18n>🔗 ${e.count}</span>` : ''}${canPin && !e.cmd && !e.act ? `<span class="qs-pin" data-i="${i}" title="${t('qsPinHint')}">📌</span>` : ''}${e.cmd && COMMANDS[e.cmd.id]?.scope === 'app' ? (() => { const on = quickAccess().includes(e.cmd.id); return `<span class="qs-qa${on ? ' on' : ''}" role="button" tabindex="-1" data-qa="${e.cmd.id}" aria-pressed="${on}" title="${x(t(on ? 'qaUnpin' : 'qaPin'))}">${on ? '★' : '☆'}</span>`; })() : ''}<span class="ls-chip" data-no-i18n>${x(e.badge)}</span>`,
+      })).join('');
+      list.querySelector('.qs-item.sel')?.scrollIntoView({ block: 'nearest' });
     }
     const cnt = ov.querySelector('#qs-count');
     if (cnt) cnt.textContent = `${_qsShown.length} ${t('qsResults')}`;

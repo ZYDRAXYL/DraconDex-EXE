@@ -107,20 +107,23 @@ async function recentRowsHtml(limit = 20) {
   return keys.map((k) => byKey.get(k)).filter(Boolean).map((e) => {
     const mod = /^module_\d+$/.test(e.key) ? findModuleNode(Number(e.key.slice(7))) : null;
     const where = mod ? (mod.parent_id != null ? findModuleNode(mod.parent_id)?.name : '') : findModuleNode(owner.get(e.key))?.name;
-    return `<div class="li" onclick="openEntityByKey(${xj(e.key)})">
-      <span class="kicon" aria-hidden="true">${mod ? moduleIconHtml(mod) : I.item || ''}</span>
-      <span class="name" data-no-i18n>${x(e.name)}<small class="chs-snippet">${x(where || '')}</small></span></div>`;
+    return listRowHtml({ icon: mod ? moduleIconHtml(mod) : I.item || '', title: e.name, meta: where || '',
+      onclick: `openEntityByKey(${xj(e.key)})`, attrs: 'data-no-i18n' });
   }).join('');
 }
+// Procress 21: two groups of the shared list — what was opened, what changed.
 async function fillLeftRecent() {
   const box = q('#left-recent');
   if (!box) return;
-  const opened = (await recentRowsHtml()) || `<div class="empty"><p>${t('recentEmpty')}</p></div>`;
+  const opened = await recentRowsHtml();
   // Procress 16 part 5: and the Nexus's changes — the vault-wide feed
   const changes = await api.versions.recent(S.nexus.id, 30).catch(() => []);
-  const rows = changes.map((c) => `<div class="li"${c.moduleId && findModuleNode(c.moduleId) ? ` onclick="openModuleNode(${c.moduleId})"` : ''}>
-    <span class="name" data-no-i18n>${x(c.name || '—')}<small class="chs-snippet">${x(String(c.at).slice(0, 16))}</small></span></div>`).join('');
-  box.innerHTML = opened + (rows ? `<div class="props-k left-changed">${t('leftChanged')}</div>${rows}` : '');
+  const rows = changes.map((c) => listRowHtml({ icon: I.edit, title: c.name || '—', meta: String(c.at).slice(0, 16), attrs: 'data-no-i18n',
+    onclick: c.moduleId && findModuleNode(c.moduleId) ? `openModuleNode(${c.moduleId})` : '' })).join('');
+  box.innerHTML = listHtml({ list: 'recent', aria: t('leftRecent'), body:
+    (opened ? listGroupHtml({ list: 'recent', id: 'opened', title: t('leftRecent'), count: (opened.match(/role="option"/g) || []).length, rows: opened })
+      : emptyStateHtml({ icon: I.return, text: t('recentEmpty') }))
+    + (rows ? listGroupHtml({ list: 'recent', id: 'changed', title: t('leftChanged'), count: changes.length, rows }) : '') });
 }
 
 const leftPanelHead = (title, acts = '') =>
@@ -159,8 +162,8 @@ function searchHistory() { try { const v = JSON.parse(localStorage.getItem(SEARC
 function rememberSearch(qy) { try { localStorage.setItem(SEARCH_HIST_KEY(), JSON.stringify([qy, ...searchHistory().filter((h) => h !== qy)].slice(0, 10))); } catch (_) {} }
 function searchHistoryHtml() {
   const h = searchHistory();
-  return h.length ? `<div class="props-k">${t('srchRecent')}</div>${h.map((qy) => `<div class="li" role="button" tabindex="0" onclick="useSearch(${xj(qy)})"
-    onkeydown="if(event.key==='Enter')useSearch(${xj(qy)})"><span class="name" data-no-i18n>${x(qy)}</span></div>`).join('')}` : '';
+  return h.length ? `<div class="props-k">${t('srchRecent')}</div>${listHtml({ list: 'search-hist', aria: t('srchRecent'),
+    body: h.map((qy) => listRowHtml({ density: 'compact', icon: I.search, title: qy, onclick: `useSearch(${xj(qy)})`, attrs: 'data-no-i18n' })).join('') })}` : '';
 }
 function useSearch(qy) { const inp = q('#left-search-q'); if (inp) { inp.value = qy; onLeftSearchInput(qy); inp.focus(); } }
 
@@ -210,10 +213,26 @@ async function runLeftSearch(v) {
   rememberSearch(qy);
   // The snippet marks the hit with [ ]; escape first, then bold the marks.
   const snip = (s) => x(s || '').replace(/\[([^\]]*)\]/g, '<b>$1</b>');
-  box.innerHTML = rows.length ? rows.map(r => `
-    <div class="li left-search-row" onclick="openEntityByKey(${xj(r.key)})">
-      <span class="name">${x(r.title || r.key)}<small class="chs-snippet" data-no-i18n>${snip(r.snippet)}</small></span>
-    </div>`).join('') : `<p class="drafter-hint">${t('leftSearchNone')}</p>`;
+  // Procress 21: grouped by the module each hit lives in, with its count
+  // (the shared list, core/list.js). A module's own hit belongs to itself.
+  const where = new Map((await api.viewer.index(S.nexus.id).catch(() => [])).map((it) => [it.key, it.moduleId]));
+  if (q('#left-search-q')?.value.trim() !== qy) return;
+  const modOf = (k) => (/^module_(\d+)$/.test(k) ? Number(k.slice(7)) : where.get(k));
+  const groups = new Map();
+  for (const r of rows) {
+    const mid = modOf(r.key) ?? null;
+    if (!groups.has(mid)) groups.set(mid, []);
+    groups.get(mid).push(r);
+  }
+  const row = (r) => {
+    const mod = /^module_\d+$/.test(r.key) ? findModuleNode(Number(r.key.slice(7))) : null;
+    return listRowHtml({ icon: mod ? moduleIconHtml(mod) : I.item || '', title: r.title || r.key, metaHtml: snip(r.snippet),
+      cls: 'left-search-row', onclick: `openEntityByKey(${xj(r.key)})`, attrs: 'data-no-i18n' });
+  };
+  box.innerHTML = rows.length ? listHtml({ list: 'search', aria: t('leftSearch'), body: [...groups].map(([mid, hits]) =>
+    listGroupHtml({ list: 'search', id: mid ?? 'other', title: findModuleNode(mid)?.name || t('leftSearch'), count: hits.length,
+      rows: listRowsHtml('search', hits, row, { key: String(mid) }) })).join('') })
+    : emptyStateHtml({ icon: I.search, text: t('leftSearchNone') });
 }
 
 // ── tools ───────────────────────────────────────────────────────────────
