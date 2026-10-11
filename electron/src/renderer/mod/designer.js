@@ -342,14 +342,9 @@ function dgArmEdgePick() {
 function openDesignShapePopup(anchor) {
   closeAllPopups();
   if (!anchor) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup dg-shape-popup';
-  pop.innerHTML = `<div class="insp-label">${t('moreShapes')}</div>
+  const pop = openPopover(anchor, `<div class="insp-label">${t('moreShapes')}</div>
     <div class="ipk-grid">${DG_SHAPES.map(sh =>
-      `<div class="ipk-cell" title="${x(sh)}" onclick="pickDesignShape('${sh}')" data-no-i18n>${DG_SHAPE_GLYPH[sh]}</div>`).join('')}</div>`;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', (ev) => ev.stopPropagation());
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+      `<div class="ipk-cell" title="${x(sh)}" onclick="pickDesignShape('${sh}')" data-no-i18n>${DG_SHAPE_GLYPH[sh]}</div>`).join('')}</div>`, { cls: 'dg-shape-popup', keep: true });
 }
 
 function pickDesignShape(shape) {

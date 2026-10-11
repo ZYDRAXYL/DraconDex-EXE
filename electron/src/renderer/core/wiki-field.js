@@ -101,9 +101,7 @@ async function updateWikiAc(el) {
   _wikiAc.items = items;
   _wikiAc.idx = Math.min(_wikiAc.idx, items.length - 1);
   paintWikiAc();
-  const r = el.getBoundingClientRect();
-  _wikiAc.pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - 260))}px`;
-  _wikiAc.pop.style.top = `${Math.min(r.bottom + 4, window.innerHeight - 40)}px`;
+  placeFloating(_wikiAc.pop, el, { gap: 4 }); // core/popover.js — flips above near the bottom
 }
 
 function acceptWikiAc() {

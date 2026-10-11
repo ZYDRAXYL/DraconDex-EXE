@@ -33,24 +33,12 @@ const cmdModule = (c) => (c.moduleId != null ? findModuleNode(c.moduleId) : null
 const isFolderCtx = (c) => cmdModule(c)?.kind === 'collector';
 const cmdAsset = (c) => (c.fileId != null ? (S.importFiles || []).find(v => v.id === c.fileId) || (S.filePreview?.id === c.fileId ? S.filePreview : null) : null);
 
-// Where a palette-run command anchors a popup it opens: upper middle of the
-// window, where the palette itself was.
-function paletteAnchor() {
-  const x0 = Math.round(window.innerWidth / 2), y0 = Math.round(window.innerHeight * 0.22);
-  return { getBoundingClientRect: () => ({ left: x0, top: y0, bottom: y0, right: x0 }) };
-}
-
 // A hand-built submenu opened on its own (the palette has no row to hang it
-// on) — same .kind-popup the menus use, so Escape / arrows / closeAllPopups
+// on) — same .popover the menus use, so Escape / arrows / closeAllPopups
 // all apply.
 function openHtmlPopup(html, anchor) {
   closeAllPopups();
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup kind-list-popup';
-  pop.innerHTML = html;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  positionPopupNear(pop, (anchor || paletteAnchor()).getBoundingClientRect());
+  const pop = openPopover(anchor || paletteAnchor(), html, { cls: 'popover-menu', keep: true });
   setTimeout(() => pop.querySelector('.kind-search, .kind-list-item')?.focus(), 0);
   return pop;
 }

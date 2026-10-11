@@ -51,16 +51,11 @@ function toggleNexusSwitcher(e) {
   if (document.querySelector('.nexus-switcher-popup')) { closeAllPopups(); return; }
   closeAllPopups();
   const anchor = e.currentTarget;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup nexus-switcher-popup';
   // Procress 21: a menu, so compact rows of the shared list (core/list.js)
-  pop.innerHTML = listHtml({ list: 'nexus-switcher', aria: t('wmChangeNexus'), body: recentNexuses(3).map(n => listRowHtml({ density: 'compact',
+  openPopover(anchor, listHtml({ list: 'nexus-switcher', aria: t('wmChangeNexus'), body: recentNexuses(3).map(n => listRowHtml({ density: 'compact',
     icon: `<span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>`,
     title: n.name, state: { current: n.id === S.nexus?.id }, onclick: `openNexusWindow(${n.id})`, attrs: 'data-no-i18n' })).join('')
-    + listRowHtml({ density: 'compact', icon: I.projects, title: t('wmChangeNexus'), cls: 'nexus-switcher-more', onclick: 'openWelcomeWindow()' }) });
-  document.body.appendChild(pop);
-  pop.addEventListener('click', ev => ev.stopPropagation());
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+    + listRowHtml({ density: 'compact', icon: I.projects, title: t('wmChangeNexus'), cls: 'nexus-switcher-more', onclick: 'openWelcomeWindow()' }) }), { cls: 'nexus-switcher-popup', keep: true, focus: false });
 }
 
 // Every "let me pick a different vault" entry point funnels here: the switcher

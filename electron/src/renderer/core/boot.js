@@ -189,7 +189,7 @@ async function init() {
 function bindPopupDismiss(){
   document.addEventListener('click', () => {
     document.querySelectorAll('.np-dropdown').forEach(d => d.style.display = 'none');
-    document.querySelectorAll('.kind-popup').forEach(d => d.remove());
+    document.querySelectorAll('.popover').forEach(d => d.remove());
   });
 }
 

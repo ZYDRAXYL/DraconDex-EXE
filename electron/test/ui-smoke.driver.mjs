@@ -56,7 +56,7 @@ test('B4 / I2: Create is a click-opened picker; a hover flyout survives a diagon
   await sleep(400);
   assert.equal(await win.locator('.ctx-submenu').count(), 0, 'hovering Create opens nothing');
   await win.locator('.context-menu-popup .kind-list-item:has-text("Create")').click();
-  await win.waitForSelector('.kind-list-popup .kind-search');
+  await win.waitForSelector('.popover-menu .kind-search');
   await win.keyboard.press('Escape');
   await row('Guide').click({ button: 'right' });
   await hover(win.locator('.context-menu-popup .kli-submenu-parent:has-text("Move to")'));
@@ -99,8 +99,8 @@ test('the page ⋯ menu and the Nest [▾] open real menus', async () => {
   assert.ok(await rows() >= 4, 'page menu has its rows');
   await win.keyboard.press('Escape');
   await win.click('#left-panel button.split-more');
-  await win.waitForSelector('.kind-popup');
-  assert.ok(await win.locator('.kind-popup .kind-list-item').count() >= 1, '[▾] lists ways to add');
+  await win.waitForSelector('.popover');
+  assert.ok(await win.locator('.popover .kind-list-item').count() >= 1, '[▾] lists ways to add');
   await win.keyboard.press('Escape');
 });
 

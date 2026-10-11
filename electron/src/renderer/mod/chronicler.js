@@ -332,15 +332,8 @@ async function openChroniclerEventIconPopup(evId, anchor, tlid) {
   const evs = await api.timeline.getEvents(tlid);
   const ev = evs.find(e => e.id === evId);
   if (!ev) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup icon-edit-popup';
-  pop.innerHTML = await iconPicker(ev.icon || null, ev.color || null, ev.event_name);
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => {
-    e.stopPropagation();
-    if (e.target.closest('.ipk-cell') || e.target.closest('.cswatch')) saveChroniclerEventIconLive(evId, tlid);
-  });
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+  openPopover(anchor, await iconPicker(ev.icon || null, ev.color || null, ev.event_name), { cls: 'icon-edit-popup', keep: true, focus: false,
+    onClick: (e) => { if (e.target.closest('.ipk-cell') || e.target.closest('.cswatch')) saveChroniclerEventIconLive(evId, tlid); } });
 }
 
 async function saveChroniclerEventIconLive(evId, tlid) {

@@ -17,9 +17,7 @@ async function openPbIconPick(anchor, onPick) {
   el.setAttribute('aria-label', t('pbChooseIcon'));
   document.body.appendChild(el);
   pbIpkRender();
-  const r = anchor?.getBoundingClientRect?.() || { left: 80, bottom: 80 };
-  el.style.left = `${Math.max(8, Math.min(window.innerWidth - el.offsetWidth - 8, r.left))}px`;
-  el.style.top = `${Math.max(8, Math.min(window.innerHeight - el.offsetHeight - 8, r.bottom + 6))}px`;
+  placeFloating(el, anchor?.getBoundingClientRect ? anchor : pointAnchor(80, 80)); // core/popover.js
   el.querySelector('input')?.focus();
   try { _pbIpk.symbols = await api.color.getSymbolCollection(); } catch (_) { _pbIpk.symbols = []; }
 }

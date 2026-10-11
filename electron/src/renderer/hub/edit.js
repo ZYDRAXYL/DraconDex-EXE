@@ -80,15 +80,8 @@ async function openModuleIconPopup(id, anchor) {
   closeAllPopups();
   const m = findModuleNode(id);
   if (!m || !anchor) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup icon-edit-popup';
-  pop.innerHTML = await iconPicker(m.icon || null, m.color || null, m.name, kindLabel(m.kind));
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => {
-    e.stopPropagation();
-    if (e.target.closest('.ipk-cell') || e.target.closest('.cswatch')) saveModuleIconLive(id);
-  });
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+  openPopover(anchor, await iconPicker(m.icon || null, m.color || null, m.name, kindLabel(m.kind)), { cls: 'icon-edit-popup', keep: true, focus: false,
+    onClick: (e) => { if (e.target.closest('.ipk-cell') || e.target.closest('.cswatch')) saveModuleIconLive(id); } });
 }
 
 async function saveModuleIconLive(id) {

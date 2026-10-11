@@ -103,14 +103,5 @@ function _guidePaint() {
 
   // Place the popover: prefer below the target, flip above if it would overflow,
   // then clamp horizontally into the viewport.
-  const pop = ov.querySelector('.guide-pop');
-  const pw = pop.offsetWidth || 280;
-  const ph = pop.offsetHeight || 140;
-  const gap = 12;
-  let top = r.bottom + gap;
-  if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - gap);
-  let left = r.left + r.width / 2 - pw / 2;
-  left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
-  pop.style.left = `${left}px`;
-  pop.style.top = `${top}px`;
+  placeFloating(ov.querySelector('.guide-pop'), r, { placement: 'bottom-center', gap: 12 }); // core/popover.js
 }

@@ -55,10 +55,7 @@ function pbPopPlace() {
   document.querySelectorAll('.pb-gear.active').forEach((g) => g.classList.toggle('active', g === gear));
   gear.classList.add('active');
   const r = gear.getBoundingClientRect();
-  const w = el.offsetWidth || 320;
-  const h = el.offsetHeight || 400;
-  el.style.left = `${Math.max(8, Math.min(window.innerWidth - w - 8, r.left - 8))}px`;
-  el.style.top = `${Math.max(8, Math.min(window.innerHeight - h - 8, r.bottom + 6))}px`;
+  placeFloating(el, { left: r.left - 8, top: r.top, right: r.right, bottom: r.bottom }); // core/popover.js
 }
 
 function pbPopTab(tab) { if (_pbPop) { _pbPop.tab = tab; pbPopRender(); } }

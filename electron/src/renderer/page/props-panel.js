@@ -121,6 +121,6 @@ document.addEventListener('keydown', (e) => {
 // Esc folds the panel while it floats over the page (a narrow window)
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !propsNarrow() || !_propsNarrowOpen || e.defaultPrevented) return;
-  if (document.querySelector('.modal-overlay:not(.hidden), #qs-overlay, .kind-popup, #pb-pop')) return;
+  if (document.querySelector('.modal-overlay:not(.hidden), #qs-overlay, .popover, #pb-pop')) return;
   togglePropsPanel(false);
 });

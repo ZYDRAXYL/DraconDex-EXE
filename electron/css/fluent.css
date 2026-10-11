@@ -64,7 +64,7 @@ body[data-ui-style="fluent"] .btn-p{
 }
 
 /* ── Flyouts are Acrylic: menus, popovers, the command palette ── */
-body[data-ui-style="fluent"] .kind-popup,
+body[data-ui-style="fluent"] .popover,
 body[data-ui-style="fluent"] .ctx-submenu,
 body[data-ui-style="fluent"] #settings-menu,
 body[data-ui-style="fluent"] #layout-menu,

@@ -10,7 +10,7 @@
 // menu is worth having rather than a second Edit dialog.
 //
 // The popup plumbing is hub/popups.js's, unchanged: closeAllPopups() sweeps
-// `.kind-popup`, positionPopupNear() flips above and clamps horizontally.
+// `.popover`, placeFloating() flips above and clamps horizontally.
 // Rows follow hub/menus.js's shape so this menu behaves like every other
 // context menu in the app.
 
@@ -19,11 +19,9 @@ function openNexusOptionsPopup(anchor, nexusId) {
   if (!anchor) return;
   const n = (S.nexuses || []).find((v) => v.id === nexusId);
   if (!n) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup nexus-options-popup';
   const row = (fn, label, cls = '') =>
     `<div class="kind-list-item ${cls}" onclick="closeAllPopups();${fn}"><span class="kli-name">${label}</span></div>`;
-  pop.innerHTML = `
+  openPopover(anchor, `
     ${row(`openNexusModal(${n.id})`, t('edit'))}
     ${row(`nexusDuplicate(${n.id})`, t('nexusDuplicate'))}
     ${row(`nexusExportFile(${n.id})`, t('nexusExport'))}
@@ -32,10 +30,7 @@ function openNexusOptionsPopup(anchor, nexusId) {
     ${row(`nexusShare(${n.id})`, t('nexusShare'))}
     ${row(`nexusRevealFile(${n.id})`, t('nexusRevealFile'))}
     <div class="ctx-sep"></div>
-    ${row(`delNexus(${n.id})`, t('delete'), 'kli-danger')}`;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', (e) => e.stopPropagation());
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+    ${row(`delNexus(${n.id})`, t('delete'), 'kli-danger')}`, { cls: 'nexus-options-popup', role: 'menu', keep: true, focus: false });
 }
 
 // The ⋯ button itself, shared by welcome.js and nexus.js's fallback picker so

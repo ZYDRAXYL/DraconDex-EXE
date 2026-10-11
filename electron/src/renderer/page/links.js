@@ -136,15 +136,9 @@ function wikiCandidates(name) {
 }
 function openWikiChooser(anchor, name, list) {
   closeAllPopups();
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup wiki-chooser';
-  pop.setAttribute('role', 'menu');
-  pop.innerHTML = `<div class="ctx-head">${x(t('wlWhich').replace('{name}', name))}</div>${list.map((e) =>
+  const pop = openPopover(anchor, `<div class="ctx-head">${x(t('wlWhich').replace('{name}', name))}</div>${list.map((e) =>
     `<button class="btn btn-g kind-list-item" role="menuitem" onclick="closeAllPopups();openEntityByKey(${xj(e.key)})">
-      <span class="kli-text"><span class="kli-name" data-no-i18n>${x(e.name)}</span><span class="kli-desc" data-no-i18n>${x(wikiCrumb(e))}</span></span></button>`).join('')}`;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', (ev) => ev.stopPropagation());
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+      <span class="kli-text"><span class="kli-name" data-no-i18n>${x(e.name)}</span><span class="kli-desc" data-no-i18n>${x(wikiCrumb(e))}</span></span></button>`).join('')}`, { cls: 'wiki-chooser', role: 'menu', keep: true });
   pop.querySelector('button')?.focus();
 }
 // where a candidate lives: its module (and folder), or its kind
@@ -357,10 +351,7 @@ function pbHoverAt(el, html) {
   card.innerHTML = html;
   const r = el.getBoundingClientRect();
   card.classList.add('on');
-  const w = card.offsetWidth, h = card.offsetHeight;
-  const below = r.bottom + 8 + h < window.innerHeight;
-  card.style.left = `${Math.max(8, Math.min(window.innerWidth - w - 8, r.left))}px`;
-  card.style.top = `${below ? r.bottom + 8 : Math.max(8, r.top - h - 8)}px`;
+  placeFloating(card, r, { gap: 8 }); // core/popover.js
   if (typeof watchPageCovers === 'function') watchPageCovers();
 }
 document.addEventListener('mouseover', (e) => {

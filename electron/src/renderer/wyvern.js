@@ -54,15 +54,10 @@ function wyvernCreateParentId(){
 // points (Plan process2 part2 #1.2).
 function openWyvernViewSetMenu(anchor){
   closeAllPopups();
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup kind-list-popup';
-  pop.innerHTML = `
+  const pop = openPopover(anchor, `
     <div class="kind-list-item" onclick="closeAllPopups();goToNexusNestHub()"><span class="kli-name">${x(t('nexusNest'))}</span></div>
     <div class="kind-list-item" onclick="closeAllPopups();openSageTab('dataSize')"><span class="kli-name">${x(t('sageHut'))}</span></div>
-  `;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+  `, { cls: 'popover-menu', keep: true });
 }
 
 // ═══ Drill-down browse (replaces the docked Nexus Nest tree) ════════════

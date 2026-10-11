@@ -40,12 +40,7 @@ function buildChroniclerGraphOptionsHtml() {
 function openChroniclerGraphOptions(anchor) {
   closeAllPopups();
   if (!anchor) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup chr-graph-options-popup';
-  pop.innerHTML = buildChroniclerGraphOptionsHtml();
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+  const pop = openPopover(anchor, buildChroniclerGraphOptionsHtml(), { cls: 'chr-graph-options-popup', keep: true });
 }
 
 // An event's icon on the graph. Inline SVG can't host the icon markup directly

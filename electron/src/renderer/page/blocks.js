@@ -242,7 +242,7 @@ async function pbSetImage(iid, key) {
   await reloadModulePage(i.moduleId, i.itemKey);
 }
 
-// Live-saves on every tag add/remove (matches every other .kind-popup) —
+// Live-saves on every tag add/remove (matches every other .popover) —
 // no Save/Cancel footer. hashtagSelector/addModalTag/removeModalTag
 // (core.js) are shared with modals that save on a button, so this wraps
 // them with a delegated click listener instead of changing them.
@@ -250,12 +250,8 @@ async function openModuleTagPopup(moduleId, anchor) {
   closeAllPopups();
   if (!anchor) return;
   const current = (pageOf(moduleId)?.props?.tags || []).map((tg) => tg.id);
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup tag-link-popup';
-  pop.innerHTML = await hashtagSelector('modtag', current);
-  document.body.appendChild(pop);
+  const pop = openPopover(anchor, await hashtagSelector('modtag', current), { cls: 'tag-link-popup', keep: true, aria: t('hashtag') });
   pop.addEventListener('click', async (e) => {
-    e.stopPropagation();
     if (e.target.closest('.htag-item') || e.target.closest('.htag-chip button')) {
       await api.module.setTags(moduleId, getModalTagIds('modtag'));
       // Only the chips: a whole-page render would pull this popup's anchor
@@ -270,7 +266,7 @@ async function openModuleTagPopup(moduleId, anchor) {
     }
   });
   renderModalTagSuggestions('modtag');
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+  repositionPopover(pop, anchor); // the suggestions changed its height
 }
 
 // ── footnotes across the page (Procress 14, TEMPLATES §7.3) ─────────────

@@ -283,10 +283,10 @@
 .vw-chip{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);border:1px solid var(--accent);border-radius:var(--rl);padding:2px 9px}
 .vw-chip-or{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));font-weight:700}
 
-/* Obsidian-style filter popup (Plan part6 #1-2) — reuses .kind-popup's base
+/* Obsidian-style filter popup (Plan part6 #1-2) — reuses .popover's base
    floating-panel chrome, wider than the 280px icon/kind-list baseline since
    nested group/rule rows need more horizontal room. Live-saves on every
-   control, no Save/Cancel footer, matching every other .kind-popup. */
+   control, no Save/Cancel footer, matching every other .popover. */
 .filter-popup{padding:12px;width:380px;max-height:calc(100vh - 40px);overflow-y:auto}
 .fp-groups{display:flex;flex-direction:column;gap:2px}
 .fp-group{border:1px solid var(--border);border-radius:var(--rs);padding:8px;background:var(--raised)}

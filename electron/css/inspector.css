@@ -76,13 +76,7 @@
 .kindgrid.locked .kindcard{cursor:default}
 .kindgrid.locked .kindcard:hover{border-color:var(--accent)}
 
-/* Instant-create / icon-edit popups (position set inline via JS — hub.js's
-   positionPopupNear) — same floating-above-everything z-index as .wlink-float */
-.kind-popup{
-	position:fixed;z-index:calc(var(--z-tooltip) + 200);background:var(--surface);border:1px solid var(--border);
-	border-radius:var(--r);box-shadow:var(--shadow-menu);
-}
-.kind-list-popup{width:280px;max-height:360px;overflow-y:auto;padding:6px}
+/* .popover / .popover-menu: css/popover.css (Procress 22) */
 /* v5 kind picker (hub/menus.js buildKindListHtml): search, Artisan row,
    recent, and the structure / view / data headings of V5.md §9.5. */
 .kind-search{width:100%;margin:0 0 6px;position:sticky;top:0;z-index:calc(var(--z-base) + 1)}
@@ -113,7 +107,7 @@
    override for a flex-column crop UI, not a swatch grid, and its 220x220px
    crop canvas would clip badly inside a 162px box. */
 #ipk-icon-grid,#ipk-symbol-grid{max-height:162px;overflow-y:auto}
-/* Right-click context menu (hub.js) — reuses .kind-popup base + .kind-list-item
+/* Right-click context menu (hub.js) — reuses .popover base + .kind-list-item
    rows; Major-module variant appends action rows below the full create-list,
    so it gets the same docked scrollable max-height as .icon-edit-popup above. */
 .context-menu-popup{width:280px;max-height:min(72vh,520px);overflow-y:auto;padding:6px}
@@ -172,7 +166,7 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .tg.on::after{left:auto;right:2px;background:var(--on-accent)}
 /* Nest-tree options popup rows (Plan part1 #2) — .togglerow's own
    margin-top:7px is tuned for stacking inside a modal body, not a
-   .kind-popup, so give these their own tighter row padding/hover. */
+   .popover, so give these their own tighter row padding/hover. */
 .nest-opt-row{padding:7px 8px;margin-top:0;border-radius:var(--rs);cursor:pointer}
 .nest-opt-row:hover{background:var(--hover)}
 /* the one 3-way row among the Nest options — not a toggle, so it opts out of
