@@ -135,6 +135,7 @@
 /* FLOATING (MODELESS) PANEL — like #modal but no backdrop, so the app below
    stays interactive (Plan part3 setting#2). */
 .floating-panel{
+	--ls-floor:var(--surface);
 	position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
 	max-width:95vw;max-height:90vh;
 	background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);
@@ -158,19 +159,6 @@
    pages moved in from there). */
 .setting-shell{display:flex;height:100%;gap:16px}
 .setting-sidebar{width:190px;flex-shrink:0;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
-.setting-nav-head{
-	text-align:left;padding:8px 10px;color:var(--t2);
-	font-family:inherit;font-size:calc(var(--fs-body) * var(--fsc,1));font-weight:700;
-	text-transform:uppercase;letter-spacing:.02em;
-}
-.setting-nav-group.open>.setting-nav-head{color:var(--t1)}
-.setting-nav-pages{display:flex;flex-direction:column;gap:1px;padding-left:8px;margin-bottom:4px}
-.setting-nav-item{
-	text-align:left;padding:7px 10px;border:none;border-radius:var(--rs);background:transparent;
-	color:var(--t2);cursor:pointer;font-family:inherit;font-size:calc(12px * var(--fsc,1));
-}
-.setting-nav-item:hover{background:var(--hover);color:var(--t1)}
-.setting-nav-item.active{background:var(--accent);color:var(--on-accent)}
 .setting-content{flex:1;min-width:0;overflow-y:auto}
 /* v5 Part 6 §10.3: the rule between the two halves of a merged Setting page. */
 .setting-merge-sep{border-top:1px solid var(--border);margin:22px 0 16px}
@@ -237,18 +225,7 @@
 }
 .prefs-theme-add:hover{border-color:var(--accentH);color:var(--accentH)}
 .prefs-lang-shell{display:flex;gap:16px;margin-top:4px}
-.lang-list{width:220px;flex-shrink:0;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
-.lang-item{
-	display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;
-	border:1px solid var(--border);border-radius:var(--rs);background:var(--bg);color:var(--t2);
-	cursor:pointer;font-size:calc(12px * var(--fsc,1));font-weight:600;
-}
-.lang-item:hover{background:var(--hover);color:var(--t1)}
-.lang-item.active{border-color:var(--accent);color:var(--t1)}
-/* Procress 10 part 2 — see .prefs-theme-cell.locked above; same treatment. */
-.lang-item.locked{opacity:.55;cursor:default}
-.lang-item.locked:hover{background:var(--bg);color:var(--t2)}
-.lang-item.locked .btn{opacity:1}
+.lang-list{width:240px;flex-shrink:0;max-height:320px;overflow-y:auto}
 .prefs-lang-preview{
 	flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);
 	padding:14px;display:flex;flex-direction:column;gap:8px;font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t1);

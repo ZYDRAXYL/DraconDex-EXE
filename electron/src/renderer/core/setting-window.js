@@ -105,19 +105,15 @@ function renderSettingWindow(){
 function settingWindowNavHtml(){
   // Plan part2 "session head": every group's page list stays open (no more
   // single-open accordion), and the group header is plain text now that
-  // clicking it has nothing left to toggle — page buttons below are the only
-  // way to select a page.
-  return Object.keys(SETTING_GROUPS).map(g => {
+  // clicking it has nothing left to toggle — page rows below are the only
+  // way to select a page. Procress 21: compact rows of the shared list
+  // (core/list.js), the open page as the selected row.
+  return listHtml({ list: 'setting-nav', aria: t('settingWindowTitle'), body: Object.keys(SETTING_GROUPS).map(g => {
     const openGroup = S.settingGroup === g;
-    const pages = settingGroupPages(g).map(p => {
-      const active = openGroup && S.settingPage === p;
-      return `<button type="button" class="setting-nav-item${active?' active':''}" onclick="selectSettingPage('${g}','${p}')">${t(SETTING_PAGE_LABEL_KEY[p])}</button>`;
-    }).join('');
-    return `<div class="setting-nav-group${openGroup?' open':''}">
-      <div class="setting-nav-head">${t(SETTING_GROUP_LABEL_KEY[g])}</div>
-      <div class="setting-nav-pages">${pages}</div>
-    </div>`;
-  }).join('');
+    const rows = settingGroupPages(g).map(p => listRowHtml({ density: 'compact', title: t(SETTING_PAGE_LABEL_KEY[p]),
+      state: { selected: openGroup && S.settingPage === p }, onclick: `selectSettingPage('${g}','${p}')` })).join('');
+    return listGroupHtml({ list: 'setting-nav', id: g, title: t(SETTING_GROUP_LABEL_KEY[g]), rows, collapsible: false });
+  }).join('') });
 }
 function settingWindowBodyHtml(){
   const parts = (SETTING_PAGE_MERGE[S.settingPage] || [S.settingPage])
@@ -250,11 +246,8 @@ function settingUiStyleCatalogItemHtml(p){
   const pv = p.preview?.vars;
   const sample = pv
     ? `<span class="uistyle-sample" style="border-radius:${x(pv['--rl'])};box-shadow:${x(pv['--shadow-pop'])}"><i style="border-radius:${x(pv['--rs'])}"></i></span>` : '';
-  return `<div class="theme-item locked${pv ? ' has-preview' : ''}" title="${t('pkgPreviewHint')}">
-    ${sample}
-    <span class="theme-name" data-no-i18n>${x(pkgDisplayName(p))}</span>
-    <button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}">${I.import}</button>
-  </div>`;
+  return listRowHtml({ lead: sample, title: pkgDisplayName(p), tip: t('pkgPreviewHint'), state: { disabled: true }, attrs: 'data-no-i18n',
+    trailing: `<button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}" aria-label="${t('pkgInstall')}">${I.import}</button>` });
 }
 function settingUiStyleSectionHtml(){
   const expanded = !!S.settingUiStyleExpanded;
@@ -269,10 +262,8 @@ function settingUiStyleSectionHtml(){
     const label = UI_STYLE_LABEL_KEY[key]
       ? t(UI_STYLE_LABEL_KEY[key])
       : pkgDisplayName(INSTALLED_PACKAGES.uistyles.find(u => `pkg:${u.id}` === key)) || key;
-    return `<button type="button" class="theme-item${active ? ' active' : ''}" onclick="setUiSetting('uiStyle','${key}')">
-      <span class="theme-name"${UI_STYLE_LABEL_KEY[key] ? '' : ' data-no-i18n'}>${x(label)}</span>
-      ${active ? `<span class="theme-check">${I.check}</span>` : ''}
-    </button>`;
+    return listRowHtml({ title: label, state: { selected: active }, onclick: `setUiSetting('uiStyle','${key}')`,
+      attrs: UI_STYLE_LABEL_KEY[key] ? '' : 'data-no-i18n', trailing: active ? `<span class="theme-check">${I.check}</span>` : '' });
   }).join('');
   const notDownloaded = expanded
     ? pkgCatalogGap('uistyle', UI_STYLE_OPTIONS_BUILTIN).map(settingUiStyleCatalogItemHtml).join('') : '';
@@ -281,7 +272,7 @@ function settingUiStyleSectionHtml(){
         <span class="settings-label">${t('settingUiStyle')}</span>
         <button class="btn btn-s btn-sm" onclick="toggleSettingUiStyleExpanded()">${expanded ? t('settingCollapse') : t('settingShowAll')}</button>
       </div>
-      <div class="theme-list">${cells}${notDownloaded}</div>
+      ${listHtml({ list: 'uistyles', aria: t('settingUiStyle'), body: cells + notDownloaded })}
     </div>`;
 }
 function toggleSettingUiStyleExpanded(){
@@ -356,16 +347,23 @@ function sliderNumberRowHtml(labelHtml, { min, max, step = 1, value, commit }) {
 // checkmark slot.
 function settingLangCatalogItemHtml(p){
   const btnSel = `#pkg-inline-${p.id}`;
-  return `<div class="lang-item locked">
-    <span data-no-i18n>${x(pkgDisplayName(p))}</span>
-    <button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}">${I.import}</button>
-  </div>`;
+  return listRowHtml({ title: pkgDisplayName(p), state: { disabled: true }, attrs: 'data-no-i18n',
+    trailing: `<button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}" aria-label="${t('pkgInstall')}">${I.import}</button>` });
+}
+// Procress 21: one language row of the shared list (core/list.js) — its own
+// name, and as meta its name in the language the app speaks now. Hovering
+// it previews the language (data-preview-lang, core/settings.js).
+function langNameHere(lang) {
+  try { const n = new Intl.DisplayNames([S.settings.language], { type: 'language' }).of(lang); return n && n !== lang ? n : ''; } catch (_) { return ''; }
+}
+function langRowHtml(lang, onclick) {
+  const on = S.settings.language === lang;
+  return listRowHtml({ title: LANGUAGE_LABELS[lang], meta: langNameHere(lang), state: { selected: on }, onclick, attrs: `data-preview-lang="${lang}" data-no-i18n`,
+    trailing: on ? `<span class="theme-check">${I.check}</span>` : '' });
 }
 function settingTextSizePageHtml(){
-  const rows = UI_LANGUAGE_OPTIONS.map(lang => `
-    <div class="lang-item${S.settings.language===lang?' active':''}" data-preview-lang="${lang}" onclick="setUiSetting('language','${lang}')">
-      <span>${LANGUAGE_LABELS[lang]}</span>${S.settings.language===lang?`<span class="theme-check">${I.check}</span>`:''}
-    </div>`).join('') + pkgCatalogGap('lang', UI_LANGUAGE_OPTIONS_BUILTIN).map(settingLangCatalogItemHtml).join('');
+  const rows = listHtml({ list: 'langs', aria: t('language'), body: UI_LANGUAGE_OPTIONS.map(lang => langRowHtml(lang, `setUiSetting('language','${lang}')`)).join('')
+    + pkgCatalogGap('lang', UI_LANGUAGE_OPTIONS_BUILTIN).map(settingLangCatalogItemHtml).join('') });
   const areaRows = Object.keys(SETTING_AREA_CONTAINERS).map(key =>
     sliderNumberRowHtml(`${t('settingArea_'+key)} (%)`, { min: 50, max: 150, value: (S.settings.areaScale||{})[key] ?? 100, commit: `setAreaScale('${key}', this.value)` })).join('');
   return `<div class="settings-label">${t('language')}</div>

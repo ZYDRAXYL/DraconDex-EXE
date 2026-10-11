@@ -160,10 +160,14 @@ const LIST_SCREENS = {
   author: async () => { await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'author').id); },
   sketcher: async () => { await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'sketcher').id); await setSketcherView('pages'); },
   diviner: async () => { await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'diviner').id); },
+  // settings
+  'settings-nav': async () => { openSettingWindow('workspace', 'theme'); },
+  'settings-lang': async () => { openSettingWindow('workspace', 'textsize'); },
+  'quick-themes': async () => { openFloatingPanel('ls-audit-themes', 'Themes', quickThemeExtraHtml(), { width: 320, height: 480 }); },
   props: async () => { localStorage.setItem('dracondex-props-open', '1'); await openModuleNode(flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'drafter').id); renderSidePanel(); await new Promise((res) => setTimeout(res, 400)); localStorage.setItem('dracondex-props-open', '0'); },
 };
 const openListScreen = async (name) => {
-  await win.evaluate(() => { closeFloatingPanel('setting-window'); closeSidePanel(); closeModal(); closeAllPopups(); document.getElementById('qs-overlay')?.remove(); S.leftTool = null; });
+  await win.evaluate(() => { closeFloatingPanel('setting-window'); closeFloatingPanel('ls-audit-themes'); closeSidePanel(); closeModal(); closeAllPopups(); document.getElementById('qs-overlay')?.remove(); S.leftTool = null; });
   await win.evaluate(`(${LIST_SCREENS[name]})()`);
   await win.waitForTimeout(500);
 };

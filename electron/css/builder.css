@@ -184,8 +184,6 @@
 .settings-hint{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));margin-top:6px;line-height:1.5}
 .settings-number{width:100%;background:var(--raised);border:1px solid var(--border);border-radius:var(--rs);
 	color:var(--t1);padding:6px 10px}
-.theme-item .theme-tools{display:none;gap:4px;margin-left:auto}
-.theme-item:hover .theme-tools{display:flex}
 .theme-tool{cursor:pointer;color:var(--t3-aa,var(--t2));padding:0 3px}
 .theme-tool:hover{color:var(--accentH)}
 .ctm-grid{display:grid;grid-template-columns:1fr 220px;gap:18px}

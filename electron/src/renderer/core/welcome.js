@@ -174,10 +174,7 @@ function welcomeSetUi(key, value) {
 
 // ── Step 1: language ──
 function welcomeStepLangHtml() {
-  const rows = UI_LANGUAGE_OPTIONS.map(lang => `
-    <div class="lang-item${S.settings.language === lang ? ' active' : ''}" data-preview-lang="${lang}" onclick="welcomeSetUi('language','${lang}')">
-      <span data-no-i18n>${x(LANGUAGE_LABELS[lang] || lang)}</span>${S.settings.language === lang ? `<span class="theme-check">${I.check}</span>` : ''}
-    </div>`).join('');
+  const rows = listHtml({ list: 'wizard-langs', aria: t('language'), body: UI_LANGUAGE_OPTIONS.map(lang => langRowHtml(lang, `welcomeSetUi('language','${lang}')`)).join('') });
   return `<div class="prefs-lang-shell">
     <div class="lang-list">${rows}</div>
     <div class="prefs-lang-preview">${settingLangPreviewHtml(S.settingPreviewLang || S.settings.language)}</div>
