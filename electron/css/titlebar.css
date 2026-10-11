@@ -95,7 +95,7 @@ body:not([data-workspace="wyvern"]):not(.welcome-mode) #settings-menu-wrap{displ
 #settings-menu{
 	position:absolute;top:38px;right:0;width:292px;background:var(--surface);
 	border:1px solid var(--border);border-radius:0 0 var(--r) var(--r);
-	box-shadow:var(--shadow-menu);padding:12px;z-index:300;
+	box-shadow:var(--shadow-menu);padding:12px;z-index:calc(var(--z-dropdown) + 200);
 	color:var(--t1);
 }
 #settings-menu.hidden{display:none}

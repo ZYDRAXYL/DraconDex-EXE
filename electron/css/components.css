@@ -109,7 +109,7 @@
 #modal-overlay{
 	position:fixed;inset:0;background:rgba(0,0,0,.65);
 	display:flex;align-items:center;justify-content:center;
-	z-index:100;backdrop-filter:blur(4px);
+	z-index:var(--z-dropdown);backdrop-filter:blur(4px);
 }
 #modal-overlay.hidden{display:none}
 #modal{
@@ -139,7 +139,7 @@
 	position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
 	max-width:95vw;max-height:90vh;
 	background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);
-	box-shadow:0 24px 60px rgba(0,0,0,.5);z-index:150;display:flex;flex-direction:column;overflow:hidden;
+	box-shadow:0 24px 60px rgba(0,0,0,.5);z-index:calc(var(--z-dropdown) + 50);display:flex;flex-direction:column;overflow:hidden;
 }
 .fp-head{
 	display:flex;align-items:center;justify-content:space-between;padding:15px 18px;
@@ -232,14 +232,14 @@
 }
 .prefs-advanced{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
 
-#confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)}
+#confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:var(--z-modal);backdrop-filter:blur(4px)}
 #confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);width:360px;max-width:92vw;padding:20px;box-shadow:var(--shadow-modal)}
 .confirm-msg{font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t1);line-height:1.5;white-space:pre-wrap}
 .confirm-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
 /* setBusy() — the app's only loading affordance (see core.js). Theme tokens
    only; sits above panel content but below every dialog layer. */
 .busy-veil{
-	position:absolute;inset:0;z-index:90;
+	position:absolute;inset:0;z-index:calc(var(--z-dropdown) - 10);
 	display:flex;align-items:center;justify-content:center;gap:10px;
 	background:color-mix(in srgb, var(--bg) 72%, transparent);
 	backdrop-filter:blur(1px);font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t2);
@@ -276,7 +276,7 @@
    highest of which is #guide-overlay at 1200; it is removed from the DOM once
    faded, so nothing here ever competes with the app for a click. */
 #splash{
-	position:fixed;inset:0;z-index:2000;
+	position:fixed;inset:0;z-index:calc(var(--z-tooltip) + 100);
 	display:flex;flex-direction:column;align-items:center;justify-content:center;
 	gap:var(--sp-7);background:var(--bg);
 	transition:opacity .26s ease;
@@ -304,7 +304,7 @@
 #confirm-box .fg textarea{min-height:110px;font-family:var(--mono,ui-monospace,monospace);font-size:calc(12px * var(--fsc,1))}
 
 /* First-run coach-marks guide (src/renderer/guide.js) — theme-token colors only */
-#guide-overlay{position:fixed;inset:0;z-index:1200;pointer-events:none}
+#guide-overlay{position:fixed;inset:0;z-index:var(--z-tooltip);pointer-events:none}
 .guide-catch{position:absolute;inset:0;pointer-events:auto}
 .guide-spotlight{position:fixed;border-radius:var(--r);pointer-events:none;
 	box-shadow:0 0 0 9999px rgba(0,0,0,.6),0 0 0 2px var(--accent);
@@ -349,7 +349,7 @@
    "tell the user why" message in the app was effectively invisible. Bottom
    right, above modals (100/150) and the confirm dialog (1000) so the result
    of a confirmed action shows, below the 2000 full-window layer. */
-#toast{position:fixed;right:18px;bottom:18px;z-index:1100;max-width:min(420px,calc(100vw - 36px));
+#toast{position:fixed;right:18px;bottom:18px;z-index:var(--z-toast);max-width:min(420px,calc(100vw - 36px));
 	padding:10px 16px;border-radius:var(--r);border:1px solid var(--border);border-left:4px solid var(--accent);
 	background:var(--raised);color:var(--t1);font-size:calc(var(--fs-body) * var(--fsc,1));box-shadow:var(--shadow-float);
 	transform:translateY(24px);opacity:0;pointer-events:none;transition:transform .2s ease,opacity .2s ease}

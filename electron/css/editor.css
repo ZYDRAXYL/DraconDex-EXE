@@ -12,8 +12,8 @@
   font-family:inherit;white-space:pre-wrap;word-wrap:break-word;overflow-y:auto;
   border:1px solid var(--border);border-radius:var(--r);box-sizing:border-box;
 }
-.mded-backdrop{background:var(--surface);color:transparent;pointer-events:none;z-index:0}
-.mded-text{background:transparent;color:var(--t1);caret-color:var(--accent);resize:none;outline:none;z-index:1}
+.mded-backdrop{background:var(--surface);color:transparent;pointer-events:none;z-index:var(--z-base)}
+.mded-text{background:transparent;color:var(--t1);caret-color:var(--accent);resize:none;outline:none;z-index:calc(var(--z-base) + 1)}
 .mded-text:focus{border-color:var(--accent)}
 .mded-wikimark{color:transparent;background:color-mix(in srgb, var(--accent) 18%, transparent);border-radius:2px}
 
@@ -41,7 +41,7 @@
 
 /* ═══ QUICK SWITCHER (Ctrl+P) ═══ */
 #qs-overlay{
-  position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.45);
+  position:fixed;inset:0;z-index:var(--z-tooltip);background:rgba(0,0,0,.45);
   display:flex;align-items:flex-start;justify-content:center;padding-top:12vh;
 }
 #qs-box{
@@ -84,7 +84,7 @@
 .mded-links-toggle.active{color:var(--accent-text,var(--accent));border-color:var(--accent)}
 
 /* [[ autocomplete float */
-.mded-ac{position:absolute;z-index:50;min-width:200px;max-width:280px;background:var(--raised);border:1px solid var(--border);border-radius:var(--r);box-shadow:0 8px 24px rgba(0,0,0,.35);overflow:hidden}
+.mded-ac{position:absolute;z-index:calc(var(--z-sticky) + 40);min-width:200px;max-width:280px;background:var(--raised);border:1px solid var(--border);border-radius:var(--r);box-shadow:0 8px 24px rgba(0,0,0,.35);overflow:hidden}
 .mded-ac-item{display:flex;align-items:center;gap:7px;padding:6px 10px;font-size:calc(var(--fs-body) * var(--fsc,1));cursor:pointer;color:var(--t1)}
 .mded-ac-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mded-ac-item.active,.mded-ac-item:hover{background:var(--hover)}
@@ -113,7 +113,7 @@
 .scribe-row-edit:hover{color:var(--t1);background:var(--hover)}
 .scribe-row-edit .icon{width:13px;height:13px}
 
-.wiki-field-ac{position:fixed;z-index:1000}
+.wiki-field-ac{position:fixed;z-index:var(--z-modal)}
 /* Procress 16 part 7: Quick Access pin on a command row */
 .qs-qa{cursor:pointer;color:var(--t2);padding:0 6px;font-size:calc(var(--fs-body) * var(--fsc,1))}
 .qs-qa:hover,.qs-qa.on{color:var(--warn)}

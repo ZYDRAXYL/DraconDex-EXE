@@ -119,7 +119,7 @@ body.welcome-wizard-mode #left-panel{display:none}
 
 /* Layout step: "recommended" pin. Top-LEFT is taken by .prefs-theme-check. */
 .welcome-reco{
-	position:absolute;top:6px;right:6px;z-index:1;
+	position:absolute;top:6px;right:6px;z-index:calc(var(--z-base) + 1);
 	background:var(--accent);color:var(--on-accent);border-radius:var(--rs);
 	padding:1px var(--sp-2);font-size:var(--fs-micro);font-weight:600;
 }

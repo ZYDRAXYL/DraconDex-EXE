@@ -65,7 +65,7 @@
 #layout-menu{
 	position:absolute;top:38px;right:0;width:130px;background:var(--surface);
 	border:1px solid var(--border);border-radius:0 0 var(--r) var(--r);
-	box-shadow:var(--shadow-menu);padding:4px;z-index:300;
+	box-shadow:var(--shadow-menu);padding:4px;z-index:calc(var(--z-dropdown) + 200);
 }
 #layout-menu.hidden{display:none}
 .layout-menu-item{
@@ -218,7 +218,7 @@
 /* v5 Part 8 (§12.11): a top-row pane's tab strip, lifted onto the title bar
    by core/titlebar-tabs.js. The head drags the window; only the tabs don't,
    so the space right of the last tab is still title bar. */
-.bpane-head.tb-tabgroup{position:fixed;z-index:60;background:transparent;border-bottom:none;padding:0 4px;
+.bpane-head.tb-tabgroup{position:fixed;z-index:calc(var(--z-sticky) + 50);background:transparent;border-bottom:none;padding:0 4px;
 	align-items:flex-end;-webkit-app-region:drag}
 .bpane-head.tb-tabgroup .bpane-tabs{flex:0 1 auto;min-height:0;height:100%;align-items:flex-end;padding-top:5px;-webkit-app-region:no-drag}
 /* Procress 16 B2: + (new tab) · ⧉ (split) · tab list, after the strip. The

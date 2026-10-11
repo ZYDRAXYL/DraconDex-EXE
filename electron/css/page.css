@@ -95,10 +95,10 @@
 .cls-rel-graph{position:relative;overflow:hidden;min-height:340px;border:1px solid var(--border);border-radius:var(--r)}
 
 /* Canvas frame (page/canvas-frame.js) */
-.cf-grip{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:row-resize;z-index:4}
+.cf-grip{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:row-resize;z-index:calc(var(--z-base) + 4)}
 .cf-grip:hover{background:var(--accent);opacity:.5}
-.cf-full{position:absolute;top:10px;right:10px;z-index:4}
-.pblock.pb-canvas-full{position:fixed;inset:48px 12px 12px;z-index:60;background:var(--bg);border-radius:var(--r);
+.cf-full{position:absolute;top:10px;right:10px;z-index:calc(var(--z-base) + 4)}
+.pblock.pb-canvas-full{position:fixed;inset:48px 12px 12px;z-index:calc(var(--z-sticky) + 50);background:var(--bg);border-radius:var(--r);
 	box-shadow:0 10px 40px rgba(0,0,0,.45);padding:10px;overflow:auto}
 .pblock.pb-canvas-full .map-whiteboard,.pblock.pb-canvas-full [data-cf]{height:calc(100vh - 150px) !important}
 
@@ -126,7 +126,7 @@
 .addr-caret:hover{opacity:1}
 .addr-sep{opacity:.4;padding:0 2px}
 .addr-input{flex:1;min-width:0;width:100%;background:transparent;border:none;outline:none;color:var(--t1);font:inherit}
-.addr-sugg{position:fixed;z-index:9999;max-height:50vh;overflow:auto;background:var(--surface);border:1px solid var(--border);
+.addr-sugg{position:fixed;z-index:calc(var(--z-tooltip) + 200);max-height:50vh;overflow:auto;background:var(--surface);border:1px solid var(--border);
   border-radius:var(--r);box-shadow:var(--shadow-menu);padding:4px}
 .addr-sugg .kind-list-item{cursor:pointer}
 .addr-row .navbar-acts{display:flex;align-items:center;gap:4px;flex-shrink:0}
@@ -241,7 +241,7 @@ body.focus-mode #title-left-zone{width:44px}
 .pb-frames{display:inline-flex;align-items:center;margin-right:6px}
 .pb-frames .pb-frame-px{width:72px;margin-left:4px}
 .arranging .pb-col{position:relative}
-.pb-col-grip{position:absolute;top:0;bottom:0;right:calc(-1 * var(--sp-4) / 2 - 4px);width:8px;cursor:col-resize;border-radius:var(--rs);z-index:2}
+.pb-col-grip{position:absolute;top:0;bottom:0;right:calc(-1 * var(--sp-4) / 2 - 4px);width:8px;cursor:col-resize;border-radius:var(--rs);z-index:calc(var(--z-base) + 2)}
 .pb-col-grip:hover,.pb-col-grip:active{background:var(--accent);opacity:.6}
 /* Procress 16 B10: the component collection (left panel + popup) */
 .pbc-search{padding:0 10px 6px}
@@ -290,7 +290,7 @@ body.focus-mode #title-left-zone{width:44px}
 .pbc-pic[data-pic=search] i:first-child{flex:1;height:14px;border-radius:var(--r);align-self:center}.pbc-pic[data-pic=search] i:not(:first-child){display:none}
 /* Procress 16 part 6: a secret block — shown to you, never published */
 .page-blocks.arranging .pblock[data-secret]{outline:1px dashed var(--warn);outline-offset:2px}
-.page-blocks.arranging .pblock[data-secret]::before{content:'🔒';position:absolute;right:6px;top:6px;font-size:calc(var(--fs-meta) * var(--fsc,1));z-index:3}
+.page-blocks.arranging .pblock[data-secret]::before{content:'🔒';position:absolute;right:6px;top:6px;font-size:calc(var(--fs-meta) * var(--fsc,1));z-index:calc(var(--z-base) + 3)}
 #page-css{width:100%;font-family:ui-monospace,Consolas,monospace}
 /* Procress 16 part 7: a block's settings docked in the Properties panel */
 .pb-pop.pb-pop-docked{position:static;width:auto;max-height:none;flex-shrink:0;overflow:visible;box-shadow:none;border:0;border-bottom:1px solid var(--border);border-radius:0;padding:0 0 var(--sp-3);background:none}

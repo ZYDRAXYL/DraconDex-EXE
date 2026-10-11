@@ -226,7 +226,7 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
   const counts = {};
   nodes.forEach(n => { counts[n.module] = (counts[n.module]||0)+1; });
   const panel = document.createElement('div');
-  panel.style.cssText = 'position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:calc(12px * var(--fsc,1));z-index:2';
+  panel.style.cssText = 'position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:calc(12px * var(--fsc,1));z-index:calc(var(--z-base) + 2)';
   const moduleLabels = opts.labels || { director:t('director'), navigator:t('navigator'), hero:t('hero'), writer:t('writer'), global:t('hashtag') };
   panel.innerHTML = Object.keys(moduleColors).map(mod => `
     <label style="display:flex;align-items:center;gap:6px;color:var(--t2);cursor:pointer;user-select:none">

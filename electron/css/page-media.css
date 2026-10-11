@@ -50,7 +50,7 @@
 .pc-3d-cover svg{width:14px;height:14px}
 .pc-3d.live .pc-3d-cover,.pc-3d.failed .pc-3d-cover{display:none}
 .pc-3d.failed .pc-3d-stage{display:flex;align-items:center;justify-content:center}
-.pc-3d-save{position:absolute;right:8px;bottom:8px;z-index:2}
+.pc-3d-save{position:absolute;right:8px;bottom:8px;z-index:calc(var(--z-base) + 2)}
 .pb-lb-3d{width:88vw;height:84vh;position:relative}
 
 /* core.media: a video or model tile */
