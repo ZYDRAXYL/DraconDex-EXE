@@ -109,14 +109,6 @@
 .vh-panel{display:flex;flex-direction:column}
 .vh-panel .insp-head .vh-count{margin-left:auto;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2))}
 .vh-list{flex:1;overflow-y:auto;padding:8px 10px}
-.vh-row{border-left:2px solid var(--border);padding:8px 12px;margin-bottom:4px}
-.vh-row.vh-latest{border-left-color:var(--accent);background:var(--raised);border-radius:0 var(--rs) var(--rs) 0}
-.vh-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.vh-title{font-size:calc(12px * var(--fsc,1));font-weight:650}
-.vh-current{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--accentH);border:1px solid var(--accent);border-radius:var(--r);padding:1px 8px}
-.vh-detail{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;
-	display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.vh-time{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));margin-top:3px}
 .vh-foot{padding:10px 14px;border-top:1px solid var(--border);font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));line-height:1.6}
 
 /* Plugin panel (v4.3.0) — a plugin's own page docked in the Inspector slot.

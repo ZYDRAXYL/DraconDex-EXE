@@ -265,9 +265,6 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 .left-search-row .name{white-space:normal}
 .left-search-row b{color:var(--accent-text,var(--accent))}
 .setting-db-io{display:flex;gap:8px;margin-bottom:14px}
-.prob-row{align-items:flex-start}
-.prob-row .name{white-space:normal}
-.prob-drops{display:flex;gap:6px;padding:6px 8px;border-radius:var(--rs,6px);background:var(--raised)}
 .csv-preview{max-height:320px;overflow:auto;border:1px solid var(--border);border-radius:var(--rs,6px)}
 .csv-preview table{border-collapse:collapse;font-size:calc(12px * var(--fsc,1));width:max-content;min-width:100%}
 .csv-preview th,.csv-preview td{padding:4px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;white-space:nowrap}

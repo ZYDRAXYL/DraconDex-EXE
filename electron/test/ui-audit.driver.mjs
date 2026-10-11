@@ -135,6 +135,119 @@ test('contrast: every page, every built-in theme — text ≥ 4.5:1, focus ring 
   assert.deepEqual([...new Set(bad)], []);
 });
 
+// ── Procress 21 part 4: the one list (APP docs/UX-LAYOUT.md §12) ─────────
+// Every visible row of the shared list (core/list.js) on the list screens:
+// 28 or 40 px (× UI Size) and nothing else, focusable, named; its meta, count
+// and group heads ≥ 4.5:1 in each built-in theme; and the keyboard path.
+const LIST_SCREENS = {
+  trash: async () => { showLeftDest('trash'); },
+  problems: async () => { openProblemsPanel(); },
+  assets: async () => { showLeftDest('nest'); if (!S.importFolderCollapsed.has('#unsorted:open')) toggleImportFolder('#unsorted:open'); },
+  versions: async () => { const m = flattenModulesByKind(S.moduleTree, []).find((x2) => x2.kind === 'classifier'); await openModuleNode(m.id); await openVersionPanel(m.id); },
+  plugins: async () => { openSettingWindow('plugin', 'plugin'); },
+};
+const openListScreen = async (name) => {
+  await win.evaluate(() => { closeFloatingPanel('setting-window'); closeSidePanel(); closeModal(); S.leftTool = null; });
+  await win.evaluate(`(${LIST_SCREENS[name]})()`);
+  await win.waitForTimeout(500);
+};
+const rowAudit = () => win.evaluate(() => {
+  const cs = getComputedStyle(document.documentElement);
+  const zoom = Number(getComputedStyle(document.body).zoom) || 1;
+  const h = { compact: parseFloat(cs.getPropertyValue('--row-compact')), comfy: parseFloat(cs.getPropertyValue('--row-comfy')) };
+  const rows = [...document.querySelectorAll('.ls-row')].filter((r) => r.offsetParent && r.getBoundingClientRect().height);
+  const bad = [];
+  for (const r of rows) {
+    const want = (r.classList.contains('ls-compact') ? h.compact : h.comfy) * zoom;
+    const got = r.getBoundingClientRect().height;
+    const name = r.getAttribute('aria-label') || '';
+    if (Math.abs(got - want) > 0.5) bad.push(`${name}: ${got.toFixed(1)} px, wants ${want}`);
+    if (!r.hasAttribute('tabindex')) bad.push(`${name}: not focusable`);
+    if (!name.trim()) bad.push(`a row with no name: ${r.outerHTML.slice(0, 80)}`);
+  }
+  for (const box of document.querySelectorAll('.ls-list')) {
+    if (box.offsetParent && box.querySelector('.ls-row') && box.querySelectorAll('[tabindex="0"]:is(.ls-row,.ls-group-head)').length !== 1) bad.push(`${box.id}: not exactly one tab stop`);
+  }
+  return { n: rows.length, bad };
+});
+
+test('list rows: 28 or 40 px × UI Size, focusable and named, on every list screen', async () => {
+  await win.evaluate(async () => {
+    for (const n of ['Old notes', 'Draft map']) { const id = await api.module.create({ nexus_ref: S.nexus.id, parent_id: null, name: n, kind: 'drafter' }); await api.trash.module(S.nexus.id, id); }
+    for (const [u, n] of [['https://example.com/a', 'Reference site'], ['https://example.com/b', 'Map source']]) await api.importdock.addUrl(S.nexus.id, u, n, null);
+    S.importFiles = undefined; await reloadModuleTree(); renderNexusHome();
+  });
+  const bad = [];
+  let seen = 0;
+  for (const size of [100, 125]) {
+    await win.evaluate((v) => setUiSetting('size', v), size);
+    for (const name of Object.keys(LIST_SCREENS)) {
+      await openListScreen(name);
+      const r = await rowAudit();
+      seen += r.n;
+      if (name !== 'plugins' && !r.n) bad.push(`${name}: no rows to measure`);
+      bad.push(...r.bad.map((b) => `${size}% ${name}: ${b}`));
+    }
+  }
+  await win.evaluate(() => setUiSetting('size', 100));
+  console.log(`list rows measured: ${seen}`);
+  assert.deepEqual(bad, []);
+});
+
+test('list meta, counts and group heads reach 4.5:1 in every built-in theme', async () => {
+  const bad = [];
+  for (const theme of ['midnight', 'moonlight', 'daylight']) {
+    await win.evaluate((th) => setUiSetting('theme', th), theme);
+    for (const name of Object.keys(LIST_SCREENS)) {
+      await openListScreen(name);
+      for (const f of await win.evaluate(contrastProbe)) if (/\.ls-|^(span|div|p)\.ls/.test(f.sel)) bad.push(`${theme} ${name}: ${f.sel} "${f.text}" ${f.ratio}:1`);
+    }
+  }
+  await win.evaluate(() => { closeFloatingPanel('setting-window'); closeSidePanel(); setUiSetting('theme', 'midnight'); });
+  assert.deepEqual([...new Set(bad)], []);
+});
+
+test('list keyboard: one tab stop, ↑ ↓ Home End move, Enter, Delete asks, groups fold', async () => {
+  await openListScreen('trash');
+  const r = await win.evaluate(async () => {
+    const box = document.querySelector('#ls-trash');
+    const stops = () => [...box.querySelectorAll('.ls-row, .ls-group-head[role="button"]')].filter((e) => e.offsetParent);
+    const key = (k, o = {}) => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...o }));
+    const at = () => stops().indexOf(document.activeElement);
+    box.querySelector('[tabindex="0"]').focus();
+    const out = { first: at() };
+    key('ArrowDown'); out.down = at();
+    key('End'); out.end = at(); out.last = stops().length - 1;
+    key('Home'); out.home = at();
+    key('Enter'); await new Promise((res) => setTimeout(res, 50)); // a group head: Enter folds
+    out.folded = !!box.querySelector('.ls-group.ls-folded');
+    key('Enter'); await new Promise((res) => setTimeout(res, 50));
+    out.unfolded = !box.querySelector('.ls-group.ls-folded');
+    key('ArrowDown');
+    key('Delete'); await new Promise((res) => setTimeout(res, 100));
+    out.asked = !!document.getElementById('confirm-overlay');
+    document.querySelector('#confirm-overlay .btn-s')?.click();
+    return out;
+  });
+  assert.deepEqual(r, { first: 0, down: 1, end: r.last, last: r.last, home: 0, folded: true, unfolded: true, asked: true });
+  // The Nest shares the handler: Delete there sends to the trash with Undo (17 I3).
+  const nest = await win.evaluate(async () => {
+    showLeftDest('nest');
+    await new Promise((res) => setTimeout(res, 300));
+    const m = S.moduleTree.find((x2) => x2.kind !== 'collector') || flattenModulesByKind(S.moduleTree, []).find((x2) => x2.kind === 'drafter');
+    const row = document.querySelector(`#nest-tree-body [data-mid="${m.id}"]`);
+    row.focus();
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }));
+    await new Promise((res) => setTimeout(res, 600));
+    const undo = document.querySelector('#toast.has-action .toast-act');
+    const gone = !findModuleNode(m.id);
+    undo?.click();
+    await new Promise((res) => setTimeout(res, 800));
+    return { gone, undo: !!undo, back: flattenModulesByKind(S.moduleTree, []).some((x2) => x2.name === m.name) };
+  });
+  assert.deepEqual(nest, { gone: true, undo: true, back: true });
+});
+
 test('no page or console error anywhere above', () => {
   assert.deepEqual(pageErrors, []);
 });

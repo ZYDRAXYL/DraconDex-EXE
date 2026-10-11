@@ -56,19 +56,14 @@ async function pluginRefreshOrgRepos() {
   const el = q('#plugin-org-repos');
   if (!el) return; // panel closed or switched section before this resolved
   if (!r?.ok || !r.repos.length) { el.innerHTML = ''; return; }
+  // Procress 21: the shared list (core/list.js)
   el.innerHTML = `
     <div class="fg">
       <label>${t('pluginOrgReposLabel')}</label>
-      ${r.repos.map((repo) => `
-        <div class="sync-upload-row">
-          <div>
-            <b data-no-i18n>${x(repo.name)}</b>
-            <div class="sync-hint" data-no-i18n>${x(repo.description)}</div>
-          </div>
-          <div class="sync-upload-actions">
-            <button class="btn btn-s btn-sm" onclick="pluginInstallFromOrgRepo(${xj(repo.url)})">${t('pluginPreviewBtn')}</button>
-          </div>
-        </div>`).join('')}
+      ${listHtml({ list: 'plugin-org', aria: t('pluginOrgReposLabel'), body: r.repos.map((repo) => listRowHtml({
+        icon: I.import, title: repo.name, meta: repo.description, attrs: 'data-no-i18n',
+        actions: listActHtml({ name: t('pluginPreviewBtn'), text: true, key: 'Enter', onclick: `pluginInstallFromOrgRepo(${xj(repo.url)})` }),
+      })).join('') })}
     </div>`;
 }
 
@@ -107,34 +102,30 @@ function pluginDepsMissingHtml(p) {
   </div>`;
 }
 
+// Procress 21: one row of the shared list (core/list.js) — the missing-
+// dependency block, when there is one, sits under its row (it holds a button
+// per dependency, more than a row can).
 function pluginRowHtml(p, isRunning) {
   const at = p.repo_host === 'gitlab' ? 'GitLab' : 'GitHub';
   const blocked = !!(p.missingDeps || []).length;
-  return `
-    <div class="sync-upload-row">
-      <div>
-        <b>${x(p.name)}</b> <span class="sync-hint">v${x(p.version || '—')}</span>
-        <div class="sync-hint">${at} · ${x(p.repo_owner)}/${x(p.repo_name)}@${x(p.repo_ref)} · ${p.tables.length} ${t('pluginTablesLabel')}</div>
-        ${pluginDepsMissingHtml(p)}
-      </div>
-      <div class="sync-upload-actions">
-        ${isRunning
-          ? `<button class="btn btn-d btn-sm" onclick="pluginStopClick(${p.id})">${t('pluginStop')}</button>`
-          : blocked
-            ? `<button class="btn btn-s btn-sm" disabled title="${t('pluginLaunchBlocked')}">${t('pluginLaunch')}</button>`
-            : `<button class="btn btn-s btn-sm" onclick="pluginLaunchClick(${p.id})">${t('pluginLaunch')}</button>`}
-        <button class="btn btn-d btn-sm" onclick="pluginUninstallClick(${p.id})">${t('delete')}</button>
-      </div>
-    </div>`;
+  const run = isRunning
+    ? listActHtml({ name: t('pluginStop'), text: true, danger: true, key: 'Enter', onclick: `pluginStopClick(${p.id})` })
+    : listActHtml({ name: t('pluginLaunch'), text: true, key: 'Enter', disabled: blocked, tip: blocked ? t('pluginLaunchBlocked') : '', onclick: `pluginLaunchClick(${p.id})` });
+  return listRowHtml({
+    icon: I.layer, titleHtml: `${x(p.name)} <span class="ls-meta" data-no-i18n>v${x(p.version || '—')}</span>`, title: p.name,
+    meta: `${at} · ${p.repo_owner}/${p.repo_name}@${p.repo_ref} · ${p.tables.length} ${t('pluginTablesLabel')}`,
+    state: { current: !!isRunning },
+    actions: run + listActHtml({ icon: I.delete, name: t('delete'), danger: true, key: 'Delete', onclick: `pluginUninstallClick(${p.id})` }),
+  }) + pluginDepsMissingHtml(p);
 }
 
 // `running` is positional-parallel to `list` — pass it through explicitly
 // rather than letting Array.map hand pluginRowHtml the index as its second
 // argument (that bug made row 0 always show Launch and every other row Stop).
 function pluginBodyHtml(list, running) {
-  const rows = list.length
+  const rows = listHtml({ list: 'plugins', aria: t('prefs_plugin'), body: list.length
     ? list.map((p, i) => pluginRowHtml(p, running?.[i])).join('')
-    : `<div class="modal-hint">${I.info}<span>${t('pluginNoneInstalled')}</span></div>`;
+    : emptyStateHtml({ icon: I.info, text: t('pluginNoneInstalled') }) });
   return `
     <div class="fg">
       <label>${t('pluginInstallNew')}</label>
@@ -348,8 +339,9 @@ async function pluginRefreshSettingsSection() {
   const list = await api.plugin.list();
   const el = q('#plugin-settings-body');
   if (!el) return;
-  el.innerHTML = list.length
-    ? list.map((p) => `<div class="li"><span class="name">${x(p.name)}</span><span class="tag">${t('settingPluginNoSettings')}</span></div>`).join('')
-    : `<div class="modal-hint">${I.info}<span>${t('pluginNoneInstalled')}</span></div>`;
+  el.innerHTML = listHtml({ list: 'plugin-settings', aria: t('settingPagePluginSettings'), body: list.length
+    ? list.map((p) => listRowHtml({ icon: I.layer, title: p.name, attrs: 'data-no-i18n',
+      trailing: `<span class="ls-chip">${x(t('settingPluginNoSettings'))}</span>` })).join('')
+    : emptyStateHtml({ icon: I.info, text: t('pluginNoneInstalled') }) });
 }
 registerSettingPage('plugin', 'pluginsettings', settingPluginSettingsPageHtml);

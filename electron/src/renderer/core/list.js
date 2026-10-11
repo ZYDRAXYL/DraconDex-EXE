@@ -21,8 +21,9 @@
 //
 // The keyboard (§12.7) is the Nest tree's (Procress 17 I4) — listKeyNav below
 // is that handler, moved here so hub/tree.js and every list share one: roving
-// tabindex (Tab enters a list once), ↑ ↓ Home End, Enter opens, F2 renames,
-// Delete deletes (a row's button marked data-ls-key="Delete" — the same action
+// tabindex (Tab enters a list once), ↑ ↓ Home End, Enter opens (or runs the
+// row's data-ls-key="Enter" button), F2 renames, Delete deletes (a row's
+// button marked data-ls-key="Delete" — the same action
 // as the click, so its undo toast or its confirm comes with it, Procress 17
 // I3), Shift+F10 / the Menu key = the row's ⋯ menu.
 
@@ -52,11 +53,11 @@ const _lsAttr = (v) => x(v == null ? '' : String(v));
 // A row's ⋯ / act button. `key` binds a keyboard key to it (Delete, F2).
 // Text buttons ('Restore') and icon buttons are both ctl-sm, so they fit a
 // compact row and never grow a comfy one.
-function listActHtml({ icon = '', label = '', onclick = '', key = '', text = false, danger = false, disabled = false, tip = '' } = {}) {
+function listActHtml({ icon = '', name = '', onclick = '', key = '', text = false, danger = false, disabled = false, tip = '' } = {}) {
   const cls = text ? 'btn btn-s btn-sm' : 'btn btn-g btn-i';
-  const name = tip || label;
+  const aria = tip || name;
   return `<button class="${cls} ls-act${danger ? ' ls-danger' : ''}" tabindex="-1"${key ? ` data-ls-key="${_lsAttr(key)}"` : ''}
-    ${disabled ? 'disabled' : `onclick="event.stopPropagation();${onclick}"`} title="${_lsAttr(name)}" aria-label="${_lsAttr(name)}">${text ? `${icon}${x(label)}` : icon}</button>`;
+    ${disabled ? 'disabled' : `onclick="event.stopPropagation();${onclick}"`} title="${_lsAttr(aria)}" aria-label="${_lsAttr(aria)}">${text ? `${icon}${x(name)}` : icon}</button>`;
 }
 
 // One row (§12.1).
@@ -128,11 +129,11 @@ function listGroupHtml({ list, id, title, count = null, rows = '', collapsible =
   </div>`;
 }
 
-// The list box. `label` names it for a screen reader; `head` is listHeadHtml
+// The list box. `aria` names it for a screen reader; `head` is listHeadHtml
 // (or ''); `body` the rows / groups / empty state.
-function listHtml({ list, label = '', head = '', body = '', cls = '' }) {
+function listHtml({ list, aria = '', head = '', body = '', cls = '' }) {
   const boxCls = cls ? `ls ${cls}` : 'ls';
-  return `<div class="${boxCls}" data-ls="${_lsAttr(list)}">${head}<div class="ls-list" role="listbox" id="ls-${_lsAttr(list)}" aria-label="${_lsAttr(label)}">${body}</div></div>`;
+  return `<div class="${boxCls}" data-ls="${_lsAttr(list)}">${head}<div class="ls-list" role="listbox" id="ls-${_lsAttr(list)}" aria-label="${_lsAttr(aria)}">${body}</div></div>`;
 }
 
 // Redraw a registered list's body in place (its header stays).
@@ -260,7 +261,9 @@ document.addEventListener('keydown', (e) => {
   if (head && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); listGroupToggle(row); return; }
   const keyed = (k) => () => row.querySelector(`[data-ls-key="${k}"]:not([disabled])`)?.click();
   listKeyNav(e, row, rows, {
-    open: (r) => (r.getAttribute('aria-disabled') === 'true' ? null : r.click()),
+    // a row with a button marked data-ls-key="Enter" (Launch, Restore) runs
+    // that; otherwise Enter is the row's own click
+    open: (r) => { if (r.getAttribute('aria-disabled') === 'true') return; const b = r.querySelector('[data-ls-key="Enter"]:not([disabled])'); if (b) b.click(); else r.click(); },
     rename: head ? null : row.querySelector('[data-ls-key="F2"]') ? keyed('F2') : null,
     remove: head ? null : row.querySelector('[data-ls-key="Delete"]') ? keyed('Delete') : null,
     menu: (r) => { if (r.hasAttribute('oncontextmenu')) listRowMenu(r); else r.querySelector('.ls-more')?.click(); },

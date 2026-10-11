@@ -49,7 +49,7 @@ test('a row: selected and disabled states, ⋯ = the right-click menu', () => {
 });
 
 test('an action button carries its key and stops the row click', () => {
-  const b = L.listActHtml({ icon: '<i></i>', label: 'Delete', onclick: 'del(3)', key: 'Delete', danger: true });
+  const b = L.listActHtml({ icon: '<i></i>', name: 'Delete', onclick: 'del(3)', key: 'Delete', danger: true });
   assert.match(b, /data-ls-key="Delete"/);
   assert.match(b, /onclick="event.stopPropagation\(\);del\(3\)"/);
   assert.match(b, /aria-label="Delete"/);

@@ -35,9 +35,14 @@
 .ls-chip.ls-on{color:var(--accentH,var(--accent));border-color:var(--accent)}
 
 /* ── trailing actions: on hover / focus / selected; ⋯ always on touch (§12.1) ── */
-.ls-acts{flex:none;display:flex;align-items:center;gap:var(--sp-0);visibility:hidden}
+/* They float over the row's end instead of holding its space: a narrow panel
+   keeps the whole title until the pointer or the focus asks for the buttons,
+   and nothing moves when they appear. Their floor is the row's own. */
+.ls-row{--ls-row-bg:var(--ls-floor,var(--surface))}
+.ls-acts{position:absolute;top:0;bottom:0;right:var(--sp-1);display:flex;align-items:center;gap:var(--sp-0);
+	padding-left:var(--sp-3);background:var(--ls-row-bg);visibility:hidden}
 .ls-row:hover .ls-acts,.ls-row:focus .ls-acts,.ls-row:focus-within .ls-acts,.ls-row.sel .ls-acts{visibility:visible}
-@media (hover:none){.ls-acts{visibility:visible}}
+@media (hover:none){.ls-acts{position:static;padding-left:0;background:none;visibility:visible}}
 .ls-act.btn-i{width:var(--ctl-sm);height:var(--ctl-sm);padding:0}
 .ls-act.btn-i .icon{width:var(--icon-sm);height:var(--icon-sm)}
 .ls-act.btn-sm{height:var(--ctl-sm);padding:0 var(--sp-3);font-size:var(--fs-sm);gap:var(--sp-1)}
@@ -46,8 +51,8 @@
 .ls-row.sel .ls-more{visibility:visible}
 
 /* ── states (§12.3): hover · selected = bar + floor, never colour alone · focus ring · drag · off ── */
-.ls-row:hover{background:var(--hover);color:var(--t1)}
-.ls-row.sel{background:var(--raised);color:var(--t1);box-shadow:inset 3px 0 0 var(--accent)}
+.ls-row:hover{--ls-row-bg:var(--hover);background:var(--hover);color:var(--t1)}
+.ls-row.sel{--ls-row-bg:var(--raised);background:var(--raised);color:var(--t1);box-shadow:inset 3px 0 0 var(--accent)}
 .ls-row.sel .ls-title{font-weight:600}
 .ls-row.ls-current .ls-title{color:var(--t1);font-weight:600}
 /* inside the row's edge: a list scrolls, and its box would clip a ring outside */
