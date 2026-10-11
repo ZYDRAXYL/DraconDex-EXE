@@ -55,7 +55,6 @@
 }
 #qs-list{overflow-y:auto;padding:4px}
 .qs-icon{display:flex;align-items:center;color:var(--accent-text,var(--accent));flex-shrink:0}
-.qs-type{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));flex-shrink:0}
 
 /* ═══ IDE SHELL: status bar ═══ */
 #status-bar{

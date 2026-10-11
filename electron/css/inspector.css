@@ -273,7 +273,6 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .mgr-card-icon .kicon-img-icon{width:22px;height:22px;border-radius:50%;object-fit:cover}
 .mgr-card-count{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2))}
 /* Process 8 part 2: "<majors below> / <own minors>" on a Manager list row. */
-.mgr-row-count{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));margin-left:8px;flex-shrink:0}
 
 /* Canvas chrome: pan/zoom hint pill + zoom control (progress.md Phase 7,
    cross-cutting per Section A.3 #6 — every canvas/graph kind gets these) */

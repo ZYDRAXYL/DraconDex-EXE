@@ -251,6 +251,28 @@ test('list keyboard: one tab stop, ↑ ↓ Home End move, Enter, Delete asks, gr
     return out;
   });
   assert.deepEqual(r, { first: 0, down: 1, end: r.last, last: r.last, home: 0, folded: true, unfolded: true, asked: true });
+  // …and the same path on every other list screen: Tab lands once, the
+  // arrows / Home / End walk it. (Ctrl+P keeps the focus in its input — a
+  // combobox with its own keys — so it is not walked here.)
+  const walked = [];
+  for (const name of Object.keys(LIST_SCREENS).filter((n) => !['quickswitch', 'plugins'].includes(n))) {
+    await openListScreen(name);
+    const w = await win.evaluate(() => {
+      const box = [...document.querySelectorAll('.ls-list')].find((b) => b.offsetParent && b.querySelector('.ls-row'));
+      if (!box) return null;
+      const stops = () => [...box.querySelectorAll('.ls-row, .ls-group-head[role="button"]')].filter((e) => e.offsetParent);
+      const key = (k) => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+      const at = () => stops().indexOf(document.activeElement);
+      box.querySelector('[tabindex="0"]').focus();
+      const n = stops().length;
+      key('Home'); const home = at();
+      key('End'); const end = at();
+      key('ArrowUp'); const up = at();
+      return { n, ok: home === 0 && end === n - 1 && (n < 2 || up === n - 2) };
+    });
+    if (w && !w.ok) walked.push(`${name}: ${JSON.stringify(w)}`);
+  }
+  assert.deepEqual(walked, [], 'every list walks by keyboard');
   // The Nest shares the handler: Delete there sends to the trash with Undo (17 I3).
   const nest = await win.evaluate(async () => {
     showLeftDest('nest');
