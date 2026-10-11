@@ -334,6 +334,33 @@ console.log('=== command registry (core/commands.js) ===');
   else ok(`${seen.size} top-level const/let/class names, none declared twice`);
 }
 
+// ═══ Procress 21: a list row comes from core/list.js ═══
+// APP docs/UX-LAYOUT.md §12. Every list row is listRowHtml() (class ls-row);
+// a NEW `*-row` / `*-item` class written by hand, without .ls-row beside it,
+// is a list nobody can learn once (L1: ~60 such classes, each its own size).
+// The classes below were there before the shared list (2026-10-11) — many
+// are not list rows at all (form rows, toolbars) and stay. The list only
+// shrinks: when a class is migrated or deleted, take it out (the checker
+// prints a note for every entry it no longer finds).
+const LEGACY_ROW_CLASSES = new Set([
+  'addr-row', 'art-row', 'bundle-adj-row', 'chr-cal-row', 'chr-insp-row', 'chs-row', 'chs-tr-row',
+  'cls-link-row', 'crecent-row', 'ctm-row', 'div-hist-row', 'ex-row', 'exh-pal-row', 'fp-rule-row',
+  'htag-item', 'htag-row', 'hx-row', 'ipk-color-row', 'ipk-preview-row', 'kind-artisan-row',
+  'kind-list-item', 'lang-item', 'layout-menu-item', 'left-search-row', 'mded-ac-item', 'mgr-pick-row',
+  'module-item', 'module-rail-item', 'nar-logic-row', 'nar-row', 'navbar-row', 'nest-asset-row',
+  'nest-item-row', 'nest-opt-row', 'nest-sig-row', 'nexus-item', 'nexus-switcher-item', 'palette-item',
+  'pb-ii-row', 'pb-le-row', 'pb-props-row', 'pc-bar-row', 'pc-gal-item', 'pc-ib-row', 'pc-navbox-row',
+  'pc-toc-row', 'plugin-preview-row', 'prob-row', 'props-row', 'qs-item', 'sb-item', 'setting-hit-row',
+  'setting-nav-item', 'settings-label-row', 'sh-bar-row', 'size-slider-row', 'sync-key-row',
+  'sync-status-row', 'sync-upload-row', 'theme-item', 'tpt-row', 'tpv-row', 'vh-row', 'welcome-name-row',
+  'welcome-recent-row', 'wnd-area-row',
+]);
+// …and no raw px font-size in a row's own rule (§12.1: --fs-body / --fs-sm),
+// or UI Size moves one list and not the next (L2). Selectors grandfathered:
+const LEGACY_ROW_PX = new Set(['.plugin-preview-row', '.setting-nav-item', '.lang-item', '.div-hist-row', '.module-item', '.theme-item']);
+const ROW_CLASS = /^[a-z][\w-]*-(row|item)$/;
+const rowClassesSeen = new Set();
+
 // ═══ Per-file lint ═══
 // Recursive: renderer code lives in src/renderer/{,mod/,core/,hub/,navigator/,
 // hero/}. A flat readdir here used to skip mod/ entirely and would now skip
@@ -416,6 +443,17 @@ for (const file of targets) {
     }
   }
   if (unknown.size) warn(`class(es) not defined in style.css: ${[...unknown].join(', ')}`);
+
+  // Procress 21: a hand-written list row
+  const newRows = new Set();
+  for (const m of src.matchAll(/class="([^"]*)"/g)) {
+    const cls = stripInterp(m[1]).split(/\s+/).filter(Boolean);
+    for (const c of cls.filter((c) => ROW_CLASS.test(c))) {
+      rowClassesSeen.add(c);
+      if (!cls.includes('ls-row') && !LEGACY_ROW_CLASSES.has(c)) newRows.add(c);
+    }
+  }
+  if (newRows.size) warn(`new list-row class(es) without .ls-row: ${[...newRows].join(', ')} — build the row with listRowHtml() (core/list.js, UX-LAYOUT §12)`);
 }
 
 // ═══ Wiring checks for --module <name> ═══
@@ -447,6 +485,25 @@ if (moduleName) {
   } else {
     console.log(`  note    no ${app(`src/db/${m}.js`)} (fine if the module reuses another db file)`);
   }
+}
+
+// ═══ Procress 21: row rules size their text with tokens ═══
+if (!files.length) {
+  console.log('=== list rows (core/list.js, UX-LAYOUT §12) ===');
+  const px = [];
+  for (const [, sel, body] of cssSrc.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const size = /font-size\s*:\s*([^;]+)/.exec(body)?.[1];
+    if (!size || !/\d(\.\d+)?px/.test(size)) continue;
+    for (const part of sel.split(',').map((p) => p.trim())) {
+      if (/\.(?:ls-[\w-]+|[\w-]+-(?:row|item))(?![\w-])/.test(part) && !LEGACY_ROW_PX.has(part)) px.push(`${part} { font-size: ${size.trim()} }`);
+    }
+  }
+  if (px.length) warn(`raw px font-size in list-row rule(s) — use var(--fs-body) / var(--fs-sm): ${px.slice(0, 6).join(' · ')}${px.length > 6 ? ' …' : ''}`);
+  else ok('no list-row rule sizes its text in raw px');
+  const stale = [...LEGACY_ROW_CLASSES].filter((c) => !rowClassesSeen.has(c));
+  const cssSels = new Set(cssSrc.replace(/\/\*[\s\S]*?\*\//g, '').split(/[{}]/).flatMap((p) => p.split(',').map((q) => q.trim())));
+  const stalePx = [...LEGACY_ROW_PX].filter((sel) => !cssSels.has(sel));
+  if (stale.length || stalePx.length) console.log(`  note    migrated or gone — drop from LEGACY_ROW_CLASSES / LEGACY_ROW_PX: ${[...stale, ...stalePx].join(', ')}`);
 }
 
 console.log(`\n${errors} error(s), ${warnings} warning(s)`);

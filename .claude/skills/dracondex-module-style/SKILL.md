@@ -81,6 +81,12 @@ What to compare (the shared chrome every module must have):
   "dragonish" one — invent a word matching its tone, e.g. `Vokhal`).
 - `sage.js` legitimately has ~20 hex colors (chart palette) and `core.js` has
   a few — warnings there are known baseline, not new debt.
+- **A list row is `listRowHtml()`** (`electron/src/renderer/core/list.js`, CSS in
+  `electron/css/list.css`, rules in APP `docs/UX-LAYOUT.md` §12). A new hand-written
+  `*-row` / `*-item` class without `.ls-row` warns, and so does a raw px
+  `font-size` in a row's rule. The classes that predate the shared list sit in
+  `LEGACY_ROW_CLASSES` / `LEGACY_ROW_PX` in `check.mjs`; that list only
+  shrinks — the checker prints a note for every entry it no longer finds.
 - The checker's unknown-CSS-class warnings include intentionally unstyled
   marker classes (e.g. `table-name-input`) — treat as "check spelling," not
   "must fix."
