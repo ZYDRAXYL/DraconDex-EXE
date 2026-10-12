@@ -510,6 +510,8 @@ contextBridge.exposeInMainWorld('api', {
     openNexus:      (nexusId) => inv('window:openNexus', nexusId),
     openWelcome:    () => inv('window:openWelcome'),
     openNexusReplace: (nexusId) => inv('window:openNexusReplace', nexusId),
+    openCreateNexus:  () => inv('window:openCreateNexus'),
+    createNexusDone:  (payload) => inv('window:createNexusDone', payload),
     openBuilderTab: (nexusId, tabKey) => inv('window:openBuilderTab', nexusId, tabKey),
     getId:          () => inv('window:getId'),
     moveTabToMain:  (nexusId, tabKey) => inv('window:moveTabToMain', nexusId, tabKey),
