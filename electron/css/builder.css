@@ -141,7 +141,7 @@
 .trx-qr{display:flex;justify-content:center;margin:4px 0 10px}
 /* The white plate and the padding are not decoration: the quiet zone is part
    of the QR spec, and a dark-themed card without it does not scan. */
-.trx-qr svg{width:190px;height:190px;background:#fff;padding:10px;border-radius:var(--rs)}
+.trx-qr svg{width:190px;height:190px;background:var(--paper);padding:10px;border-radius:var(--rs)}
 .sync-upload-row{display:flex;justify-content:space-between;align-items:center;gap:12px;
 	padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);margin-bottom:6px}
 .sync-upload-row-mine{border-color:var(--accent)}

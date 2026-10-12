@@ -238,7 +238,9 @@ async function relinkNexusLocation(id) {
 }
 
 async function createNexusSubmit() {
-  const name = q('#nx-name').value.trim(); if (!name) return;
+  const name = q('#nx-name').value.trim();
+  setFieldError('#nx-name', name ? null : t('fieldRequired')); // core/controls.js
+  if (!name) { q('#nx-name').focus(); return; }
   S._guideAfterCreate = Boolean(q('#nx-guide')?.checked);
   try {
     const newId = await api.nexus.create(name, q('#nx-memo').value.trim(), q('#sel-color').value || null, S._nexusSavePath || null);

@@ -85,7 +85,7 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 .split-btn{display:inline-flex;align-items:stretch;border-radius:var(--rs);overflow:hidden;margin-right:2px}
 .split-btn .btn{border-radius:0;min-height:26px}
 .split-btn .split-main{padding:0 8px;gap:4px}
-.split-btn .split-more{padding:0 5px;border-left:1px solid color-mix(in srgb,var(--on-accent,#fff) 30%,transparent)}
+.split-btn .split-more{padding:0 5px;border-left:1px solid color-mix(in srgb,var(--on-accent) 30%,transparent)}
 .split-btn .icon{width:14px;height:14px}
 
 /* NEXUS VAULT PICKER */

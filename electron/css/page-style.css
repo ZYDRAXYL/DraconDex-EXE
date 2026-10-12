@@ -43,11 +43,11 @@
 .pblock.pb-v-hero .pb-heading{font-size:calc(24px * var(--fsc,1))}
 /* white belongs to the hero's own ground only: a surface inside it (an
    infobox, a card, an editor, a nested block) goes back to the theme */
-.pblock.pb-v-hero .pb-body :is(.pbc-core-properties,.pc-infobox,.pc-callout,.pc-stat,.pc-roster-card,.pc-toc,.pc-seealso,
+.pblock.pb-v-hero .pb-body :is(.pbc-core-properties,.pc-infobox,.pc-callout,.pc-stat,.pc-roster-tile,.pc-toc,.pc-seealso,
 	.mded,input:not(.pb-heading),select,textarea,.pblock.pb-v-card,.pblock.pb-v-outline,.pblock.pb-v-tinted,[class*="-card"]){
 	--t1:var(--th-t1);--t2:var(--th-t2);--t3-aa:var(--th-t3);color:var(--th-t1)}
-.pblock.pb-v-hero .pb-body :is(.pbc-core-properties,.pc-infobox,.pc-callout,.pc-stat,.pc-roster-card,.pc-toc,.pc-seealso){background:var(--surface)}
-.pblock.pb-v-hero a{color:#fff;text-decoration:underline}
+.pblock.pb-v-hero .pb-body :is(.pbc-core-properties,.pc-infobox,.pc-callout,.pc-stat,.pc-roster-tile,.pc-toc,.pc-seealso){background:var(--surface)}
+.pblock.pb-v-hero a{color:var(--on-media);text-decoration:underline}
 
 /* width — "normal" is the page's own column, as before §6. A readable
    page caps each BLOCK at 46rem (not the whole stack, as it did), so wide
@@ -78,7 +78,7 @@
 	padding:0 0 8px}
 .pb-head .pb-ico{display:inline-flex;color:var(--pb-acc,var(--accent));font-size:calc(15px * var(--fsc,1))}
 .pb-head .pb-ico svg{width:16px;height:16px}
-.pblock.pb-v-hero .pb-head .pb-ico{color:#fff}
+.pblock.pb-v-hero .pb-head .pb-ico{color:var(--on-media)}
 .pb-head-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pblock.pb-collapsible > .pb-head{cursor:pointer;user-select:none;border-radius:var(--r)}
 .pblock.pb-collapsible > .pb-head:hover .pb-head-t{text-decoration:underline}

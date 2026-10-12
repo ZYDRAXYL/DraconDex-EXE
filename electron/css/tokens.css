@@ -55,6 +55,16 @@ html{height:100%;overflow:hidden}
 	   Three independent literals on purpose — writing --on-button:var(--on-accent)
 	   would freeze the alias at :root and per-theme overrides would never reach
 	   it, the same trap documented on --bg2 further down. */
+	/* Procress 22: colours that deliberately do NOT follow the theme, named so
+	   they stop being anonymous hex in component CSS — text/icons over a photo
+	   or a dark scrim, the white sheet of a print/export preview and its ink,
+	   the black behind a video, the Sketcher's fixed drawing board. */
+	--on-media: #fff;
+	--on-media-soft: #f1f1f5;
+	--media-bg: #000;
+	--paper: #fff;
+	--paper-ink: #1a1a1a;
+	--canvas-dark: #0b0b10;
 	--on-accent: #fff;
 	--on-button: #fff;
 	--on-danger: #fff;

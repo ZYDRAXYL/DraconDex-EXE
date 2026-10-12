@@ -59,8 +59,8 @@ body[data-ui-style="fluent"] .btn-s{
 	border-bottom-color:color-mix(in srgb,var(--t1) 16%,transparent);
 }
 body[data-ui-style="fluent"] .btn-p{
-	border:1px solid color-mix(in srgb,#fff 8%,var(--button,var(--accent)));
-	border-bottom-color:color-mix(in srgb,#000 30%,var(--button,var(--accent)));
+	border:1px solid color-mix(in srgb,var(--on-media) 8%,var(--button,var(--accent)));
+	border-bottom-color:color-mix(in srgb,var(--media-bg) 30%,var(--button,var(--accent)));
 }
 
 /* ── Flyouts are Acrylic: menus, popovers, the command palette ── */

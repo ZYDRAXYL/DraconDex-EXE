@@ -108,7 +108,7 @@ function managerRowIcon(r) {
 
 function renderManagerCards(rows) {
   return `<div class="cls-grid">${rows.map(r => `
-    <div class="cls-card mgr-card" ${managerRowEvents(r)}>
+    <div class="card card-link cls-tile mgr-tile" ${managerRowEvents(r)}>
       <span class="disp-thumb"><img data-display-key="module_${r.id}" alt=""></span>
       <div class="mgr-card-icon" style="color:${x(r.color || 'var(--accent)')}">${managerRowIcon(r)}</div>
       <div class="cls-card-name" data-no-i18n>${x(r.name)}</div>

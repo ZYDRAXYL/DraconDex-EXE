@@ -186,8 +186,7 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .cls-cell:focus{outline:1px solid var(--accent);outline-offset:-1px;background:var(--raised)}
 .cls-rowacts{display:flex;gap:2px;white-space:nowrap}
 .cls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
-.cls-card{border:1px solid var(--border);border-radius:var(--r);padding:14px 10px;text-align:center;cursor:pointer;background:var(--surface)}
-.cls-card:hover{background:var(--hover)}
+.card.cls-tile{padding:14px 10px;text-align:center}
 .cls-card-dot{width:26px;height:26px;border-radius:50%;margin:0 auto 8px}
 .cls-card-name{font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t1)}
 .cls-listdetail{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;min-height:260px}
@@ -245,7 +244,7 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .cls-adv>summary{cursor:pointer;font-size:calc(12px * var(--fsc,1));color:var(--t2)}
 
 /* Manager view (progress.md Phase 6) */
-.mgr-card{display:flex;flex-direction:column;align-items:center;gap:4px}
+.card.mgr-tile{display:flex;flex-direction:column;align-items:center;gap:4px}
 .mgr-card-icon{display:flex;align-items:center;justify-content:center}
 .mgr-card-icon .icon{width:22px;height:22px}
 .mgr-card-icon .kicon-img-icon{width:22px;height:22px;border-radius:50%;object-fit:cover}

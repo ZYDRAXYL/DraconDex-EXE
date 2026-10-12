@@ -80,7 +80,7 @@ function buildNarratorDialogueListHtml(d) {
     const open = d.openDialogueId === dl.id;
     html += `<div class="chr-insp-row${open ? ' open' : ''}">
       ${listRowHtml({ expanded: open, onclick: `toggleNarratorDialogueOpen(${dl.id})`, title: dl.name, attrs: 'data-no-i18n',
-        icon: `<span class="odot" style="background:${x(dl.color_code || '#6366f1')}"></span>`,
+        icon: `<span class="odot" style="background:${x(dl.color_code || 'var(--accent)')}"></span>`,
         meta: `${dl.speaker_count || 0} ${t('speaker')} · ${dl.talk_count || 0} ${t('conversation')}${dl.choice_count ? ` · ${dl.choice_count} ${t('choice')}` : ''}` })}
       ${open ? `<div class="chr-insp-body">
         <div class="fg"><label>${t('description')}</label><textarea data-wiki onchange="saveNarratorDialogueDescription(${dl.id},this)">${x(dl.description || '')}</textarea></div>
