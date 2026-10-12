@@ -9,7 +9,7 @@ i18nAdd('zh', {
   // Procress 23: package minAppVersion
   pkgNeedsNewerApp:'需要 DraconDex {v} 或更高版本 — 请更新应用', pkgUpdateApp:'更新应用',
   // Procress 23: Glass style + Reduce transparency
-  uiStyleGlass:'玻璃', uiStyleGlassHint:'柔和背景上的半透明栏与菜单', settingReduceTransparency:'降低透明度（栏与菜单不透明）',
+  uiStyleGlass:'玻璃', uiStyleGlassHint:'柔和背景上的半透明栏与菜单', settingReduceTransparency:'降低透明度（栏与菜单不透明）', settingSystemGlass:'使用系统玻璃（实验性 · Windows 11 Acrylic / macOS 毛玻璃）',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'深色', themeGroupLight:'浅色', themeGroupCustom:'你的主题',
   listFilterHint:'筛选', listSort:'排序', listSortName:'名称', listSortEdited:'最近编辑', listSortCreated:'创建时间', listSortKind:'类型', listSortManual:'按排列顺序', listCount:'{n} 项', listNoMatch:'没有符合此筛选条件的内容。', listGroupToday:'今天', listGroupThisWeek:'本周', listGroupOlder:'更早', assetGroupImage:'图片', assetGroupAudio:'音频', assetGroupVideo:'视频', assetGroupDoc:'文档', assetGroupTrack:'字幕', assetGroupModel:'3D 模型', assetGroupUrl:'链接', assetGroupOther:'其他文件',

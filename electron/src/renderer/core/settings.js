@@ -97,6 +97,7 @@ function applyUiSettings(){
   if (S.settings.reduceTransparency) document.body.dataset.reduceTransparency = '';
   else delete document.body.dataset.reduceTransparency;
   if (typeof glassSync === 'function') glassSync();
+  if (typeof systemGlassSync === 'function') systemGlassSync();
   document.documentElement.style.setProperty('--fsc', String((S.settings.fontScale || 100) / 100));
   // Per-area overrides are global scale × area %, so they follow the global one.
   applyAreaScales();
@@ -127,6 +128,7 @@ function setUiSetting(key, value){
   if(key === 'nameMode' && !['unique','classic'].includes(value)) return;
   if(key === 'uiStyle' && !UI_STYLE_OPTIONS.includes(value)) return;
   if(key === 'reduceTransparency') value = value === true || value === 'true';
+  if(key === 'systemGlass') value = value === true || value === 'true';
   if(key === 'fontScale'){
     value = Math.min(130, Math.max(80, Math.round(Number(value) || 100)));
   }

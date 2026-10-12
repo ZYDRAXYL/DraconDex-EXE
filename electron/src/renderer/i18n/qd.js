@@ -9,7 +9,7 @@ i18nAdd('qd', {
   // Procress 23: package minAppVersion
   pkgNeedsNewerApp:'Needeth DraconDex {v} or newer — amende the werke', pkgUpdateApp:'Amende the werke',
   // Procress 23: Glass style + Reduce transparency
-  uiStyleGlass:'Glasse', uiStyleGlassHint:'Bares and menus clere as glasse upon a softe grounde', settingReduceTransparency:'Lessen the clerenesse (bares and menus made sollid)',
+  uiStyleGlass:'Glasse', uiStyleGlassHint:'Bares and menus clere as glasse upon a softe grounde', settingReduceTransparency:'Lessen the clerenesse (bares and menus made sollid)', settingSystemGlass:'Use the systemes owne glasse (untryed · Windows 11 Acrylic / macOS vibrancy)',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'Derke', themeGroupLight:'Lyghte', themeGroupCustom:'Thyne owne hewes',
   listFilterHint:'Sifteth', listSort:'Ordeyne', listSortName:'Nymm', listSortEdited:'Last graven', listSortCreated:'Forgeday', listSortKind:'Kynde', listSortManual:'As laid-thra', listCount:'{n} thyngs', listNoMatch:'Naught answereth this sifting.', listGroupToday:'Thys sun', listGroupThisWeek:'Thys sennight', listGroupOlder:'Elder', assetGroupImage:'Glymmers', assetGroupAudio:'Songs', assetGroupVideo:'Movyng glymmers', assetGroupDoc:'Scrolls', assetGroupTrack:'Undertongues', assetGroupModel:'Shaped wyrmstone', assetGroupUrl:'Threads', assetGroupOther:'Othyr hoard',

@@ -9,7 +9,7 @@ i18nAdd('ko', {
   // Procress 23: package minAppVersion
   pkgNeedsNewerApp:'DraconDex {v} 이상 필요 — 앱을 업데이트하세요', pkgUpdateApp:'앱 업데이트',
   // Procress 23: Glass style + Reduce transparency
-  uiStyleGlass:'글래스', uiStyleGlassHint:'부드러운 배경 위의 반투명 막대와 메뉴', settingReduceTransparency:'투명도 줄이기 (불투명한 막대와 메뉴)',
+  uiStyleGlass:'글래스', uiStyleGlassHint:'부드러운 배경 위의 반투명 막대와 메뉴', settingReduceTransparency:'투명도 줄이기 (불투명한 막대와 메뉴)', settingSystemGlass:'시스템 유리 효과 사용 (실험적 · Windows 11 Acrylic / macOS Vibrancy)',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'어두운 테마', themeGroupLight:'밝은 테마', themeGroupCustom:'내 테마',
   listFilterHint:'필터', listSort:'정렬', listSortName:'이름', listSortEdited:'최근 편집', listSortCreated:'만든 날짜', listSortKind:'종류', listSortManual:'배치한 순서', listCount:'{n}개', listNoMatch:'이 필터와 일치하는 항목이 없습니다.', listGroupToday:'오늘', listGroupThisWeek:'이번 주', listGroupOlder:'이전', assetGroupImage:'이미지', assetGroupAudio:'오디오', assetGroupVideo:'동영상', assetGroupDoc:'문서', assetGroupTrack:'자막', assetGroupModel:'3D 모델', assetGroupUrl:'링크', assetGroupOther:'기타 파일',

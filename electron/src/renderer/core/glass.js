@@ -119,6 +119,33 @@ function glassGuardTint() {
   if (need > have) { b.style.setProperty('--glass-tint', `${need}%`); b.dataset.glassTint = pkgTint || ''; }
 }
 
+// ── "Use system glass" (experimental, off by default) ──────────────────
+// The OS material (Windows 11 acrylic / macOS vibrancy) behind the glass
+// style instead of the CSS gradient — untested on real hardware, hence off.
+// The renderer only decides whether it is WANTED and stores that through the
+// existing setting:set door ('systemGlass' = '1'/'0'); main (src/db/system-
+// glass.js) applies it to every app window and sets <html data-system-glass>,
+// which css/glass.css answers by letting the window frame go transparent.
+function systemGlassPlatform() {
+  const p = String(navigator.userAgentData?.platform || navigator.platform || '');
+  return /^win/i.test(p) || /^mac/i.test(p);
+}
+function systemGlassWanted() {
+  const st = S.settings || {};
+  return !!st.systemGlass && st.uiStyle === 'glass' && !st.reduceTransparency
+    && !matchMedia('(prefers-reduced-transparency: reduce)').matches
+    && !matchMedia('(forced-colors: active)').matches
+    && systemGlassPlatform();
+}
+let _systemGlassSent;
+function systemGlassSync() {
+  if (!systemGlassPlatform() || !window.api?.setting) return; // linux: nothing, ever
+  const want = systemGlassWanted();
+  if (want === _systemGlassSent) return;
+  _systemGlassSent = want;
+  api.setting.set('systemGlass', want ? '1' : '0');
+}
+
 function glassSync() {
   if (!document.body) return;
   glassGuardTint();

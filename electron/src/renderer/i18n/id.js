@@ -9,7 +9,7 @@ i18nAdd('id', {
   // Procress 23: package minAppVersion
   pkgNeedsNewerApp:'Perlu DraconDex {v} atau lebih baru — perbarui aplikasi', pkgUpdateApp:'Perbarui aplikasi',
   // Procress 23: Glass style + Reduce transparency
-  uiStyleGlass:'Kaca', uiStyleGlassHint:'Bilah dan menu tembus pandang di atas latar lembut', settingReduceTransparency:'Kurangi transparansi (bilah dan menu pekat)',
+  uiStyleGlass:'Kaca', uiStyleGlassHint:'Bilah dan menu tembus pandang di atas latar lembut', settingReduceTransparency:'Kurangi transparansi (bilah dan menu pekat)', settingSystemGlass:'Gunakan kaca sistem (eksperimental · Acrylic Windows 11 / vibrancy macOS)',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'Gelap', themeGroupLight:'Terang', themeGroupCustom:'Tema Anda',
   listFilterHint:'Saring', listSort:'Urutkan', listSortName:'Nama', listSortEdited:'Terakhir diedit', listSortCreated:'Dibuat', listSortKind:'Jenis', listSortManual:'Sesuai susunan', listCount:'{n} item', listNoMatch:'Tidak ada yang cocok dengan saringan ini.', listGroupToday:'Hari ini', listGroupThisWeek:'Minggu ini', listGroupOlder:'Lebih lama', assetGroupImage:'Gambar', assetGroupAudio:'Audio', assetGroupVideo:'Video', assetGroupDoc:'Dokumen', assetGroupTrack:'Subtitel', assetGroupModel:'Model 3D', assetGroupUrl:'Tautan', assetGroupOther:'Berkas lain',

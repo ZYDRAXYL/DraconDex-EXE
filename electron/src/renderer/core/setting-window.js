@@ -298,6 +298,7 @@ function settingUiStyleSectionHtml(){
       </div>
       ${listHtml({ list: 'uistyles', aria: t('settingUiStyle'), body: cells + notDownloaded })}
       ${settingReduceTransparencyHtml()}
+      ${settingSystemGlassHtml()}
     </div>`;
 }
 // Procress 23: app-wide, not glass-only — it also turns fluent's Acrylic and
@@ -306,6 +307,15 @@ function settingReduceTransparencyHtml(){
   const on = !!S.settings.reduceTransparency;
   return `<div class="togglerow setting-switch" role="switch" tabindex="0" aria-checked="${on}" onclick="setUiSetting('reduceTransparency', ${!on})"
     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><span class="tg${on ? ' on' : ''}"></span>${t('settingReduceTransparency')}</div>`;
+}
+// Procress 23: the OS's own glass material — experimental, off by default,
+// only offered where it could exist (Windows / macOS) and only for the glass
+// style it backs.
+function settingSystemGlassHtml(){
+  if (S.settings.uiStyle !== 'glass' || typeof systemGlassPlatform !== 'function' || !systemGlassPlatform()) return '';
+  const on = !!S.settings.systemGlass;
+  return `<div class="togglerow setting-switch" role="switch" tabindex="0" aria-checked="${on}" onclick="setUiSetting('systemGlass', ${!on})"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><span class="tg${on ? ' on' : ''}"></span>${t('settingSystemGlass')}</div>`;
 }
 function toggleSettingUiStyleExpanded(){
   S.settingUiStyleExpanded = !S.settingUiStyleExpanded;

@@ -9,7 +9,7 @@ i18nAdd('ru', {
   // Procress 23: package minAppVersion
   pkgNeedsNewerApp:'Нужен DraconDex {v} или новее — обновите приложение', pkgUpdateApp:'Обновить приложение',
   // Procress 23: Glass style + Reduce transparency
-  uiStyleGlass:'Стекло', uiStyleGlassHint:'Полупрозрачные панели и меню на мягком фоне', settingReduceTransparency:'Уменьшить прозрачность (сплошные панели и меню)',
+  uiStyleGlass:'Стекло', uiStyleGlassHint:'Полупрозрачные панели и меню на мягком фоне', settingReduceTransparency:'Уменьшить прозрачность (сплошные панели и меню)', settingSystemGlass:'Системное стекло (экспериментально · Acrylic в Windows 11 / vibrancy в macOS)',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'Тёмные', themeGroupLight:'Светлые', themeGroupCustom:'Ваши темы',
   listFilterHint:'Фильтр', listSort:'Сортировка', listSortName:'Имя', listSortEdited:'Последнее изменение', listSortCreated:'Дата создания', listSortKind:'Тип', listSortManual:'Как расставлено', listCount:'Элементов: {n}', listNoMatch:'Ничего не подходит под этот фильтр.', listGroupToday:'Сегодня', listGroupThisWeek:'На этой неделе', listGroupOlder:'Раньше', assetGroupImage:'Изображения', assetGroupAudio:'Аудио', assetGroupVideo:'Видео', assetGroupDoc:'Документы', assetGroupTrack:'Субтитры', assetGroupModel:'3D-модели', assetGroupUrl:'Ссылки', assetGroupOther:'Другие файлы',

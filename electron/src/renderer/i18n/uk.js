@@ -9,7 +9,7 @@ i18nAdd('uk', {
   // Procress 23: package minAppVersion
   pkgNeedsNewerApp:'Потрібен DraconDex {v} або новіший — оновіть застосунок', pkgUpdateApp:'Оновити застосунок',
   // Procress 23: Glass style + Reduce transparency
-  uiStyleGlass:'Скло', uiStyleGlassHint:'Напівпрозорі панелі й меню на м’якому тлі', settingReduceTransparency:'Зменшити прозорість (суцільні панелі й меню)',
+  uiStyleGlass:'Скло', uiStyleGlassHint:'Напівпрозорі панелі й меню на м’якому тлі', settingReduceTransparency:'Зменшити прозорість (суцільні панелі й меню)', settingSystemGlass:'Системне скло (експериментально · Acrylic у Windows 11 / vibrancy у macOS)',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'Темні', themeGroupLight:'Світлі', themeGroupCustom:'Ваші теми',
   listFilterHint:'Фільтр', listSort:'Сортування', listSortName:'Назва', listSortEdited:'Останнє редагування', listSortCreated:'Дата створення', listSortKind:'Тип', listSortManual:'Як упорядковано', listCount:'Елементів: {n}', listNoMatch:'Ніщо не відповідає цьому фільтру.', listGroupToday:'Сьогодні', listGroupThisWeek:'Цього тижня', listGroupOlder:'Раніше', assetGroupImage:'Зображення', assetGroupAudio:'Аудіо', assetGroupVideo:'Відео', assetGroupDoc:'Документи', assetGroupTrack:'Субтитри', assetGroupModel:'3D-моделі', assetGroupUrl:'Посилання', assetGroupOther:'Інші файли',

@@ -9,7 +9,7 @@ i18nAdd('vi', {
   // Procress 23: package minAppVersion
   pkgNeedsNewerApp:'Cần DraconDex {v} trở lên — hãy cập nhật ứng dụng', pkgUpdateApp:'Cập nhật ứng dụng',
   // Procress 23: Glass style + Reduce transparency
-  uiStyleGlass:'Kính', uiStyleGlassHint:'Thanh và menu trong mờ trên nền dịu', settingReduceTransparency:'Giảm trong suốt (thanh và menu đặc)',
+  uiStyleGlass:'Kính', uiStyleGlassHint:'Thanh và menu trong mờ trên nền dịu', settingReduceTransparency:'Giảm trong suốt (thanh và menu đặc)', settingSystemGlass:'Dùng kính của hệ thống (thử nghiệm · Acrylic của Windows 11 / vibrancy của macOS)',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'Tối', themeGroupLight:'Sáng', themeGroupCustom:'Chủ đề của bạn',
   listFilterHint:'Lọc', listSort:'Sắp xếp', listSortName:'Tên', listSortEdited:'Sửa gần nhất', listSortCreated:'Ngày tạo', listSortKind:'Loại', listSortManual:'Theo thứ tự đã xếp', listCount:'{n} mục', listNoMatch:'Không có mục nào khớp bộ lọc này.', listGroupToday:'Hôm nay', listGroupThisWeek:'Tuần này', listGroupOlder:'Cũ hơn', assetGroupImage:'Hình ảnh', assetGroupAudio:'Âm thanh', assetGroupVideo:'Video', assetGroupDoc:'Tài liệu', assetGroupTrack:'Phụ đề', assetGroupModel:'Mô hình 3D', assetGroupUrl:'Liên kết', assetGroupOther:'Tệp khác',

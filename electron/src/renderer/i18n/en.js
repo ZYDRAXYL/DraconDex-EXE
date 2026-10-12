@@ -9,7 +9,7 @@ i18nAdd('en', {
   // Procress 23: package minAppVersion
   pkgNeedsNewerApp:'Needs DraconDex {v} or newer — update the app', pkgUpdateApp:'Update the app',
   // Procress 23: Glass style + Reduce transparency
-  uiStyleGlass:'Glass', uiStyleGlassHint:'Translucent bars and menus over a soft backdrop', settingReduceTransparency:'Reduce transparency (solid bars and menus)',
+  uiStyleGlass:'Glass', uiStyleGlassHint:'Translucent bars and menus over a soft backdrop', settingReduceTransparency:'Reduce transparency (solid bars and menus)', settingSystemGlass:'Use system glass (experimental · Windows 11 Acrylic / macOS vibrancy)',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'Dark', themeGroupLight:'Light', themeGroupCustom:'Your themes',
   listFilterHint:'Filter', listSort:'Sort', listSortName:'Name', listSortEdited:'Last edited', listSortCreated:'Created', listSortKind:'Kind', listSortManual:'As arranged', listCount:'{n} items', listNoMatch:'Nothing matches this filter.', listGroupToday:'Today', listGroupThisWeek:'This week', listGroupOlder:'Older', assetGroupImage:'Images', assetGroupAudio:'Audio', assetGroupVideo:'Video', assetGroupDoc:'Documents', assetGroupTrack:'Subtitles', assetGroupModel:'3D models', assetGroupUrl:'Links', assetGroupOther:'Other files',

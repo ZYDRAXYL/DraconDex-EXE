@@ -9,7 +9,7 @@ i18nAdd('ja', {
   // Procress 23: package minAppVersion
   pkgNeedsNewerApp:'DraconDex {v} 以降が必要です — アプリを更新してください', pkgUpdateApp:'アプリを更新',
   // Procress 23: Glass style + Reduce transparency
-  uiStyleGlass:'ガラス', uiStyleGlassHint:'やわらかな背景に半透明のバーとメニュー', settingReduceTransparency:'透明度を下げる（バーとメニューを不透明に）',
+  uiStyleGlass:'ガラス', uiStyleGlassHint:'やわらかな背景に半透明のバーとメニュー', settingReduceTransparency:'透明度を下げる（バーとメニューを不透明に）', settingSystemGlass:'システムのガラスを使う（試験的 · Windows 11 の Acrylic / macOS の Vibrancy）',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'ダーク', themeGroupLight:'ライト', themeGroupCustom:'あなたのテーマ',
   listFilterHint:'絞り込み', listSort:'並べ替え', listSortName:'名前', listSortEdited:'最終編集', listSortCreated:'作成日', listSortKind:'種類', listSortManual:'配置順', listCount:'{n} 件', listNoMatch:'この条件に一致するものはありません。', listGroupToday:'今日', listGroupThisWeek:'今週', listGroupOlder:'それ以前', assetGroupImage:'画像', assetGroupAudio:'音声', assetGroupVideo:'動画', assetGroupDoc:'ドキュメント', assetGroupTrack:'字幕', assetGroupModel:'3D モデル', assetGroupUrl:'リンク', assetGroupOther:'その他のファイル',
