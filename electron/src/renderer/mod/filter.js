@@ -89,8 +89,8 @@ function filterRuleLabel(r) {
 }
 
 function filterChipsHtml(def) {
-  if (!def.groups.length) return `<span class="vw-chip">${t('filterAll')}</span>`;
-  return def.groups.map(g => `<span class="vw-chip">${g.rules.map(filterRuleLabel).join(' &amp; ') || '—'}</span>`)
+  if (!def.groups.length) return `<span class="chip">${t('filterAll')}</span>`;
+  return def.groups.map(g => `<span class="chip">${g.rules.map(filterRuleLabel).join(' &amp; ') || '—'}</span>`)
     .join(`<span class="vw-chip-or" data-no-i18n>${t('filterOr')}</span>`);
 }
 

@@ -72,11 +72,11 @@ function buildFileViewerHtml() {
   }
   const isImage = c.kind === 'image';
   const linkerChip = f.entity
-    ? `<span class="htag lk" data-no-i18n onclick="openEntityByKey(${xj(f.linker_key)})">[[${x(f.entity.name)}]]</span>`
+    ? chipHtml({ label: `[[${f.entity.name}]]`, variant: 'link', onclick: `openEntityByKey(${xj(f.linker_key)})`, noI18n: true })
     : `<span class="pv ghost">${t('notLinked')}</span>`;
   return wrapPageView(`${pageHeadHtml({
       title: `<span data-no-i18n>${x(f.file_name)}</span>`, titleText: f.file_name,
-      after: '<span class="kind-chip" data-no-i18n>File</span>',
+      after: '<span class="chip" data-no-i18n>File</span>',
       sub: `<span data-no-i18n>${f.source_kind === 'url' ? x(f.file_path) : fvBytes(f.file_size)}</span>`,
     })}
     <div class="cn-wrap fv-wrap">${body}</div>

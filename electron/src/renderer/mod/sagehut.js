@@ -70,7 +70,7 @@ function buildSageHutHtml() {
   else body = buildSageHutBarsHtml(d, d.tab === 'dataSize');
   return wrapPageView(`${pageHeadHtml({
       icon: I.sage, title: '<span data-no-i18n>Sage Hut</span>', titleText: 'Sage Hut',
-      after: '<span class="kind-chip" data-no-i18n>Analytics</span>',
+      after: '<span class="chip" data-no-i18n>Analytics</span>',
       sub: `${t('sageHutSubtitle')} ${x(S.nexus.name)}`,
     })}
     <div class="classifier-toolbar">${viewBar}</div>

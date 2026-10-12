@@ -221,9 +221,9 @@ async function openQuickSwitcher(seed = '', { newTab = false } = {}) {
       </div>
       <div class="qs-filters">
         <span class="qs-flabel">${t('qsScope')}:</span>
-        <span class="qs-chip" data-scope="vault">${t('qsScopeVault')}</span>
-        <span class="qs-chip" data-scope="level">${t('qsScopeLevel')}</span>
-        <span class="qs-chip" data-scope="subtree">${t('qsScopeSubtree')}</span>
+        <button type="button" class="chip chip-filter" aria-pressed="false" data-scope="vault">${t('qsScopeVault')}</button>
+        <button type="button" class="chip chip-filter" aria-pressed="false" data-scope="level">${t('qsScopeLevel')}</button>
+        <button type="button" class="chip chip-filter" aria-pressed="false" data-scope="subtree">${t('qsScopeSubtree')}</button>
         <span class="qs-flabel" style="margin-left:auto">${t('qsKind')}:</span>
         <select id="qs-kind">
           <option value="">${t('qsAllKinds')}</option>
@@ -251,8 +251,10 @@ async function openQuickSwitcher(seed = '', { newTab = false } = {}) {
   };
 
   const paintChips = () => {
-    ov.querySelectorAll('.qs-chip').forEach(el =>
-      el.classList.toggle('act', el.dataset.scope === _qsScope));
+    ov.querySelectorAll('.chip-filter[data-scope]').forEach(el => {
+      const on = el.dataset.scope === _qsScope;
+      el.classList.toggle('on', on); el.setAttribute('aria-pressed', String(on));
+    });
   };
 
   const paint = () => {
@@ -365,7 +367,7 @@ async function openQuickSwitcher(seed = '', { newTab = false } = {}) {
 
   document.addEventListener('keydown', onKey, true);
   input.addEventListener('input', update);
-  ov.querySelectorAll('.qs-chip').forEach(el =>
+  ov.querySelectorAll('.chip-filter[data-scope]').forEach(el =>
     el.addEventListener('click', () => { _qsScope = el.dataset.scope; update(); input.focus(); }));
   ov.querySelector('#qs-kind').addEventListener('change', (e) => { _qsKind = e.target.value; update(); input.focus(); });
   list.addEventListener('click', (e) => {

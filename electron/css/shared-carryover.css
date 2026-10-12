@@ -10,7 +10,6 @@
    `.empty .ei` empty-state icon opacity used across most modules. */
 
 /* ── Generic tag chip + empty-state icon (used app-wide) ── */
-.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--rs);font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:600;background:var(--raised);color:var(--t3-aa,var(--t2));font-family:monospace}
 .empty .ei{font-size:calc(40px * var(--fsc,1));opacity:.35}
 .empty .ei .kicon-img-icon{width:48px;height:48px;border-radius:50%;object-fit:cover}
 .empty .ei .icon{width:48px;height:48px;opacity:.45;color:var(--t3-aa,var(--t2));margin-bottom:8px}

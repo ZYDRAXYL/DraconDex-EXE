@@ -97,7 +97,7 @@ function settingDbModuleRowsHtml(list, nexusId, depth = 0){
   return list.map((m) => `
     <div class="li" style="padding-left:${depth * 16}px">
       <span class="name" data-no-i18n>${x(m.name)}</span>
-      <span class="tag" data-no-i18n>${x(kindLabel(m.kind))}</span>
+      <span class="chip" data-no-i18n>${x(kindLabel(m.kind))}</span>
       <button class="btn btn-s btn-sm" onclick="settingDbExportModule(${nexusId},${m.id})">${t('settingDbExportModule')}</button>
       <button class="btn btn-s btn-sm" onclick="settingDbImportModule(${nexusId},${m.id})">${t('settingDbImportModule')}</button>
     </div>

@@ -231,7 +231,7 @@ function paintNarratorPlay() {
     }).join('');
     next = `${pd.prompt ? `<div class="nar-read-line">${x(pd.prompt)}</div>` : ''}${shown || `<p class="drafter-hint">${t('narNoOptionOpen')}</p>`}`;
   } else if (pd?.kind === 'route') {
-    next = pd.outs.map(e => `<button class="btn btn-s nar-play-opt" onclick="followNarratorPlayRoute(${e.to_ref})">→ ${x(e.label || d.dialogues.find(dd => dd.id === e.to_ref)?.name || '')}</button>`).join('');
+    next = pd.outs.map(e => `<button class="btn btn-s nar-play-opt" onclick="followNarratorPlayRoute(${e.to_ref})">${I.arrowRight}${x(e.label || d.dialogues.find(dd => dd.id === e.to_ref)?.name || '')}</button>`).join('');
   } else if (pd?.kind === 'end') {
     next = `<p class="drafter-hint">${t('narPlayEnd')}</p>`;
   }

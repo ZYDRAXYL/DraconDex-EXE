@@ -42,7 +42,7 @@
 /* Related */
 .pb-related{border-top:1px solid var(--border);padding-top:8px}
 .pb-label{font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--t3-aa,var(--t2));padding:4px 0}
-.pb-related .insp-chips{padding:4px 0 8px}
+.pb-related .chip-set{padding:4px 0 8px}
 
 /* Plain blocks */
 .pb-md .mded{min-height:80px}
@@ -176,8 +176,7 @@ body.focus-mode #title-left-zone{width:44px}
 .exd{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);flex:1 1 auto;min-height:0;margin:-4px 0 0}
 .exd-left{padding:0 16px 8px 0;overflow:auto;min-width:0}
 .exd-h{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px;font-weight:600}
-.exd-seg{display:flex;width:max-content;max-width:100%}
-.exd-seg .btn{min-height:28px;padding:4px 12px;font-size:calc(var(--fs-body) * var(--fsc,1))}
+
 .exd-prev{background:var(--bg);border-left:1px solid var(--border);border-radius:0 var(--r) var(--r) 0;padding:12px 14px;display:flex;flex-direction:column;gap:10px;overflow:auto;min-height:0}
 .exd-cap{margin:0;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2))}
 .exd-cap b{color:var(--t1)}
@@ -223,7 +222,7 @@ body.focus-mode #title-left-zone{width:44px}
 /* Procress 16 part 3b: a row's preset drawn as its columns */
 .pb-colpic{display:inline-flex;gap:2px;width:44px;height:14px}
 .pb-colpic i{display:block;border-radius:2px;background:currentColor;opacity:.55}
-.pb-seg .btn.on .pb-colpic i{opacity:1}
+.seg .on .pb-colpic i{opacity:1}
 /* a narrow page (a phone, a split pane): a row's columns stack in order */
 .page-blocks{container-type:inline-size}
 .pb-cols{grid-template-columns:var(--w-pc)}

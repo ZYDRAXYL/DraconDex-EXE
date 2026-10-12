@@ -19,19 +19,9 @@
 .prop .acts{margin-left:auto}
 .insp-attr:hover .acts{display:flex}
 .insp-attr .acts{display:none;gap:2px}
-.insp-chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 14px 10px;align-items:center}
-.htag{font-size:calc(var(--fs-meta) * var(--fsc,1));border:1px solid var(--border);border-radius:var(--rl);padding:1px 8px;display:inline-flex;align-items:center;min-height:24px;color:var(--t2);background:transparent;cursor:default}
-.htag.lk{border-color:var(--accent);color:var(--accentH);cursor:pointer}
-.htag.lk:hover{background:var(--hover)}
 
 /* Icon Collection picker (progress.md Phase 5) */
-.ipk-tabs{display:flex;gap:6px;margin-bottom:10px}
-.ipk-tab{padding:5px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--raised);
-	color:var(--t2);font-size:calc(12px * var(--fsc,1));font-family:inherit;cursor:pointer}
-.ipk-tab:hover{background:var(--hover);color:var(--t1)}
-.ipk-tab.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.ipk-tab-disabled{opacity:.4;cursor:default}
-.ipk-tab-disabled:hover{background:var(--raised);color:var(--t2)}
+.ipk-tabs{margin-bottom:10px}
 .ipk-symbol{font-size:calc(17px * var(--fsc,1))}
 .ipk-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:10px}
 .ipk-cell{width:36px;height:36px;border:1px solid var(--border);border-radius:var(--rs);background:var(--raised);
@@ -174,7 +164,6 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .nest-sig-row{cursor:default;padding-top:9px}
 .nest-sig-row:hover{background:none}
 .nest-sig-label{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));margin-bottom:5px}
-.nest-sig-row .name-mode-seg{gap:4px}
 /* nowrap + a popup floor: the longest label ("Type name") wraps to two lines in
    several locales otherwise, which leaves the three buttons different heights */
 .nest-sig-row .name-mode-seg .btn{padding:4px 6px;font-size:calc(var(--fs-meta) * var(--fsc,1));white-space:nowrap}
@@ -182,16 +171,11 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 
 /* Classifier views (progress.md Phase 5) */
 .classifier-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
-.viewbar{display:inline-flex;align-items:center;gap:0;margin-left:auto;border:1px solid var(--border);
-	border-radius:var(--rs);overflow:hidden;background:var(--surface)}
-.viewbar .vlbl{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));padding:0 8px}
-/* Procress 17 U2: 14 px, ≥ 28 px tall, text at t1 (≥ 4.5:1) */
-.viewbar .vitem{font-size:calc(14px * var(--fsc,1));color:var(--t1);min-height:28px;padding:3px 12px;border:0;border-left:1px solid var(--border);border-radius:0;background:none;cursor:pointer}
-.viewbar .vitem:first-child{border-left:0}
-.viewbar .vgear{display:none;padding:3px 8px}
-.pblock .viewbar .vgear{display:inline-flex}
-.viewbar .vitem:hover{background:var(--hover);color:var(--t1)}
-.viewbar .vitem.act{background:var(--accent);color:var(--on-accent);font-weight:600}
+.viewbar{margin-left:auto} /* the view bar is a segmented control (.seg, css/controls.css) + ⚙ */
+.viewbar .vlbl{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t1);padding:0 8px;align-self:center}
+.seg.viewbar > .vitem{min-height:var(--ctl-md)}
+.seg.viewbar > .vgear{display:none;padding:0 8px}
+.pblock .seg.viewbar > .vgear{display:inline-flex}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;flex-shrink:0;vertical-align:middle}
 .cls-table-wrap{overflow-x:auto}
 .cls-table{width:100%;border-collapse:collapse;font-size:calc(var(--fs-body) * var(--fsc,1))}

@@ -56,7 +56,7 @@ function cloudCapsHtml(p) {
   const caps = [];
   if (p.capabilities?.backup) caps.push(t('cloudRoleBackup'));
   if (p.capabilities?.sync) caps.push(t('cloudRoleSync'));
-  return caps.map((c) => `<span class="sync-tag-chip">${c}</span>`).join('');
+  return caps.map((c) => `<span class="chip chip-status" data-status="info">${c}</span>`).join('');
 }
 
 function cloudProviderRowHtml(p, isActive, status) {

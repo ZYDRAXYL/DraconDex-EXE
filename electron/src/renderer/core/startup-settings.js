@@ -17,10 +17,8 @@ function settingStartupPageHtml(){
   }
   const mode = S.startupModeCache;
   return `<div class="settings-label">${t('settingPageStartup')}</div>
-    <div class="name-mode-seg">
-      <button class="btn ${mode !== 'latest' ? 'btn-p' : 'btn-s'}" onclick="setStartupMode('welcome')">${t('settingStartupWelcome')}</button>
-      <button class="btn ${mode === 'latest' ? 'btn-p' : 'btn-s'}" onclick="setStartupMode('latest')">${t('settingStartupLatest')}</button>
-    </div>
+    ${segmentedHtml([{ value: 'welcome', text: t('settingStartupWelcome') }, { value: 'latest', text: t('settingStartupLatest') }],
+      mode === 'latest' ? 'latest' : 'welcome', { fill: true, aria: t('settingPageStartup'), onclick: (v) => `setStartupMode('${v}')` })}
     <div class="settings-hint">${t('settingStartupHint')}</div>`;
 }
 async function setStartupMode(mode){

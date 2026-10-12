@@ -346,7 +346,7 @@ console.log('=== command registry (core/commands.js) ===');
 const LEGACY_ROW_CLASSES = new Set([
   'addr-row', 'art-row', 'bundle-adj-row', 'chr-cal-row', 'chr-insp-row', 'chs-row', 'chs-tr-row',
   'crecent-row', 'ctm-row', 'div-hist-row', 'ex-row', 'exh-pal-row', 'fp-rule-row',
-  'htag-item', 'htag-row', 'hx-row', 'ipk-color-row', 'ipk-preview-row', 'kind-artisan-row',
+  'htag-item', 'hx-row', 'ipk-color-row', 'ipk-preview-row', 'kind-artisan-row',
   'kind-list-item', 'layout-menu-item', 'mded-ac-item', 'mgr-pick-row',
   'module-rail-item', 'nar-logic-row', 'nar-row', 'navbar-row', 'nest-asset-row',
   'nest-item-row', 'nest-opt-row', 'nest-sig-row', 'palette-item',
@@ -361,6 +361,32 @@ const LEGACY_ROW_CLASSES = new Set([
 const LEGACY_ROW_PX = new Set(['.plugin-preview-row', '.div-hist-row']);
 const ROW_CLASS = /^[a-z][\w-]*-(row|item)$/;
 const rowClassesSeen = new Set();
+
+// ═══ Procress 22: a popup goes through openPopover / openModal ═══
+// APP docs/COMPONENTS.md. A floating layer built by hand (position:fixed, or
+// appended straight to <body>) is a popup with its own placement, its own
+// Escape and its own z-index — the 4 positioners and 24 z-index values that
+// Procress 22 folded into core/popover.js. The files and classes below did it
+// before the shared popover (2026-10-11) and are not all migrated; the lists
+// only shrink (a note names every entry the checker no longer finds).
+const LEGACY_HAND_POPUP_FILES = new Set([
+  'core/popover.js', 'core/ui.js', // the shared popover and modal themselves
+  'core/titlebar-tabs.js', 'core/views.js', 'core/wiki-field.js', 'guide.js', 'mod/author.js',
+  'page/components/decor.js', 'page/components/media.js', 'page/iconpick.js', 'page/links.js',
+  'page/style-pop.js', 'quickswitch.js', 'transfer.js',
+]);
+const LEGACY_FIXED_CLASSES = new Set([
+  'popover', 'modal-overlay', 'confirm-overlay', 'toast', 'skip-link', 'splash', // the shared layers
+  'addr-sugg', 'au-book-measure', 'bpane-head', 'floating-panel', 'guide-overlay', 'guide-pop', 'guide-spotlight',
+  'hx-host', 'pb-hover', 'pb-lightbox', 'pb-pop', 'pblock', 'preview-ring', 'qs-overlay', 'wiki-field-ac',
+]);
+const HAND_POPUP = /position\s*:\s*fixed|\.position\s*=\s*['"]fixed|document\.body\.(?:appendChild|append)\(/;
+const handPopupSeen = new Set();
+// …and a character or emoji as the icon of a NEW button (COMPONENTS.md §1:
+// icons are SVG in I.*). `→` inside a sentence is text, not an icon — this only
+// looks inside <button>…</button>. No file is grandfathered: the last two went
+// in Procress 22.
+const CHAR_ICON = /[\u2190-\u21FF\u2300-\u23FF\u25A0-\u27BF\u2B00-\u2BFF\u{1F300}-\u{1FAFF}]/u;
 
 // ═══ Per-file lint ═══
 // Recursive: renderer code lives in src/renderer/{,mod/,core/,hub/,navigator/,
@@ -427,7 +453,8 @@ for (const file of targets) {
   // buttons without .btn class
   const badBtn = [];
   for (const m of src.matchAll(/<button[^>]*/g)) {
-    if (!/class="[^"]*\bbtn\b/.test(stripInterp(m[0])) && !/class=\$\{|class="\$\{/.test(m[0])) badBtn.push(`L${lineOf(m.index)}`);
+    // Procress 22: the shared controls (core/controls.js) are buttons of their own
+    if (!/class="[^"]*\b(btn|chip-filter|chip-x|seg-opt|card-link)\b/.test(stripInterp(m[0])) && !/class=\$\{|class="\$\{/.test(m[0])) badBtn.push(`L${lineOf(m.index)}`);
   }
   if (badBtn.length) warn(`${badBtn.length} <button> without .btn class (${badBtn.slice(0, 5).join(' ')}) — use btn btn-p/btn-s/btn-g/btn-d (+btn-i for icon)`);
 
@@ -455,6 +482,16 @@ for (const file of targets) {
     }
   }
   if (newRows.size) warn(`new list-row class(es) without .ls-row: ${[...newRows].join(', ')} — build the row with listRowHtml() (core/list.js, UX-LAYOUT §12)`);
+
+  // Procress 22: a hand-built floating layer, and a character as a button's icon
+  const relR = file.slice(app('src/renderer/').length);
+  if (HAND_POPUP.test(src)) {
+    handPopupSeen.add(relR);
+    if (!LEGACY_HAND_POPUP_FILES.has(relR)) warn(`builds a floating layer by hand (position:fixed / appended to <body>) — open it with openPopover() (core/popover.js) or openModal() (APP docs/COMPONENTS.md)`);
+  }
+  const charBtn = [];
+  for (const m of src.matchAll(/<button\b[^>]*>([^<]*(?:<(?!\/button)[^<]*)*)<\/button>/g)) if (CHAR_ICON.test(m[1])) charBtn.push(`L${lineOf(m.index)}`);
+  if (charBtn.length) warn(`${charBtn.length} button(s) with a character/emoji icon (${charBtn.slice(0, 5).join(' ')}) — use an SVG from I.* (core/state.js; COMPONENTS.md §1)`);
 }
 
 // ═══ Wiring checks for --module <name> ═══
@@ -505,6 +542,26 @@ if (!files.length) {
   const cssSels = new Set(cssSrc.replace(/\/\*[\s\S]*?\*\//g, '').split(/[{}]/).flatMap((p) => p.split(',').map((q) => q.trim())));
   const stalePx = [...LEGACY_ROW_PX].filter((sel) => !cssSels.has(sel));
   if (stale.length || stalePx.length) console.log(`  note    migrated or gone — drop from LEGACY_ROW_CLASSES / LEGACY_ROW_PX: ${[...stale, ...stalePx].join(', ')}`);
+}
+
+// ═══ Procress 22: fixed layers in css/ ═══
+if (!files.length) {
+  console.log('=== floating layers (core/popover.js, COMPONENTS.md) ===');
+  const fixed = new Set();
+  for (const [, sel, body] of cssSrc.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!/position\s*:\s*fixed/.test(body)) continue;
+    for (const part of sel.split(',').map((p) => p.trim())) {
+      const names = [...part.matchAll(/[.#]([\w-]+)/g)].map((x) => x[1]);
+      const own = /\s/.test(part) || part.startsWith('body') ? names[names.length - 1] : names[0];
+      if (own) fixed.add(own);
+    }
+  }
+  const newFixed = [...fixed].filter((c) => !LEGACY_FIXED_CLASSES.has(c));
+  if (newFixed.length) warn(`new position:fixed layer(s) in css/: ${newFixed.join(', ')} — a popup is a .popover from openPopover(); a dialog is openModal()`);
+  else ok(`${fixed.size} fixed layers, all of them the shared ones or grandfathered`);
+  const staleP = [...LEGACY_HAND_POPUP_FILES].filter((f) => !handPopupSeen.has(f));
+  const staleF = [...LEGACY_FIXED_CLASSES].filter((c) => !fixed.has(c));
+  if (staleP.length || staleF.length) console.log(`  note    migrated or gone — drop from LEGACY_HAND_POPUP_FILES / LEGACY_FIXED_CLASSES: ${[...staleP, ...staleF].join(', ')}`);
 }
 
 console.log(`\n${errors} error(s), ${warnings} warning(s)`);

@@ -246,7 +246,7 @@ function buildItemPageHtml(node) {
   const paged = node.itemKey && pageOf(node.moduleId, node.itemKey);
   return `${pageHeadHtml({
       color: col, title: `<span data-no-i18n>${x(name)}</span>`, titleText: name,
-      after: `<span class="kind-chip" data-no-i18n>${x(t(reg.badgeKey))}</span>`,
+      after: `<span class="chip" data-no-i18n>${x(t(reg.badgeKey))}</span>`,
       sub: `<span data-no-i18n>${x(node.m?.name || '')}</span>`,
       acts: paged ? pageHeadActsHtml(node.moduleId, node.itemKey) : '',
       addr: { moduleId: node.moduleId, itemName: name },

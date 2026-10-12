@@ -48,7 +48,7 @@ function buildFolderPageHtml() {
   return wrapPageView(`${pageHeadHtml({
       addr: { moduleId: m.id }, title: x(m.name), titleText: m.name, icon: moduleIconHtml(m),
       color: m.icon_color_code || m.color_code || KIND_COLOR.collector,
-      after: `<span class="kind-chip">${x(kindLabel('collector'))}</span>`, acts,
+      after: `<span class="chip">${x(kindLabel('collector'))}</span>`, acts,
     })}${body}`);
 }
 

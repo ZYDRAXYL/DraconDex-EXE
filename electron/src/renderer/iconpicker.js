@@ -41,11 +41,11 @@ async function iconPicker(selIcon, selColorId, previewName, previewKind) {
         ${previewKind ? `<span class="kind">${x(previewKind)}</span>` : ''}
       </div>
     </div>
-    <div class="ipk-tabs">
-      <div class="ipk-tab active" data-ipktab="icons" onclick="switchIconPickerTab('icons')">${t('iconTabIcons')}</div>
-      <div class="ipk-tab" data-ipktab="emoji" onclick="switchIconPickerTab('emoji')">${t('iconTabEmoji')}</div>
-      <div class="ipk-tab" data-ipktab="symbols" onclick="switchIconPickerTab('symbols')">${t('iconTabSymbols')}</div>
-      <div class="ipk-tab" data-ipktab="uploaded" onclick="switchIconPickerTab('uploaded')">${t('iconTabUploaded')}</div>
+    <div class="seg seg-sm seg-fill ipk-tabs" role="tablist">
+      <button type="button" class="seg-opt on" role="tab" aria-selected="true" data-ipktab="icons" onclick="switchIconPickerTab('icons')">${t('iconTabIcons')}</button>
+      <button type="button" class="seg-opt" role="tab" aria-selected="false" data-ipktab="emoji" onclick="switchIconPickerTab('emoji')">${t('iconTabEmoji')}</button>
+      <button type="button" class="seg-opt" role="tab" aria-selected="false" data-ipktab="symbols" onclick="switchIconPickerTab('symbols')">${t('iconTabSymbols')}</button>
+      <button type="button" class="seg-opt" role="tab" aria-selected="false" data-ipktab="uploaded" onclick="switchIconPickerTab('uploaded')">${t('iconTabUploaded')}</button>
     </div>
     <div id="ipk-icon-pane">
       <input type="search" class="ipk-search" placeholder="${x(t('iconSearchPh'))}" aria-label="${x(t('iconSearchPh'))}" oninput="filterIconPicker(this.value)">
@@ -76,7 +76,7 @@ async function iconPicker(selIcon, selColorId, previewName, previewKind) {
 }
 
 function switchIconPickerTab(tabName) {
-  document.querySelectorAll('.ipk-tab[data-ipktab]').forEach(b => b.classList.toggle('active', b.dataset.ipktab === tabName));
+  document.querySelectorAll('.ipk-tabs [data-ipktab]').forEach(b => { const on = b.dataset.ipktab === tabName; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
   const q1 = q('#ipk-icon-pane'), q2 = q('#ipk-symbol-grid'), q3 = q('#ipk-upload-pane'), q4 = q('#ipk-emoji-grid');
   if (q1) q1.style.display = tabName === 'icons' ? '' : 'none';
   if (q4) q4.style.display = tabName === 'emoji' ? '' : 'none';

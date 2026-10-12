@@ -225,10 +225,8 @@ function buildNestOptionsPopupHtml() {
   const s = S.settings;
   const row = (onclick, on, labelKey) =>
     `<div class="togglerow nest-opt-row" onclick="${onclick}"><span class="tg${on ? ' on' : ''}"></span>${t(labelKey)}</div>`;
-  // Same .name-mode-seg control the Preferences panel uses (nameModeSegHtml,
-  // core/settings.js) — btn-p marks the active option, btn-s the rest.
-  const sig = (mode, labelKey) =>
-    `<button class="btn ${s.nestSignatureMode === mode ? 'btn-p' : 'btn-s'}" onclick="setNestSignatureMode('${mode}')">${t(labelKey)}</button>`;
+  // The shared segmented control (core/controls.js), as in Preferences.
+  const sig = [['name', 'nestSigName'], ['icon', 'nestSigIcon'], ['handle', 'nestSigHandle']].map(([value, k]) => ({ value, text: t(k) }));
   return [
     row("toggleNestOption('nestShowItems')", s.nestShowItems !== false, 'nestOptShowItems'),
     row("toggleNestOption('nestShowMajorIcon')", s.nestShowMajorIcon !== false, 'nestOptShowMajorIcon'),
@@ -239,7 +237,7 @@ function buildNestOptionsPopupHtml() {
     // 3-way, so a segmented row rather than a 4th toggle switch — the other
     // three rows above are genuine booleans and stay as they are.
     `<div class="nest-opt-row nest-sig-row"><div class="nest-sig-label">${t('nestOptSignature')}</div>
-      <div class="name-mode-seg">${sig('name', 'nestSigName')}${sig('icon', 'nestSigIcon')}${sig('handle', 'nestSigHandle')}</div></div>`,
+      ${segmentedHtml(sig, s.nestSignatureMode, { size: 'sm', fill: true, aria: t('nestOptSignature'), onclick: (v) => `setNestSignatureMode('${v}')` })}</div>`,
   ].join('');
 }
 

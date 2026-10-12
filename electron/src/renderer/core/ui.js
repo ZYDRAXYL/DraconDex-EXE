@@ -92,12 +92,9 @@ function setBusy(el, on = true) {
 // tokens; 'lg' is the two-pane dialog (the Artisan gallery, Export…, Use
 // template…) and 'xl' is its old name. Reset on every open, so a normal
 // modal after a wide one is normal again.
-// opts.hint: one sentence of help, drawn as the .modal-hint callout on top.
-// opts.footer: the foot's buttons as HTML — or end the body with
-// <div class="mfoot">…</div>, which is moved into the foot (73 callers do).
-// opts.focus: a selector to focus instead of the first field — a checkbox at
-// the bottom of a scrolling pane would otherwise pull the pane down past its
-// heading.
+// opts.hint: one sentence, the .modal-hint callout on top · opts.footer: the
+// foot's buttons (or end the body with a .mfoot, moved into the foot) ·
+// opts.focus: a selector to focus instead of the first field.
 const MODAL_SIZES = { sm: 'sm', md: 'md', lg: 'lg', xl: 'lg' };
 function modalHintHtml(text) { return `<div class="modal-hint">${I.info || ''}<span>${x(tr(text))}</span></div>`; }
 function openModal(title,body,opts={}) {

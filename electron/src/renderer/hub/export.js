@@ -134,7 +134,7 @@ function exportScopeHtml(fmt) {
   if (fmt === 'pdf') { key = 'scope'; opts = [['page', t('exportScopePage')]]; if (!_ex.itemKey) opts.push(['module', t('exportScopeModule')]); }
   if (fmt === 'md') { key = 'mdScope'; opts = [['module', t('exportScopeInside')], ['nexus', t('exportScopeNexus')]]; }
   if (!key || opts.length < 2) return '';
-  return `<h6 class="exd-h">${t('exportScope')}</h6><div class="pb-seg exd-seg" role="radiogroup" aria-label="${t('exportScope')}">${opts.map(([v, label]) =>
+  return `<h6 class="exd-h">${t('exportScope')}</h6><div class="seg" role="radiogroup" aria-label="${t('exportScope')}">${opts.map(([v, label]) =>
     `<button class="btn${p[key] === v ? ' on' : ''}" role="radio" aria-checked="${p[key] === v}" onclick="exportSet('${key}','${v}')">${label}</button>`).join('')}</div>`;
 }
 

@@ -7,7 +7,7 @@ async function renderHashtagView(){
     h+=`<div class="htags-grid">`;
     for(const t of tags){
       const col=t.color_code||'#6366f1';
-      h+=`<div class="htag-item" id="tag-item-${t.id}" style="--tc:${col}"><span class="hn">#${x(t.tag_name)}</span><button class="btn btn-g btn-i" onclick="openHashtagModal(${t.id})" style="opacity:.6;color:var(--tc)">✏️</button></div>`;
+      h+=`<div class="htag-item" id="tag-item-${t.id}" style="--tc:${col}"><span class="hn">#${x(t.tag_name)}</span><button class="btn btn-g btn-i" onclick="openHashtagModal(${t.id})" title="${window.t('edit')}" aria-label="${window.t('edit')}">${I.edit}</button></div>`;
     }
     h+=`</div>`;
   }

@@ -125,7 +125,7 @@ function syncUploadRowHtml(u, st) {
   return `
     <div class="sync-upload-row${isThis ? ' sync-upload-row-mine' : ''}">
       <div>
-        <b>${x(u.name)}</b>${isThis ? `<span class="sync-tag-chip">${t('syncThisNexus')}</span>` : ''}${u.hasPassword ? ` <span class="inline-ico">${I.lock}</span>` : ''}
+        <b>${x(u.name)}</b>${isThis ? `<span class="chip chip-status" data-status="info">${t('syncThisNexus')}</span>` : ''}${u.hasPassword ? ` <span class="inline-ico">${I.lock}</span>` : ''}
         <div class="sync-hint">${syncFmtSize(u.sizeBytes)} · ${t('syncExpires')} ${syncFmtTime(u.expiresAt)}</div>
       </div>
       <div class="sync-upload-actions">

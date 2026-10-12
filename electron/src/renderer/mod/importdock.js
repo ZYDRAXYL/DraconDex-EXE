@@ -290,7 +290,7 @@ async function deleteImportFileRow(id) {
 // Nest leaves.
 function buildModuleAssetsStripHtml(m) {
   const list = nestAssetsOf(m.id);
-  const chips = list.map(f => `<span class="htag${f.missing ? ' asset-missing' : ''}" data-no-i18n draggable="true"
+  const chips = list.map(f => `<span class="chip chip-link${f.missing ? ' asset-missing' : ''}" role="link" tabindex="0" data-no-i18n draggable="true"
       ondragstart="onAssetDragStart(event,${f.id})" ondragend="S.dragAsset=null"
       onclick="openImportFile(${f.id})" oncontextmenu="openImportFileContextMenu(event,${f.id})">${assetGlyph(f)} ${x(f.file_name)}</span>`).join('');
   return `<div class="module-assets">

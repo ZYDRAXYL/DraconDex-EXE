@@ -70,7 +70,7 @@ function pbPopRender() {
   el.setAttribute('aria-label', `${t('pbBlockSettings')} — ${pbBlockName(b)}`);
   el.innerHTML = `<div class="pb-pop-top"><b data-no-i18n>${x(pbBlockName(b))}</b>
       <button class="btn btn-g btn-i" onclick="closePbStyle()" title="${t('close')}" aria-label="${t('close')}">${I.close}</button></div>
-    <div class="pb-seg pb-tabs2" role="tablist">${tabBtn('style', 'pbStyle')}${tabBtn('opts', 'pbOptions')}</div>
+    <div class="seg seg-sm seg-fill pb-tabs2" role="tablist">${tabBtn('style', 'pbStyle')}${tabBtn('opts', 'pbOptions')}</div>
     <div data-r="pop-body">${tab === 'style' ? pbPopStyleHtml(iid, b) : pbPopOptsHtml(iid, b)}</div>
     <div class="pb-pop-foot">
       <button class="btn btn-s btn-sm" onclick="pbStyleReset(${xj(iid)})">${t('pbStyleReset')}</button>
@@ -84,7 +84,7 @@ function pbPopRender() {
 
 // A row of choices, one of them on.
 function pbSegHtml(iid, key, vals, cur, labelOf, onSet = 'pbStyleSet') {
-  return `<div class="pb-seg" role="radiogroup">${vals.map((v) => {
+  return `<div class="seg seg-sm seg-wrap" role="radiogroup">${vals.map((v) => {
     const on = v === cur;
     const text = labelOf(v);
     const pv = onSet === 'pbStyleSet' || onSet === 'pbColsSet' ? ` data-pv="${onSet}" data-pv-iid="${x(iid)}" data-pv-key="${x(key)}" data-pv-val="${x(String(v))}"` : '';

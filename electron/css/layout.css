@@ -98,8 +98,6 @@ body.resize-drag-active{user-select:none}
 	text-transform:uppercase;letter-spacing:.05em;
 }
 .li-head .icon{width:13px;height:13px}
-/* Hovering the char-symbol button shouldn't also highlight the whole row */
-.li:has(> div > .char-sym-btn:hover){background:transparent;color:var(--t2)}
 /* Content-item "minor module" leaves in the Nest tree (Plan part4) — a
    plain, non-draggable .li row (no grip/chevron/context-menu, see
    buildNestItemRow) one level under their owning module. */
@@ -115,22 +113,6 @@ body.resize-drag-active{user-select:none}
 .item-roll{flex:1;font-weight:600}
 .item-sketch{display:block;max-width:min(100%,640px);border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
 
-/* World character's linked-object chips: clamped to one row by default so a
-   long link list doesn't blow up the card's height; an expand button (shown
-   only when it actually overflows, see refreshCharLinkOverflow) reveals the
-   rest as additional wrapped rows. */
-.char-link-wrap{position:relative;width:100%}
-.char-link-row{display:flex;flex-wrap:wrap;gap:6px;width:100%;max-height:28px;overflow:hidden;padding-right:26px}
-.char-link-row.char-link-expanded{max-height:none}
-.char-link-chip{display:flex;align-items:center;gap:4px;flex-shrink:0;white-space:nowrap;
-  font-size:.8em;color:var(--t3-aa,var(--t2));background:var(--raised);border:1px solid var(--border);
-  border-radius:var(--rs);padding:2px 4px 2px 8px}
-.char-link-chip .btn-i{padding:1px 5px;font-size:calc(var(--fs-meta) * var(--fsc,1))}
-.char-link-expand{display:none;position:absolute;top:0;right:0;width:22px;height:22px;
-  align-items:center;justify-content:center;background:var(--raised);border:1px solid var(--border);
-  border-radius:var(--rs);color:var(--t3-aa,var(--t2));font-size:calc(var(--fs-meta) * var(--fsc,1));cursor:pointer;line-height:1}
-.char-link-expand:hover{color:var(--t1)}
-.char-link-expand.show{display:flex}
 
 /* FOLDER */
 .folder-sec{margin-bottom:2px}
@@ -212,34 +194,6 @@ body.resize-drag-active{user-select:none}
 	display:flex;
 	flex-direction:column;
 	gap:6px;
-}
-.project-detail-item{
-	display:flex;
-	flex-direction:column;
-	gap:4px;
-	padding:8px 10px;
-	border:1px solid var(--border);
-	border-radius:var(--r);
-	background:var(--bg);
-	cursor:pointer;
-}
-.project-detail-item:hover{background:var(--hover)}
-.project-detail-item .dk{
-	min-width:0;
-	padding:0;
-	font-size:calc(var(--fs-meta) * var(--fsc,1));
-}
-.project-detail-item .dv{
-	font-size:calc(var(--fs-body) * var(--fsc,1));
-	color:var(--t2);
-	display:-webkit-box;
-	-webkit-line-clamp:3;
-	-webkit-box-orient:vertical;
-	overflow:hidden;
-}
-.project-side-empty{
-	padding:14px 10px;
-	min-height:0;
 }
 
 /* DIVIDER */

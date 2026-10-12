@@ -62,7 +62,7 @@ function driveBackupLogRowHtml(entry) {
   const ok = entry.ok !== false;
   const parts = [entry.layout ? t('driveIncludeLayout') : '', entry.ddx ? t('driveIncludeDdx') : ''].filter(Boolean).join(', ');
   return `<div class="li"><span class="name">${driveFmtTime(entry.at)}</span>
-    <span class="tag" data-no-i18n>${ok ? (parts || '—') : `${I.alert}${x(entry.code || '')}`}</span></div>`;
+    <span class="chip" data-no-i18n>${ok ? (parts || '—') : `${I.alert}${x(entry.code || '')}`}</span></div>`;
 }
 function driveBackupLogHtml(log) {
   if (!log || !log.length) return '';

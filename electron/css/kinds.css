@@ -8,11 +8,7 @@
 #nav-sidebar .nav-btn.create{background:var(--accent);color:var(--on-accent);border-radius:var(--r)}
 #nav-sidebar .nav-btn.create:hover{background:var(--accentH)}
 /* module header chips row (tags + link count) */
-.module-head .kind-chip{
-	display:inline-block;font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:500;color:var(--t2);
-	border:1px solid var(--border);border-radius:var(--rl);padding:1px 9px;
-	vertical-align:2px;margin-left:6px;
-}
+.module-head .chip{vertical-align:2px;margin-left:6px}
 /* ── Chronicler: one-line event rows, side-by-side dates, graph icons ── */
 .chr-daterow{display:flex;gap:14px;flex-wrap:wrap}
 /* 300px is the width a full 5-box date row actually needs (52+52+70+52+52 plus
@@ -280,7 +276,6 @@
 
 /* Analys "Viewer" / Relation "Connector" (Phase 14, mockups 14/32/33/15) */
 .vw-filterlabel{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2))}
-.vw-chip{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);border:1px solid var(--accent);border-radius:var(--rl);padding:2px 9px}
 .vw-chip-or{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));font-weight:700}
 
 /* Obsidian-style filter popup (Plan part6 #1-2) — reuses .popover's base
@@ -486,7 +481,7 @@ select.fp-input[multiple]{padding:2px}
 .asset-missing .name{text-decoration:line-through dotted}
 .module-assets{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 4px;font-size:calc(var(--fs-meta) * var(--fsc,1))}
 .module-assets .pk{color:var(--t3-aa,var(--t2))}
-.module-assets .htag{cursor:pointer}
+.module-assets .chip{cursor:pointer}
 .fv-media{display:flex;justify-content:center;padding:18px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
 .fv-media video{max-width:100%;max-height:520px}
 .fv-media audio{width:100%;max-width:560px}
@@ -538,8 +533,8 @@ select.fp-input[multiple]{padding:2px}
 .ph-pop-h{font-weight:600;margin-bottom:6px}
 .ph-pop-label{font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));margin:10px 0 4px}
 .ph-pop-hint{font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));margin-top:8px}
-.ph-seg{display:flex;gap:4px}
-.ph-seg .btn{flex:1;justify-content:center}
+.ph-acts{display:flex;gap:4px}
+.ph-acts .btn{flex:1;justify-content:center}
 .ph-pop .fg{margin:0}
 .ph-icon-inp{font-size:calc(16px * var(--fsc,1))}
 .ph-covers{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:180px;overflow-y:auto}
@@ -633,3 +628,5 @@ select.fp-input[multiple]{padding:2px}
 .au-card-pov{display:inline-flex;align-items:center;gap:3px;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);overflow:hidden}
 .au-card-pov .icon{width:12px;height:12px}
 .au-card-add{align-items:center;justify-content:center;color:var(--t3-aa,var(--t2));cursor:pointer;border-style:dashed}
+/* a table cell that opens what it names (Sage hut) */
+td.lk{cursor:pointer}

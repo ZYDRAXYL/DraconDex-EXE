@@ -21,7 +21,7 @@ function setPageFrame(f) {
 function pbFrameSwitchHtml() {
   const cur = typeof S.pageFrame === 'number' ? null : (S.pageFrame || 'pc');
   const one = (f) => `<button class="btn${cur === f ? ' on' : ''}" aria-pressed="${cur === f}" onclick="setPageFrame('${f}')" title="${PB_FRAMES[f]} px">${t(PB_FRAME_KEY[f])}</button>`;
-  return `<span class="pb-seg pb-frames" role="group" aria-label="${x(t('pbPageSize'))}">${Object.keys(PB_FRAMES).map(one).join('')}
+  return `<span class="seg seg-sm pb-frames" role="group" aria-label="${x(t('pbPageSize'))}">${Object.keys(PB_FRAMES).map(one).join('')}
     <input type="number" class="pb-frame-px" min="320" max="2560" step="10" value="${cur ? '' : S.pageFrame}" placeholder="px"
       title="${x(t('pbFrameCustom'))}" aria-label="${x(t('pbFrameCustom'))}" onchange="setPageFrame(Number(this.value) || 'pc')"></span>`;
 }

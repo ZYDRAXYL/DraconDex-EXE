@@ -197,8 +197,8 @@ function buildChroniclerCalendarHtml(evs, data) {
     </div>`;
   }).join('');
 
-  const viewBar = `<div class="viewbar">${chroniclerCalViewUnits().map(u =>
-    `<span class="vitem${u.key === zoom ? ' act' : ''}" onclick="setChroniclerCalZoom('${x(u.key)}')" ${chroniclerCalIsBuiltinUnit(u.key) ? '' : 'data-no-i18n'}>${x(chroniclerCalUnitLabel(u.key))}</span>`).join('')}</div>`;
+  const viewBar = `<div class="seg viewbar">${chroniclerCalViewUnits().map(u =>
+    `<button type="button" class="seg-opt vitem${u.key === zoom ? ' act' : ''}" aria-pressed="${u.key === zoom}" onclick="setChroniclerCalZoom('${x(u.key)}')" ${chroniclerCalIsBuiltinUnit(u.key) ? '' : 'data-no-i18n'}>${x(chroniclerCalUnitLabel(u.key))}</button>`).join('')}</div>`;
 
   // The panel deliberately covers the bar rather than pushing it down — the
   // Plan asks for exactly that: the custom div may cover the view bar.
@@ -251,7 +251,7 @@ function buildChroniclerCalPanelHtml(spec, data) {
   const unitKey = units.some(u => u.key === data.calPanelUnit) ? data.calPanelUnit : units[0].key;
   const unit = units.find(u => u.key === unitKey);
   const pages = units.map(u =>
-    `<span class="vitem${u.key === unitKey ? ' act' : ''}" onclick="setChroniclerCalPanelUnit('${x(u.key)}')" ${chroniclerCalIsBuiltinUnit(u.key) ? '' : 'data-no-i18n'}>${x(chroniclerCalUnitLabel(u.key))}</span>`).join('');
+    `<button type="button" class="seg-opt vitem${u.key === unitKey ? ' act' : ''}" aria-pressed="${u.key === unitKey}" onclick="setChroniclerCalPanelUnit('${x(u.key)}')" ${chroniclerCalIsBuiltinUnit(u.key) ? '' : 'data-no-i18n'}>${x(chroniclerCalUnitLabel(u.key))}</button>`).join('');
 
   return `<div class="chr-cal-panel">
     <div class="chr-cal-panel-bar">

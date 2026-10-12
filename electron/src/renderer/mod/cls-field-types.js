@@ -97,7 +97,7 @@ function clsFieldValueHtml(o, c) {
     case 'relation': {
       const rels = clsFieldRels(o.id, c.id);
       return `<span class="pv cls-rel">
-        ${rels.map(r => `<span class="htag cls-rel-chip"><span onclick="openEntityByKey('${x(r.to_key)}')" data-no-i18n>${x(clsKeyName(r.to_key))}</span>
+        ${rels.map(r => `<span class="chip cls-rel-chip"><span onclick="openEntityByKey('${x(r.to_key)}')" data-no-i18n>${x(clsKeyName(r.to_key))}</span>
           <button class="btn cls-rel-x" onclick="removeClsRelation(${r.id})" title="${x(t('delete'))}" aria-label="${x(t('delete'))}">×</button></span>`).join('')}
         <button class="btn btn-g btn-i" onclick="openClsRelationPicker(${o.module_ref ?? S.activeModuleNode?.id ?? 'null'},${o.id},${c.id})" title="${x(t('clsRelationAdd'))}">${I.plus}</button>
       </span>`;

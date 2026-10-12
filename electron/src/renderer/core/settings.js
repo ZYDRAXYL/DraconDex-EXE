@@ -213,10 +213,8 @@ function getBuiltinThemePalettes(){
 // Shared by the quick settings dropdown and the Preferences panel (Plan
 // part3) so both surfaces render the identical control from one source.
 function nameModeSegHtml(){
-  return `<div class="name-mode-seg">
-    <button class="btn ${S.settings.nameMode !== 'classic' ? 'btn-p' : 'btn-s'}" onclick="setUiSetting('nameMode','unique')" data-no-i18n>Unique</button>
-    <button class="btn ${S.settings.nameMode === 'classic' ? 'btn-p' : 'btn-s'}" onclick="setUiSetting('nameMode','classic')" data-no-i18n>Classic</button>
-  </div>
+  return `${segmentedHtml([{ value: 'unique', text: 'Unique' }, { value: 'classic', text: 'Classic' }],
+    S.settings.nameMode === 'classic' ? 'classic' : 'unique', { fill: true, noI18n: true, aria: t('moduleNameModeHint'), onclick: (v) => `setUiSetting('nameMode','${v}')` })}
   <div class="settings-hint">${t('moduleNameModeHint')}</div>`;
 }
 // Read-only compare view (Plan part2 #3) alongside the toggle above — every
@@ -349,7 +347,7 @@ const SHORTCUT_HELP = [
 ];
 function openShortcutsModal(){
   const rows = SHORTCUT_HELP.map(([combo, key]) =>
-    `<div class="li"><span class="name">${t(key)}</span><span class="tag" data-no-i18n>${combo}</span></div>`).join('');
+    `<div class="li"><span class="name">${t(key)}</span><span class="chip" data-no-i18n>${combo}</span></div>`).join('');
   openModal(t('shortcuts'), `<div class="modal-data">${rows}</div>`);
 }
 
