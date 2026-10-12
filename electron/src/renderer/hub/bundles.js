@@ -35,6 +35,22 @@ async function mineBundles() {
 }
 const bundleOrMine = async (id) => (String(id).startsWith('u:') ? (S._mineBundles || []).find((b) => b.id === id) : bundleById(id)) || null;
 
+// One template card (Procress 25): the Home gallery (builder.js
+// fillHomeTemplates) and the Create Nexus window (core/nexus-create.js) draw
+// the same component — a picture of what the template makes (its modules, by
+// kind and colour), its name and one line. `icon` replaces the picture for a
+// card with no modules (Create Nexus's "Blank").
+const bundleKindsOf = (spec) => [...(spec?.modules || []), ...(spec?.folders || []).flatMap((f) => f.modules || [])]
+  .map((m) => m.kind).filter((k) => KIND_ICON[k]).slice(0, 8);
+function templateCardHtml(b, { onclick = '', attrs = '', on = false, icon = null } = {}) {
+  const pic = icon ? `<i>${I[icon] || ''}</i>`
+    : bundleKindsOf(b.spec).map((k) => `<i style="color:${x(KIND_COLOR[k] || 'var(--accent)')}">${I[KIND_ICON[k]]}</i>`).join('');
+  return `<button class="btn home-tpl${on ? ' on' : ''}"${onclick ? ` onclick="${onclick}"` : ''}${attrs ? ` ${attrs}` : ''}>
+      <span class="home-tpl-pic" aria-hidden="true">${pic}</span>
+      <span class="kli-name" data-no-i18n>${x(b.name)}</span><span class="kli-desc" data-no-i18n>${x(b.description || '')}</span>
+    </button>`;
+}
+
 const BUNDLE_TABS = ['classic', 'genre', 'mine'];
 const BUNDLE_SAMPLE_COLS = ['objects', 'events', 'chapters', 'dialogues', 'sessions'];
 const bundleSamplesOf = (m) => BUNDLE_SAMPLE_COLS
