@@ -67,13 +67,14 @@ function glassHandleDown(e) { if (e.target.closest?.('.panel-resize-handle')) gl
 // the solid surface is the theme's own problem, not glass's — it is left out,
 // or one weak colour would push the tint to 100 % and switch glass off.
 const GLASS_TEXT_TOKENS = ['--t1', '--t2', '--t3-aa', '--danger'];
+// Resolved through the (invisible) screen-reader live region's own colour,
+// so var()/color-mix() computes exactly as the panes will — then restored.
 function glassRgb(css) {
-  const probe = document.createElement('i');
+  const probe = document.getElementById('sr-live') || document.body;
+  const was = probe.style.color;
   probe.style.color = css;
-  probe.hidden = true;
-  document.body.appendChild(probe);
   const c = getComputedStyle(probe).color;
-  probe.remove();
+  probe.style.color = was;
   let m = /rgba?\(([^)]+)\)/.exec(c);
   if (m) return m[1].split(/[ ,/]+/).filter(Boolean).slice(0, 3).map(Number);
   m = /color\(srgb ([^)]+)\)/.exec(c);
