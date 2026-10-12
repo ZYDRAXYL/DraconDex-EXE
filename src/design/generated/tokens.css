@@ -7,6 +7,7 @@
    fall back through var(--t3-aa, var(--t2)), not inherit midnight's. */
 :root{
 	--ink-dark:#1a1a26;
+	--ink-black:#000000;
 	--sp-0:2px;
 	--sp-1:4px;
 	--sp-2:6px;
@@ -122,6 +123,7 @@ body[data-theme="midnight"]{
 	--accentH:#818cf8;
 	--danger:#ef4444;
 	--success:#22c55e;
+	--on-accent:var(--ink-black);
 	--warn:#f59e0b;
 	--info:#38bdf8;
 	--on-warn:#1a1200;
