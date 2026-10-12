@@ -48,7 +48,7 @@ jobs:
   build:
     runs-on: windows-latest
     # A hung step used to run to GitHub's 6-hour ceiling; the whole job takes ~40 min.
-    timeout-minutes: 75
+    timeout-minutes: 120
     permissions:
       contents: write
     # Consumed by the `mirror` job below, which re-publishes this release to
