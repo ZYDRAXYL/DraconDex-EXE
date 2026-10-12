@@ -133,10 +133,27 @@ async function pkgRefreshCatalog() {
     : `<div class="modal-hint">${I.info}<span>${t('pkgAllInstalled')}</span></div>`;
 }
 
+// Procress 23: minAppVersion is enforced — main refuses the install
+// (app_too_old) and marks the entry appTooOld; here it is a locked row that
+// says what to do instead of a button that would only fail.
+function pkgNeedsAppText(p) {
+  return t('pkgNeedsNewerApp').replace('{v}', p.minAppVersion || '');
+}
 function pkgCatalogRowHtml(p) {
   const kind = t(PKG_KIND_LABEL_KEY[p.kind] || 'pkgKindTheme');
   const lang = S.settings?.language || 'th';
   const desc = p.description?.[lang] || p.description?.en || '';
+  if (p.appTooOld) return `
+    <div class="sync-upload-row" aria-disabled="true">
+      <div>
+        <b>${x(pkgDisplayName(p))}</b> <span class="sync-hint">v${x(p.version)}</span>
+        <div class="sync-hint">${x(kind)}${desc ? ` · ${x(desc)}` : ''}</div>
+      </div>
+      <div class="sync-upload-actions">
+        <span class="chip chip-status" data-status="warn">${x(pkgNeedsAppText(p))}</span>
+        <button class="btn btn-s btn-sm" onclick="openSettingWindow('appdata','versions')">${t('pkgUpdateApp')}</button>
+      </div>
+    </div>`;
   return `
     <div class="sync-upload-row">
       <div>
@@ -281,5 +298,6 @@ function pkgErrText(r) {
   if (code === 'checksum') return t('pkgErrChecksum');
   if (code === 'invalid') return t('pkgErrInvalid');
   if (code === 'too_large') return t('pkgErrTooLarge');
+  if (code === 'app_too_old') return pkgNeedsAppText(r);
   return t('pkgErrGeneric');
 }

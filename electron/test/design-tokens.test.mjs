@@ -16,11 +16,22 @@ test('no stylesheet colours text with the sub-AA --t3', () => {
   }
 });
 
-test('vendored tokens load first, fluent.css after every component file', () => {
+test('vendored tokens load first, fluent.css then glass.css after every component file', () => {
   const links = [...read('../index.html').matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map((m) => m[1]);
   assert.equal(links[0], '../src/design/generated/tokens.css');
   assert.equal(links[1], 'css/tokens.css');
-  assert.deepEqual(links.slice(-2), ['css/fluent.css', 'css/welcome.css']);
+  assert.deepEqual(links.slice(-3), ['css/fluent.css', 'css/glass.css', 'css/welcome.css']);
+});
+
+// Procress 23: glass.css may only reach the glass style (built in, or a
+// package carrying the glass tokens), the app-wide Reduce transparency switch,
+// and the glass row's own sample in Settings.
+test('every glass rule is scoped to glass, Reduce transparency or its sample', () => {
+  const body = read('../css/glass.css').replace(/\/\*[\s\S]*?\*\//g, '').replace(/@(media|supports)[^{]*\{/g, '');
+  const ok = /^(body:is\(\[data-ui-style="glass"\],\[data-glass\]\)|body\[data-reduce-transparency\]|\.uistyle-sample\.glass-sample)/;
+  for (const sel of body.split('}').map((r) => r.split('{')[0].trim()).filter(Boolean)) {
+    for (const part of sel.split(/,(?![^(]*\))/)) assert.match(part.trim(), ok, part);
+  }
 });
 
 test('every Fluent 2 rule is scoped to the fluent UI style', () => {

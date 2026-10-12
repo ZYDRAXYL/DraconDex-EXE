@@ -23,7 +23,7 @@ registerFilled('classifier.spotlight', { kind: 'classifier', labelKey: 'pcSpotli
 registerFilled('classifier.roster', { kind: 'classifier', labelKey: 'pcRoster', borrow: true }, async (c) => {
   const { objects = [] } = (await api.classifier.getObjectsFull(c.source.id)) || {};
   if (!objects.length) return pcEmpty(t('pcNoElements'));
-  return `<div class="pc-roster">${objects.slice(0, 60).map((o) => `<div class="pc-roster-card" role="button" tabindex="0" ${pcOpen(`cobj_${o.id}`)}>
+  return `<div class="pc-roster">${objects.slice(0, 60).map((o) => `<div class="card card-link pc-roster-tile" role="button" tabindex="0" ${pcOpen(`cobj_${o.id}`)}>
     <span class="pc-avatar"${o.color_code ? ` style="background:${x(o.color_code)}"` : ''}>${x((o.name || '?').slice(0, 1))}</span>
     <span class="pc-roster-name">${x(o.name)}</span></div>`).join('')}</div>`;
 });

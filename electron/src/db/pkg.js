@@ -52,14 +52,13 @@ const THEME_REQUIRED = ['--bg','--surface','--raised','--hover','--border',
 const VIEW_SETTINGS = new Set(['size','fontScale','animationsEnabled','animationSpeed',
   'workspaceStyle','navOrientation','navHorizontalDisplay','navVerticalAlwaysLabel',
   'nameMode','nestShowItems','nestShowMajorIcon','nestShowMinorIcon','nestSignatureMode','dragonView']);
-// The 7 shape/elevation tokens css/ui-style.css assigns per
-// body[data-ui-style="<name>"] — the same "inline vars on <body>" mechanism
-// theme uses, over a different, smaller vocabulary. Unlike theme's 12-of-15
-// split, all 7 are required: ui-style.css itself sets all 7 in every preset.
-const UISTYLE_TOKENS = new Set(['--r','--rs','--rl','--shadow-pop','--shadow-float','--shadow-menu','--shadow-modal']);
-const UISTYLE_REQUIRED = [...UISTYLE_TOKENS];
+// uistyle tokens (the 7 + Procress 23's optional glass group), the value
+// whitelist and the minAppVersion check live in pkg-rules.js — pure, so the
+// regression tests can load them without electron.
+const { CSS_VALUE, validateUistyleVars, meetsMinApp } = require('./pkg-rules');
 
-const CSS_VALUE = /^[#a-zA-Z0-9\s(),.%/-]{1,80}$/;
+
+function appVersion() { return require('electron').app.getVersion(); }
 
 function assetUrl(release, asset) {
   // Every URL this module fetches is built here from an allowlisted shape.
@@ -128,13 +127,7 @@ function validatePayload(kind, payload) {
     if (!s || typeof s !== 'object') return 'view has no settings';
     for (const k of Object.keys(s)) if (!VIEW_SETTINGS.has(k)) return `"${k}" is not a settable UI setting`;
   } else if (kind === 'uistyle') {
-    const vars = payload.vars;
-    if (!vars || typeof vars !== 'object') return 'uistyle has no vars';
-    for (const [k, v] of Object.entries(vars)) {
-      if (!UISTYLE_TOKENS.has(k)) return `unknown ui-style token "${k}"`;
-      if (typeof v !== 'string' || !CSS_VALUE.test(v)) return `unsafe value for "${k}"`;
-    }
-    for (const req of UISTYLE_REQUIRED) if (!vars[req]) return `missing required token ${req}`;
+    return validateUistyleVars(payload.vars);
   } else if (kind === 'guide') {
     return require('./guide').validateGuide(payload);
   }
@@ -200,6 +193,9 @@ async function pkgCatalog(release) {
     packages.push({
       id: e.id, kind: e.kind, version: e.version, displayName: e.displayName,
       description: e.description || null, minAppVersion: e.minAppVersion || null,
+      // Procress 23: a package made for a newer app (a glass uistyle needs the
+      // release that reads glass tokens) is listed, locked, never installed.
+      appTooOld: !meetsMinApp(e.minAppVersion, appVersion()),
       bytes: e.bytes || null,
       preview: catalogPreview(e),
       installedVersion: have ? have.version : null,
@@ -226,6 +222,9 @@ async function pkgInstall(pkgId, release) {
   if (!entry) return { ok: false, code: 'not_found', error: `${pkgId} is not in the catalog` };
   const badEntry = validateEntry(entry);
   if (badEntry) return { ok: false, code: 'invalid', error: badEntry };
+  if (!meetsMinApp(entry.minAppVersion, appVersion())) {
+    return { ok: false, code: 'app_too_old', error: `${pkgId} needs DraconDex ${entry.minAppVersion} or newer`, minAppVersion: entry.minAppVersion };
+  }
 
   const actualRelease = cat.json.release || tag;
   const got = await fetchJson(assetUrl(actualRelease, entry.asset), PAYLOAD_TIMEOUT_MS, MAX_PAYLOAD_BYTES);

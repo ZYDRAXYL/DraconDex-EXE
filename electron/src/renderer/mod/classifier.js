@@ -182,7 +182,7 @@ function renderClassifierGrid(m, d, inst) {
   return `<div class="cls-grid" oncontextmenu="if(event.target===this)openCtx('classifier.category',event,{moduleId:${m.id}})">${lazyRows(d.objects, o => {
     const col = o.color_code || 'var(--accent)';
     return `
-    <div class="cls-card" style="border-top:3px solid ${x(col)}" onclick="openItemNode('classifier',${m.id},${o.id})"
+    <div class="card card-link cls-tile" style="border-top:3px solid ${x(col)}" onclick="openItemNode('classifier',${m.id},${o.id})"
         oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})">
       <span class="disp-thumb"><img data-display-key="cobj_${o.id}" alt=""></span>
       <span class="cls-card-icon" style="border-color:${x(col)};color:${x(col)}">${classifierObjectIconHtml(o, m)}</span>

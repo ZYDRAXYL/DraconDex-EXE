@@ -99,6 +99,8 @@ const COMMANDS = {
   'page.properties': { label: 'pbProperties', icon: 'fields', scope: 'app', hint: 'Ctrl+Alt+B', when: () => !!(S.activeModuleNode || S.activeItemNode), run: () => togglePropsPanel(), surfaces: ['page.head'] },
   'page.css': { label: 'pageCss', icon: 'edit', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode, run: () => openPageCssModal(S.activeModuleNode.id), surfaces: ['page.head'] },
   'page.history': { label: 'versionHistory', icon: 'timeline', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode, run: () => toggleVersionPanel(S.activeModuleNode.id), surfaces: ['page.head'] },
+  // Procress 22: the component gallery — dev builds only (S.devMode), APP docs/COMPONENTS.md
+  'dev.gallery': { label: 'componentGallery', icon: 'list', scope: 'app', hint: 'Ctrl+Alt+Shift+G', when: () => !!S.devMode, run: async () => { await loadModule('src/renderer/gallery.js'); openGallery(); }, surfaces: ['shortcut'] },
   'app.focusMode': { label: 'focusMode', icon: 'eye', scope: 'app', hint: 'Ctrl+Shift+F', run: () => toggleFocusMode(), surfaces: ['shortcut'] },
   // Procress 13 part 4 (REDESIGN.md C6): the title's own layout, per page.
   'page.useTemplate': { label: 'tplUse', icon: 'layer', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode?.itemKey, run: () => openTemplateGallery(S.activeModuleNode.id), surfaces: ['page.head'] },

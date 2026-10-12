@@ -97,6 +97,10 @@ function openPopover(anchor, html, opts = {}) {
   const { placement = 'bottom-start', size = null, cls = '', role = 'dialog', aria = null, focus = null, onClose = null, keep = false, onClick = null } = opts;
   const opener = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
   if (!keep) closeAllPopups();
+  // The click that opens a popover must not also reach the document's
+  // outside-click sweep (core/boot.js bindPopupDismiss) and close it again —
+  // callers used to remember stopPropagation() each; now none has to.
+  if (window.event?.type === 'click') window.event.stopPropagation();
   const pop = document.createElement('div');
   pop.className = ['popover', size ? `popover-${size}` : '', cls].filter(Boolean).join(' ');
   pop.setAttribute('role', role);

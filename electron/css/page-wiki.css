@@ -45,7 +45,7 @@
 .pc-lc-grid[data-layout="compact"] .pb-sum-cover,.pc-lc-grid[data-layout="compact"] .pb-sum-f,.pc-lc-grid[data-layout="compact"] .pb-sum-first{display:none}
 .pc-lc-grid[data-layout="compact"] .pb-sum-body{padding:8px 10px}
 .pc-lc-buttons{display:flex;flex-wrap:wrap;gap:6px}
-.pc-lc-buttons > .pb-link{padding:6px 14px;border-radius:var(--r);background:var(--button,var(--accent));color:var(--on-button,#fff);font-weight:600}
+.pc-lc-buttons > .pb-link{padding:6px 14px;border-radius:var(--r);background:var(--button,var(--accent));color:var(--on-button);font-weight:600}
 .pc-lc-buttons > .pb-link .pb-ext{color:inherit;opacity:.85}
 .pc-lc-buttons > .pb-link.pb-link-dangling{background:var(--raised);color:var(--t2)}
 

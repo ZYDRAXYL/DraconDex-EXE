@@ -158,7 +158,7 @@ function buildNavPinListHtml() {
   // and toggle nested modules too, not just root-level ones.
   return flattenModuleTree(S.moduleTree, 0).map(({ m, depth }) => `
     <div class="kind-list-item" style="padding-left:${10 + depth * 14}px" onclick="toggleNavPinAndRefresh(${m.id})">
-      <span class="kicon" aria-hidden="true" style="color:${x(m.icon_color_code || m.color_code || '#6366f1')}">${moduleIconHtml(m)}</span>
+      <span class="kicon" aria-hidden="true" style="color:${x(m.icon_color_code || m.color_code || 'var(--accent)')}">${moduleIconHtml(m)}</span>
       <span class="kli-name">${x(m.name)}</span>
       <span class="ctx-check">${m.pinned ? I.check : ''}</span>
     </div>`).join('');

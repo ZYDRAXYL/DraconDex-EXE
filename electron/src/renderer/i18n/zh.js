@@ -4,6 +4,10 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('zh', {
+  // Procress 23: package minAppVersion
+  pkgNeedsNewerApp:'需要 DraconDex {v} 或更高版本 — 请更新应用', pkgUpdateApp:'更新应用',
+  // Procress 23: Glass style + Reduce transparency
+  uiStyleGlass:'玻璃', uiStyleGlassHint:'柔和背景上的半透明栏与菜单', settingReduceTransparency:'降低透明度（栏与菜单不透明）',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'深色', themeGroupLight:'浅色', themeGroupCustom:'你的主题',
   listFilterHint:'筛选', listSort:'排序', listSortName:'名称', listSortEdited:'最近编辑', listSortCreated:'创建时间', listSortKind:'类型', listSortManual:'按排列顺序', listCount:'{n} 项', listNoMatch:'没有符合此筛选条件的内容。', listGroupToday:'今天', listGroupThisWeek:'本周', listGroupOlder:'更早', assetGroupImage:'图片', assetGroupAudio:'音频', assetGroupVideo:'视频', assetGroupDoc:'文档', assetGroupTrack:'字幕', assetGroupModel:'3D 模型', assetGroupUrl:'链接', assetGroupOther:'其他文件',
@@ -34,7 +38,7 @@ i18nAdd('zh', {
   newFolder:'新建文件夹', newProject:'新建项目', createProject:'创建项目',
   welcomeTitle:'Novel Manager', welcomeText:'从左侧列表选择项目，或创建一个新项目。',
   colorPanel:'颜色', saved:'已保存', deleted:'已删除', created:'已创建', applied:'已应用',
-  edit:'编辑', delete:'删除', add:'添加', remove:'移除', save:'保存', name:'名称', memo:'备注', color:'颜色', title:'标题', content:'内容',
+  edit:'编辑', delete:'删除', add:'添加', remove:'移除', fieldRequired:'请填写此项', componentGallery:'组件库', save:'保存', name:'名称', memo:'备注', color:'颜色', title:'标题', content:'内容',
   nexus:'Nexus', director:'Director', nexusWelcomeTitle:'DraconDex', nexusWelcomeText:'选择一个模块以开始。',
   create:'创建', nexusNew:'新建 Nexus', nexusEdit:'编辑 Nexus', nexusSelect:'选择要打开的 Nexus 仓库。', nexusSwitch:'切换 Nexus', nexusEmpty:'还没有 Nexus — 创建你的第一个仓库。', nexusDeleteBlocked:'该 Nexus 仍包含项目，无法删除。', nexusSaveLocation:'保存位置', nexusSaveLocationHint:'每个 Nexus 都是独立的 .ddx 文件。可保留默认位置，也可放在任意位置。', nexusChangeLocation:'更改...', nexusLocate:'定位...', nexusFileMissing:'找不到该文件。它可能已被移动、重命名，或所在驱动器未连接。', nexusRelinkFailed:'该文件不是 DraconDex Nexus', nexusOptionsTitle:'更多操作', nexusDuplicate:'复制', nexusDuplicated:'已复制 Nexus', nexusExport:'导出...', nexusExported:'已导出 Nexus', nexusShare:'分享...', nexusRevealFile:'在文件管理器中打开', nexusShareHint:'副本已保存。可拖入聊天窗口，或作为邮件附件发送。', nexusShareCopyPath:'复制路径', nexusShareEmail:'写邮件', nexusShareEmailBody:'与你分享一个 DraconDex Nexus。文件已附上（或见下方路径）。', copied:'已复制', nexusDeleteConfirm:'删除此 Nexus？', nexusCreated:'Nexus 已创建', nexusNameTaken:'该名称已被使用。', nexusSelectFirst:'请先选择一个 Nexus。',
   wmTitle:'欢迎使用 DraconDex', wmText:'创建你的第一个 Nexus 仓库，或导入已有的仓库。', wmCreateNew:'创建新的 Nexus', wmImport:'导入 Nexus', wmLater:'稍后创建', wmRecent:'最近', wmChangeNexus:'更换 Nexus…', wmOpenNexus:'打开', wzTitle:'初始设置', wzIntro:'按你的喜好选择，之后都可以在设置中更改。', wzAccountHint:'可选。之后可以在设置中连接账号。', wzRecommended:'推荐', usedBeforeAsk:'你以前用过 DraconDex 吗？', usedBeforeYes:'用过', usedBeforeNo:'还没有', guideNext:'下一步', guideBack:'上一步', guideSkip:'跳过', guideDone:'完成', guideModuleTitle:'创建模块', guideModuleText:'在此添加你的第一个主模块 — 分类、时间线、地图等。', guideNestTitle:'Nexus Nest', guideNestText:'模块树在这里。在此展开并组织此仓库中的一切。', guideSageTitle:'Sage Hut', guideSageText:'查看仓库的统计与链接 — 数据大小、对象数量等。', guideBackupTitle:'备份与恢复', guideBackupText:'将数据导出为 .db 文件，或导入并合并数据。', guideSwitchTitle:'切换 Nexus', guideSwitchText:'在此切换仓库或管理当前 Nexus。',

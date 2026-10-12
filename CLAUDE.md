@@ -88,6 +88,8 @@ English `text=` selectors.
 
 ## Conventions the checkers enforce
 
+**Before building new UI, read `docs/COMPONENTS.md` in DraconDex-APP** — the shared popover, modal, chip, segmented, card, field and list (`core/popover.js`, `core/controls.js`, `core/list.js`); `npm run ui:check` fails if a component group, hex colour, raw z-index or character icon count goes up.
+
 - Every `window.api.<ns>.<fn>()` needs a matching `preload.js` entry and a
   matching `main.js` handler.
 - Every `t('key')` must exist in **all 18 locale blocks** in `i18n.js`. A missing

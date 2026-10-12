@@ -4,6 +4,10 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('ja', {
+  // Procress 23: package minAppVersion
+  pkgNeedsNewerApp:'DraconDex {v} 以降が必要です — アプリを更新してください', pkgUpdateApp:'アプリを更新',
+  // Procress 23: Glass style + Reduce transparency
+  uiStyleGlass:'ガラス', uiStyleGlassHint:'やわらかな背景に半透明のバーとメニュー', settingReduceTransparency:'透明度を下げる（バーとメニューを不透明に）',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'ダーク', themeGroupLight:'ライト', themeGroupCustom:'あなたのテーマ',
   listFilterHint:'絞り込み', listSort:'並べ替え', listSortName:'名前', listSortEdited:'最終編集', listSortCreated:'作成日', listSortKind:'種類', listSortManual:'配置順', listCount:'{n} 件', listNoMatch:'この条件に一致するものはありません。', listGroupToday:'今日', listGroupThisWeek:'今週', listGroupOlder:'それ以前', assetGroupImage:'画像', assetGroupAudio:'音声', assetGroupVideo:'動画', assetGroupDoc:'ドキュメント', assetGroupTrack:'字幕', assetGroupModel:'3D モデル', assetGroupUrl:'リンク', assetGroupOther:'その他のファイル',
@@ -34,7 +38,7 @@ i18nAdd('ja', {
   newFolder:'新規フォルダー', newProject:'新規プロジェクト', createProject:'プロジェクト作成',
   welcomeTitle:'Novel Manager', welcomeText:'左の一覧からプロジェクトを選ぶか、新しく作成してください。',
   colorPanel:'色', saved:'保存しました', deleted:'削除しました', created:'作成しました', applied:'適用しました',
-  edit:'編集', delete:'削除', add:'追加', remove:'削除', save:'保存', name:'名前', memo:'メモ', color:'色', title:'タイトル', content:'内容',
+  edit:'編集', delete:'削除', add:'追加', remove:'削除', fieldRequired:'入力してください', componentGallery:'コンポーネントギャラリー', save:'保存', name:'名前', memo:'メモ', color:'色', title:'タイトル', content:'内容',
   nexus:'Nexus', director:'ディレクター', nexusWelcomeTitle:'DraconDex', nexusWelcomeText:'モジュールを選択してください。',
   create:'作成', nexusNew:'新しいNexus', nexusEdit:'Nexusを編集', nexusSelect:'開くNexusボルトを選択してください。', nexusSwitch:'Nexusを切り替え', nexusEmpty:'Nexusがありません — 最初のボルトを作成しましょう。', nexusDeleteBlocked:'このNexusにはまだプロジェクトがあるため削除できません。', nexusSaveLocation:'保存先', nexusSaveLocationHint:'各 Nexus は独立した .ddx ファイルです。既定のままでも、好きな場所でも構いません。', nexusChangeLocation:'変更...', nexusLocate:'場所を指定...', nexusFileMissing:'ファイルが見つかりません。移動・改名されたか、ドライブが接続されていない可能性があります。', nexusRelinkFailed:'そのファイルは DraconDex の Nexus ではありません', nexusOptionsTitle:'その他の操作', nexusDuplicate:'複製', nexusDuplicated:'Nexus を複製しました', nexusExport:'エクスポート...', nexusExported:'Nexus をエクスポートしました', nexusShare:'共有...', nexusRevealFile:'ファイルマネージャーで開く', nexusShareHint:'コピーを保存しました。チャットにドラッグするか、メールに添付してください。', nexusShareCopyPath:'パスをコピー', nexusShareEmail:'メールを作成', nexusShareEmailBody:'DraconDex の Nexus を共有します。ファイルは添付済み（または下記のパス）です。', copied:'コピーしました', nexusDeleteConfirm:'このNexusを削除しますか？', nexusCreated:'Nexusを作成しました', nexusNameTaken:'この名前は既に使われています。', nexusSelectFirst:'先にNexusを選択してください。',
   wmTitle:'DraconDex へようこそ', wmText:'最初の Nexus 保管庫を作成するか、既存のものをインポートしましょう。', wmCreateNew:'新しい Nexus を作成', wmImport:'Nexus をインポート', wmLater:'あとで作成', wmRecent:'最近', wmChangeNexus:'Nexus を変更…', wmOpenNexus:'開く', wzTitle:'初期設定', wzIntro:'お好みを選んでください。あとから設定でいつでも変更できます。', wzAccountHint:'任意です。アカウントはあとから設定で接続できます。', wzRecommended:'おすすめ', usedBeforeAsk:'DraconDex を使ったことがありますか？', usedBeforeYes:'使ったことがある', usedBeforeNo:'まだない', guideNext:'次へ', guideBack:'戻る', guideSkip:'スキップ', guideDone:'完了', guideModuleTitle:'モジュールを作成', guideModuleText:'ここから最初のメインモジュール（分類・年表・地図など）を追加します。', guideNestTitle:'Nexus Nest', guideNestText:'モジュールツリーはここにあります。保管庫内をここで整理します。', guideSageTitle:'Sage Hut', guideSageText:'保管庫全体の統計とリンク（データ量・オブジェクト数など）を確認できます。', guideBackupTitle:'バックアップと復元', guideBackupText:'データを .db に書き出したり、読み込んで統合したりできます。', guideSwitchTitle:'Nexus を切り替え', guideSwitchText:'ここで保管庫を切り替えたり、現在の Nexus を管理します。',

@@ -119,11 +119,10 @@ body[data-theme="midnight"]{
 	--t2:#9090a8;
 	--t3:#5a5a72;
 	--t3-aa:#8a8a9d;
-	--accent:#6366f1;
+	--accent:#585ced;
 	--accentH:#818cf8;
 	--danger:#ef4444;
 	--success:#22c55e;
-	--on-accent:var(--ink-black);
 	--warn:#f59e0b;
 	--info:#38bdf8;
 	--on-warn:#1a1200;

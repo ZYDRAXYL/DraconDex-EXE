@@ -85,7 +85,7 @@ function wyvernBrowseCardHtml(m, totalModules){
   const canOpen = m.kind !== 'collector';
   const primary = hasChildren || !canOpen ? `wyvernDrillInto(${m.id})` : `openModuleNode(${m.id})`;
   return `<div class="typecard" onclick="${primary}" oncontextmenu="openModuleContextMenu(event,${m.id})">
-    <h5 style="color:${x(m.icon_color_code || m.color_code || '#6366f1')}" data-no-i18n>${moduleIconHtml(m)} ${x(m.name)}</h5>
+    <h5 style="color:${x(m.icon_color_code || m.color_code || 'var(--accent)')}" data-no-i18n>${moduleIconHtml(m)} ${x(m.name)}</h5>
     <p data-no-i18n>${x(kindLabel(m.kind))}${hasChildren ? ` · ${m.children.length}:${totalModules}` : ''}</p>
     ${hasChildren && canOpen ? `<button class="btn btn-s btn-sm" onclick="event.stopPropagation();openModuleNode(${m.id})">${t('open')}</button>` : ''}
   </div>`;
