@@ -25,10 +25,11 @@ test('vendored tokens load first, fluent.css then glass.css after every componen
 
 // Procress 23: glass.css may only reach the glass style (built in, or a
 // package carrying the glass tokens), the app-wide Reduce transparency switch,
-// and the glass row's own sample in Settings.
+// and the glass row's own sample in Settings. A rule may be narrowed further
+// by html[data-system-glass] (the experimental OS material), never widened.
 test('every glass rule is scoped to glass, Reduce transparency or its sample', () => {
   const body = read('../css/glass.css').replace(/\/\*[\s\S]*?\*\//g, '').replace(/@(media|supports)[^{]*\{/g, '');
-  const ok = /^(body:is\(\[data-ui-style="glass"\],\[data-glass\]\)|body\[data-reduce-transparency\]|\.uistyle-sample\.glass-sample)/;
+  const ok = /^((html\[data-system-glass\] )?body:is\(\[data-ui-style="glass"\],\[data-glass\]\)|body\[data-reduce-transparency\]|\.uistyle-sample\.glass-sample)/;
   for (const sel of body.split('}').map((r) => r.split('{')[0].trim()).filter(Boolean)) {
     for (const part of sel.split(/,(?![^(]*\))/)) assert.match(part.trim(), ok, part);
   }

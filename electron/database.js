@@ -1,5 +1,6 @@
 'use strict';
 const core      = require('./src/db/core');
+const systemGlass = require('./src/db/system-glass');
 const nexus     = require('./src/db/nexus');
 const teach     = require('./src/db/teach');
 const preset    = require('./src/db/preset');
@@ -62,6 +63,7 @@ const cloud     = require('./src/db/cloud');
 
 module.exports = {
   ...core,
+  ...systemGlass,
   ...mediaRead,
   ...nexus,
   ...teach,

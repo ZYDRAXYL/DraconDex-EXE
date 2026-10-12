@@ -72,6 +72,27 @@ app.on('second-instance', () => {
 // window:moveTabToMain below.
 const popupWindowIds = new Set();
 
+// Procress 23 — "Use system glass" (experimental, off by default): the OS
+// material behind the Glass UI style. Every window that loads index.html is
+// registered here; db.applySystemGlass (src/db/system-glass.js) is the one
+// place that sets or clears the material, from the app_setting the renderer
+// stores through setting:set. Plugin and print windows never take part.
+const appWindows = new Set();
+function systemGlassWanted() {
+  try { return db.getAppSetting(db.SYSTEM_GLASS_KEY) === '1'; } catch (_) { return false; }
+}
+function syncSystemGlass(wins = appWindows) {
+  const on = systemGlassWanted();
+  for (const w of wins) db.applySystemGlass(w, on);
+}
+function trackAppWindow(win) {
+  appWindows.add(win);
+  win.on('closed', () => appWindows.delete(win));
+  // a reload loses <html data-system-glass>; the material itself stays
+  win.webContents.on('did-finish-load', () => { if (db.systemGlassApplied(win)) db.markSystemGlass(win, true); });
+  syncSystemGlass([win]);
+}
+
 // Procress 17 I6: a vault window opens where the last one was (size,
 // position, maximized) and only once it can paint — it used to appear at a
 // fixed size with a blank flash, after the Welcome window had already gone.
@@ -115,6 +136,7 @@ function createWindow(bootstrapNexusId, bootstrapTabKey) {
     },
   });
   hardenWebviewAttach(win.webContents);
+  trackAppWindow(win);
   win.once('ready-to-show', () => { if (last?.maximized) win.maximize(); win.show(); });
   if (!bootstrapTabKey) win.on('close', () => rememberVaultBounds(win));
   // Which vault this window's IPC calls belong to. Registered before loadFile
@@ -193,6 +215,7 @@ function createWelcomeWindow() {
     },
   });
   welcomeWindowIds.add(win.id);
+  trackAppWindow(win);
   win.on('closed', () => welcomeWindowIds.delete(win.id));
   win.loadFile(path.join(__dirname, 'index.html'), { search: 'welcome=1' });
 }
@@ -238,6 +261,7 @@ function createNexusCreateWindow(parent) {
   });
   hardenWebviewAttach(win.webContents);
   createNexusWinId = win.id;
+  trackAppWindow(win);
   win.on('closed', () => { if (createNexusWinId === win.id) createNexusWinId = null; });
   win.once('ready-to-show', () => win.show());
   win.loadFile(path.join(__dirname, 'index.html'), { search: 'createNexus=1' });
@@ -1643,7 +1667,7 @@ h('versions:restore', (id)   => db.restoreVersion(id));
 // every api.setting.* call site passes a literal, and 'versionLimit' is the
 // only one), so this is an allowlist rather than a denylist — a new secret
 // key added later is closed by default instead of open by default.
-const RENDERER_SETTING_KEYS = new Set(['versionLimit', 'startupMode', 'nexusHistoryLimit']);
+const RENDERER_SETTING_KEYS = new Set(['versionLimit', 'startupMode', 'nexusHistoryLimit', 'systemGlass']);
 // Two gates, not one. The allowlist is the rule; isSecretKey() is the backstop
 // that survives someone widening the allowlist later without noticing they
 // just handed the renderer a refresh token. Cloud-provider credentials are
@@ -1651,7 +1675,12 @@ const RENDERER_SETTING_KEYS = new Set(['versionLimit', 'startupMode', 'nexusHist
 // enumerated in a set — isSecretKey matches them by shape.
 const rendererSettingAllowed = (k) => RENDERER_SETTING_KEYS.has(String(k)) && !isSecretKey(k);
 h('setting:get',      (k)    => (rendererSettingAllowed(k) ? db.getAppSetting(k) : null));
-h('setting:set',      (k,v)  => (rendererSettingAllowed(k) ? db.setAppSetting(k,v) : { ok: false }));
+h('setting:set',      (k,v)  => {
+  if (!rendererSettingAllowed(k)) return { ok: false };
+  const r = db.setAppSetting(k, v);
+  if (k === db.SYSTEM_GLASS_KEY) syncSystemGlass(); // Procress 23: every app window follows
+  return r;
+});
 
 // History limit (Procress 10 part 1) — byte usage + clear for whichever
 // vault this window has open; see db/versions.js's historyBytesUsed for why

@@ -46,6 +46,15 @@ body:is([data-ui-style="glass"],[data-glass]) #window-frame{
 	background-image:linear-gradient(135deg,var(--glass-backdrop-from,var(--bg)) 0%,var(--glass-backdrop-to,color-mix(in srgb,var(--bg) 65%,var(--accent))) 100%);
 }
 
+/* "Use system glass" (experimental, off by default): main has put the OS
+   material (Windows 11 acrylic / macOS vibrancy) behind the window and set
+   html[data-system-glass] — the backdrop steps aside so it shows through.
+   Never set on linux, or with either Reduce transparency switch on. */
+html[data-system-glass] body:is([data-ui-style="glass"],[data-glass]),
+html[data-system-glass] body:is([data-ui-style="glass"],[data-glass]) #window-frame{
+	background:transparent;
+}
+
 /* ── chrome: tint only ── */
 body:is([data-ui-style="glass"],[data-glass]) #title-tab-bar,
 body:is([data-ui-style="glass"],[data-glass]) #nav-sidebar,
