@@ -98,7 +98,7 @@ function renderNexusPicker() {
   }
   q('#left-panel-inner').innerHTML = `
     <div class="ph"><h4>${t('nexus')}</h4>
-      <button class="btn btn-p btn-sm" onclick="openNexusModal()">+ ${t('nexusNew')}</button>
+      <button class="btn btn-p btn-sm" onclick="openCreateNexusWindow()">+ ${t('nexusNew')}</button>
     </div>
     ${listHtml({ list: 'nexuses', aria: t('nexus'), body: S.nexuses.map(n => nexusRowHtml(n, `selectNexus(${n.id})`)).join('') })}`;
   q('#main-inner').innerHTML = `<div class="empty" style="margin-top:80px">
@@ -163,26 +163,29 @@ async function reportParentNormalize() {
 // switcher's last row now open the Welcome window instead and leave this
 // window on its vault, so nothing called it any more.
 
-async function openNexusModal(id = null, { showGuideChoice = false } = {}) {
+// Editing a Nexus. Creating one is the Create Nexus window's job (Procress
+// 25, core/nexus-create.js) — one way in, looked after in one place — so a
+// call with no id opens that window instead.
+async function openNexusModal(id = null) {
+  if (!id) return openCreateNexusWindow();
   await reloadNexuses();
-  const n = id ? S.nexuses.find(v => v.id === id) : null;
-  openModal(n ? t('nexusEdit') : t('nexusNew'), `
-    <div class="fg"><label>${t('name')} *</label><input id="nx-name" value="${x(n?.name || '')}"></div>
-    <div class="fg"><label>${t('memo')}</label><textarea id="nx-memo">${x(n?.memo || '')}</textarea></div>
-    <div class="fg"><label>${t('color')}</label>${await colorPicker(n?.color)}</div>
-    ${n ? nexusFileRowHtml(n) : await nexusSaveLocationHtml()}
-    ${n ? nexusLocateRowHtml(n) : ''}
-    ${!n && showGuideChoice ? `<div class="fg"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="nx-guide" type="checkbox" checked> ${t('nexusTourOption')}</label></div>` : ''}
+  const n = S.nexuses.find(v => v.id === id);
+  if (!n) return;
+  openModal(t('nexusEdit'), `
+    <div class="fg"><label>${t('name')} *</label><input id="nx-name" value="${x(n.name || '')}"></div>
+    <div class="fg"><label>${t('memo')}</label><textarea id="nx-memo">${x(n.memo || '')}</textarea></div>
+    <div class="fg"><label>${t('color')}</label>${await colorPicker(n.color)}</div>
+    ${nexusFileRowHtml(n)}
+    ${nexusLocateRowHtml(n)}
     <div class="mfoot">
-      ${n ? `<button class="btn btn-d" onclick="delNexus(${id})">${t('delete')}</button>`
-          : `<button class="btn btn-s" onclick="closeModal();importDatabaseFile()">${t('importDb')}</button>`}
+      <button class="btn btn-d" onclick="delNexus(${id})">${t('delete')}</button>
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="${n ? `saveNexus(${id})` : 'createNexusSubmit()'}">${n ? t('save') : t('create')}</button>
+      <button class="btn btn-p" onclick="saveNexus(${id})">${t('save')}</button>
     </div>`);
   setTimeout(() => q('#nx-name').focus(), 60);
 }
 
-// Where the vault file goes. Shown in every build, dev included, with the
+// Where the vault file goes (the Create Nexus window's form). Shown in every build, dev included, with the
 // default already filled in — the dialog only opens if the user clicks Change,
 // which is what keeps the run-dracondex driver able to create a Nexus without
 // a native dialog blocking it forever.
@@ -235,34 +238,6 @@ async function relinkNexusLocation(id) {
   await reloadNexuses();
   toast(t('saved'), 'ok');
   renderNexusHome();
-}
-
-async function createNexusSubmit() {
-  const name = q('#nx-name').value.trim(); if (!name) return;
-  S._guideAfterCreate = Boolean(q('#nx-guide')?.checked);
-  try {
-    const newId = await api.nexus.create(name, q('#nx-memo').value.trim(), q('#sel-color').value || null, S._nexusSavePath || null);
-    closeModal();
-    await reloadNexuses();
-    toast(t('nexusCreated'), 'ok');
-    // Created from the Welcome window: this window is about to close, so hand
-    // the new vault to a fresh app window and let the tour start over there
-    // (boot.js picks the flag up) instead of running it in a dying renderer.
-    if (S.isWelcome) {
-      if (S._guideAfterCreate) localStorage.setItem(NEXUS_PENDING_GUIDE_KEY, String(newId));
-      S._guideAfterCreate = false;
-      await welcomeOpenNexus(newId);
-      return;
-    }
-    await selectNexus(newId);
-    // Users who opted in get the coach-marks tour once the vault home is rendered.
-    if (S._guideAfterCreate) {
-      S._guideAfterCreate = false;
-      await createGuideBundle({ quiet: true }); // v5 Part 7 (§11.8): the example folder first
-      await loadModule('src/renderer/guide.js');
-      if (typeof startNexusGuide === 'function') startNexusGuide();
-    }
-  } catch (e) { toast(t('nexusNameTaken'), 'error'); }
 }
 
 async function saveNexus(id) {

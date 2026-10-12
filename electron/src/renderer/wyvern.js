@@ -126,7 +126,7 @@ function buildWyvernPageHtml(){
 // mirror it into #main-inner too (same row markup, reused verbatim).
 function buildWyvernNexusPickerHtml(){
   return `<div class="ph"><h4>${t('nexus')}</h4>
-      <button class="btn btn-p btn-sm" onclick="openNexusModal()">+ ${t('nexusNew')}</button>
+      <button class="btn btn-p btn-sm" onclick="openCreateNexusWindow()">+ ${t('nexusNew')}</button>
     </div>
     <div class="typegrid">${S.nexuses.map(n => `
       <div class="typecard" onclick="selectNexus(${n.id})">

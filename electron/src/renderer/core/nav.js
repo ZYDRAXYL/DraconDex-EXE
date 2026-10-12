@@ -76,7 +76,7 @@ function toggleLayoutMenu(force){
 
 function updateTitlebarVault(){
   const el = q('#titlebar-vault');
-  if(el) el.textContent = S.nexus ? `${S.nexus.name} — DraconDex` : 'DraconDex';
+  if(el) el.textContent = S.nexus ? `${S.nexus.name} — DraconDex` : S.isCreateNexus ? t('cnTitle') : 'DraconDex';
 }
 
 // v3 module tabs are pane-scoped now (Phase 19): opening a module books it

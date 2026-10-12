@@ -240,7 +240,7 @@ async function openBundleAdjust(id, parentId) {
       </div>`).join('')}
     </div>
     <div class="mfoot">
-      <button class="btn btn-s" onclick="openBundlePicker(${parentId ?? 'null'})">${t('guideBack')}</button>
+      <button class="btn btn-s" onclick="${S.isCreateNexus ? 'closeModal()' : `openBundlePicker(${parentId ?? 'null'})`}">${t('guideBack')}</button>
       <button class="btn btn-p" onclick="submitBundleAdjust('${id}',${parentId ?? 'null'})">${t('bundleCreate')}</button>
     </div>`);
 }
@@ -280,6 +280,7 @@ async function submitBundleAdjust(id, parentId) {
   const spec = { ...b.spec, name, icon: b.icon, modules: out };
   if (spec.home && !kept.has(spec.home)) delete spec.home;
   if (q('#bd-samples') && !q('#bd-samples').checked) spec.includeSamples = false;
+  if (S.isCreateNexus) return cnAdjusted(id, spec); // Procress 25: made later, in the new Nexus's window
   await createBundleNow(id, parentId, spec);
 }
 
