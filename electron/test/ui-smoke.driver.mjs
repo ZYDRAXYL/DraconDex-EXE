@@ -812,7 +812,8 @@ test('25: Welcome → New opens a child window wider than Welcome; Cancel closes
   await welcome.close();
 });
 
-test('25: Fantasy + App Docs → the new window has the Fantasy modules and the Guide; ≤ 3 clicks from Welcome', async () => {
+// The click budget of this path (≤ 3 from Welcome) is ui-depth.driver.mjs's row now (Procress 24).
+test('25: Fantasy + App Docs → the new window has the Fantasy modules and the Guide', async () => {
   const welcome = await cnOpenWelcome();
   cnClicks = 0;
   const create = await cnOpenCreate(welcome);              // 1 New
@@ -821,7 +822,6 @@ test('25: Fantasy + App Docs → the new window has the Fantasy modules and the 
   await create.check('#cn-appdocs');                        // a value change, not a step on the path
   await create.fill('#nx-name', 'Smoke Fantasy');
   const v = await cnCreateFrom(create);                     // 3 Create
-  assert.ok(cnClicks <= 3, `a Nexus from a template in ≤ 3 clicks (${cnClicks})`);
   const { top, all } = await cnTop(v);
   assert.ok(top.includes('Guide'), `the Guide folder (${top})`);
   assert.ok(all.includes('Characters'), 'the Fantasy modules');

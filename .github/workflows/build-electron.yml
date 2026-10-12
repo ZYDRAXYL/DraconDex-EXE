@@ -107,6 +107,12 @@ jobs:
       - name: UI audit (every page)
         run: node --test electron/test/ui-audit.driver.mjs
 
+      # Procress 24 (APP docs/UX-LAYOUT.md §13): every customisation within
+      # its click budget from Home — real buttons, none hover-only, no new
+      # window, the same steps by keyboard.
+      - name: UI depth (clicks from Home)
+        run: node --test electron/test/ui-depth.driver.mjs
+
       - name: Resolve version and release tag
         id: meta
         shell: pwsh
