@@ -17,8 +17,12 @@
 .prop .pv[contenteditable]:focus{border-color:var(--accent);outline:none}
 .prop .pv.ghost{color:var(--t3-aa,var(--t2));font-style:italic}
 .prop .acts{margin-left:auto}
-.insp-attr:hover .acts{display:flex}
-.insp-attr .acts{display:none;gap:2px}
+/* Procress 24 (UX-LAYOUT §13.1): ✎ / delete always shown — no button on a
+   path may appear only under the pointer */
+.insp-attr .acts{display:flex;gap:2px}
+.insp-attr .pk-link{cursor:pointer}
+.insp-attr .pk-link:hover{color:var(--t1);text-decoration:underline}
+.insp-attr .pk-link:focus-visible{outline:var(--focus-ring) solid var(--accentH,var(--accent));outline-offset:2px}
 
 /* Icon Collection picker (progress.md Phase 5) */
 .ipk-tabs{margin-bottom:10px}
@@ -181,6 +185,8 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .cls-table{width:100%;border-collapse:collapse;font-size:calc(var(--fs-body) * var(--fsc,1))}
 .cls-table th{color:var(--t3-aa,var(--t2));text-align:left;font-weight:600;font-size:calc(var(--fs-meta) * var(--fsc,1));letter-spacing:.04em;
 	text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.cls-table th .btn{height:auto;min-height:var(--ctl-sm);padding:0 var(--sp-1);margin-left:calc(-1 * var(--sp-1));color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
+.cls-table th .btn:hover{color:var(--t1)}
 .cls-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--t2)}
 .cls-table td:first-child{color:var(--t1);white-space:nowrap}
 .cls-cell:focus{outline:1px solid var(--accent);outline-offset:-1px;background:var(--raised)}

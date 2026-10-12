@@ -238,6 +238,8 @@ function buildNestOptionsPopupHtml() {
     // three rows above are genuine booleans and stay as they are.
     `<div class="nest-opt-row nest-sig-row"><div class="nest-sig-label">${t('nestOptSignature')}</div>
       ${segmentedHtml(sig, s.nestSignatureMode, { size: 'sm', fill: true, aria: t('nestOptSignature'), onclick: (v) => `setNestSignatureMode('${v}')` })}</div>`,
+    // Procress 24: the rest of how the workspace looks — Settings opens on that page.
+    `<div class="popover-foot"><button class="btn btn-s btn-sm" onclick="closeAllPopups();openSettingWindow('workspace','style')">${t('nestOptMoreLayout')}</button></div>`,
   ].join('');
 }
 

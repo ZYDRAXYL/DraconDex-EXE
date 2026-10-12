@@ -147,7 +147,9 @@ function classifierTableCellHtml(m, o, c) {
 const clsLazy = (c, view) => ((c.state.lazy ||= {})[view] ||= {});
 
 function renderClassifierTable(m, d, inst) {
-  let html = `<div class="cls-table-wrap"><table class="cls-table"><tr><th>${t('name')}</th>${d.templates.map(c => `<th>${x(c.description)}</th>`).join('')}<th></th></tr>`;
+  // Procress 24: a column's head is its field — click it for the field menu
+  // (type · rename · delete), two clicks from the module page.
+  let html = `<div class="cls-table-wrap"><table class="cls-table"><tr><th>${t('name')}</th>${d.templates.map(c => `<th><button type="button" class="btn btn-g btn-sm" aria-haspopup="menu" title="${x(t('clsFieldMenu'))}" onclick="event.stopPropagation();openClsFieldMenu(this,${m.id},${c.id})" data-no-i18n>${x(c.description)}</button></th>`).join('')}<th></th></tr>`;
   html += lazyRows(d.objects, (o) => {
     let html = `<tr oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})"><td><span class="dot" style="background:${x(o.color_code || 'var(--accent)')}"></span>${x(o.name)}</td>`;
     for (const c of d.templates) html += classifierTableCellHtml(m, o, c);

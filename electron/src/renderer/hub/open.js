@@ -126,7 +126,8 @@ function pageTabsHtml(moduleId, tab) {
 function pageStructureHtml(m) {
   const fields = m.kind === 'classifier' ? clsData(m.id).templates.map((tpl) => `
       <div class="prop insp-attr">
-        <span class="pk" data-no-i18n>${x(tpl.description)}</span>
+        <span class="pk pk-link" role="button" tabindex="0" data-no-i18n onclick="openClassifierFieldsModal(${m.id},${tpl.id})"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" title="${t('editAttribute')}">${x(tpl.description)}</span>
         <span class="pv ghost">${t(CLASSIFIER_DISPTYPE_KEY[tpl.attribute_type] || 'dispTypeText')}</span>
         <span class="acts">
           <button class="btn btn-g btn-i" onclick="openClassifierFieldsModal(${m.id},${tpl.id})" title="${t('edit')}" aria-label="${t('edit')}">${I.edit}</button>
@@ -180,9 +181,9 @@ CTX_PROVIDERS['page.menu'] = () => {
     }
   }
   const groups = [
-    [head('pageMenuView'), cmdItem('page.properties'), cmdItem('page.readable'), cmdItem('page.layout')],
+    [head('pageMenuView'), cmdItem('page.properties'), cmdItem('page.readable'), cmdItem('page.layout'), cmdItem('page.chooseLayout')],
     [head('pageMenuTemplate'), cmdItem('page.useTemplate'), cmdItem('page.saveTemplate')],
-    [head('pageMenuShare'), cmdItem('page.export'), cmdItem('page.css')],
+    [head('pageMenuShare'), cmdItem('page.export'), cmdItem('app.publishSite'), cmdItem('page.css')],
     [head('pageMenuMore'), cmdItem('page.history'), ...plugins],
   ].filter((g) => g.slice(1).some(Boolean));
   return groups.flatMap((g, i) => (i ? [{ sep: true }, ...g] : g));

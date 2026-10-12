@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('vi', {
+  // Procress 24: customisation within 2–3 clicks
+  nexusSettingsThis:'Cài đặt Nexus này…', publishSite:'Xuất bản thành trang web…', pageChooseLayout:'Chọn bố cục…', settingPageThisNexus:'Nexus này', nestOptMoreLayout:'Thêm cài đặt bố cục…', clsFieldMenu:'Trường: loại, tên, xoá', clsFieldChangeType:'Đổi loại…', tagColor:'Màu',
   // Procress 23: package minAppVersion
   pkgNeedsNewerApp:'Cần DraconDex {v} trở lên — hãy cập nhật ứng dụng', pkgUpdateApp:'Cập nhật ứng dụng',
   // Procress 23: Glass style + Reduce transparency

@@ -79,6 +79,12 @@ function iconBtnHtml(icon, label, onclick, o = {}) {
   return `<button type="button" class="${cls}" onclick="${onclick}" title="${_attr(label)}" aria-label="${_attr(label)}"${o.disabled ? ' disabled' : ''} ${o.attrs || ''}>${I[icon] || ''}</button>`;
 }
 
+// A colour dot that is a button (Procress 24): a tag's or a category's own
+// colour — user data, so a dot, never text colour — and clicking it picks one.
+function colorDotBtnHtml(color, label, onclick) {
+  return `<button type="button" class="btn btn-g btn-i btn-i-sm" onclick="event.stopPropagation();${onclick}" title="${_attr(label)}" aria-label="${_attr(label)}"><span class="color-dot" style="--dot-c:${_attr(color || 'transparent')}"></span></button>`;
+}
+
 // o: { id, label, value, type, placeholder, hint, error, disabled, readOnly,
 //      size: 'sm'|'md'|'lg', textarea, attrs }
 function fieldHtml(o) {

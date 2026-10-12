@@ -55,6 +55,10 @@ function toggleNexusSwitcher(e) {
   openPopover(anchor, listHtml({ list: 'nexus-switcher', aria: t('wmChangeNexus'), body: recentNexuses(3).map(n => listRowHtml({ density: 'compact',
     icon: `<span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>`,
     title: n.name, state: { current: n.id === S.nexus?.id }, onclick: `openNexusWindow(${n.id})`, attrs: 'data-no-i18n' })).join('')
+    // Procress 24 (UX-LAYOUT §13): what you change about THIS Nexus, here, in
+    // this window — the ✎ used to live only in the Welcome window's list.
+    + (S.nexus ? listRowHtml({ density: 'compact', icon: I.settings, title: t('nexusSettingsThis'), cls: 'nexus-switcher-edit', onclick: `closeAllPopups();openNexusModal(${S.nexus.id})` })
+      + listRowHtml({ density: 'compact', icon: I.globe, title: t('publishSite'), cls: 'nexus-switcher-publish', onclick: "closeAllPopups();runCommand('app.publishSite')" }) : '')
     + listRowHtml({ density: 'compact', icon: I.projects, title: t('wmChangeNexus'), cls: 'nexus-switcher-more', onclick: 'openWelcomeWindow()' }) }), { cls: 'nexus-switcher-popup', keep: true, focus: false });
 }
 
@@ -168,21 +172,30 @@ async function reportParentNormalize() {
 // call with no id opens that window instead.
 async function openNexusModal(id = null) {
   if (!id) return openCreateNexusWindow();
-  await reloadNexuses();
-  const n = S.nexuses.find(v => v.id === id);
-  if (!n) return;
+  const fields = await nexusEditFieldsHtml(id);
+  if (!fields) return;
   openModal(t('nexusEdit'), `
-    <div class="fg"><label>${t('name')} *</label><input id="nx-name" value="${x(n.name || '')}"></div>
-    <div class="fg"><label>${t('memo')}</label><textarea id="nx-memo">${x(n.memo || '')}</textarea></div>
-    <div class="fg"><label>${t('color')}</label>${await colorPicker(n.color)}</div>
-    ${nexusFileRowHtml(n)}
-    ${nexusLocateRowHtml(n)}
+    ${fields}
     <div class="mfoot">
       <button class="btn btn-d" onclick="delNexus(${id})">${t('delete')}</button>
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" onclick="saveNexus(${id})">${t('save')}</button>
     </div>`);
   setTimeout(() => q('#nx-name').focus(), 60);
+}
+
+// The edit fields, shared by the modal above and Settings → This Nexus
+// (Procress 24). saveNexus() reads them by id.
+async function nexusEditFieldsHtml(id) {
+  await reloadNexuses();
+  const n = S.nexuses.find(v => v.id === id);
+  if (!n) return '';
+  return `
+    <div class="fg"><label for="nx-name">${t('name')} *</label><input id="nx-name" value="${x(n.name || '')}"></div>
+    <div class="fg"><label for="nx-memo">${t('memo')}</label><textarea id="nx-memo">${x(n.memo || '')}</textarea></div>
+    <div class="fg"><label>${t('color')}</label>${await colorPicker(n.color)}</div>
+    ${nexusFileRowHtml(n)}
+    ${nexusLocateRowHtml(n)}`;
 }
 
 // Where the vault file goes (the Create Nexus window's form). Shown in every build, dev included, with the

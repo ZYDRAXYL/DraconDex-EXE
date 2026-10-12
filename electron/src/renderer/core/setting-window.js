@@ -23,19 +23,22 @@
 // renderer, run one after the other (SETTING_PAGE_MERGE), so the files that
 // register them (account.js, drive.js, plugin.js, db-transfer.js) did not
 // change. An old id still opens the page it now lives on (SETTING_PAGE_ALIAS).
+// Procress 24 (UX-LAYOUT §13): Appearance split in two again — theme + UI
+// style, then Language & text — so neither needs scrolling to find; and
+// "This Nexus" (name, colour, Locate folder) joins the group, so the open
+// vault is changed here instead of from the Welcome window.
 const SETTING_GROUPS = {
-  workspace: ['theme', 'tooltoggle', 'style', 'startup'],
+  workspace: ['theme', 'textsize', 'thisnexus', 'tooltoggle', 'style', 'startup'],
   user: ['account'],
   appdata: ['tokensync', 'transfer', 'database', 'cloudstorage', 'versions'],
   plugin: ['extension', 'plugin', 'packages'],
 };
 const SETTING_PAGE_MERGE = {
-  theme: ['theme', 'textsize'],
   account: ['account', 'profile'],
   database: ['database', 'backup'],
   plugin: ['plugin', 'pluginsettings'],
 };
-const SETTING_PAGE_ALIAS = { textsize: 'theme', profile: 'account', backup: 'database', pluginsettings: 'plugin' };
+const SETTING_PAGE_ALIAS = { profile: 'account', backup: 'database', pluginsettings: 'plugin' };
 function settingGroupPages(group){
   const pages = SETTING_GROUPS[group] || SETTING_GROUPS.workspace;
   return cloudSyncAvailable() ? pages : pages.filter(p => p !== 'tokensync');
@@ -45,7 +48,7 @@ const SETTING_GROUP_LABEL_KEY = {
   appdata: 'settingGroupAppdata', plugin: 'settingGroupPlugin',
 };
 const SETTING_PAGE_LABEL_KEY = {
-  theme: 'settingPageAppearance', textsize: 'settingPageTextSize', tooltoggle: 'settingPageToolToggle',
+  theme: 'settingPageAppearance', textsize: 'settingPageTextSize', thisnexus: 'settingPageThisNexus', tooltoggle: 'settingPageToolToggle',
   style: 'settingPageWorkspaceStyle', startup: 'settingPageStartup',
   account: 'settingPageAccount', profile: 'settingPageProfile',
   tokensync: 'settingPageTokenSync', transfer: 'settingPageTransfer',
@@ -68,11 +71,15 @@ function registerSettingPage(group, page, fn){
 // (start at top, same as opening the window fresh) — reset on open so the
 // window always starts at the top the moment it's shown.
 let _settingWindowLastKey = null;
+// Procress 24 (UX-LAYOUT §13.1): Settings opens on the page that fits where
+// it was opened from (the caller names it); opened plainly — the ⚙ — it is
+// Appearance, always, not whichever page was looked at last.
 function openSettingWindow(group, page){
   page = SETTING_PAGE_ALIAS[page] || page;
-  S.settingGroup = group || S.settingGroup || 'workspace';
+  if (!group) { group = 'workspace'; page = 'theme'; }
+  S.settingGroup = group;
   const pages = settingGroupPages(S.settingGroup);
-  S.settingPage = page || (pages.includes(S.settingPage) ? S.settingPage : pages[0]);
+  S.settingPage = page && pages.includes(page) ? page : pages[0];
   _settingWindowLastKey = null;
   openFloatingPanel('setting-window', `${I.settings} ${t('settingWindowTitle')}`, settingWindowBodyHtml(), {width:1040, height:680});
   _settingWindowLastKey = `${S.settingGroup}.${S.settingPage}`;
@@ -212,7 +219,11 @@ function settingThemeSectionHtml(){
   const customs = (S.settings.customThemes || []).map(ct =>
     settingThemeGridCellHtml(`custom:${ct.id}`, ct.name, ct.vars || {}, {active: S.settings.theme === `custom:${ct.id}`, isCustom: true})
   ).join('');
-  const addBox = `<div class="prefs-theme-cell prefs-theme-add" onclick="openCustomThemeModal()" title="${t('customThemeNew')}">+</div>`;
+  // Procress 24: a card that says what it is — "Your themes" over "Create
+  // custom theme" — not a bare +; and a real button for the keyboard.
+  const addBox = `<div class="prefs-theme-cell prefs-theme-add" role="button" tabindex="0" onclick="openCustomThemeModal()"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" title="${t('customThemeNew')}" aria-label="${t('customThemeNew')}">
+    <span class="prefs-theme-add-group">${t('themeGroupCustom')}</span>${I.plus}<span class="prefs-theme-add-label">${t('customThemeNew')}</span></div>`;
   // Not-yet-downloaded catalog themes only ever show once expanded — the
   // collapsed 3-slot view is reserved for the app's own basics, same rule
   // custom themes already follow just above.
@@ -407,8 +418,8 @@ function settingTextSizePageHtml(){
       <div class="settings-label">${t('settingAreaScale')}</div>
       ${areaRows}
       <div class="settings-label">${t('help')}</div>
-      <button class="btn btn-s" style="width:100%;margin-bottom:6px" onclick="openShortcutsModal()">${I.info} ${t('shortcuts')}</button>
-      <button class="btn btn-s" style="width:100%" onclick="replayGuideTour()">${I.book} ${t('replayTour')}</button>
+      <div class="setting-wide-btns"><button class="btn btn-s" onclick="openShortcutsModal()">${I.info} ${t('shortcuts')}</button>
+      <button class="btn btn-s" onclick="replayGuideTour()">${I.book} ${t('replayTour')}</button></div>
     </div>` : ''}`;
 }
 function toggleSettingAdvanced(){
@@ -416,3 +427,20 @@ function toggleSettingAdvanced(){
   renderSettingWindow();
 }
 registerSettingPage('workspace', 'textsize', settingTextSizePageHtml);
+
+// ═══ Workspace → This Nexus (Procress 24) ═══════════════════════════════
+// The open vault's name, memo, colour, file and Locate folder — the same
+// fields as its Edit modal (nexusEditFieldsHtml, core/nexus.js), and the same
+// saveNexus(). Async (the colour picker reads the palette), so it patches its
+// own box once ready, like the plugin and package pages.
+function settingThisNexusPageHtml(){
+  const n = S.nexus;
+  if (!n) return `<div class="settings-label">${t('settingPageThisNexus')}</div><p class="drafter-hint">${t('nexusEmpty')}</p>`;
+  nexusEditFieldsHtml(n.id).then((html) => {
+    const el = q('#setting-thisnexus');
+    if (!el || S.settingPage !== 'thisnexus') return;
+    el.innerHTML = `${html}<div class="mfoot"><button class="btn btn-p" onclick="saveNexus(${n.id})">${t('save')}</button></div>`;
+  }).catch(() => {});
+  return `<div class="settings-label">${t('settingPageThisNexus')}</div><div id="setting-thisnexus">${t('syncWorking')}</div>`;
+}
+registerSettingPage('workspace', 'thisnexus', settingThisNexusPageHtml);

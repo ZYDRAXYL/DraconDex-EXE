@@ -94,3 +94,6 @@
 .gal-icons{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
 .gal-icon{display:inline-flex;flex-direction:column;align-items:center;gap:2px;width:72px;color:var(--t1)}
 .gal-icon small{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
+/* ── colour dot button (colorDotBtnHtml): a user's colour, clicked to change ── */
+.btn-i .color-dot{display:block;width:12px;height:12px;border-radius:50%;background:var(--dot-c,transparent);border:1px solid var(--border)}

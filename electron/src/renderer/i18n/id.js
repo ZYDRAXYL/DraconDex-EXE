@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('id', {
+  // Procress 24: customisation within 2–3 clicks
+  nexusSettingsThis:'Pengaturan Nexus ini…', publishSite:'Terbitkan sebagai situs web…', pageChooseLayout:'Pilih tata letak…', settingPageThisNexus:'Nexus ini', nestOptMoreLayout:'Pengaturan tata letak lainnya…', clsFieldMenu:'Bidang: jenis, nama, hapus', clsFieldChangeType:'Ubah jenis…', tagColor:'Warna',
   // Procress 23: package minAppVersion
   pkgNeedsNewerApp:'Perlu DraconDex {v} atau lebih baru — perbarui aplikasi', pkgUpdateApp:'Perbarui aplikasi',
   // Procress 23: Glass style + Reduce transparency

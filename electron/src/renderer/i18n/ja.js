@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('ja', {
+  // Procress 24: customisation within 2–3 clicks
+  nexusSettingsThis:'この Nexus の設定…', publishSite:'ウェブサイトとして公開…', pageChooseLayout:'レイアウトを選ぶ…', settingPageThisNexus:'この Nexus', nestOptMoreLayout:'その他のレイアウト設定…', clsFieldMenu:'フィールド：種類・名前・削除', clsFieldChangeType:'種類を変更…', tagColor:'色',
   // Procress 23: package minAppVersion
   pkgNeedsNewerApp:'DraconDex {v} 以降が必要です — アプリを更新してください', pkgUpdateApp:'アプリを更新',
   // Procress 23: Glass style + Reduce transparency

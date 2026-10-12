@@ -277,6 +277,8 @@ document.addEventListener('keydown', (e) => {
   const row = e.target.closest?.(LIST_STOPS);
   const box = row?.closest('.ls-list');
   if (!box || e.target.closest('input, select, textarea') || e.altKey || e.ctrlKey || e.metaKey) return;
+  // Enter / Space on a button inside the row is that button's (a colour dot, Download)
+  if (e.target !== row && (e.key === 'Enter' || e.key === ' ') && e.target.closest('button, [role="button"]')) return;
   const rows = [...box.querySelectorAll(LIST_STOPS)].filter((r) => r.offsetParent);
   const head = row.classList.contains('ls-group-head');
   if (head && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); listGroupToggle(row); return; }
