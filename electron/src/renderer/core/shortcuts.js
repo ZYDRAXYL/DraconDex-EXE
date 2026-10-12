@@ -17,6 +17,11 @@ function bindGlobalShortcuts() {
       return;
     }
     if (modalOpen) return;
+    if (key === 'g' && e.shiftKey && e.altKey && S.devMode) { // the component gallery (dev only, Procress 22)
+      e.preventDefault();
+      await runCommand('dev.gallery');
+      return;
+    }
     if (key === 'f' && e.shiftKey) { // focus mode (page/focus.js)
       e.preventDefault();
       await runCommand('app.focusMode');

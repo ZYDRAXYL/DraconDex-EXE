@@ -59,7 +59,7 @@
 .card{display:block;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:var(--sp-3) var(--sp-4);color:var(--t1)}
 .card-link{cursor:pointer;text-align:left;font:inherit}
 .card-link:hover,.card-link:focus-visible{border-color:var(--accent);background:var(--hover)}
-.card-link.on,.card-link[aria-checked="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.card-link.on,.card-link.active,.card-link[aria-checked="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .card-preview{padding:0;overflow:hidden}
 .card-preview > .card-media{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--raised)}
 .card-preview > .card-body{padding:var(--sp-3) var(--sp-4)}
@@ -79,3 +79,18 @@
 .fg .fg-hint{margin-top:4px;color:var(--t2);font-size:calc(var(--fs-meta) * var(--fsc,1))}
 .fg :is(input,select,textarea):disabled{opacity:.55;cursor:not-allowed}
 .fg :is(input,textarea)[readonly]{background:var(--raised);border-style:dashed}
+
+/* ── The component gallery (dev only — src/renderer/gallery.js) ──────── */
+.gal{padding:var(--sp-5) var(--sp-6);max-width:1100px}
+.gal .ch{display:flex;align-items:center;gap:var(--sp-3)}
+.gal-sec{margin-top:var(--sp-5)}
+.gal-h{font-size:calc(var(--fs-section) * var(--fsc,1));margin-bottom:var(--sp-3);color:var(--t1)}
+.gal-set{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
+.gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--sp-3);width:100%}
+.gal-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--sp-3);width:100%}
+.gal-list{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);width:100%}
+.gal-media{height:80px;aspect-ratio:auto;background:linear-gradient(135deg,var(--accent),var(--info))}
+.gal-p{margin:var(--sp-2) 0 0;color:var(--t1)}
+.gal-icons{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.gal-icon{display:inline-flex;flex-direction:column;align-items:center;gap:2px;width:72px;color:var(--t1)}
+.gal-icon small{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);overflow:hidden;text-overflow:ellipsis;max-width:100%}

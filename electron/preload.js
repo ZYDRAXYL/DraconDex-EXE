@@ -512,6 +512,7 @@ contextBridge.exposeInMainWorld('api', {
     openNexusReplace: (nexusId) => inv('window:openNexusReplace', nexusId),
     openBuilderTab: (nexusId, tabKey) => inv('window:openBuilderTab', nexusId, tabKey),
     getId:          () => inv('window:getId'),
+    devInfo:        () => inv('window:devInfo'),
     moveTabToMain:  (nexusId, tabKey) => inv('window:moveTabToMain', nexusId, tabKey),
     onTabInbound:   (cb) => ipcRenderer.on('builder:tabInbound', (_, nexusId, tabKey) => cb(nexusId, tabKey)),
   },

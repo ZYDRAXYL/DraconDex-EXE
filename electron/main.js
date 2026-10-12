@@ -1957,6 +1957,14 @@ h('window:openNexus', (nexusId) => { createWindow(nexusId); });
 // last row and the ⇄ button both route here instead of dropping the current
 // window back to the in-hub Nexus picker.
 h('window:openWelcome', () => { createWelcomeWindow(); });
+// Procress 22: dev-only surfaces (the component gallery) ask here — never in a packaged build.
+// `--gallery` opens it once, in the first vault window that asks.
+let _galleryOpened = false;
+h('window:devInfo', () => {
+  const gallery = !isPackaged && !_galleryOpened && process.argv.includes('--gallery');
+  if (gallery) _galleryOpened = true;
+  return { dev: !isPackaged, gallery };
+});
 // Welcome -> app handoff: open the vault in a fresh window, then close the
 // window that asked (the Welcome one). Needs the raw ipcMain event to know
 // WHICH window called — same reason as window:getId below, and the `h()`

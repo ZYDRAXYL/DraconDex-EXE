@@ -182,6 +182,8 @@ async function init() {
   initDriveAutoBackup();   // fire-and-forget — must not block first paint
   initVersionCheck();      // fire-and-forget — must not block first paint
   initLegacyDataCheck();   // fire-and-forget — must not block first paint
+  // Procress 22: dev builds get the component gallery (Ctrl+P, or --gallery)
+  api.window.devInfo().then((d) => { S.devMode = !!d?.dev; if (d?.gallery) runCommand('dev.gallery'); }).catch(() => {});
   window.__splash?.finish();
 }
 

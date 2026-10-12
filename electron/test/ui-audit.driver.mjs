@@ -291,6 +291,73 @@ test('list keyboard: one tab stop, ↑ ↓ Home End move, Enter, Delete asks, gr
   assert.deepEqual(nest, { gone: true, undo: true, back: true });
 });
 
+// ── Procress 22: the component gallery (APP docs/COMPONENTS.md) ─────────
+// Every shared component, variant and state on one page (src/renderer/
+// gallery.js, dev builds only), measured in each built-in theme: text and
+// its layers (popover, menu, modal) ≥ 4.5:1, every control ≥ 24 × 24 px and
+// named, and the keyboard path through the popover and the modal.
+const openGalleryPage = async () => {
+  await win.evaluate(async () => { closeModal(); closeAllPopups(); document.getElementById('confirm-overlay')?.remove(); await runCommand('dev.gallery'); });
+  await win.waitForTimeout(400);
+};
+const GALLERY_CONTROLS = '#gallery :is(button, [role="button"], [role="link"], [role="tab"], a[href], input:not([type="hidden"]), select, textarea)';
+const galleryTargets = () => win.evaluate((sel) => [...document.querySelectorAll(sel)]
+  .filter((el) => el.offsetParent && !el.closest('.ls-row') && !el.closest('.gal-icons'))
+  .map((el) => { const r = el.getBoundingClientRect(); return { r, el }; })
+  .filter(({ r }) => r.width < 23.5 || r.height < 23.5)
+  .map(({ r, el }) => `${el.outerHTML.replace(/\s+/g, ' ').slice(0, 70)} ${r.width.toFixed(0)}×${r.height.toFixed(0)}`), GALLERY_CONTROLS);
+
+test('gallery: every component, every built-in theme — contrast, ≥ 24 px targets, names', async () => {
+  const bad = [];
+  for (const theme of ['midnight', 'moonlight', 'daylight']) {
+    await win.evaluate((th) => setUiSetting('theme', th), theme);
+    await openGalleryPage();
+    assert.ok(await win.locator('#gallery .gal-sec').count() >= 8, 'the gallery renders (dev build)');
+    for (const f of await win.evaluate(contrastProbe)) bad.push(`${theme} gallery: ${f.sel} "${f.text}" ${f.ratio}:1 (needs ${f.need}) ${f.fg} on ${f.bg}`);
+    bad.push(...(await galleryTargets()).map((b) => `${theme} target under 24 px: ${b}`));
+    const snap = await snapshot();
+    bad.push(...snap.nameless.map((n) => `${theme} nameless: ${n}`), ...snap.white.map((w) => `${theme} white input: ${w}`));
+    // the layers it opens
+    for (const open of ['#gal-pop', '#gal-menu', '#gal-modal-md']) {
+      await win.click(open); await win.waitForTimeout(250);
+      for (const f of await win.evaluate(contrastProbe)) if (/popover|modal|ctx|kind-list/.test(f.sel) || f.sel.includes('#modal')) bad.push(`${theme} ${open}: ${f.sel} "${f.text}" ${f.ratio}:1`);
+      await win.evaluate(() => { closeAllPopups(); closeModal(); });
+    }
+  }
+  await win.evaluate(() => setUiSetting('theme', 'midnight'));
+  assert.deepEqual([...new Set(bad)], []);
+});
+
+test('gallery keyboard: popover takes focus, traps Tab, Esc gives it back; modal foot and Esc', async () => {
+  await openGalleryPage();
+  const r = await win.evaluate(async () => {
+    const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    const key = (k, o = {}) => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...o }));
+    const btn = document.querySelector('#gal-pop');
+    btn.focus(); btn.click(); await wait(60);
+    const pop = document.querySelector('.popover');
+    const out = { opened: !!pop, role: pop?.getAttribute('role'), named: !!pop?.getAttribute('aria-label'), inside: !!pop?.contains(document.activeElement) };
+    const stops = [...pop.querySelectorAll('button, input')].filter((e) => e.offsetParent);
+    stops[stops.length - 1].focus(); key('Tab');
+    out.trapped = document.activeElement === stops[0];
+    key('Shift', {}); stops[0].focus(); key('Tab', { shiftKey: true });
+    out.trappedBack = document.activeElement === stops[stops.length - 1];
+    key('Escape'); await wait(30);
+    out.closed = !document.querySelector('.popover');
+    out.focusBack = document.activeElement === btn;
+    document.querySelector('#gal-modal-md').click(); await wait(80);
+    const foot = document.querySelector('#modal-foot');
+    out.foot = !!foot && !foot.hidden && foot.querySelector('.btn-p') === foot.querySelector('.mfoot').lastElementChild;
+    out.hint = !!document.querySelector('#modal-body > .modal-hint');
+    out.size = document.querySelector('#modal').dataset.size;
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await wait(30);
+    out.modalClosed = document.querySelector('#modal-overlay').classList.contains('hidden');
+    return out;
+  });
+  assert.deepEqual(r, { opened: true, role: 'dialog', named: true, inside: true, trapped: true, trappedBack: true, closed: true, focusBack: true, foot: true, hint: true, size: 'md', modalClosed: true });
+});
+
 test('no page or console error anywhere above', () => {
   assert.deepEqual(pageErrors, []);
 });
