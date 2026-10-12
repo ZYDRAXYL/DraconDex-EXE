@@ -138,6 +138,11 @@ function unwatchFolder(nx) {
   watchers.delete(nx);
 }
 
+// Every watcher, closed. A recursive watcher left open on a folder that is
+// then deleted keeps a Windows process from exiting (the regression tests
+// hung CI for hours that way), so tests and app quit close them first.
+function unwatchAll() { for (const nx of [...watchers.keys()]) unwatchFolder(nx); }
+
 // true = walk the folder (something changed there, or there is no watcher
 // to say it didn't); the flag resets.
 function folderChanged(nx) {
@@ -466,7 +471,7 @@ function copyIntoFolder(nx, paths, targetId) {
 
 module.exports = {
   trackVault, takeDirty, giveBackDirty, hasDirty,
-  watchFolder, unwatchFolder, folderChanged, takeVerify, ignoreOwn, isWatching, markActive, isActive, forget,
+  watchFolder, unwatchFolder, unwatchAll, folderChanged, takeVerify, ignoreOwn, isWatching, markActive, isActive, forget,
   defaultLocateRoot, locateRoot, setLocateRoot, ensureLocateDir, driveAvailable, repairLocate,
   followRename, moveLocate, outsideAssets, gatherAssets, freeDir, autoNameOf,
   syncLocate, locateRootOf, copyIntoFolder,

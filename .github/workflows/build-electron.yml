@@ -47,6 +47,8 @@ concurrency:
 jobs:
   build:
     runs-on: windows-latest
+    # A hung step used to run to GitHub's 6-hour ceiling; the whole job takes ~40 min.
+    timeout-minutes: 75
     permissions:
       contents: write
     # Consumed by the `mirror` job below, which re-publishes this release to
@@ -88,7 +90,8 @@ jobs:
         run: npm run sdb:check
 
       - name: Run regression tests
-        run: node --test "electron/test/*.test.mjs"
+        run: node --test --test-timeout=120000 "electron/test/*.test.mjs"
+        timeout-minutes: 15
 
       # Procress 22 part 4: component variants, hard-coded hex, inline style,
       # raw z-index and character icons may only go down (ui-inventory.json is

@@ -25,7 +25,7 @@ const locate = require('../src/db/locate.js');
 const { serializeVault } = require('../src/db/sync.js');
 const { splitByModule } = require('../src/db/snapshot-split.js');
 const { MANIFEST } = require('../src/db/mirror.js');
-test.after(() => { conn.closeAllVaults(); rmSync(dir, { recursive: true, force: true }); });
+test.after(() => { locate.unwatchAll(); conn.closeAllVaults(); rmSync(dir, { recursive: true, force: true }); });
 
 const inVault = (id, fn) => runWithVault(id, fn);
 const sync = (id, reason = 'manual') => inVault(id, () => locate.syncLocate(id, { reason }));
