@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('pl', {
+  // Procress 23: package minAppVersion
+  pkgNeedsNewerApp:'Wymaga DraconDex {v} lub nowszego — zaktualizuj aplikację', pkgUpdateApp:'Zaktualizuj aplikację',
   // Procress 23: Glass style + Reduce transparency
   uiStyleGlass:'Szkło', uiStyleGlassHint:'Półprzezroczyste paski i menu na miękkim tle', settingReduceTransparency:'Zmniejsz przezroczystość (pełne paski i menu)',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart

@@ -188,6 +188,10 @@ registerSettingPage('workspace', 'theme', settingThemePageHtml);
 // there's nothing real to preview here.
 function settingThemeCatalogCellHtml(p){
   const btnSel = `#pkg-inline-${p.id}`;
+  if (p.appTooOld) return `<div class="prefs-theme-cell locked" title="${x(pkgNeedsAppText(p))}">
+    <div class="ctm-preview mini prefs-theme-cell-lockglyph">${I.info}</div>
+    <div class="prefs-theme-name" data-no-i18n>${x(pkgDisplayName(p))}</div>
+  </div>`;
   // The catalog's preview.vars (validated in main) is enough to draw the real
   // mockup; an entry without one (older catalog) keeps the plain glyph.
   const pv = p.preview?.vars;
@@ -247,6 +251,8 @@ function uiStyleSampleHtml(key){
 // no onclick, Download button where the checkmark slot would be.
 function settingUiStyleCatalogItemHtml(p){
   const btnSel = `#pkg-inline-${p.id}`;
+  // Procress 23: made for a newer app (minAppVersion) — say so, no Download.
+  if (p.appTooOld) return listRowHtml({ title: pkgDisplayName(p), meta: pkgNeedsAppText(p), state: { disabled: true }, attrs: 'data-no-i18n' });
   // A shape sample drawn from the catalog's preview.vars: the preset's own
   // corner radius and popup shadow, on the current theme's colours.
   const pv = p.preview?.vars;

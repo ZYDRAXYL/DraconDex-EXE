@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('qd', {
+  // Procress 23: package minAppVersion
+  pkgNeedsNewerApp:'Needeth DraconDex {v} or newer — amende the werke', pkgUpdateApp:'Amende the werke',
   // Procress 23: Glass style + Reduce transparency
   uiStyleGlass:'Glasse', uiStyleGlassHint:'Bares and menus clere as glasse upon a softe grounde', settingReduceTransparency:'Lessen the clerenesse (bares and menus made sollid)',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
