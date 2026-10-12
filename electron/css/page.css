@@ -124,6 +124,7 @@
 .addr-seg.is-folder:hover{color:var(--t1)}
 .addr-caret{cursor:pointer;opacity:.55;font-size:.85em;display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;border-radius:var(--rs)}
 .addr-caret:hover{opacity:1}
+.addr-caret .icon{width:12px;height:12px}
 .addr-sep{opacity:.4;padding:0 2px}
 .addr-input{flex:1;min-width:0;width:100%;background:transparent;border:none;outline:none;color:var(--t1);font:inherit}
 .addr-sugg{position:fixed;z-index:calc(var(--z-tooltip) + 200);max-height:50vh;overflow:auto;background:var(--surface);border:1px solid var(--border);

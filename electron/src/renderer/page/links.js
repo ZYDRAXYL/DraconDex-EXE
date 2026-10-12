@@ -222,8 +222,8 @@ function pbLinksEditorHtml(iid, d, v) {
       ${d.grouped ? `<input type="text" value="${x(l.group || '')}" placeholder="${x(t('pbLinkGroup'))}" maxlength="40" aria-label="${x(t('pbLinkGroup'))}"
         onchange="pbLinkEdit(${xj(iid)},${k},${i},{group:this.value})">` : ''}
       <span class="pb-le-acts">
-        <button class="btn btn-g btn-i" onclick="pbLinkMove(${xj(iid)},${k},${i},-1)" title="${t('pbLinkUp')}"${i ? '' : ' disabled'}>▲</button>
-        <button class="btn btn-g btn-i" onclick="pbLinkMove(${xj(iid)},${k},${i},1)" title="${t('pbLinkDown')}"${i < list.length - 1 ? '' : ' disabled'}>▼</button>
+        <button class="btn btn-g btn-i" onclick="pbLinkMove(${xj(iid)},${k},${i},-1)" title="${t('pbLinkUp')}"${i ? '' : ' disabled'}>${I.chevronUp}</button>
+        <button class="btn btn-g btn-i" onclick="pbLinkMove(${xj(iid)},${k},${i},1)" title="${t('pbLinkDown')}"${i < list.length - 1 ? '' : ' disabled'}>${I.chevronDown}</button>
         <button class="btn btn-g btn-i" onclick="pbLinkMove(${xj(iid)},${k},${i},0)" title="${t('delete')}">${I.close}</button>
       </span></div>`).join('');
   return `<div class="pb-le">${rows}

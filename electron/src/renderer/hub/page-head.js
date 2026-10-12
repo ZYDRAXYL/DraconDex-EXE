@@ -152,7 +152,7 @@ async function openPageLayoutPopup(anchor) {
     <div class="fg"><input class="ph-icon-inp" maxlength="16" value="${x(lay.icon || '')}" placeholder="✦" data-no-i18n></div>
     <div class="ph-pop-label">${t('pageCover')}</div>
     ${images.length
-      ? `<div class="ph-covers"><div role="button" tabindex="0" class="ph-cover-opt ph-cover-none${lay.cover ? '' : ' active'}" data-cover="" title="${t('pageCoverNone')}">✕</div>${covers}</div>`
+      ? `<div class="ph-covers"><div role="button" tabindex="0" class="ph-cover-opt ph-cover-none${lay.cover ? '' : ' active'}" data-cover="" title="${t('pageCoverNone')}">${I.close}</div>${covers}</div>`
       : `<div class="ph-pop-hint">${t('pageCoverEmpty')}</div>`}
     <div class="ph-seg"><button type="button" class="btn btn-s btn-sm" data-more="1">${t('pageCoverMore')}</button>
       ${lay.cover ? `<button type="button" class="btn btn-s btn-sm" data-focus="1">${t('pbFocusTitle')}</button>` : ''}</div>

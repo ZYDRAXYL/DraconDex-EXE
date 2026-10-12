@@ -507,3 +507,7 @@
 .home-tpl-pic{display:flex;flex-wrap:wrap;gap:4px;padding:var(--sp-2);border-radius:var(--rs);background:var(--raised);width:100%;min-height:40px}
 .home-tpl-pic i{display:inline-flex}.home-tpl-pic .icon{width:18px;height:18px}
 .btn.home-tpl .kli-desc{color:var(--t2);font-size:calc(var(--fs-meta) * var(--fsc,1))}
+
+/* Procress 22: an icon inline with text (a lock after a name) */
+.inline-ico{display:inline-flex;vertical-align:-2px}
+.inline-ico .icon{width:var(--icon-sm);height:var(--icon-sm)}

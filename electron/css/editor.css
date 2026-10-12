@@ -117,3 +117,5 @@
 /* Procress 16 part 7: Quick Access pin on a command row */
 .qs-qa{cursor:pointer;color:var(--t2);padding:0 6px;font-size:calc(var(--fs-body) * var(--fsc,1))}
 .qs-qa:hover,.qs-qa.on{color:var(--warn)}
+.qs-qa .icon{width:14px;height:14px}
+.qs-qa.on .icon{fill:currentColor}

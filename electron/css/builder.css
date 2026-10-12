@@ -227,3 +227,4 @@
 .bpane-acts{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .bpane-head:not(:has(.tabs-compact)) .bpane-tablist{display:none}
 .bpane-tabs .project-tab:not(.active):not(.pane-active):not(:hover) .tab-close{visibility:hidden}
+.qs-item .qs-pin .icon{width:12px;height:12px}

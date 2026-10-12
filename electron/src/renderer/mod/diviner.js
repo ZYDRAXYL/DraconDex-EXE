@@ -125,8 +125,8 @@ function divinerEntryRowHtml(e, i, n, tb) {
     </span>
     <span class="acts">
       <button class="btn btn-g btn-i" onclick="openDivinerLinkModal(${e.id})" title="${t('divLinkTo')}">${I.relation}</button>
-      <button class="btn btn-g btn-i" onclick="moveDivinerEntry(${e.id},-1)" ${i === 0 ? 'disabled' : ''} title="${t('divMoveUp')}">↑</button>
-      <button class="btn btn-g btn-i" onclick="moveDivinerEntry(${e.id},1)" ${i === n - 1 ? 'disabled' : ''} title="${t('divMoveDown')}">↓</button>
+      <button class="btn btn-g btn-i" onclick="moveDivinerEntry(${e.id},-1)" ${i === 0 ? 'disabled' : ''} title="${t('divMoveUp')}">${I.arrowUp}</button>
+      <button class="btn btn-g btn-i" onclick="moveDivinerEntry(${e.id},1)" ${i === n - 1 ? 'disabled' : ''} title="${t('divMoveDown')}">${I.arrowDown}</button>
       <button class="btn btn-g btn-i" onclick="deleteDivinerEntryRow(${e.id})" title="${t('delete')}">${I.delete}</button>
     </span>
   </div>`;

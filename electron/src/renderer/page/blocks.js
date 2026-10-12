@@ -62,7 +62,7 @@ function pbTagChipsHtml(moduleId, p) {
   // Procress 16 part 5: a label is a category — its chip opens the category page
   const chips = (p.tags || []).map((tg) => `<a class="htag" role="link" tabindex="0" onclick="openCategoryPage(${xj(tg.tag_name)})" onkeydown="if(event.key==='Enter')openCategoryPage(${xj(tg.tag_name)})" style="border-color:${x(tg.color_code || '#6366f1')};color:${x(tg.color_code || '#6366f1')}">#${x(tg.tag_name)}</a>`).join('');
   const n = (p.links?.outgoing?.length || 0) + (p.links?.backlinks?.length || 0);
-  const links = `<span class="htag lk" data-no-i18n title="${t('openInExhibitor')}" onclick="openExhibitorFor(${moduleId},'module_${moduleId}')">🔗 ${n}</span>`;
+  const links = `<span class="htag lk" data-no-i18n title="${t('openInExhibitor')}" onclick="openExhibitorFor(${moduleId},'module_${moduleId}')">${I.relation}${n}</span>`;
   return `${chips}${links}<button class="btn btn-g btn-i" onclick="openModuleTagPopup(${moduleId}, this)" title="${t('tagLink')}">${I.plus}</button>`;
 }
 

@@ -16,8 +16,8 @@ function buildExhibitorHierarchyRows(d, parentId, depth) {
         onclick="selectExhibitorNode(${n.id})" ondblclick="openExhibitorNodeTarget(${n.id})">
       <span class="name" data-no-i18n>${x(exhNodeTitle(n))}</span>
       <span class="acts">
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();patchExhibitorNode(${n.id},{hidden:${n.hidden ? 0 : 1}})" title="${x(t('exhibitorHidden'))}" data-no-i18n>${n.hidden ? '◌' : '●'}</button>
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();patchExhibitorNode(${n.id},{locked:${n.locked ? 0 : 1}})" title="${x(t('exhibitorLocked'))}" data-no-i18n>${n.locked ? '⊠' : '□'}</button>
+        <button class="btn btn-g btn-i" onclick="event.stopPropagation();patchExhibitorNode(${n.id},{hidden:${n.hidden ? 0 : 1}})" title="${x(t('exhibitorHidden'))}" >${n.hidden ? I.eyeOff : I.eye}</button>
+        <button class="btn btn-g btn-i" onclick="event.stopPropagation();patchExhibitorNode(${n.id},{locked:${n.locked ? 0 : 1}})" title="${x(t('exhibitorLocked'))}" >${n.locked ? I.lock : I.unlock}</button>
       </span>
     </div>${kids}`;
   }).join('');
@@ -36,7 +36,7 @@ function buildExhibitorInspectorHtml(d, n) {
   }).join('');
   return `<aside class="exh-insp">
     <div class="exh-hier-head"><span data-no-i18n>${x(exhNodeTitle(n))}</span>
-      <button class="btn btn-g btn-i" onclick="selectExhibitorNode(null)" title="${x(t('cancel'))}" data-no-i18n>✕</button></div>
+      <button class="btn btn-g btn-i" onclick="selectExhibitorNode(null)" title="${x(t('cancel'))}">${I.close}</button></div>
     ${it ? `<div class="drafter-hint" data-no-i18n>${VIEWER_KIND_LABEL[it.kind] || it.kind}${it.moduleName ? ` · ${x(it.moduleName)}` : ''}</div>
       <button class="btn btn-s btn-sm" onclick="openExhibitorNodeTarget(${n.id})">${t('exhibitorOpenItem')}</button>` : ''}
     <div class="fg"><label>${t('exhibitorLabel')}</label>

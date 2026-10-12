@@ -52,7 +52,7 @@ async function hashtagSelector(prefix, selectedIds){
     <input id="${prefix}-tag-search" class="tag-search-input" type="text" placeholder="พิมพ์ค้นหา Tag..." oninput="renderModalTagSuggestions('${prefix}')">
     <div class="tag-add-box">
       <div class="tag-suggestions" id="${prefix}-tag-sug"></div>
-      <div class="htag-row" id="${prefix}-tag-list">${selectedTags.map(t=>`<span class="htag-chip" style="border-color:${t.color_code||'#6366f1'}"><span class="hn" style="color:${t.color_code||'#6366f1'}">#${x(t.tag_name)}</span><button class="btn btn-s btn-i" type="button" onclick="removeModalTag('${prefix}',${t.id})">✕</button></span>`).join('')}</div>
+      <div class="htag-row" id="${prefix}-tag-list">${selectedTags.map(t=>`<span class="htag-chip" style="border-color:${t.color_code||'#6366f1'}"><span class="hn" style="color:${t.color_code||'#6366f1'}">#${x(t.tag_name)}</span><button class="btn btn-s btn-i" type="button" onclick="removeModalTag('${prefix}',${t.id})" aria-label="${window.t('remove')}">${I.close}</button></span>`).join('')}</div>
     </div>
     <input type="hidden" id="${prefix}-tag-value" value="${selected.join(',')}">
   </div>`;
@@ -90,7 +90,7 @@ function renderModalSelectedTags(prefix){
   if(!list) return;
   api.hashtag.getAll().then(tags => {
     const selectedTags = tags.filter(t => ids.has(t.id));
-    list.innerHTML = selectedTags.map(t=>`<span class="htag-chip" style="border-color:${t.color_code||'#6366f1'}"><span class="hn" style="color:${t.color_code||'#6366f1'}">#${x(t.tag_name)}</span><button class="btn btn-s btn-i" type="button" onclick="removeModalTag('${prefix}',${t.id})">✕</button></span>`).join('');
+    list.innerHTML = selectedTags.map(t=>`<span class="htag-chip" style="border-color:${t.color_code||'#6366f1'}"><span class="hn" style="color:${t.color_code||'#6366f1'}">#${x(t.tag_name)}</span><button class="btn btn-s btn-i" type="button" onclick="removeModalTag('${prefix}',${t.id})" aria-label="${window.t('remove')}">${I.close}</button></span>`).join('');
   });
 }
 

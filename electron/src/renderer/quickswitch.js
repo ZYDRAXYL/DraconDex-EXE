@@ -215,7 +215,7 @@ async function openQuickSwitcher(seed = '', { newTab = false } = {}) {
   ov.innerHTML = `
     <div id="qs-box">
       <div class="qs-inputrow">
-        <span class="qs-glass">${I.search || '🔍'}</span>
+        <span class="qs-glass">${I.search}</span>
         <input id="qs-input" placeholder="${t('qsPlaceholder')}" autocomplete="off" spellcheck="false">
         <span class="qs-kbd" data-no-i18n>Ctrl+P</span>
       </div>
@@ -265,7 +265,7 @@ async function openQuickSwitcher(seed = '', { newTab = false } = {}) {
       list.innerHTML = _qsShown.map((e, i) => listRowHtml({
         density: 'compact', cls: 'qs-item', state: { selected: i === _qsIdx }, attrs: `data-i="${i}" data-no-i18n`,
         icon: `<span class="qs-icon" style="color:${x(e.color || 'var(--accent)')}">${e.icon}</span>`, title: e.name, meta: e.crumb,
-        trailing: `${e.handle ? `<span class="qs-handle" data-no-i18n>@${x(e.handle)}</span>` : ''}${e.hint ? `<span class="qs-keys" data-no-i18n>${e.hint.split('+').map(k => `<kbd>${x(k)}</kbd>`).join('')}</span>` : ''}${e.recent ? `<span class="qs-recent" title="${x(t('qsRecent'))}">${I.return}</span>` : ''}${e.count ? `<span class="qs-lc" data-no-i18n>🔗 ${e.count}</span>` : ''}${canPin && !e.cmd && !e.act ? `<span class="qs-pin" data-i="${i}" title="${t('qsPinHint')}">📌</span>` : ''}${e.cmd && COMMANDS[e.cmd.id]?.scope === 'app' ? (() => { const on = quickAccess().includes(e.cmd.id); return `<span class="qs-qa${on ? ' on' : ''}" role="button" tabindex="-1" data-qa="${e.cmd.id}" aria-pressed="${on}" title="${x(t(on ? 'qaUnpin' : 'qaPin'))}">${on ? '★' : '☆'}</span>`; })() : ''}<span class="ls-chip" data-no-i18n>${x(e.badge)}</span>`,
+        trailing: `${e.handle ? `<span class="qs-handle" data-no-i18n>@${x(e.handle)}</span>` : ''}${e.hint ? `<span class="qs-keys" data-no-i18n>${e.hint.split('+').map(k => `<kbd>${x(k)}</kbd>`).join('')}</span>` : ''}${e.recent ? `<span class="qs-recent" title="${x(t('qsRecent'))}">${I.return}</span>` : ''}${e.count ? `<span class="qs-lc" data-no-i18n>${I.relation}${e.count}</span>` : ''}${canPin && !e.cmd && !e.act ? `<span class="qs-pin" data-i="${i}" title="${t('qsPinHint')}">${I.pin}</span>` : ''}${e.cmd && COMMANDS[e.cmd.id]?.scope === 'app' ? (() => { const on = quickAccess().includes(e.cmd.id); return `<span class="qs-qa${on ? ' on' : ''}" role="button" tabindex="-1" data-qa="${e.cmd.id}" aria-pressed="${on}" title="${x(t(on ? 'qaUnpin' : 'qaPin'))}">${I.star}</span>`; })() : ''}<span class="ls-chip" data-no-i18n>${x(e.badge)}</span>`,
       })).join('');
       list.querySelector('.qs-item.sel')?.scrollIntoView({ block: 'nearest' });
     }

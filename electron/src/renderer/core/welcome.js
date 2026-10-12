@@ -251,7 +251,7 @@ function welcomeLoginBodyHtml(st) {
   // No client id/secret baked into this build — sign-in cannot start at all,
   // so point at where the credentials go instead of a button that would fail.
   if (!st?.ok || !st.configured) return `<div class="settings-hint">${t('driveNotConnected')}</div>`;
-  if (!st.connected) return `<button class="btn btn-p" id="welcome-login-btn" onclick="welcomeLoginClick()">☁ ${t('driveConnect')}</button>`;
+  if (!st.connected) return `<button class="btn btn-p" id="welcome-login-btn" onclick="welcomeLoginClick()">${I.cloud}${t('driveConnect')}</button>`;
   return `<div class="sync-status-row"><span>${t('settingAccountLoggedInAs')}</span><b data-no-i18n>${x(st.email || '')}</b></div>`;
 }
 

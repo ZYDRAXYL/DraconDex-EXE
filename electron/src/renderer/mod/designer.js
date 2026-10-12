@@ -86,8 +86,8 @@ function buildDesignerMainHtml(m, c) {
         ${DG_TOOLBAR_SHAPES.map(s => `<button class="btn btn-g btn-i" onclick="addDesignNode('${s}')" title="${s}">${DG_SHAPE_GLYPH[s]}</button>`).join('')}
         <button class="btn btn-g btn-i" onclick="event.stopPropagation();openDesignShapePopup(this)" title="${t('moreShapes')}">${I.options}</button>
         <span class="zsep"></span>
-        <button class="btn btn-g btn-i${dgState.edgeFrom !== null ? ' act' : ''}" onclick="startDesignEdge()" title="${t('edgeTool')}">↦</button>
-        <button class="btn btn-g btn-i" onclick="openDesignPinModal()" title="${t('pinModuleLink')}">🔗</button>
+        <button class="btn btn-g btn-i${dgState.edgeFrom !== null ? ' act' : ''}" onclick="startDesignEdge()" title="${t('edgeTool')}">${I.arrowRight}</button>
+        <button class="btn btn-g btn-i" onclick="openDesignPinModal()" title="${t('pinModuleLink')}">${I.relation}</button>
         <button class="btn btn-g btn-i" onclick="openDesignerLinkFilterModal(${m.id})" title="${t('narratorLinkFilter')}">${I.edit}</button>
         <span class="zsep"></span>
         ${cmdBtn('designer.readOrder', { moduleId: m.id }, { iconOnly: true, cls: `btn-g btn-i${d.showOrder ? ' act' : ''}` })}

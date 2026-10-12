@@ -58,7 +58,7 @@ function openCustomThemeModal(id = null){
   const vars = ct ? { ...ct.vars } : currentPaletteVars();
   S.ctmAccentGradient = isGradientValue(vars['--accent']);
   const rows = CUSTOM_THEME_TOKENS.map(tok => ctmRowHtml(tok, vars)).join('');
-  openFloatingPanel('ctm-panel', `🎨 Custom Theme — ${t('customThemeNew')}`, `
+  openFloatingPanel('ctm-panel', `Custom Theme — ${t('customThemeNew')}`, `
     <div class="ctm-grid">
       <div>
         <div class="fg"><label>${t('name')} *</label><input id="ctm-name" value="${x(ct?.name || '')}"></div>

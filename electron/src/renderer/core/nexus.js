@@ -166,7 +166,7 @@ async function reportParentNormalize() {
 async function openNexusModal(id = null, { showGuideChoice = false } = {}) {
   await reloadNexuses();
   const n = id ? S.nexuses.find(v => v.id === id) : null;
-  openModal(n ? `✏️ ${t('nexusEdit')}` : `🗄️ ${t('nexusNew')}`, `
+  openModal(n ? t('nexusEdit') : t('nexusNew'), `
     <div class="fg"><label>${t('name')} *</label><input id="nx-name" value="${x(n?.name || '')}"></div>
     <div class="fg"><label>${t('memo')}</label><textarea id="nx-memo">${x(n?.memo || '')}</textarea></div>
     <div class="fg"><label>${t('color')}</label>${await colorPicker(n?.color)}</div>
