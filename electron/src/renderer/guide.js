@@ -1,10 +1,9 @@
 'use strict';
 // ═══ FIRST-RUN COACH-MARKS GUIDE ═════════════════════════════════════════
 // Lazy-loaded (loadModule) and started for a first-time user right after their
-// first Nexus is created — by createNexusSubmit() when the vault was created
-// from inside an app window, or by init() (boot.js) picking up
-// NEXUS_PENDING_GUIDE_KEY when it was created from the Welcome window, whose
-// renderer closes before the tour could run — so the real vault-home UI
+// first Nexus is created — by runPendingCreate() (core/nexus-create.js),
+// which the new vault's window runs at boot when the Create Nexus window left
+// "show the tour" in NEXUS_PENDING_GUIDE_KEY (Procress 25) — so the real vault-home UI
 // (module rail, hub sections, backup buttons, switch control) already exists to
 // point at. A dimmed spotlight highlights each target while a popover explains
 // it; Back/Next/Skip drive the tour, Esc/←/→ on the keyboard. Steps whose target

@@ -19,6 +19,7 @@ function renderWelcomeWindow() {
   // One switch for both directions: the wizard runs without a left panel, the
   // vault list needs it back. Toggling here rather than inside the two render
   // functions is what stops "finish the wizard" leaving the panel hidden.
+  if (S.isCreateNexus) return; // a Welcome-family window with a page of its own (core/nexus-create.js)
   document.body.classList.toggle('welcome-wizard-mode', S.welcomeStep != null);
   if (S.welcomeStep != null) return renderWelcomeWizard();
   const recent = recentNexuses(3, null);
@@ -58,14 +59,16 @@ function renderWelcomeWindow() {
 // away, and the new window reads the list at boot.
 async function welcomeOpenNexus(id) {
   pushRecentNexus(id);
+  // In the Create Nexus window (an import made a vault there): main opens it
+  // and closes this window and the Welcome window behind it.
+  if (S.isCreateNexus) return api.window.createNexusDone({ nexusId: id });
   await api.window.openNexusReplace(id);
 }
 
-// "Create new Nexus" opens the standard vault form with the optional tour
-// checkbox. createNexusSubmit (nexus.js) reads it after the vault is created
-// and, in this window, defers the tour to the app window it opens.
+// "Create new Nexus" opens the Create Nexus window (Procress 25,
+// core/nexus-create.js) over this one.
 async function welcomeCreateNexus() {
-  openNexusModal(null, { showGuideChoice: true });
+  openCreateNexusWindow();
 }
 
 // ═══ FIRST-RUN SETUP WIZARD ════════════════════════════

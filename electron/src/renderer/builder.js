@@ -985,12 +985,8 @@ async function fillHomeTemplates() {
   const rank = (b) => (pref.includes(b.id) ? pref.indexOf(b.id) : 99);
   const list = (await bundleCatalog()).filter((b) => b.group === 'genre').sort((a, b) => rank(a) - rank(b) || (a.order ?? 0) - (b.order ?? 0)).slice(0, 6);
   if (!list.length || q('#home-templates') !== box) return;
-  const kindsOf = (spec) => [...(spec?.modules || []), ...(spec?.folders || []).flatMap((f) => f.modules || [])].map((m) => m.kind).filter((k) => KIND_ICON[k]).slice(0, 8);
-  box.innerHTML = `<section class="home-sec"><h3>${t('artStartTemplate')}</h3><div class="home-tpls">${list.map((b) => `
-    <button class="btn home-tpl" onclick="openBundlePicker(null,'genre',${xj(b.id)})">
-      <span class="home-tpl-pic" aria-hidden="true">${kindsOf(b.spec).map((k) => `<i style="color:${x(KIND_COLOR[k] || 'var(--accent)')}">${I[KIND_ICON[k]]}</i>`).join('')}</span>
-      <span class="kli-name" data-no-i18n>${x(b.name)}</span><span class="kli-desc" data-no-i18n>${x(b.description || '')}</span>
-    </button>`).join('')}</div>
+  box.innerHTML = `<section class="home-sec"><h3>${t('artStartTemplate')}</h3><div class="home-tpls">${list.map((b) =>
+    templateCardHtml(b, { onclick: `openBundlePicker(null,'genre',${xj(b.id)})` })).join('')}</div>
     <button class="btn btn-g btn-sm" onclick="runCommand('app.newProject',{parentId:null})">${t('tplBrowse')}</button></section>`;
 }
 function homeOrganise() {

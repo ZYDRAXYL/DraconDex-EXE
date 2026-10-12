@@ -24,11 +24,17 @@ export async function launchWithVault(name = 'Test') {
   // Next until the last step (its Skip finishes), however many steps there are
   for (let i = 0; i < 10 && !(await win.locator("button.btn-g[onclick='welcomeWizardFinish()']").count()); i++) await win.click('button.btn-p[onclick^=welcomeWizardGo]');
   await win.click("button.btn-g[onclick='welcomeWizardFinish()']");
-  await win.locator("button.btn-p[onclick='welcomeCreateNexus()']").first().click();
-  await win.fill('#nx-name', name);
-  await win.click("button.btn-p[onclick='createNexusSubmit()']");
-  win = await app.waitForEvent('window', { timeout: 20000 });
+  // Procress 25: New opens the Create Nexus window (a child of Welcome); its
+  // Create opens the vault's window. The first Nexus gets App Docs (the Guide
+  // folder) by default — the suites lean on it.
+  const [create] = await Promise.all([app.waitForEvent('window', { timeout: 20000 }),
+    win.locator("button.btn-p[onclick='welcomeCreateNexus()']").first().click()]);
+  await create.waitForSelector('#cn-grid .home-tpl', { timeout: 20000 });
+  await create.fill('#nx-name', name);
+  [win] = await Promise.all([app.waitForEvent('window', { timeout: 20000 }), create.click('#cn-create').catch(() => {})]); // the page closes under the click
   await win.waitForSelector('#hub-body', { timeout: 20000 });
+  await win.waitForFunction(() => 'pendingCreate' in S, null, { timeout: 20000 });
+  await win.evaluate(() => S.pendingCreate); // the Guide folder, made by the new window at boot
   await win.locator("button:has-text('Skip')").first().click({ timeout: 3000 }).catch(() => {}); // the Nest tour
   // The suites assert a desktop layout: 100% UI Size and a window wide enough
   // for the docked Properties panel (layout.css floats it under 1100 px).

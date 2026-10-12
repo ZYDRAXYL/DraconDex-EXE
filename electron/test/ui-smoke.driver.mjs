@@ -745,3 +745,118 @@ test('16 part 7: the game line — a play session logged against the world\'s ow
   assert.equal(r.ev.y, 1050, 'the in-game date');
   assert.match(r.ev.story, /^\d{4}-\d\d-\d\d \d\d:\d\d · 90 min/, 'the real time beside it');
 });
+
+// ═══ Procress 25: the Create Nexus window ═══════════════════════════════════
+// Welcome → New opens a CHILD window (Unity Hub's New project) that is allowed
+// to be bigger than the 760-px Welcome; Create makes the Nexus there and the
+// new vault's window adds the template and App Docs at boot. Last in this
+// file: each test opens a Welcome window and leaves only `win` behind.
+const winsInfo = () => ui.app.evaluate(({ BrowserWindow, screen }) => ({
+  area: screen.getPrimaryDisplay().workArea,
+  wins: BrowserWindow.getAllWindows().map((w) => ({ id: w.id, url: w.webContents.getURL(), width: w.getBounds().width, parent: w.getParentWindow()?.id ?? null, modal: w.isModal() })),
+}));
+async function cnOpenWelcome() {
+  const [w] = await Promise.all([ui.app.waitForEvent('window'), win.evaluate(() => api.window.openWelcome())]);
+  await w.waitForSelector('.welcome-hero', { timeout: 20000 });
+  return w;
+}
+// counts real pointer clicks on the path, for the depth budget (UX-LAYOUT §13)
+let cnClicks = 0;
+async function cnClick(page, sel) { cnClicks++; await page.locator(sel).first().click(); }
+async function cnOpenCreate(welcome) {
+  const [c] = await Promise.all([ui.app.waitForEvent('window'), cnClick(welcome, "button.btn-p[onclick='welcomeCreateNexus()']")]);
+  await c.waitForSelector('#cn-grid .home-tpl', { timeout: 20000 });
+  return c;
+}
+async function cnCreateFrom(create) {
+  const [v] = await Promise.all([ui.app.waitForEvent('window'), cnClick(create, '#cn-create').catch(() => {})]);
+  await v.waitForSelector('#hub-body', { timeout: 20000 });
+  await v.waitForFunction(() => 'pendingCreate' in S, null, { timeout: 20000 });
+  await v.evaluate(() => S.pendingCreate);
+  return v;
+}
+const cnTop = (page) => page.evaluate(() => ({ top: S.moduleTree.map((m) => m.name), all: flattenModulesByKind(S.moduleTree, []).map((m) => m.name) }));
+
+test('25: Welcome → New opens a child window wider than Welcome; Cancel closes only the child', async () => {
+  const welcome = await cnOpenWelcome();
+  const create = await cnOpenCreate(welcome);
+  const { area, wins } = await winsInfo();
+  const w = wins.find((x) => /createNexus=1/.test(x.url));
+  const wel = wins.find((x) => /welcome=1/.test(x.url));
+  assert.equal(wel.width, 760, 'Welcome keeps its size');
+  assert.equal(w.parent, wel.id, 'a child of the Welcome window');
+  if (process.platform !== 'darwin') assert.ok(w.modal, 'modal over Welcome');
+  const want = area.width < 1000 ? area.width : Math.min(1120, area.width - 48);
+  assert.equal(w.width, want, 'min(1120, workArea − 48)');
+  if (area.width >= 1148) assert.ok(w.width >= 1100, `at least 1100 px wide (${w.width})`);
+  // Blank is the default, the name is filled in and free, the Locate folder follows it
+  assert.equal(await create.locator('#cn-grid .home-tpl.on').getAttribute('data-cn-id'), '');
+  assert.ok((await create.inputValue('#nx-name')).length > 0);
+  assert.match(await create.inputValue('#cn-locate'), /DraconDex[\\/]/);
+  // ←→ move the selection through the grid; the detail follows
+  await create.focus('#cn-grid .home-tpl.on');
+  await create.keyboard.press('ArrowRight');
+  const second = await create.locator('#cn-grid .home-tpl').nth(1).getAttribute('data-cn-id');
+  assert.equal(await create.locator('#cn-grid .home-tpl.on').getAttribute('data-cn-id'), second);
+  assert.equal(await create.evaluate(() => document.activeElement?.dataset.cnId), second, 'focus moves with it');
+  assert.ok((await create.locator('#cn-detail .ls-row').count()) > 0, 'the modules it makes');
+  // a taken name is said under the field, not in a toast
+  await create.fill('#nx-name', 'Smoke');
+  assert.equal(await create.locator('#nx-name-err').isVisible(), true);
+  // the page closes under the click, so the click itself may report a closed target
+  await Promise.all([create.waitForEvent('close'), create.click('.cn-foot .btn-s:has-text("Cancel")').catch(() => {})]);
+  await sleep(300);
+  const after = (await winsInfo()).wins;
+  assert.equal(after.some((x) => /createNexus=1/.test(x.url)), false, 'the child is gone');
+  assert.equal(after.some((x) => /welcome=1/.test(x.url)), true, 'Welcome stays');
+  await welcome.close();
+});
+
+test('25: Fantasy + App Docs → the new window has the Fantasy modules and the Guide; ≤ 3 clicks from Welcome', async () => {
+  const welcome = await cnOpenWelcome();
+  cnClicks = 0;
+  const create = await cnOpenCreate(welcome);              // 1 New
+  await cnClick(create, '#cn-grid [data-cn-id="fantasy"]'); // 2 the card
+  assert.equal(await create.isChecked('#cn-appdocs'), false, 'App Docs is off once a Nexus exists');
+  await create.check('#cn-appdocs');                        // a value change, not a step on the path
+  await create.fill('#nx-name', 'Smoke Fantasy');
+  const v = await cnCreateFrom(create);                     // 3 Create
+  assert.ok(cnClicks <= 3, `a Nexus from a template in ≤ 3 clicks (${cnClicks})`);
+  const { top, all } = await cnTop(v);
+  assert.ok(top.includes('Guide'), `the Guide folder (${top})`);
+  assert.ok(all.includes('Characters'), 'the Fantasy modules');
+  await sleep(500);
+  assert.equal((await winsInfo()).wins.some((x) => /welcome=1/.test(x.url)), false, 'Welcome closed behind the new window');
+  await v.close();
+});
+
+test('25: no App Docs → no Guide', async () => {
+  const welcome = await cnOpenWelcome();
+  const create = await cnOpenCreate(welcome);
+  await create.click('#cn-grid [data-cn-id="fantasy"]');
+  await create.fill('#nx-name', 'Smoke Plain');
+  assert.equal(await create.isDisabled('#cn-tour'), true, 'the tour needs App Docs');
+  const v = await cnCreateFrom(create);
+  const { top, all } = await cnTop(v);
+  assert.ok(all.includes('Characters'), 'the template is there');
+  assert.equal(top.includes('Guide'), false, `no Guide folder (${top})`);
+  await v.close();
+});
+
+test('25: a template that fails keeps the Nexus and offers the picker again', async () => {
+  const r = await win.evaluate(async () => {
+    localStorage.setItem(NEXUS_PENDING_GUIDE_KEY, JSON.stringify({ nexusId: S.nexus.id, template: { id: 'fantasy', group: 'genre', spec: {} }, appDocs: false, tour: false }));
+    await runPendingCreate();
+    const toastEl = document.querySelector('#toast');
+    const out = { pending: localStorage.getItem(NEXUS_PENDING_GUIDE_KEY), text: toastEl.textContent, action: toastEl.classList.contains('has-action'), still: !!(await api.nexus.get(S.nexus.id)) };
+    toastEl.querySelector('.toast-act')?.click();
+    await new Promise((res) => setTimeout(res, 400));
+    out.picker = !!document.querySelector('#modal-overlay:not(.hidden) .art-card.on');
+    closeModal();
+    return out;
+  });
+  assert.equal(r.pending, null, 'runs once');
+  assert.ok(r.action && /template/i.test(r.text), `a toast with a retry (${r.text})`);
+  assert.ok(r.still, 'the Nexus is still there');
+  assert.ok(r.picker, 'retry opens the template picker on that template');
+});

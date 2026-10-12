@@ -197,6 +197,53 @@ function createWelcomeWindow() {
   win.loadFile(path.join(__dirname, 'index.html'), { search: 'welcome=1' });
 }
 
+// Procress 25 — "Create a new Nexus", Unity Hub's New project window: templates
+// on the left, the form on the right. Its own child window rather than a modal
+// in the Welcome page, because at 760x560 the Welcome window cannot hold a
+// two-pane form; a child window is allowed to be bigger than its parent.
+// Same index.html (?createNexus=1, boot.js), same preload.js, no webview —
+// hardened all the same. One at a time: a second request focuses the first.
+//   - parent: the Welcome window, or the app window that asked (Switch Nexus
+//     → New Nexus). Closing the parent closes this one with it.
+//   - modal everywhere but macOS, where a modal child is a sheet glued to the
+//     parent's title bar — and the parent here is the SMALLER window.
+//   - centred on the parent's screen, not on the parent; a screen under 1000
+//     px gets the whole work area and the page folds to two steps (css).
+let createNexusWinId = null;
+
+function createNexusCreateWindow(parent) {
+  const open = createNexusWinId != null ? BrowserWindow.fromId(createNexusWinId) : null;
+  if (open && !open.isDestroyed()) { if (open.isMinimized()) open.restore(); open.focus(); return open; }
+  const { screen } = require('electron');
+  const host = parent && !parent.isDestroyed() ? parent : null;
+  const area = (host ? screen.getDisplayMatching(host.getBounds()) : screen.getPrimaryDisplay()).workArea;
+  const small = area.width < 1000;
+  const width = small ? area.width : Math.min(1120, area.width - 48);
+  const height = small ? area.height : Math.min(720, area.height - 48);
+  const win = new BrowserWindow({
+    ...(host ? { parent: host, modal: process.platform !== 'darwin' } : {}),
+    x: area.x + Math.round((area.width - width) / 2), y: area.y + Math.round((area.height - height) / 2),
+    width, height,
+    minWidth: Math.min(900, area.width), minHeight: Math.min(600, area.height),
+    show: false,
+    backgroundColor: '#050506',
+    frame: false,
+    autoHideMenuBar: true,
+    icon: path.join(__dirname, '..', 'src', 'assets', 'brand', 'DraconDex_Icon.ico'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  hardenWebviewAttach(win.webContents);
+  createNexusWinId = win.id;
+  win.on('closed', () => { if (createNexusWinId === win.id) createNexusWinId = null; });
+  win.once('ready-to-show', () => win.show());
+  win.loadFile(path.join(__dirname, 'index.html'), { search: 'createNexus=1' });
+  return win;
+}
+
 // Plugins (v4.0.0 as "Github extensions", renamed v4.2.0): one dedicated
 // BrowserWindow per running plugin, tracked winId -> plugin row id so
 // pluginapi:table:* handlers below can resolve "which plugin is this" from the
@@ -1976,6 +2023,31 @@ ipcMain.handle('window:openNexusReplace', (event, nexusId) => {
   // Procress 17 I6: the Welcome window goes once the vault window is up, not before — no gap
   const closeCaller = () => { if (caller && !caller.isDestroyed()) caller.close(); };
   if (win) win.once('show', closeCaller); else closeCaller();
+});
+// Procress 25: the Create Nexus window, parented to whichever window asked.
+ipcMain.handle('window:openCreateNexus', (event) => {
+  createNexusCreateWindow(BrowserWindow.fromWebContents(event.sender));
+});
+// ...and its answer. Only the Create Nexus window itself may report, and only
+// with the id of a Nexus that exists. { nexusId } → open that Nexus in a new
+// app window, close this one, and close the Welcome window behind it once the
+// new one is up (same no-gap order as window:openNexusReplace). Anything else
+// (Cancel, ✕, Esc) just closes this window; its parent stays as it was. The
+// "pending work" (template, App Docs, tour) travels in localStorage under
+// NEXUS_PENDING_GUIDE_KEY — the new window picks it up at boot.
+ipcMain.handle('window:createNexusDone', (event, payload) => {
+  const child = BrowserWindow.fromWebContents(event.sender);
+  if (!child || child.id !== createNexusWinId) return false;
+  const nexusId = Number(payload?.nexusId);
+  const parent = child.getParentWindow();
+  if (!Number.isInteger(nexusId) || nexusId <= 0 || !db.getNexus(nexusId)) { child.close(); return true; }
+  const win = createWindow(nexusId);
+  child.close();
+  if (parent && welcomeWindowIds.has(parent.id)) {
+    const closeParent = () => { if (!parent.isDestroyed()) parent.close(); };
+    if (win) win.once('show', closeParent); else closeParent();
+  }
+  return true;
 });
 // Same pattern as window:openNexus, but bootstraps a specific Builder tab
 // into a leaner popup window instead of the full app shell — see core.js's
