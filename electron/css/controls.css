@@ -96,4 +96,4 @@
 .gal-icon small{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);overflow:hidden;text-overflow:ellipsis;max-width:100%}
 
 /* ── colour dot button (colorDotBtnHtml): a user's colour, clicked to change ── */
-.btn-i .color-dot{display:block;width:12px;height:12px;border-radius:50%;background:var(--dot-c,transparent);border:1px solid var(--border)}
+.btn-i .color-dot{display:block;width:12px;height:12px;border-radius:50%;background:var(--dot-c,transparent);border:1px solid var(--t3-aa,var(--t2))}
