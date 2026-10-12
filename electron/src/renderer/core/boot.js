@@ -182,7 +182,8 @@ async function init() {
   // handoff of v4.6.0): the vault was made there, but its template, App Docs
   // and tour need an open vault — this one. runPendingCreate (core/
   // nexus-create.js) clears the key first, so it fires exactly once.
-  if (!isPopup && S.nexus) runPendingCreate().catch(() => {});
+  // Kept as S.pendingCreate so a test can wait for it.
+  if (!isPopup && S.nexus) S.pendingCreate = runPendingCreate().catch(() => {});
   bindNav();
   bindWikilinkClicks();
   bindGlobalShortcuts();

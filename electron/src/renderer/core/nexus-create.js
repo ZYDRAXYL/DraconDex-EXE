@@ -74,7 +74,7 @@ async function renderCreateNexusWindow() {
       </div>
       <form class="cn-form" onsubmit="event.preventDefault();cnSubmit()" autocomplete="off">
         <div class="fg"><label for="nx-name">${t('name')} *</label>
-          <input id="nx-name" oninput="cnNameInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();cnSubmit()}" aria-describedby="nx-name-err">
+          <input id="nx-name" value="${x(cnDefaultName())}" oninput="cnNameInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();cnSubmit()}" aria-describedby="nx-name-err">
           <div id="nx-name-err" class="help err" role="alert" hidden></div></div>
         <div class="fg"><label for="nx-memo">${t('memo')}</label><textarea id="nx-memo" rows="2"></textarea></div>
         <div class="fg"><label>${t('color')}</label>${await colorPicker(null)}</div>
@@ -102,7 +102,7 @@ async function renderCreateNexusWindow() {
   cnRenderGrid();
   cnNameInput();
   cnSyncTour();
-  setTimeout(() => q('#nx-name')?.focus(), 30);
+  setTimeout(() => { const el = q('#nx-name'); el?.focus(); el?.select(); }, 30);
 }
 
 function cnRenderCats() {
@@ -210,6 +210,12 @@ function cnTemplateSpec() {
 }
 
 const cnNameTaken = (name) => S.nexuses.some((n) => n.name === name);
+// Unity's "My project": a name is already there, free and selected, so a
+// template is New → card → Create (UX-LAYOUT §13) and typing replaces it.
+function cnDefaultName() {
+  const base = t('nexusNew');
+  for (let i = 1; ; i++) { const n = i === 1 ? base : `${base} ${i}`; if (!cnNameTaken(n)) return n; }
+}
 function cnNameErr(msg) {
   const el = q('#nx-name-err');
   if (!el) return;
