@@ -164,6 +164,53 @@ try {
   row('  worst step while scrolling (2 frames)', `${Math.round(scrolled.worst)} ms`, '< 32 ms');
   row('  longest frame while scrolling', `${Math.round(scrolled.frameWorst)} ms`, '< 32 ms (F10)');
 
+  // Procress 23: Glass vs Standard — frames per second while the 3,000-row
+  // table scrolls and while a Nest row is dragged, with a popover and a toast
+  // open (each a blurred layer under glass). Target: glass within 10 %.
+  {
+    const fps = {};
+    for (const style of ['oldPlain', 'glass', 'oldPlain', 'glass']) {
+      await win.evaluate(async ([st, cls]) => {
+        closeAllPopups(); setUiSetting('uiStyle', st);
+        await openModuleNode(cls);
+        const iid = document.querySelector('[onclick*="setClassifierView"]')?.getAttribute('onclick').match(/setClassifierView\(["']([^"']+)["']/)?.[1];
+        if (iid) await setClassifierView(iid, 'table');
+        await openModuleNode(cls);
+      }, [style, seed.cls]);
+      await win.waitForTimeout(400);
+      const scroll = await win.evaluate(async () => {
+        // a popover + a toast: the flyouts glass blurs (none in oldPlain)
+        openPopover(document.querySelector('#nav-sidebar .nav-btn'), '<div style="height:160px">menu</div>', { focus: false });
+        toast('Saved', 'ok');
+        let el = document.querySelector('#main-inner td, #main-inner .ls-row, #main-inner [data-lazy]');
+        while (el && !(el.scrollHeight > el.clientHeight + 10 && /auto|scroll/.test(getComputedStyle(el).overflowY))) el = el.parentElement;
+        if (!el) return null;
+        el.scrollTop = 0;
+        let n = 0; const t0 = performance.now();
+        await new Promise((res) => { const step = () => { el.scrollTop += 24; n++; if (performance.now() - t0 < 2000) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); });
+        return n / ((performance.now() - t0) / 1000);
+      });
+      // Nest drag: a real pointer drag of one row down the tree for ~1.5 s
+      await win.evaluate(() => { closeAllPopups(); window.__f = { n: 0, on: true, t0: performance.now() }; const tick = () => { if (!window.__f.on) return; window.__f.n++; requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
+      const rows = win.locator('#left-panel-inner .li');
+      const a = await rows.nth(1).boundingBox(), b = await rows.nth(12).boundingBox();
+      await win.mouse.move(a.x + 40, a.y + a.height / 2);
+      await win.mouse.down();
+      await win.mouse.move(a.x + 44, a.y + a.height / 2 + 8, { steps: 4 });
+      await win.mouse.move(b.x + 44, b.y + b.height / 2, { steps: 90 });
+      const drag = await win.evaluate(() => { window.__f.on = false; return window.__f.n / ((performance.now() - window.__f.t0) / 1000); });
+      await win.keyboard.press('Escape'); await win.mouse.up();
+      (fps[style] ||= { scroll: [], drag: [] }).scroll.push(scroll); fps[style].drag.push(drag);
+    }
+    const avg = (xs) => xs.reduce((p, c) => p + c, 0) / xs.length;
+    for (const k of ['scroll', 'drag']) {
+      const std = avg(fps.oldPlain[k]), gl = avg(fps.glass[k]);
+      const drop = Math.max(0, (1 - gl / std) * 100);
+      row(`Glass vs Standard: ${k === 'scroll' ? 'table scroll' : 'Nest drag'} fps`, `${gl.toFixed(1)} / ${std.toFixed(1)} (−${drop.toFixed(1)} %)`, '≤ 10 % drop (P23)');
+    }
+    await win.evaluate(() => setUiSetting('uiStyle', 'oldPlain'));
+  }
+
   const mem = await ui.app.evaluate(() => process.memoryUsage().rss / 1e6);
   row('RAM main process', `${Math.round(mem)} MB`, '(237–260 MB)');
 } finally {

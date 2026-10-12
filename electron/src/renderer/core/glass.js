@@ -57,8 +57,70 @@ function glassStill() {
 function glassDragStart() { clearTimeout(_glassMoveTimer); document.body.classList.add('glass-moving'); }
 function glassHandleDown(e) { if (e.target.closest?.('.panel-resize-handle')) glassDragStart(); }
 
+// ── legibility guard ───────────────────────────────────────────────────
+// SDB raises --glass-tint per built-in theme so text on a pane keeps 4.5:1
+// over the worst point of the backdrop (generated tokens.css). A custom
+// theme, a theme package or a glass uistyle package has no such override —
+// so the same check runs here, on the palette actually applied, and raises
+// the tint inline (never lowers it) when the stylesheet's value falls short.
+// --danger: menus write "Delete" in it. A token that already misses 4.5:1 on
+// the solid surface is the theme's own problem, not glass's — it is left out,
+// or one weak colour would push the tint to 100 % and switch glass off.
+const GLASS_TEXT_TOKENS = ['--t1', '--t2', '--t3-aa', '--danger'];
+function glassRgb(css) {
+  const probe = document.createElement('i');
+  probe.style.color = css;
+  probe.hidden = true;
+  document.body.appendChild(probe);
+  const c = getComputedStyle(probe).color;
+  probe.remove();
+  let m = /rgba?\(([^)]+)\)/.exec(c);
+  if (m) return m[1].split(/[ ,/]+/).filter(Boolean).slice(0, 3).map(Number);
+  m = /color\(srgb ([^)]+)\)/.exec(c);
+  return m ? m[1].split(/[ /]+/).filter(Boolean).slice(0, 3).map(v => Number(v) * 255) : null;
+}
+function glassContrast(a, b) {
+  const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  const L = ([r, g, b2]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b2);
+  const [x, y] = [L(a), L(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05);
+}
+// The lowest tint (%, whole) from `from` up at which every text token reads
+// ≥ 4.5:1 on the surface mixed over both ends of the backdrop.
+function glassTintNeeded(from) {
+  const surface = glassRgb('var(--surface)');
+  const ends = [glassRgb('var(--glass-backdrop-from, var(--bg))'), glassRgb('var(--glass-backdrop-to, var(--bg))')];
+  if (!surface || ends.some(e => !e)) return from;
+  const texts = GLASS_TEXT_TOKENS.map(k => glassRgb(`var(${k}, var(--t2))`)).filter(c => c && glassContrast(c, surface) >= 4.5);
+  for (let tint = from; tint < 100; tint++) {
+    const a = tint / 100;
+    const ok = ends.every(e => {
+      const pane = surface.map((v, i) => v * a + e[i] * (1 - a));
+      return texts.every(tx => glassContrast(tx, pane) >= 4.5);
+    });
+    if (ok) return tint;
+  }
+  return 100;
+}
+function glassGuardTint() {
+  const b = document.body;
+  // undo a previous raise (applyUiSettings() drops the marker itself when it
+  // has just re-set the tokens, so this only runs on a bare glassSync())
+  if ('glassTint' in b.dataset) {
+    const orig = b.dataset.glassTint;
+    delete b.dataset.glassTint;
+    if (orig) b.style.setProperty('--glass-tint', orig); else b.style.removeProperty('--glass-tint');
+  }
+  if (!glassOn()) return;
+  const pkgTint = b.style.getPropertyValue('--glass-tint'); // a glass package's own
+  const have = parseFloat(pkgTint || getComputedStyle(b).getPropertyValue('--glass-tint')) || 72;
+  const need = glassTintNeeded(Math.ceil(have));
+  if (need > have) { b.style.setProperty('--glass-tint', `${need}%`); b.dataset.glassTint = pkgTint || ''; }
+}
+
 function glassSync() {
   if (!document.body) return;
+  glassGuardTint();
   const on = glassOn();
   if (on && !_glassObs) {
     _glassObs = new MutationObserver(glassSchedule);

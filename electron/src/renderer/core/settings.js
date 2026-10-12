@@ -87,6 +87,7 @@ function applyUiSettings(){
   // none — main refused anything else). Set, it turns css/glass.css on for
   // that package (body[data-glass]); the built-in glass style needs neither.
   const pkgGlass = !!uistyleVars && CUSTOM_GLASS_TOKENS.every(tok => uistyleVars[tok]);
+  delete document.body.dataset.glassTint; // core/glass.js's raise, re-judged below
   for (const tok of CUSTOM_GLASS_TOKENS) {
     if (pkgGlass) document.body.style.setProperty(tok, uistyleVars[tok]);
     else document.body.style.removeProperty(tok);

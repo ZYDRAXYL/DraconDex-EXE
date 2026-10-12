@@ -105,7 +105,7 @@ body:is([data-ui-style="glass"],[data-glass]) #modal{
 	body:is([data-ui-style="glass"],[data-glass]) #settings-menu,
 	body:is([data-ui-style="glass"],[data-glass]) #layout-menu{background:var(--glass-fill-dense)}
 }
-body:is([data-ui-style="glass"],[data-glass]) [data-glass-flat],
+body:is([data-ui-style="glass"],[data-glass]) :is(.popover,.floating-panel,#qs-box,#toast,#settings-menu,#layout-menu,#modal-overlay)[data-glass-flat],
 body:is([data-ui-style="glass"],[data-glass]).glass-moving :is(.popover,.floating-panel,#qs-box,#toast,#settings-menu,#layout-menu,#modal-overlay){
 	backdrop-filter:none;
 }
@@ -135,6 +135,7 @@ body[data-reduce-transparency][data-theme="rainbow"] #left-panel{background:var(
 
 /* ── Windows high contrast: no glass at all — system colours, no blur ── */
 @media (forced-colors:active){
+	body:is([data-ui-style="glass"],[data-glass]){--glass-filter:none}
 	body:is([data-ui-style="glass"],[data-glass]) #window-frame{background-image:none}
 	body:is([data-ui-style="glass"],[data-glass]) :is(#title-tab-bar,#nav-sidebar,#left-panel,#side-panel,#status-bar,.popover,.floating-panel,#qs-box,#toast,#settings-menu,#layout-menu,#modal){
 		background:Canvas;border-color:CanvasText;backdrop-filter:none;box-shadow:none;

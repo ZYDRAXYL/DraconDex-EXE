@@ -358,6 +358,160 @@ test('gallery keyboard: popover takes focus, traps Tab, Esc gives it back; modal
   assert.deepEqual(r, { opened: true, role: 'dialog', named: true, inside: true, trapped: true, trappedBack: true, closed: true, focusBack: true, foot: true, hint: true, size: 'md', modalClosed: true });
 });
 
+// ── Procress 23: Glass ───────────────────────────────────────────────────
+// Real contrast on the glass style — the text glass puts on a translucent pane
+// (chrome and overlays; the page itself stays opaque and is the contrast test
+// above): every page × the built-in themes, plus the
+// lightest and darkest theme packages and the one SDB had to raise most
+// (applied as custom themes — CI has no package catalog), each measured over
+// BOTH ends of the backdrop gradient (the probe composites a translucent pane
+// over its ancestors' fills, so the frame's fill is set to each end in turn).
+// Then the overlays a pane can be: Setting window, menu, popover, modal, toast.
+// Every pane glass draws: what Reduce transparency must turn solid.
+const GLASS_PANES = '#title-tab-bar, #nav-sidebar, #left-panel, #side-panel:not(.hidden), #status-bar, .popover, .floating-panel, #modal, #toast';
+const GLASS_PALETTES = {
+  atDay: { '--bg': '#fffaf0', '--surface': '#ffffff', '--raised': '#fff3d6', '--hover': '#ffe9b3', '--border': '#ffd97d', '--t1': '#4a3a12', '--t2': '#7a6230', '--t3': '#b39a63', '--t3-aa': '#826d3d', '--accent': '#e8a93c', '--accentH': '#ffcba4', '--button': '#d4a017', '--danger': '#dc2626', '--success': '#16a34a', '--on-accent': 'var(--ink-dark)', '--on-button': 'var(--ink-dark)' },
+  atMidnight: { '--bg': '#050608', '--surface': '#0c0e14', '--raised': '#12151e', '--hover': '#191d29', '--border': '#232838', '--t1': '#e6ebf5', '--t2': '#8b93a8', '--t3': '#525a70', '--t3-aa': '#788093', '--accent': '#4f7cc4', '--accentH': '#6f9ce4', '--on-accent': '#000000', '--danger': '#ef4444', '--success': '#22c55e' },
+  clearMeteor: { '--bg': '#0a0e1a', '--surface': '#111726', '--raised': '#182032', '--hover': '#212b40', '--border': '#2c374f', '--t1': '#eef2fb', '--t2': '#9aa6be', '--t3': '#5f6b83', '--t3-aa': '#7d879c', '--accent': '#fbbf24', '--accentH': '#fde68a', '--button': '#d97706', '--danger': '#f87171', '--success': '#34d399', '--on-accent': 'var(--ink-dark)' },
+};
+const glassThemes = async () => {
+  await win.evaluate((pal) => {
+    S.settings.customThemes = [...(S.settings.customThemes || []).filter((c) => !c.id.startsWith('glassaudit')),
+      ...Object.entries(pal).map(([name, vars]) => ({ id: `glassaudit${name}`, name, vars }))];
+  }, GLASS_PALETTES);
+  return ['daylight', 'midnight', 'moonlight', 'rainbow', ...Object.keys(GLASS_PALETTES).map((n) => `custom:glassaudit${n}`)];
+};
+// What glass itself breaks: text under 4.5:1 on the glass pane that reads fine
+// when the same pane is solid (Reduce transparency) — a theme's own weak colour
+// (rainbow's gradient buttons, a package's white-on-amber button) is the
+// contrast test's business above, not this one's.
+const glassOnlyFailures = () => win.evaluate(async ([probeSrc, panes]) => {
+  const probe = new Function(`return (${probeSrc})`)();
+  const key = (f) => `${f.sel}|${f.text}`;
+  const glass = probe(panes);
+  document.body.dataset.reduceTransparency = '';
+  await new Promise((r) => requestAnimationFrame(r));
+  const solid = new Set(probe(panes).map(key));
+  delete document.body.dataset.reduceTransparency;
+  return glass.filter((f) => !solid.has(key(f)));
+}, [contrastProbe.toString(), GLASS_PANES]);
+const atBackdropEnd = (end) => win.evaluate((e) => {
+  for (const el of [document.body, document.getElementById('window-frame')]) el.style.backgroundColor = e ? `var(--glass-backdrop-${e})` : '';
+}, end);
+
+test('glass: every page × 4 built-in + 3 package themes × both backdrop ends — text ≥ 4.5:1', async () => {
+  const bad = [];
+  const themes = await glassThemes();
+  await win.evaluate(() => setUiSetting('uiStyle', 'glass'));
+  const pages = await win.evaluate(() => [null, ...flattenModulesByKind(S.moduleTree, []).filter((m) => m.kind !== 'collector').map((m) => m.id)]);
+  for (const theme of themes) {
+    await win.evaluate((th) => setUiSetting('theme', th), theme);
+    for (const id of pages) {
+      await win.evaluate(async (mid) => { if (mid == null) await builderOpenPage(null); else await openModuleNode(mid); }, id);
+      await win.waitForTimeout(250);
+      for (const end of ['from', 'to']) {
+        await atBackdropEnd(end);
+        for (const f of await glassOnlyFailures()) bad.push(`${theme} ${end} page ${id ?? 'Home'}: ${f.sel} "${f.text}" ${f.ratio}:1 (needs ${f.need}) ${f.fg} on ${f.bg}`);
+      }
+      await atBackdropEnd(null);
+    }
+    // the overlays, over Home
+    await win.evaluate(() => builderOpenPage(null));
+    for (const open of ['settings', 'menu', 'modal']) {
+      await win.evaluate(async (o) => {
+        if (o === 'settings') openSettingWindow('workspace', 'theme');
+        if (o === 'menu') { const r = document.querySelector('#left-panel-inner .li'); r.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 120, clientY: 200 })); }
+        if (o === 'modal') { openModal('Glass', '<p>Body text</p><div class="mfoot"><button class="btn btn-p">OK</button></div>'); toast('Saved', 'ok'); }
+      }, open);
+      await win.waitForTimeout(350);
+      for (const end of ['from', 'to']) {
+        await atBackdropEnd(end);
+        for (const f of await glassOnlyFailures()) bad.push(`${theme} ${end} ${open}: ${f.sel} "${f.text}" ${f.ratio}:1 (needs ${f.need}) ${f.fg} on ${f.bg}`);
+      }
+      await atBackdropEnd(null);
+      await win.evaluate(() => { closeFloatingPanel('setting-window'); closeModal(); closeAllPopups(); });
+    }
+  }
+  await win.evaluate(() => { setUiSetting('theme', 'midnight'); setUiSetting('uiStyle', 'oldPlain'); });
+  assert.deepEqual([...new Set(bad)], []);
+});
+
+const glassLeaks = () => win.evaluate((sel) => {
+  const alpha = (c) => { const m = /\/\s*([\d.]+)\)|rgba\([^)]*,\s*([\d.]+)\)/.exec(c); return m ? Number(m[1] ?? m[2]) : 1; };
+  const out = [];
+  for (const el of document.querySelectorAll(sel)) {
+    if (!el.getClientRects().length) continue;
+    const cs = getComputedStyle(el);
+    if (alpha(cs.backgroundColor) < 1) out.push(`${el.id || el.className} bg ${cs.backgroundColor}`);
+  }
+  for (const el of document.querySelectorAll('*')) if (getComputedStyle(el).backdropFilter !== 'none') out.push(`${el.id || el.className} blur ${getComputedStyle(el).backdropFilter}`);
+  if (getComputedStyle(document.getElementById('window-frame')).backgroundImage !== 'none') out.push('backdrop gradient');
+  return out;
+}, GLASS_PANES);
+const openGlassLayers = () => win.evaluate(() => {
+  localStorage.setItem('dracondex-props-open', '1'); renderSidePanel(); // Properties
+  openPopover(document.querySelector('#nav-sidebar .nav-btn'), '<div>menu</div>', { focus: false });
+  openModal('Glass', '<p>x</p>'); toast('Saved', 'ok');
+});
+const closeGlassLayers = () => win.evaluate(() => { closeModal(); closeAllPopups(); localStorage.setItem('dracondex-props-open', '0'); renderSidePanel(); });
+
+test('glass: Reduce transparency (the switch, and the OS setting) leaves no translucent layer and no blur', async () => {
+  await win.evaluate(() => { setUiSetting('theme', 'daylight'); setUiSetting('uiStyle', 'glass'); });
+  await openGlassLayers(); await win.waitForTimeout(300);
+  const on = await glassLeaks();
+  assert.ok(on.length > 0, 'glass draws translucent panes to begin with');
+  await win.evaluate(() => setUiSetting('reduceTransparency', true));
+  await openGlassLayers(); await win.waitForTimeout(300);
+  const viaSwitch = await glassLeaks();
+  await closeGlassLayers();
+  await win.evaluate(() => setUiSetting('reduceTransparency', false));
+  // the OS preference, emulated through the DevTools protocol
+  const cdp = await win.context().newCDPSession(win);
+  await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] });
+  await openGlassLayers(); await win.waitForTimeout(300);
+  const viaOs = await glassLeaks();
+  await cdp.send('Emulation.setEmulatedMedia', { features: [] });
+  await closeGlassLayers();
+  await win.evaluate(() => { setUiSetting('theme', 'midnight'); setUiSetting('uiStyle', 'oldPlain'); });
+  assert.deepEqual({ viaSwitch, viaOs }, { viaSwitch: [], viaOs: [] });
+});
+
+test('glass: forced colours (Windows high contrast) turn it off', async () => {
+  await win.evaluate(() => setUiSetting('uiStyle', 'glass'));
+  await win.emulateMedia({ forcedColors: 'active' });
+  await openGlassLayers(); await win.waitForTimeout(300);
+  const leaks = await glassLeaks();
+  await win.emulateMedia({ forcedColors: 'none' });
+  await closeGlassLayers();
+  await win.evaluate(() => setUiSetting('uiStyle', 'oldPlain'));
+  assert.deepEqual(leaks, []);
+});
+
+test('glass: at most 4 blurred layers, none mid-drag', async () => {
+  await win.evaluate(() => setUiSetting('uiStyle', 'glass'));
+  const r = await win.evaluate(async () => {
+    const frame = () => new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+    const btn = document.querySelector('#nav-sidebar .nav-btn');
+    openModal('Glass', '<p>x</p>'); toast('Saved', 'ok');
+    for (let i = 0; i < 4; i++) openPopover(btn, `<div>p${i}</div>`, { focus: false, keep: true });
+    await frame();
+    const blurred = () => [...document.querySelectorAll('*')].filter((el) => el.getClientRects().length && getComputedStyle(el).backdropFilter !== 'none').length;
+    const most = blurred();
+    document.dispatchEvent(new Event('dragstart', { bubbles: true }));
+    await frame();
+    const dragging = blurred();
+    document.dispatchEvent(new Event('dragend', { bubbles: true }));
+    await frame();
+    const after = blurred();
+    closeModal(); closeAllPopups();
+    return { most, dragging, after };
+  });
+  await win.evaluate(() => setUiSetting('uiStyle', 'oldPlain'));
+  assert.ok(r.most <= 4 && r.most >= 2, `blurred at once: ${r.most}`);
+  assert.equal(r.dragging, 0);
+  assert.equal(r.after, r.most);
+});
+
 test('no page or console error anywhere above', () => {
   assert.deepEqual(pageErrors, []);
 });
