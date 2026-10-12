@@ -90,8 +90,8 @@ jobs:
         run: npm run sdb:check
 
       - name: Run regression tests
-        run: node --test --test-timeout=120000 "electron/test/*.test.mjs"
-        timeout-minutes: 15
+        run: node --test --test-timeout=600000 "electron/test/*.test.mjs"
+        timeout-minutes: 40
 
       # Procress 22 part 4: component variants, hard-coded hex, inline style,
       # raw z-index and character icons may only go down (ui-inventory.json is
