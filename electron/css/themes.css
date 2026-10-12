@@ -56,11 +56,8 @@ body[data-theme="midnight"]{
 	--danger:#ef4444;
 	--success:#22c55e;
 	--warn:#f59e0b;
-	--info:#38bdf8;	/* SDB (f8135e3) gives midnight --on-accent: ink-black for ITS accent #6366f1
-	   (white 4.47, black 4.70). EXE's accent is #585ced (above): white 5.04,
-	   black 4.17 — so white stays here, said out loud so the generated ink-black
-	   does not reach the buttons. */
-	--on-accent:#fff;
+	--info:#38bdf8;
+	--on-accent:#fff; /* white on #585ced = 5.04:1 (SDB follows this accent since 4db34f5) */
 }
 /* Full-spectrum theme: light, readable surfaces float over a pastel-rainbow
    backdrop; the nav rail and left panel go translucent so the rainbow shows
