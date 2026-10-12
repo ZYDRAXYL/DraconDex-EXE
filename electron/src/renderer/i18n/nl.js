@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('nl', {
+  // Procress 23: Glass style + Reduce transparency
+  uiStyleGlass:'Glas', uiStyleGlassHint:'Doorschijnende balken en menu\'s op een zachte achtergrond', settingReduceTransparency:'Transparantie verminderen (dekkende balken en menu\'s)',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'Donker', themeGroupLight:'Licht', themeGroupCustom:'Je eigen thema’s',
   listFilterHint:'Filteren', listSort:'Sorteren', listSortName:'Naam', listSortEdited:'Laatst bewerkt', listSortCreated:'Gemaakt', listSortKind:'Soort', listSortManual:'Zoals geordend', listCount:'{n} items', listNoMatch:'Niets komt overeen met dit filter.', listGroupToday:'Vandaag', listGroupThisWeek:'Deze week', listGroupOlder:'Ouder', assetGroupImage:'Afbeeldingen', assetGroupAudio:'Audio', assetGroupVideo:'Video', assetGroupDoc:'Documenten', assetGroupTrack:'Ondertitels', assetGroupModel:'3D-modellen', assetGroupUrl:'Links', assetGroupOther:'Overige bestanden',

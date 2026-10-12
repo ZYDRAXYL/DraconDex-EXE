@@ -229,7 +229,9 @@ const WORKSPACE_STYLE_OPTIONS = ['drake', 'wyvern', 'dragon'];
 // uistyle package, so every existing UI_STYLE_OPTIONS.includes(x) call site
 // keeps working with no change.
 // Procress 10 part 2 (slim): fluent stays built in, Procress 13 outgrows 7 tokens.
-const UI_STYLE_OPTIONS_BUILTIN = ['oldPlain', 'fluent'];
+// Procress 23: glass — translucent chrome + blurred flyouts (css/glass.css),
+// built in for the same reason as fluent: it restyles components, not tokens.
+const UI_STYLE_OPTIONS_BUILTIN = ['oldPlain', 'fluent', 'glass'];
 const PACKAGED_UISTYLES = ['roundedMinimal', 'cleanMinimal', 'hardBlock'];
 const UI_STYLE_OPTIONS = UI_STYLE_OPTIONS_BUILTIN.slice();
 // Nav orientation (Process 5 part1) is vertical-only since the UX-LAYOUT
@@ -283,6 +285,12 @@ const CUSTOM_THEME_TOKENS = ['--bg','--surface','--raised','--hover','--border',
 // one of these before setting the ones a pkg: uistyle provides (there is no
 // optional subset here, unlike theme — a uistyle package must set all 7).
 const CUSTOM_UISTYLE_TOKENS = ['--r','--rs','--rl','--shadow-pop','--shadow-float','--shadow-menu','--shadow-modal'];
+// Procress 23: the optional glass group a uistyle package may add on top of
+// the 7 — all four or none (src/db/pkg-rules.js checks that before install).
+// Cleared and set by applyUiSettings() exactly like the 7; a package that
+// sets them only shows them under body[data-ui-style="glass"]-shaped rules,
+// so applyUiSettings() also marks <body> data-glass for such a package.
+const CUSTOM_GLASS_TOKENS = ['--glass-blur','--glass-tint','--glass-stroke','--glass-shadow'];
 
 // Cloud Sync (Supabase Token Sync) is switched off since v4.5.0. The repo is
 // open source now, and making every user or forker stand up their own
@@ -384,7 +392,11 @@ function loadUiSettings(){
   // preset is the "advanced" sub-setting, only meaningful while enabled.
   const animationsEnabled = saved.animationsEnabled !== false;
   const animationSpeed = ['fast', 'normal', 'slow'].includes(saved.animationSpeed) ? saved.animationSpeed : 'normal';
-  return { theme: theme2, language, size, nameMode, fontScale, customThemes, nestShowItems, nestShowMajorIcon, nestShowMinorIcon, nestSignatureMode, quickExtras, navToggles, hubQuickToggles, statusToggles, workspaceStyle, uiStyle, navOrientation, navHorizontalDisplay, navVerticalAlwaysLabel, dragonView, animationsEnabled, animationSpeed, autoCollapseLeft: saved.autoCollapseLeft !== false };
+  // Procress 23: "Reduce transparency" — every translucent layer drawn solid,
+  // whatever the UI style. Off by default; the OS preference
+  // (prefers-reduced-transparency) applies on its own in css/glass.css.
+  const reduceTransparency = saved.reduceTransparency === true;
+  return { reduceTransparency, theme: theme2, language, size, nameMode, fontScale, customThemes, nestShowItems, nestShowMajorIcon, nestShowMinorIcon, nestSignatureMode, quickExtras, navToggles, hubQuickToggles, statusToggles, workspaceStyle, uiStyle, navOrientation, navHorizontalDisplay, navVerticalAlwaysLabel, dragonView, animationsEnabled, animationSpeed, autoCollapseLeft: saved.autoCollapseLeft !== false };
 }
 
 // Kind display names (Phase 22): the Unique set (KIND_LABEL, locale-

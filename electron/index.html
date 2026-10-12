@@ -69,6 +69,10 @@
   <!-- Fluent 2 restyles components under data-ui-style="fluent", so it comes
        after every component file. -->
   <link rel="stylesheet" href="css/fluent.css">
+  <!-- Glass (Procress 23) restyles the same components under data-ui-style=
+       "glass", plus the app-wide Reduce transparency switch — after fluent so
+       that switch also reaches fluent's Acrylic. -->
+  <link rel="stylesheet" href="css/glass.css">
   <!-- Last on purpose: welcome-mode strips the app chrome down to a bare
        two-column picker, so its hide rules must win over every layout file
        above without needing !important. -->
@@ -276,6 +280,7 @@
   <script src="src/renderer/core/lazy-rows.js"></script>
   <script src="src/renderer/core/list.js"></script>
   <script src="src/renderer/core/settings.js"></script>
+  <script src="src/renderer/core/glass.js"></script>
   <script src="src/renderer/core/setting-window.js"></script>
   <script src="src/renderer/core/setting-search.js"></script>
   <script src="src/renderer/core/workspace-style.js"></script>

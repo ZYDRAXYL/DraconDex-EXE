@@ -236,7 +236,13 @@ function toggleSettingThemeExpanded(){
 const UI_STYLE_LABEL_KEY = {
   roundedMinimal: 'uiStyleRoundedMinimal', cleanMinimal: 'uiStyleCleanMinimal',
   fluent: 'uiStyleFluent', hardBlock: 'uiStyleHardBlock', oldPlain: 'uiStyleOldPlain',
+  glass: 'uiStyleGlass',
 };
+// Procress 23: a built-in style's sample — the glass one shows a frosted pane
+// over the current theme's backdrop (css/glass.css), the others their shape.
+function uiStyleSampleHtml(key){
+  return `<span class="uistyle-sample${key === 'glass' ? ' glass-sample' : ''}" aria-hidden="true"><i></i></span>`;
+}
 // Procress 10 part 2: a catalog uistyle package not yet downloaded — locked,
 // no onclick, Download button where the checkmark slot would be.
 function settingUiStyleCatalogItemHtml(p){
@@ -262,7 +268,8 @@ function settingUiStyleSectionHtml(){
     const label = UI_STYLE_LABEL_KEY[key]
       ? t(UI_STYLE_LABEL_KEY[key])
       : pkgDisplayName(INSTALLED_PACKAGES.uistyles.find(u => `pkg:${u.id}` === key)) || key;
-    return listRowHtml({ title: label, state: { selected: active }, onclick: `setUiSetting('uiStyle','${key}')`,
+    return listRowHtml({ lead: UI_STYLE_LABEL_KEY[key] ? uiStyleSampleHtml(key) : '', title: label, state: { selected: active }, onclick: `setUiSetting('uiStyle','${key}')`,
+      meta: key === 'glass' ? t('uiStyleGlassHint') : '',
       attrs: UI_STYLE_LABEL_KEY[key] ? '' : 'data-no-i18n', trailing: active ? `<span class="theme-check">${I.check}</span>` : '' });
   }).join('');
   const notDownloaded = expanded
@@ -273,7 +280,15 @@ function settingUiStyleSectionHtml(){
         <button class="btn btn-s btn-sm" onclick="toggleSettingUiStyleExpanded()">${expanded ? t('settingCollapse') : t('settingShowAll')}</button>
       </div>
       ${listHtml({ list: 'uistyles', aria: t('settingUiStyle'), body: cells + notDownloaded })}
+      ${settingReduceTransparencyHtml()}
     </div>`;
+}
+// Procress 23: app-wide, not glass-only — it also turns fluent's Acrylic and
+// the dimmed scrims behind dialogs solid. The OS setting applies on its own.
+function settingReduceTransparencyHtml(){
+  const on = !!S.settings.reduceTransparency;
+  return `<div class="togglerow setting-switch" role="switch" tabindex="0" aria-checked="${on}" onclick="setUiSetting('reduceTransparency', ${!on})"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><span class="tg${on ? ' on' : ''}"></span>${t('settingReduceTransparency')}</div>`;
 }
 function toggleSettingUiStyleExpanded(){
   S.settingUiStyleExpanded = !S.settingUiStyleExpanded;

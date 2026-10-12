@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('th', {
+  // Procress 23: Glass style + Reduce transparency
+  uiStyleGlass:'กระจก', uiStyleGlassHint:'แถบและเมนูโปร่งแสงบนพื้นหลังนุ่ม ๆ', settingReduceTransparency:'ลดความโปร่ง (แถบและเมนูทึบ)',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'มืด', themeGroupLight:'สว่าง', themeGroupCustom:'ธีมของคุณ',
   listFilterHint:'กรอง', listSort:'เรียง', listSortName:'ชื่อ', listSortEdited:'แก้ไขล่าสุด', listSortCreated:'วันที่สร้าง', listSortKind:'ชนิด', listSortManual:'ตามที่จัดไว้', listCount:'{n} รายการ', listNoMatch:'ไม่มีรายการที่ตรงกับตัวกรองนี้', listGroupToday:'วันนี้', listGroupThisWeek:'สัปดาห์นี้', listGroupOlder:'เก่ากว่า', assetGroupImage:'รูปภาพ', assetGroupAudio:'เสียง', assetGroupVideo:'วิดีโอ', assetGroupDoc:'เอกสาร', assetGroupTrack:'คำบรรยาย', assetGroupModel:'โมเดล 3 มิติ', assetGroupUrl:'ลิงก์', assetGroupOther:'ไฟล์อื่น ๆ',

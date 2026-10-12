@@ -83,6 +83,19 @@ function applyUiSettings(){
     if (uistyleVars && uistyleVars[tok]) document.body.style.setProperty(tok, uistyleVars[tok]);
     else document.body.style.removeProperty(tok);
   }
+  // Procress 23: a uistyle package may carry the glass group (all four or
+  // none — main refused anything else). Set, it turns css/glass.css on for
+  // that package (body[data-glass]); the built-in glass style needs neither.
+  const pkgGlass = !!uistyleVars && CUSTOM_GLASS_TOKENS.every(tok => uistyleVars[tok]);
+  for (const tok of CUSTOM_GLASS_TOKENS) {
+    if (pkgGlass) document.body.style.setProperty(tok, uistyleVars[tok]);
+    else document.body.style.removeProperty(tok);
+  }
+  if (pkgGlass) document.body.dataset.glass = '';
+  else delete document.body.dataset.glass;
+  if (S.settings.reduceTransparency) document.body.dataset.reduceTransparency = '';
+  else delete document.body.dataset.reduceTransparency;
+  if (typeof glassSync === 'function') glassSync();
   document.documentElement.style.setProperty('--fsc', String((S.settings.fontScale || 100) / 100));
   // Per-area overrides are global scale × area %, so they follow the global one.
   applyAreaScales();
@@ -112,6 +125,7 @@ function setUiSetting(key, value){
   if(key === 'theme' && !UI_THEME_OPTIONS.includes(value) && !isCustomTheme) return;
   if(key === 'nameMode' && !['unique','classic'].includes(value)) return;
   if(key === 'uiStyle' && !UI_STYLE_OPTIONS.includes(value)) return;
+  if(key === 'reduceTransparency') value = value === true || value === 'true';
   if(key === 'fontScale'){
     value = Math.min(130, Math.max(80, Math.round(Number(value) || 100)));
   }

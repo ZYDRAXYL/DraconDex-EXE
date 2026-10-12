@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('vi', {
+  // Procress 23: Glass style + Reduce transparency
+  uiStyleGlass:'Kính', uiStyleGlassHint:'Thanh và menu trong mờ trên nền dịu', settingReduceTransparency:'Giảm trong suốt (thanh và menu đặc)',
   // Procress 21: the shared list (core/list.js) — the same words as APK's widgets/ddx_list.dart
   themeGroupDark:'Tối', themeGroupLight:'Sáng', themeGroupCustom:'Chủ đề của bạn',
   listFilterHint:'Lọc', listSort:'Sắp xếp', listSortName:'Tên', listSortEdited:'Sửa gần nhất', listSortCreated:'Ngày tạo', listSortKind:'Loại', listSortManual:'Theo thứ tự đã xếp', listCount:'{n} mục', listNoMatch:'Không có mục nào khớp bộ lọc này.', listGroupToday:'Hôm nay', listGroupThisWeek:'Tuần này', listGroupOlder:'Cũ hơn', assetGroupImage:'Hình ảnh', assetGroupAudio:'Âm thanh', assetGroupVideo:'Video', assetGroupDoc:'Tài liệu', assetGroupTrack:'Phụ đề', assetGroupModel:'Mô hình 3D', assetGroupUrl:'Liên kết', assetGroupOther:'Tệp khác',
