@@ -43,9 +43,13 @@ body[data-ui-style="fluent"] #side-panel{
 body[data-ui-style="fluent"] .nav-btn{border-radius:var(--r)}
 body[data-ui-style="fluent"] .nav-btn.active{background:var(--stroke-subtle,var(--raised))}
 body[data-ui-style="fluent"] .nav-btn.active::after{left:0;top:28%;bottom:28%}
-body[data-ui-style="fluent"] .li{border-radius:var(--r)}
-body[data-ui-style="fluent"] .li.sel{background:var(--stroke-subtle,var(--raised));position:relative}
-body[data-ui-style="fluent"] .li.sel::before{
+body[data-ui-style="fluent"] .li,
+body[data-ui-style="fluent"] .ls-row{border-radius:var(--r)}
+body[data-ui-style="fluent"] .ls-row.sel{--ls-row-bg:var(--stroke-subtle,var(--raised));box-shadow:none}
+body[data-ui-style="fluent"] .li.sel,
+body[data-ui-style="fluent"] .ls-row.sel{background:var(--stroke-subtle,var(--raised));position:relative}
+body[data-ui-style="fluent"] .li.sel::before,
+body[data-ui-style="fluent"] .ls-row.sel::before{
 	content:'';position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:2px;background:var(--accent);
 }
 
@@ -55,12 +59,12 @@ body[data-ui-style="fluent"] .btn-s{
 	border-bottom-color:color-mix(in srgb,var(--t1) 16%,transparent);
 }
 body[data-ui-style="fluent"] .btn-p{
-	border:1px solid color-mix(in srgb,#fff 8%,var(--button,var(--accent)));
-	border-bottom-color:color-mix(in srgb,#000 30%,var(--button,var(--accent)));
+	border:1px solid color-mix(in srgb,var(--on-media) 8%,var(--button,var(--accent)));
+	border-bottom-color:color-mix(in srgb,var(--media-bg) 30%,var(--button,var(--accent)));
 }
 
 /* ── Flyouts are Acrylic: menus, popovers, the command palette ── */
-body[data-ui-style="fluent"] .kind-popup,
+body[data-ui-style="fluent"] .popover,
 body[data-ui-style="fluent"] .ctx-submenu,
 body[data-ui-style="fluent"] #settings-menu,
 body[data-ui-style="fluent"] #layout-menu,
@@ -69,9 +73,4 @@ body[data-ui-style="fluent"] #qs-box{
 	-webkit-backdrop-filter:blur(30px) saturate(1.4);backdrop-filter:blur(30px) saturate(1.4);
 	border-color:var(--stroke-subtle,var(--border));border-radius:var(--rl);
 	box-shadow:var(--elev-16,var(--shadow-menu));
-}
-body[data-ui-style="fluent"] .qs-item{border-radius:var(--r);position:relative}
-body[data-ui-style="fluent"] .qs-item.active{background:var(--stroke-subtle,var(--hover))}
-body[data-ui-style="fluent"] .qs-item.active::before{
-	content:'';position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:2px;background:var(--accent);
 }

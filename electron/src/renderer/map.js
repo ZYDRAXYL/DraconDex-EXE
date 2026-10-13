@@ -435,8 +435,9 @@ async function renderMapBoard(mi){
       boardEl?.classList.remove('is-panning');
     }
   };
-  window.removeEventListener('mouseup', cleanupPan);
-  window.addEventListener('mouseup', cleanupPan);
+  // removeEventListener could never match the previous draw's closure, so
+  // every draw added one more — each holding its stage (Procress 19 RAM).
+  window.addEventListener('mouseup', cleanupPan, { signal: boardSignal(container, '_mapAbort') });
 
   layer.batchDraw();
 }
@@ -446,7 +447,7 @@ async function openMapAreaModal(iid, id=null){
   if(!mi?.map) return;
   const areas = await api.map.getAreas(mi.map.id);
   const a = id ? areas.find(v=>v.id===id) : null;
-  openModal(a?'✏️ แก้ไข Area':'🧩 Area ใหม่',`
+  openModal(a?'แก้ไข Area':'Area ใหม่',`
     <div class="fg"><label>ชื่อ Area *</label><input id="area-n" value="${x(a?.area_name||'')}"></div>
     <div class="fg"><label>สี</label>${await colorPicker(a?.color)}</div>
     <div class="mfoot">${a?`<button class="btn btn-d" onclick="delMapArea(${xj(iid)},${id})">ลบ</button>`:''}<button class="btn btn-s" onclick="closeModal()">ยกเลิก</button><button class="btn btn-p" onclick="${a?`saveMapArea(${xj(iid)},${id})`:`createMapArea(${xj(iid)})`}">${a?'บันทึก':'สร้าง'}</button></div>`);

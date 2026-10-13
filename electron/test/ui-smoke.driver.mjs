@@ -56,7 +56,7 @@ test('B4 / I2: Create is a click-opened picker; a hover flyout survives a diagon
   await sleep(400);
   assert.equal(await win.locator('.ctx-submenu').count(), 0, 'hovering Create opens nothing');
   await win.locator('.context-menu-popup .kind-list-item:has-text("Create")').click();
-  await win.waitForSelector('.kind-list-popup .kind-search');
+  await win.waitForSelector('.popover-menu .kind-search');
   await win.keyboard.press('Escape');
   await row('Guide').click({ button: 'right' });
   await hover(win.locator('.context-menu-popup .kli-submenu-parent:has-text("Move to")'));
@@ -99,8 +99,8 @@ test('the page ⋯ menu and the Nest [▾] open real menus', async () => {
   assert.ok(await rows() >= 4, 'page menu has its rows');
   await win.keyboard.press('Escape');
   await win.click('#left-panel button.split-more');
-  await win.waitForSelector('.kind-popup');
-  assert.ok(await win.locator('.kind-popup .kind-list-item').count() >= 1, '[▾] lists ways to add');
+  await win.waitForSelector('.popover');
+  assert.ok(await win.locator('.popover .kind-list-item').count() >= 1, '[▾] lists ways to add');
   await win.keyboard.press('Escape');
 });
 
@@ -195,7 +195,7 @@ test('P1: a long list renders its first rows and grows as it is scrolled', async
     return id;
   });
   await sleep(300);
-  const rows = () => win.locator('.cls-list .li').count();
+  const rows = () => win.locator('.cls-list .ls-row').count();
   const first = await rows();
   assert.ok(first >= 100 && first < 300, `first render ${first} rows`);
   for (let i = 0; i < 6; i++) { await win.evaluate(() => document.querySelector('.cls-list [data-lazy]')?.scrollIntoView()); await sleep(250); }
@@ -204,7 +204,7 @@ test('P1: a long list renders its first rows and grows as it is scrolled', async
   // selecting a far row keeps it on screen through the re-render
   const far = await win.evaluate(async (id) => { const o = (await api.classifier.getObjects(id))[550]; const iid = document.querySelector('[onclick*="selectClassifierObject"]').getAttribute('onclick').match(/selectClassifierObject\(["']([^"']+)["']/)[1]; selectClassifierObject(iid, o.id); return o.name; }, cls);
   await sleep(300);
-  assert.equal(await win.locator('.cls-list .li.sel .name').innerText(), far);
+  assert.equal(await win.locator('.cls-list .ls-row.sel .ls-title').innerText(), far);
 });
 
 // ── Procress 18 part 1 + 16 B6/B8 ────────────────────────────────────────
@@ -232,23 +232,39 @@ test('18 part 1: Nest head order, Home phase A, Recent, / and [+ New] in context
 });
 
 // ── Procress 16 part 2 ───────────────────────────────────────────────────
+// Procress 20: every Nexus is a folder, made by the app — never asked for.
+test('20: a new Nexus is a folder from the start; its modal offers where · open · move, nothing to pick or forget', async () => {
+  const n = await win.evaluate(async () => { await reloadNexuses(); return { dir: S.nexus.locate_dir, missing: S.nexus.locate_missing, data: await api.nexus.defaultPath() }; });
+  assert.ok(n.dir, 'the Nexus has its folder');
+  assert.equal(n.missing, 0);
+  assert.match(n.dir, /[\\/]DraconDex[\\/]Smoke$/, '<root>/DraconDex/<name>');
+  assert.ok(n.dir.startsWith(n.data.replace(/[\\/]vaults$/, '')), 'a test run keeps it under its data dir, never in the real Documents');
+  const row = await win.evaluate(async () => { await openNexusModal(S.nexus.id); const fg = [...document.querySelectorAll('#modal .fg')].find((e) => e.querySelector('input')?.value === S.nexus.locate_dir); const out = fg ? [...fg.querySelectorAll('button')].map((b) => b.getAttribute('onclick')) : null; closeModal(); return out; });
+  assert.ok(row, 'the Local folder row shows the folder');
+  assert.ok(row.some((c) => /moveNexusLocate/.test(c)) && row.some((c) => /locateOpen/.test(c)));
+  assert.ok(!row.some((c) => /pick|forget/i.test(c)), 'no Choose / Forget');
+});
+
 test('16 part 2: a real file dropped on a folder is copied into it on disk and filed; k: l: t: filter', async () => {
   const png = new URL('../../src/assets/brand/DraconDex_WhiteOut.png', import.meta.url);
-  await win.evaluate(() => { const i = document.createElement('input'); i.type = 'file'; i.id = 't-in'; document.body.appendChild(i); window.uiConfirm = async () => true; });
+  // Procress 20: nothing may ask anything on the way — count every question.
+  await win.evaluate(() => { const i = document.createElement('input'); i.type = 'file'; i.id = 't-in'; document.body.appendChild(i); window.__asked = 0; const ask = window.uiConfirm; window.uiConfirm = async (...a) => { window.__asked++; return ask(...a); }; });
   await win.setInputFiles('#t-in', decodeURIComponent(png.pathname.replace(/^\/([A-Za-z]:)/, '$1')));
   const r = await win.evaluate(async () => {
     const files = document.getElementById('t-in').files;
     const dt = new DataTransfer(); for (const f of files) dt.items.add(f);
     const row = document.querySelector('#left-panel-inner [data-mid="1"]'); // the Guide folder
     row.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: dt }));
-    // Wait for the file to land rather than a fixed 3 s: the first drop makes
-    // the Locate folder, mirrors the whole Nexus, copies, mirrors again and
-    // reloads the tree — over 3 s on a slow Windows runner disk.
+    // Wait for the file to land rather than a fixed 3 s: the drop copies,
+    // walks the folder, mirrors and reloads the tree — slow on a Windows
+    // runner disk.
     for (let i = 0; i < 100 && !nestAssetsOf(1).length; i++) await new Promise((res) => setTimeout(res, 200));
     return nestAssetsOf(1).map((f) => f.file_path);
   });
   assert.equal(r.length, 1);
   assert.match(r[0], /[\\/]Guide[\\/]DraconDex_WhiteOut\.png$/,'copied into the folder of the collector it was dropped on');
+  assert.equal(await win.evaluate(() => window.__asked), 0, 'no dialog on the way (Procress 20)');
+  assert.ok(r[0].startsWith(await win.evaluate(() => S.nexus.locate_dir)), 'into the Nexus\'s own folder');
   const hits = (q) => win.evaluate(async (qq) => { setNestFilter(qq); await new Promise((res) => setTimeout(res, 400)); return [...document.querySelectorAll('.nest-filter-hit .name')].map((e) => e.textContent); }, q);
   assert.deepEqual(await hits('t:image'), ['DraconDex_WhiteOut.png']);
   assert.ok((await hits('k:classifier')).includes('Characters'));
@@ -514,10 +530,10 @@ test('16 part 5: a label is a category — its page lists members and subcategor
     await openModuleNode(id); await wait(500);
     const bar = [...document.querySelectorAll('.pc-cats .pc-cat')].map((e) => e.textContent.trim());
     document.querySelector('.pc-cats .pc-cat')?.click(); await wait(600);
-    const sub = { tab: builderState().panes[builderState().focused].active, members: [...document.querySelectorAll('.cat-members .name')].map((e) => e.textContent) };
+    const sub = { tab: builderState().panes[builderState().focused].active, members: [...document.querySelectorAll('[data-ls="cat-members"] .ls-title')].map((e) => e.textContent) };
     openCategoryPage('places'); await wait(500);
-    return { bar, folder: folder.name, sub, subs: [...document.querySelectorAll('.cat-subs .pc-cat')].map((e) => e.textContent.trim()),
-      members: [...document.querySelectorAll('.cat-members .name')].map((e) => e.textContent) };
+    return { bar, folder: folder.name, sub, subs: [...document.querySelectorAll('[data-ls="cat-subs"] .ls-title')].map((e) => e.textContent.trim()),
+      members: [...document.querySelectorAll('[data-ls="cat-members"] .ls-title')].map((e) => e.textContent) };
   });
   assert.deepEqual(r.bar, ['#places/ports', r.folder], 'the bar: its label, then its folder');
   assert.equal(r.sub.tab, 'category:places/ports');
@@ -529,13 +545,13 @@ test('16 part 5: search narrows with k: / l: / in:, and remembers what was searc
   const r = await win.evaluate(async () => {
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
     showLeftDest('search'); await wait(300);
-    const run = async (qy) => { q('#left-search-q').value = qy; await runLeftSearch(qy); return [...document.querySelectorAll('#left-search-res .left-search-row .name')].map((e) => e.firstChild.textContent.trim()); };
+    const run = async (qy) => { q('#left-search-q').value = qy; await runLeftSearch(qy); return [...document.querySelectorAll('#left-search-res .left-search-row .ls-title')].map((e) => e.textContent.trim()); };
     const all = await run('harbor');
     const cls = await run('harbor k:classifier');
     const onlyK = await run('k:chronicler');
     const inGuide = await run('k:classifier in:Guide');
     q('#left-search-q').value = ''; await runLeftSearch('');
-    const hist = [...document.querySelectorAll('#left-search-res .li .name')].map((e) => e.textContent);
+    const hist = [...document.querySelectorAll('#left-search-res .ls-row .ls-title')].map((e) => e.textContent);
     showLeftDest('nest');
     return { all, cls, onlyK, inGuide, hist };
   });
@@ -565,7 +581,7 @@ test('16 part 5: an element\'s infobox shows its page picture over its fields', 
 test('16 part 5: Home phase B — the most linked page, what changed, counts and a random page', async () => {
   const r = await win.evaluate(async () => {
     await builderOpenPage(null); await new Promise((res) => setTimeout(res, 1200));
-    return { secs: [...document.querySelectorAll('#home-portal h3')].length, changed: document.querySelectorAll('#home-portal .home-list .li').length,
+    return { secs: [...document.querySelectorAll('#home-portal h3')].length, changed: document.querySelectorAll("#home-portal .ls-row").length,
       featured: !!document.querySelector('#home-portal .home-featured'), random: !!document.querySelector('#home-portal [onclick="openRandomPage()"]') };
   });
   assert.ok(r.featured && r.changed > 0 && r.random, JSON.stringify(r));
@@ -728,4 +744,121 @@ test('16 part 7: the game line — a play session logged against the world\'s ow
   assert.equal(r.ev.name, 'Session 1');
   assert.equal(r.ev.y, 1050, 'the in-game date');
   assert.match(r.ev.story, /^\d{4}-\d\d-\d\d \d\d:\d\d · 90 min/, 'the real time beside it');
+});
+
+// ═══ Procress 25: the Create Nexus window ═══════════════════════════════════
+// Welcome → New opens a CHILD window (Unity Hub's New project) that is allowed
+// to be bigger than the 760-px Welcome; Create makes the Nexus there and the
+// new vault's window adds the template and App Docs at boot. Last in this
+// file: each test opens a Welcome window and leaves only `win` behind.
+const winsInfo = () => ui.app.evaluate(({ BrowserWindow, screen }) => ({
+  area: screen.getPrimaryDisplay().workArea,
+  wins: BrowserWindow.getAllWindows().map((w) => ({ id: w.id, url: w.webContents.getURL(), width: w.getBounds().width, parent: w.getParentWindow()?.id ?? null, modal: w.isModal() })),
+}));
+async function cnOpenWelcome() {
+  const [w] = await Promise.all([ui.app.waitForEvent('window'), win.evaluate(() => api.window.openWelcome())]);
+  await w.waitForSelector('.welcome-hero', { timeout: 20000 });
+  return w;
+}
+// counts real pointer clicks on the path, for the depth budget (UX-LAYOUT §13)
+let cnClicks = 0;
+async function cnClick(page, sel) { cnClicks++; await page.locator(sel).first().click(); }
+async function cnOpenCreate(welcome, pin = true) {
+  const [c] = await Promise.all([ui.app.waitForEvent('window'), cnClick(welcome, "button.btn-p[onclick='welcomeCreateNexus()']")]);
+  await c.waitForSelector('#cn-grid .home-tpl', { timeout: 20000 });
+  if (pin) await c.setViewportSize({ width: 1120, height: 720 }); // a 1024-px runner would get the two-step layout (welcome.css < 1000 px)
+  return c;
+}
+async function cnCreateFrom(create) {
+  const [v] = await Promise.all([ui.app.waitForEvent('window'), cnClick(create, '#cn-create').catch(() => {})]);
+  await v.waitForSelector('#hub-body', { timeout: 20000 });
+  await v.waitForFunction(() => 'pendingCreate' in S, null, { timeout: 20000 });
+  await v.evaluate(() => S.pendingCreate);
+  return v;
+}
+const cnTop = (page) => page.evaluate(() => ({ top: S.moduleTree.map((m) => m.name), all: flattenModulesByKind(S.moduleTree, []).map((m) => m.name) }));
+
+test('25: Welcome → New opens a child window wider than Welcome; Cancel closes only the child', async () => {
+  const welcome = await cnOpenWelcome();
+  const create = await cnOpenCreate(welcome, false); // measured as the app sized it
+  const { area, wins } = await winsInfo();
+  const w = wins.find((x) => /createNexus=1/.test(x.url));
+  const wel = wins.find((x) => /welcome=1/.test(x.url));
+  assert.equal(wel.width, 760, 'Welcome keeps its size');
+  assert.equal(w.parent, wel.id, 'a child of the Welcome window');
+  if (process.platform !== 'darwin') assert.ok(w.modal, 'modal over Welcome');
+  const want = area.width < 1000 ? area.width : Math.min(1120, area.width - 48);
+  assert.equal(w.width, want, 'min(1120, workArea − 48)');
+  if (area.width >= 1148) assert.ok(w.width >= 1100, `at least 1100 px wide (${w.width})`);
+  await create.setViewportSize({ width: 1120, height: 720 }); // the rest drives the two-pane layout
+  // Blank is the default, the name is filled in and free, the Locate folder follows it
+  assert.equal(await create.locator('#cn-grid .home-tpl.on').getAttribute('data-cn-id'), '');
+  assert.ok((await create.inputValue('#nx-name')).length > 0);
+  assert.match(await create.inputValue('#cn-locate'), /DraconDex[\\/]/);
+  // ←→ move the selection through the grid; the detail follows
+  await create.focus('#cn-grid .home-tpl.on');
+  await create.keyboard.press('ArrowRight');
+  const second = await create.locator('#cn-grid .home-tpl').nth(1).getAttribute('data-cn-id');
+  assert.equal(await create.locator('#cn-grid .home-tpl.on').getAttribute('data-cn-id'), second);
+  assert.equal(await create.evaluate(() => document.activeElement?.dataset.cnId), second, 'focus moves with it');
+  assert.ok((await create.locator('#cn-detail .ls-row').count()) > 0, 'the modules it makes');
+  // a taken name is said under the field, not in a toast
+  await create.fill('#nx-name', 'Smoke');
+  assert.equal(await create.locator('#nx-name-err').isVisible(), true);
+  // the page closes under the click, so the click itself may report a closed target
+  await Promise.all([create.waitForEvent('close'), create.click('.cn-foot .btn-s:has-text("Cancel")').catch(() => {})]);
+  await sleep(300);
+  const after = (await winsInfo()).wins;
+  assert.equal(after.some((x) => /createNexus=1/.test(x.url)), false, 'the child is gone');
+  assert.equal(after.some((x) => /welcome=1/.test(x.url)), true, 'Welcome stays');
+  await welcome.close();
+});
+
+// The click budget of this path (≤ 3 from Welcome) is ui-depth.driver.mjs's row now (Procress 24).
+test('25: Fantasy + App Docs → the new window has the Fantasy modules and the Guide', async () => {
+  const welcome = await cnOpenWelcome();
+  cnClicks = 0;
+  const create = await cnOpenCreate(welcome);              // 1 New
+  await cnClick(create, '#cn-grid [data-cn-id="fantasy"]'); // 2 the card
+  assert.equal(await create.isChecked('#cn-appdocs'), false, 'App Docs is off once a Nexus exists');
+  await create.check('#cn-appdocs');                        // a value change, not a step on the path
+  await create.fill('#nx-name', 'Smoke Fantasy');
+  const v = await cnCreateFrom(create);                     // 3 Create
+  const { top, all } = await cnTop(v);
+  assert.ok(top.includes('Guide'), `the Guide folder (${top})`);
+  assert.ok(all.includes('Characters'), 'the Fantasy modules');
+  await sleep(500);
+  assert.equal((await winsInfo()).wins.some((x) => /welcome=1/.test(x.url)), false, 'Welcome closed behind the new window');
+  await v.close();
+});
+
+test('25: no App Docs → no Guide', async () => {
+  const welcome = await cnOpenWelcome();
+  const create = await cnOpenCreate(welcome);
+  await create.click('#cn-grid [data-cn-id="fantasy"]');
+  await create.fill('#nx-name', 'Smoke Plain');
+  assert.equal(await create.isDisabled('#cn-tour'), true, 'the tour needs App Docs');
+  const v = await cnCreateFrom(create);
+  const { top, all } = await cnTop(v);
+  assert.ok(all.includes('Characters'), 'the template is there');
+  assert.equal(top.includes('Guide'), false, `no Guide folder (${top})`);
+  await v.close();
+});
+
+test('25: a template that fails keeps the Nexus and offers the picker again', async () => {
+  const r = await win.evaluate(async () => {
+    localStorage.setItem(NEXUS_PENDING_GUIDE_KEY, JSON.stringify({ nexusId: S.nexus.id, template: { id: 'fantasy', group: 'genre', spec: {} }, appDocs: false, tour: false }));
+    await runPendingCreate();
+    const toastEl = document.querySelector('#toast');
+    const out = { pending: localStorage.getItem(NEXUS_PENDING_GUIDE_KEY), text: toastEl.textContent, action: toastEl.classList.contains('has-action'), still: !!(await api.nexus.get(S.nexus.id)) };
+    toastEl.querySelector('.toast-act')?.click();
+    await new Promise((res) => setTimeout(res, 400));
+    out.picker = !!document.querySelector('#modal-overlay:not(.hidden) .art-card.on');
+    closeModal();
+    return out;
+  });
+  assert.equal(r.pending, null, 'runs once');
+  assert.ok(r.action && /template/i.test(r.text), `a toast with a retry (${r.text})`);
+  assert.ok(r.still, 'the Nexus is still there');
+  assert.ok(r.picker, 'retry opens the template picker on that template');
 });

@@ -10,7 +10,6 @@
    `.empty .ei` empty-state icon opacity used across most modules. */
 
 /* ── Generic tag chip + empty-state icon (used app-wide) ── */
-.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--rs);font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:600;background:var(--raised);color:var(--t3-aa,var(--t2));font-family:monospace}
 .empty .ei{font-size:calc(40px * var(--fsc,1));opacity:.35}
 .empty .ei .kicon-img-icon{width:48px;height:48px;border-radius:50%;object-fit:cover}
 .empty .ei .icon{width:48px;height:48px;opacity:.45;color:var(--t3-aa,var(--t2));margin-bottom:8px}
@@ -61,7 +60,7 @@
       shared with Chronicler) ── */
 .timeline-graph-board{position:relative;width:100%;height:400px;background:var(--raised);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:default}
 .timeline-graph-board.is-panning{cursor:grabbing}
-.timeline-axis-tip{position:absolute;z-index:4;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--t1);font-size:calc(var(--fs-meta) * var(--fsc,1));white-space:nowrap;pointer-events:none;box-shadow:0 8px 18px rgba(0,0,0,.35)}
+.timeline-axis-tip{position:absolute;z-index:calc(var(--z-base) + 4);padding:5px 8px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--t1);font-size:calc(var(--fs-meta) * var(--fsc,1));white-space:nowrap;pointer-events:none;box-shadow:0 8px 18px rgba(0,0,0,.35)}
 .timeline-axis-tip.hidden{display:none}
 
 /* ── Map whiteboard (map.js's Konva stage host, shared by Locator +
@@ -92,7 +91,7 @@
 .cwheel-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:20px;display:flex;flex-direction:column;gap:14px;align-items:center}
 .cwheel-wrap{position:relative;width:220px;height:220px;border-radius:50%;overflow:hidden;box-shadow:0 0 24px rgba(99,102,241,0.12)}
 .cwheel-wrap canvas{display:block;cursor:crosshair}
-.cwheel-indicator{position:absolute;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,0.5),inset 0 0 2px rgba(0,0,0,0.25);pointer-events:none;transform:translate(-50%,-50%);z-index:2}
+.cwheel-indicator{position:absolute;width:14px;height:14px;border-radius:50%;border:2px solid var(--on-media);box-shadow:0 0 4px rgba(0,0,0,0.5),inset 0 0 2px rgba(0,0,0,0.25);pointer-events:none;transform:translate(-50%,-50%);z-index:calc(var(--z-base) + 2)}
 .cs-title{font-size:calc(var(--fs-body) * var(--fsc,1));font-weight:700;color:var(--t2);display:flex;align-items:center;gap:8px;width:100%}
 .cs-count{font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:500;color:var(--t3-aa,var(--t2));background:var(--raised);padding:1px 8px;border-radius:var(--rl)}
 .cwheel-preview{display:flex;align-items:center;gap:10px;width:100%}

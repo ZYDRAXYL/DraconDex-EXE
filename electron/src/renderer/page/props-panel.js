@@ -67,7 +67,7 @@ function renderPropsPanel(head, body) {
       ${m.create_at ? row('created', `<span data-no-i18n>${x(String(m.create_at).slice(0, 16))}</span>`) : ''}
       ${m.update_at ? row('propsUpdated', `<span data-no-i18n>${x(String(m.update_at).slice(0, 16))}</span>`) : ''}
     </section>
-    <section class="props-sec"><h4>${t('pbLinks')}</h4><div id="props-links" class="props-links"><p class="drafter-hint">${t('syncWorking')}</p></div></section>
+    <section class="props-sec"><h4>${t('pbLinks')}</h4><div id="props-links"><p class="drafter-hint">${t('syncWorking')}</p></div></section>
     <section class="props-sec">${typeof buildModuleAssetsStripHtml === 'function' ? buildModuleAssetsStripHtml(m) : ''}</section>
     <section class="props-sec props-acts">
       <button class="btn btn-s" onclick="openModuleIconPopup(${m.id},this)">${I.colors || ''} ${t('clsColorIcon')}</button>
@@ -99,13 +99,16 @@ async function fillPropsLinks(moduleId) {
   const { outgoing = [], backlinks = [] } = await api.module.getLinks(moduleId).catch(() => ({}));
   const box = q('#props-links');
   if (!box || (S.activeModuleNode || findModuleNode(S.activeItemNode?.moduleId))?.id !== moduleId) return;
+  // Procress 21: two groups of the shared list (core/list.js), compact as
+  // a panel's lists are; a link to nothing yet shows as [[name]], off.
   const li = (e) => (e.key
-    ? `<div class="li" onclick="openEntityByKey(${xj(e.key)})"><span class="name" data-no-i18n>${x(e.name)}</span></div>`
-    : `<div class="li props-unresolved"><span class="name" data-no-i18n>[[${x(e.name)}]]</span></div>`);
+    ? listRowHtml({ density: 'compact', icon: I.relation, title: e.name, onclick: `openEntityByKey(${xj(e.key)})`, attrs: 'data-no-i18n' })
+    : listRowHtml({ density: 'compact', icon: I.relation, title: `[[${e.name}]]`, cls: 'props-unresolved', state: { disabled: true }, attrs: 'data-no-i18n' }));
   box.innerHTML = (outgoing.length || backlinks.length)
-    ? `${outgoing.length ? `<div class="props-k">${t('propsLinksOut')} <span class="cnt" data-no-i18n>${outgoing.length}</span></div>${outgoing.map(li).join('')}` : ''}
-       ${backlinks.length ? `<div class="props-k">${t('backlinks')} <span class="cnt" data-no-i18n>${backlinks.length}</span></div>${backlinks.map(li).join('')}` : ''}`
-    : `<p class="drafter-hint">${t('propsNoLinks')}</p>`;
+    ? listHtml({ list: 'props-links', aria: t('pbLinks'), body:
+      (outgoing.length ? listGroupHtml({ list: 'props-links', id: 'out', title: t('propsLinksOut'), count: outgoing.length, rows: outgoing.map(li).join('') }) : '')
+      + (backlinks.length ? listGroupHtml({ list: 'props-links', id: 'back', title: t('backlinks'), count: backlinks.length, rows: backlinks.map(li).join('') }) : '') })
+    : emptyStateHtml({ icon: I.relation, text: t('propsNoLinks') });
 }
 
 // Ctrl+Alt+B (VS Code's secondary side bar)
@@ -118,6 +121,6 @@ document.addEventListener('keydown', (e) => {
 // Esc folds the panel while it floats over the page (a narrow window)
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !propsNarrow() || !_propsNarrowOpen || e.defaultPrevented) return;
-  if (document.querySelector('.modal-overlay:not(.hidden), #qs-overlay, .kind-popup, #pb-pop')) return;
+  if (document.querySelector('.modal-overlay:not(.hidden), #qs-overlay, .popover, #pb-pop')) return;
   togglePropsPanel(false);
 });

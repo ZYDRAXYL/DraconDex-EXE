@@ -57,6 +57,7 @@ body[data-theme="midnight"]{
 	--success:#22c55e;
 	--warn:#f59e0b;
 	--info:#38bdf8;
+	--on-accent:#fff; /* white on #585ced = 5.04:1 (SDB follows this accent since 4db34f5) */
 }
 /* Full-spectrum theme: light, readable surfaces float over a pastel-rainbow
    backdrop; the nav rail and left panel go translucent so the rainbow shows

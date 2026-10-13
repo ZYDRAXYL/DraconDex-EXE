@@ -62,7 +62,7 @@ function driveBackupLogRowHtml(entry) {
   const ok = entry.ok !== false;
   const parts = [entry.layout ? t('driveIncludeLayout') : '', entry.ddx ? t('driveIncludeDdx') : ''].filter(Boolean).join(', ');
   return `<div class="li"><span class="name">${driveFmtTime(entry.at)}</span>
-    <span class="tag" data-no-i18n>${ok ? (parts || '—') : `⚠ ${x(entry.code || '')}`}</span></div>`;
+    <span class="chip" data-no-i18n>${ok ? (parts || '—') : `${I.alert}${x(entry.code || '')}`}</span></div>`;
 }
 function driveBackupLogHtml(log) {
   if (!log || !log.length) return '';
@@ -77,7 +77,7 @@ function driveBackupBodyHtml(st, cfg, log) {
     return `
       ${st.dev ? `<div class="modal-hint">${I.info}<span>${t('driveDevServer')}</span></div>` : ''}
       <div class="modal-hint">${I.info}<span>${t('driveNotConnected')}</span></div>
-      <button class="btn btn-p" id="drive-connect-btn" onclick="driveConnectNow()">☁ ${t('driveConnect')}</button>`;
+      <button class="btn btn-p" id="drive-connect-btn" onclick="driveConnectNow()">${I.cloud}${t('driveConnect')}</button>`;
   }
 
   return `
@@ -95,7 +95,7 @@ function driveBackupBodyHtml(st, cfg, log) {
       <button class="btn btn-d" onclick="driveDisconnectNow()">${t('driveDisconnect')}</button>
       <button class="btn btn-s" onclick="driveRestoreLayoutNow()">${t('driveRestoreLayout')}</button>
       <button class="btn btn-s" onclick="driveRestoreDatabaseNow()">${t('driveRestoreDatabase')}</button>
-      <button class="btn btn-p" id="drive-backup-btn" onclick="driveBackupNowClick()">☁ ${t('driveBackupNow')}</button>
+      <button class="btn btn-p" id="drive-backup-btn" onclick="driveBackupNowClick()">${I.cloud}${t('driveBackupNow')}</button>
     </div>
     ${driveBackupLogHtml(log)}`;
 }

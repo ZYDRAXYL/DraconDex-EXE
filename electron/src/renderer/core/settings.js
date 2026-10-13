@@ -83,6 +83,21 @@ function applyUiSettings(){
     if (uistyleVars && uistyleVars[tok]) document.body.style.setProperty(tok, uistyleVars[tok]);
     else document.body.style.removeProperty(tok);
   }
+  // Procress 23: a uistyle package may carry the glass group (all four or
+  // none — main refused anything else). Set, it turns css/glass.css on for
+  // that package (body[data-glass]); the built-in glass style needs neither.
+  const pkgGlass = !!uistyleVars && CUSTOM_GLASS_TOKENS.every(tok => uistyleVars[tok]);
+  delete document.body.dataset.glassTint; // core/glass.js's raise, re-judged below
+  for (const tok of CUSTOM_GLASS_TOKENS) {
+    if (pkgGlass) document.body.style.setProperty(tok, uistyleVars[tok]);
+    else document.body.style.removeProperty(tok);
+  }
+  if (pkgGlass) document.body.dataset.glass = '';
+  else delete document.body.dataset.glass;
+  if (S.settings.reduceTransparency) document.body.dataset.reduceTransparency = '';
+  else delete document.body.dataset.reduceTransparency;
+  if (typeof glassSync === 'function') glassSync();
+  if (typeof systemGlassSync === 'function') systemGlassSync();
   document.documentElement.style.setProperty('--fsc', String((S.settings.fontScale || 100) / 100));
   // Per-area overrides are global scale × area %, so they follow the global one.
   applyAreaScales();
@@ -112,10 +127,16 @@ function setUiSetting(key, value){
   if(key === 'theme' && !UI_THEME_OPTIONS.includes(value) && !isCustomTheme) return;
   if(key === 'nameMode' && !['unique','classic'].includes(value)) return;
   if(key === 'uiStyle' && !UI_STYLE_OPTIONS.includes(value)) return;
+  if(key === 'reduceTransparency') value = value === true || value === 'true';
+  if(key === 'systemGlass') value = value === true || value === 'true';
   if(key === 'fontScale'){
     value = Math.min(130, Math.max(80, Math.round(Number(value) || 100)));
   }
   if(key === 'language' && !UI_LANGUAGE_OPTIONS.includes(value)) return;
+  // Procress 19 F8: a language is its own file now — fetch it first, then apply
+  // as if it had always been there. Callers that re-render after this (the
+  // welcome wizard) get the promise to wait on.
+  if(key === 'language' && !i18nLoaded(value)) return i18nLoad(value).then(() => setUiSetting(key, value));
   if(key === 'size'){
     value = Number(value);
     if(!Number.isFinite(value)) return;
@@ -209,10 +230,8 @@ function getBuiltinThemePalettes(){
 // Shared by the quick settings dropdown and the Preferences panel (Plan
 // part3) so both surfaces render the identical control from one source.
 function nameModeSegHtml(){
-  return `<div class="name-mode-seg">
-    <button class="btn ${S.settings.nameMode !== 'classic' ? 'btn-p' : 'btn-s'}" onclick="setUiSetting('nameMode','unique')" data-no-i18n>Unique</button>
-    <button class="btn ${S.settings.nameMode === 'classic' ? 'btn-p' : 'btn-s'}" onclick="setUiSetting('nameMode','classic')" data-no-i18n>Classic</button>
-  </div>
+  return `${segmentedHtml([{ value: 'unique', text: 'Unique' }, { value: 'classic', text: 'Classic' }],
+    S.settings.nameMode === 'classic' ? 'classic' : 'unique', { fill: true, noI18n: true, aria: t('moduleNameModeHint'), onclick: (v) => `setUiSetting('nameMode','${v}')` })}
   <div class="settings-hint">${t('moduleNameModeHint')}</div>`;
 }
 // Read-only compare view (Plan part2 #3) alongside the toggle above — every
@@ -297,33 +316,26 @@ function renderSettingsMenu(){
 // The quick popup's optional "Theme" extra (Tool toggle opt-in) — same swatch
 // list the old always-shown block used, just gated now instead of default.
 function quickThemeExtraHtml(){
+  // Procress 21: compact rows of the shared list (core/list.js), grouped dark /
+  // light / your own, each with its colours first. Hovering one previews it
+  // (data-preview-theme).
   const palettes = getThemePalettes();
-  const themeOptions = UI_THEME_OPTIONS.map(theme => {
-    const active = S.settings.theme === theme;
-    const swatches = THEME_SWATCH_VARS.map(v =>
-      `<i style="background:${palettes[theme]?.[v] || ''}"></i>`
-    ).join('');
-    const label = x(themeOptionLabel(theme));
-    return `<button type="button" class="theme-item${active?' active':''}" data-preview-theme="${x(theme)}" onclick="setUiSetting('theme','${theme}')" title="${label}">
-        <span class="theme-swatches">${swatches}</span>
-        <span class="theme-name" data-no-i18n>${label}</span>
-        ${active?`<span class="theme-check">${I.check}</span>`:''}
-      </button>`;
+  const row = (key, label, vars, preview, custom) => listRowHtml({ density: 'compact', title: label, tip: label,
+    lead: `<span class="theme-swatches">${(custom ? ['--bg','--raised','--accent','--accentH','--t1'] : THEME_SWATCH_VARS).map(v => `<i style="background:${x(vars?.[v] || (custom ? '#000' : ''))}"></i>`).join('')}</span>`,
+    state: { selected: S.settings.theme === key }, onclick: `setUiSetting('theme','${key}')`,
+    attrs: `${preview ? `data-preview-theme="${x(key)}" ` : ''}data-no-i18n`, trailing: S.settings.theme === key ? `<span class="theme-check">${I.check}</span>` : '' });
+  const tone = (theme) => (isLightColor(palettes[theme]?.['--bg'] || '#000') ? 'light' : 'dark');
+  const groups = [['dark', 'themeGroupDark'], ['light', 'themeGroupLight']].map(([id, key]) => {
+    const list = UI_THEME_OPTIONS.filter(th => tone(th) === id);
+    return list.length ? listGroupHtml({ list: 'quick-themes', id, title: t(key), count: list.length,
+      rows: list.map(th => row(th, themeOptionLabel(th), palettes[th], true, false)).join('') }) : '';
   }).join('');
-  const customOptions = (S.settings.customThemes || []).map(ct => {
-    const key = `custom:${ct.id}`;
-    const active = S.settings.theme === key;
-    const swatches = ['--bg','--raised','--accent','--accentH','--t1'].map(tok =>
-      `<i style="background:${x(ct.vars?.[tok] || '#000')}"></i>`).join('');
-    return `<button type="button" class="theme-item${active?' active':''}" onclick="setUiSetting('theme','${key}')" title="${x(ct.name)}">
-        <span class="theme-swatches">${swatches}</span>
-        <span class="theme-name" data-no-i18n>${x(ct.name)}</span>
-        ${active?`<span class="theme-check">${I.check}</span>`:''}
-      </button>`;
-  }).join('');
+  const customs = S.settings.customThemes || [];
+  const mine = customs.length ? listGroupHtml({ list: 'quick-themes', id: 'custom', title: t('themeGroupCustom'), count: customs.length,
+    rows: customs.map(ct => row(`custom:${ct.id}`, ct.name, ct.vars, false, true)).join('') }) : '';
   return `<div class="settings-group">
       <div class="settings-label">${t('theme')}</div>
-      <div class="theme-list">${themeOptions}${customOptions}</div>
+      ${listHtml({ list: 'quick-themes', aria: t('theme'), cls: 'theme-list', body: groups + mine })}
     </div>`;
 }
 
@@ -352,7 +364,7 @@ const SHORTCUT_HELP = [
 ];
 function openShortcutsModal(){
   const rows = SHORTCUT_HELP.map(([combo, key]) =>
-    `<div class="li"><span class="name">${t(key)}</span><span class="tag" data-no-i18n>${combo}</span></div>`).join('');
+    `<div class="li"><span class="name">${t(key)}</span><span class="chip" data-no-i18n>${combo}</span></div>`).join('');
   openModal(t('shortcuts'), `<div class="modal-data">${rows}</div>`);
 }
 

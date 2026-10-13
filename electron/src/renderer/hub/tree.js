@@ -153,7 +153,9 @@ function syncNestSelection() {
 // An ARIA tree: ↑ ↓ Home End move · → opens a folded row (or steps in) ·
 // ← folds it (or steps to the parent) · Enter opens · F2 renames · Delete
 // sends to the trash (with Undo) · Shift+F10 / the Menu key = the row menu,
-// whose "Move to…" is the keyboard way to move.
+// whose "Move to…" is the keyboard way to move. Everything but → ← is the
+// shared list keyboard (core/list.js listKeyNav, Procress 21) — one handler
+// for the tree and every list.
 document.addEventListener('keydown', (e) => {
   const row = e.target.closest?.('#nest-tree-body [role="treeitem"]');
   if (!row || e.target.closest('input')) return;
@@ -161,24 +163,22 @@ document.addEventListener('keydown', (e) => {
   const i = rows.indexOf(row);
   const mid = row.dataset.mid ? Number(row.dataset.mid) : null;
   const sel = (r) => (r.dataset.mid ? `[data-mid="${r.dataset.mid}"]` : `[data-item="${r.dataset.item}"]`);
-  const go = (r) => { if (!r) return; rows.forEach((x2) => { x2.tabIndex = -1; }); r.tabIndex = 0; r.focus(); };
   const fold = (open) => { S.nestRefocus = sel(row); if (open) S.moduleCollapsed.delete(mid); else S.moduleCollapsed.add(mid); renderNexusHome(); };
   const level = Number(row.getAttribute('aria-level'));
-  switch (e.key) {
-    case 'ArrowDown': go(rows[i + 1]); break;
-    case 'ArrowUp': go(rows[i - 1]); break;
-    case 'Home': go(rows[0]); break;
-    case 'End': go(rows[rows.length - 1]); break;
-    case 'ArrowRight': if (row.getAttribute('aria-expanded') === 'false') fold(true); else go(rows[i + 1]?.getAttribute('aria-level') > level ? rows[i + 1] : null); break;
-    case 'ArrowLeft': if (row.getAttribute('aria-expanded') === 'true') fold(false); else go(rows.slice(0, i).reverse().find((r) => Number(r.getAttribute('aria-level')) < level)); break;
-    case 'Enter': S.nestRefocus = sel(row); row.click(); break;
-    case 'F2': if (mid != null) startRenameModule(mid); break;
-    case 'Delete': if (mid != null) deleteModuleNode(mid); break;
-    case 'ContextMenu': row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: row.getBoundingClientRect().left + 40, clientY: row.getBoundingClientRect().bottom })); break;
-    case 'F10': if (!e.shiftKey) return; row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: row.getBoundingClientRect().left + 40, clientY: row.getBoundingClientRect().bottom })); break;
-    default: return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    if (e.key === 'ArrowRight') {
+      if (row.getAttribute('aria-expanded') === 'false') fold(true);
+      else listRovingGo(rows, rows[i + 1]?.getAttribute('aria-level') > level ? rows[i + 1] : null);
+    } else if (row.getAttribute('aria-expanded') === 'true') fold(false);
+    else listRovingGo(rows, rows.slice(0, i).reverse().find((r) => Number(r.getAttribute('aria-level')) < level));
+    e.preventDefault();
+    return;
   }
-  e.preventDefault();
+  listKeyNav(e, row, rows, {
+    open: (r) => { S.nestRefocus = sel(r); r.click(); },
+    rename: mid != null ? () => startRenameModule(mid) : null,
+    remove: mid != null ? () => deleteModuleNode(mid) : null,
+  });
 });
 
 // Leaf row for one content item (Plan part4) — see buildNestRow's own
@@ -436,16 +436,10 @@ document.addEventListener('paste', (e) => {
 async function nestAddFiles(files, targetId) {
   if (!S.nexus || !files?.length) return;
   files = [...files]; // a FileList loses its iterator crossing the context bridge; an array of File does not
-  let r = await api.importdock.dropToNest(S.nexus.id, files, targetId);
-  if (r?.code === 'no_dir') {
-    // the first time: this Nexus gets a Locate folder — beside its .ddx, or one the user picks
-    const d = await api.importdock.locateDefault(S.nexus.id, false);
-    if (d?.ok && await uiConfirm(t('nestLocateAsk').replace('{dir}', d.dir))) await api.importdock.locateDefault(S.nexus.id, true);
-    else if (!(await api.nexus.locatePick(S.nexus.id))?.ok) return;
-    await reloadNexuses();
-    r = await api.importdock.dropToNest(S.nexus.id, files, targetId);
-  }
-  if (!r?.ok) { toast(t('driveErrServer'), 'err'); return; }
+  // Procress 20: every Nexus has its folder (main makes one if it is
+  // missing), so nothing is asked — no_dir only means its drive is gone.
+  const r = await api.importdock.dropToNest(S.nexus.id, files, targetId);
+  if (!r?.ok) { toast(t(r?.code === 'no_dir' ? 'nexusLocalFolderDriveGone' : 'driveErrServer'), 'err'); return; }
   S.importFiles = undefined;
   if (targetId != null) S.moduleCollapsed.delete(targetId);
   await reloadModuleTree({ skipMirror: true });

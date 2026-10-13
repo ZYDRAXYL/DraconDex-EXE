@@ -65,7 +65,7 @@ async function sbRefreshPage() {
 function sbItemRowHtml(item) {
   return `<div class="li">
     <span class="name" data-no-i18n>${x(item.id)}</span>
-    <span class="tag" data-no-i18n>${item.ok ? '✓' : '✗'}</span>
+    <span class="chip chip-status" data-status="${item.ok ? 'ok' : 'danger'}" data-no-i18n>${item.ok ? I.check : I.close}</span>
   </div>`;
 }
 

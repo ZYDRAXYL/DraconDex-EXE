@@ -260,20 +260,15 @@ function classifierRelationRowsHtml(keys) {
     // A relation field's row (§11.3) is labelled with the field, not its id.
     const rt = /^ctpl_\d+$/.test(l.rel_type || '') ? clsFieldNameOf(Number(l.rel_type.slice(5))) : l.rel_type;
     const lbl = [l.label, rt && `(${rt})`].filter(Boolean).join(' ');
-    return `<div class="cls-link-row">
-      ${own ? `<span class="cls-link-name" onclick="openEntityByKey('${x(mine)}')">${x(own.name)}</span>` : ''}
-      <span data-no-i18n>${arrow}</span>
-      <span class="cls-link-name" onclick="openEntityByKey('${x(otherKey)}')">${x(e ? e.name : otherKey)}</span>
-      <span class="cls-link-mod">${x(from)}</span>
-      ${lbl ? `<span class="cls-link-lbl">${x(lbl)}</span>` : ''}
-    </div>`;
+    return listLinkRowHtml({ arrow, name: e ? e.name : otherKey, onclick: `openEntityByKey(${xj(otherKey)})`, meta: from, label: lbl,
+      own: own ? { name: own.name, onclick: `openEntityByKey(${xj(mine)})` } : null });
   }).join('');
 }
 
 function renderClassifierLinksHtml(o) {
   const rows = classifierRelationRowsHtml(new Set([`cobj_${o.id}`]));
   return `<div class="insp-label cls-link-label">${t('linkedElements')}</div>
-    <div class="cls-link-list">${rows || `<div class="cls-lv-empty">${t('noLinkedElements')}</div>`}</div>
+    ${listLinksHtml(rows)}
     <button class="btn btn-g" style="margin:4px 14px" onclick="openExhibitorFor(${o.module_ref ?? S.activeItemNode?.moduleId ?? S.activeModuleNode?.id ?? 'null'},'cobj_${o.id}')">${I.relation} ${t('openInExhibitor')}</button>`;
 }
 

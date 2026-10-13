@@ -79,14 +79,14 @@ function buildSketcherMainHtml(m, c) {
         </div>
       </div>
       <div class="sk-tools" data-no-i18n>
-        <button class="btn btn-g btn-i${skTool.mode === 'pen' ? ' act' : ''}" data-cmd="sketcher.pen" onclick="runCommand('sketcher.pen')" title="${t('penTool')}">✏️</button>
-        <button class="btn btn-g btn-i${skTool.mode === 'eraser' ? ' act' : ''}" data-cmd="sketcher.eraser" onclick="runCommand('sketcher.eraser')" title="${t('eraserTool')}">🧽</button>
+        <button class="btn btn-g btn-i${skTool.mode === 'pen' ? ' act' : ''}" data-cmd="sketcher.pen" onclick="runCommand('sketcher.pen')" title="${t('penTool')}">${I.edit}</button>
+        <button class="btn btn-g btn-i${skTool.mode === 'eraser' ? ' act' : ''}" data-cmd="sketcher.eraser" onclick="runCommand('sketcher.eraser')" title="${t('eraserTool')}">${I.eraser}</button>
         <span class="zsep"></span>
         ${SK_COLORS.map(c => `<button class="btn sk-swatch${skTool.color === c ? ' act' : ''}" style="background:${c}" onclick="setSketchColor('${c}')" aria-pressed="${skTool.color === c}" title="${x(t(SK_COLOR_KEY[c]))}" aria-label="${x(t(SK_COLOR_KEY[c]))}"></button>`).join('')}
         <span class="zsep"></span>
         ${SK_WIDTHS.map(w => `<button class="btn sk-width${skTool.width === w ? ' act' : ''}" onclick="setSketchWidth(${w})" aria-pressed="${skTool.width === w}" title="${x(t('skLineWidth').replace('{n}', w))}" aria-label="${x(t('skLineWidth').replace('{n}', w))}"><span aria-hidden="true" style="height:${w}px"></span></button>`).join('')}
         <span class="zsep"></span>
-        <button class="btn btn-g btn-i" data-cmd="sketcher.pinLink" onclick="runCommand('sketcher.pinLink')" title="${t('pinModuleLink')}">🔗</button>
+        <button class="btn btn-g btn-i" data-cmd="sketcher.pinLink" onclick="runCommand('sketcher.pinLink')" title="${t('pinModuleLink')}">${I.relation}</button>
       </div>
       ${cmdBtn('sketcher.exportPng', { moduleId: d.moduleId }, { cls: 'btn-p sk-export' })}
       <div class="chint" data-no-i18n>${t('sketcherHint')}</div>
@@ -299,16 +299,14 @@ function sketchZoomBy(dz) {
 
 // ── Pages view ──────────────────────────────────────────────────────────
 function buildSketchPagesHtml(d) {
-  return `<div class="hlist" style="max-width:560px">${d.pages.map((p, i) => `
-    <div class="li${p.id === d.pageId ? ' sel' : ''}" onclick="selectSketchPage(${p.id}).then(()=>setSketcherView('canvas'))">
-      <span class="name">${i + 1}. ${x(p.name)}</span>
-      <span class="cnt" data-no-i18n>${p.stroke_count}</span>
-      <span class="acts">
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();moveSketchPageRow(${p.id},-1)" title="↑">↑</button>
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();moveSketchPageRow(${p.id},1)" title="↓">↓</button>
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();openSketchPageModal(${d.moduleId},${p.id})" title="${t('edit')}">${I.edit}</button>
-      </span>
-    </div>`).join('')}</div>`;
+  // Procress 21: the shared list (core/list.js); ↑ ↓ stay this list's way to
+  // reorder, F2 = Edit.
+  return listHtml({ list: 'sketch-pages', aria: SKETCHER_VIEW_LABEL.pages, cls: 'sk-pages', body: d.pages.map((p, i) => listRowHtml({
+    icon: I.sketcher, title: `${i + 1}. ${p.name}`, count: p.stroke_count, state: { selected: p.id === d.pageId }, attrs: 'data-no-i18n',
+    onclick: `selectSketchPage(${p.id}).then(()=>setSketcherView('canvas'))`,
+    actions: listActHtml({ icon: I.chevronUp, name: '↑', onclick: `moveSketchPageRow(${p.id},-1)` })
+      + listActHtml({ icon: I.chevronDown, name: '↓', onclick: `moveSketchPageRow(${p.id},1)` })
+      + listActHtml({ icon: I.edit, name: t('edit'), key: 'F2', onclick: `openSketchPageModal(${d.moduleId},${p.id})` }) })).join('') });
 }
 
 async function moveSketchPageRow(id, dir) {

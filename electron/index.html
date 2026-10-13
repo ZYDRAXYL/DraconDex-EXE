@@ -46,10 +46,15 @@
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/titlebar.css">
   <link rel="stylesheet" href="css/nav-hub.css">
+  <link rel="stylesheet" href="css/popover.css">
   <link rel="stylesheet" href="css/inspector.css">
   <link rel="stylesheet" href="css/editor.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/controls.css">
+  <!-- Procress 21: the one list (core/list.js) — a component, so after
+       components.css; nothing later restyles a row. -->
+  <link rel="stylesheet" href="css/list.css">
   <link rel="stylesheet" href="css/shared-carryover.css">
   <link rel="stylesheet" href="css/compat.css">
   <link rel="stylesheet" href="css/kinds.css">
@@ -64,6 +69,10 @@
   <!-- Fluent 2 restyles components under data-ui-style="fluent", so it comes
        after every component file. -->
   <link rel="stylesheet" href="css/fluent.css">
+  <!-- Glass (Procress 23) restyles the same components under data-ui-style=
+       "glass", plus the app-wide Reduce transparency switch — after fluent so
+       that switch also reaches fluent's Acrylic. -->
+  <link rel="stylesheet" href="css/glass.css">
   <!-- Last on purpose: welcome-mode strips the app chrome down to a bare
        two-column picker, so its hide rules must win over every layout file
        above without needing !important. -->
@@ -73,7 +82,7 @@
   <!-- Procress 17 I4: the first Tab stop skips the title bar and the panels -->
   <a id="skip-link" class="skip-link" href="#main-inner" onclick="event.preventDefault();document.getElementById('main-inner').focus()">Skip to content</a>
 <div id="splash">
-  <img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img splash-logo" alt="DraconDex">
+  <img src="../src/assets/brand/web/DraconDex_WhiteOut.webp" class="brand-img splash-logo" alt="DraconDex">
   <div id="splash-track"><div id="splash-fill"></div></div>
   <div id="splash-pct" data-no-i18n>0%</div>
 </div>
@@ -159,7 +168,7 @@
 <header id="title-tab-bar">
   <div id="title-left-zone">
     <div class="tab-brand" title="DraconDex">
-      <img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img" alt="DraconDex">
+      <img src="../src/assets/brand/web/DraconDex_WhiteOut.webp" class="brand-img" alt="DraconDex">
     </div>
     <span id="titlebar-vault" class="titlebar-vault">DraconDex</span>
   </div>
@@ -204,7 +213,7 @@
 <div id="app">
   <nav id="nav-sidebar">
     <button class="nav-logo-btn" id="nav-logo-btn" title="DraconDex">
-      <img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img" alt="DraconDex">
+      <img src="../src/assets/brand/web/DraconDex_WhiteOut.webp" class="brand-img" alt="DraconDex">
     </button>
     <div id="nav-sidebar-spacer" style="flex:1"></div>
     <!-- UX-LAYOUT §6.1 (E8): Settings is the rail's last button, the way the
@@ -240,14 +249,18 @@
 </div>
 <div id="modal-overlay" class="hidden">
   <div id="modal">
-    <div id="modal-head"><span id="modal-title"></span><button id="modal-close">✕</button></div>
+    <div id="modal-head"><span id="modal-title"></span><button id="modal-close" class="btn btn-g btn-i" aria-label="Close"></button></div>
     <div id="modal-body"></div>
+    <div id="modal-foot" hidden></div>
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="sr-live" class="sr-only" aria-live="polite"></div>
   <!-- i18n data + Core + Director loaded immediately; Timeline/Relation/Map/Hashtag lazy-loaded on first use -->
   <script src="src/renderer/i18n.js"></script>
+  <!-- Procress 19 F8: English is every lookup's fallback, so it always loads;
+       i18n.js has just written the saved language's file in above this line. -->
+  <script src="src/renderer/i18n/en.js"></script>
   <script>__splash.set(15)</script>
   <script src="src/renderer/markdown.js"></script>
   <script src="src/renderer/sanitize.js"></script>
@@ -262,8 +275,12 @@
   <script src="src/renderer/core/boot.js"></script>
   <script src="src/renderer/core/calendar-engine.js"></script>
   <script src="src/renderer/core/ui.js"></script>
+  <script src="src/renderer/core/popover.js"></script>
+  <script src="src/renderer/core/controls.js"></script>
   <script src="src/renderer/core/lazy-rows.js"></script>
+  <script src="src/renderer/core/list.js"></script>
   <script src="src/renderer/core/settings.js"></script>
+  <script src="src/renderer/core/glass.js"></script>
   <script src="src/renderer/core/setting-window.js"></script>
   <script src="src/renderer/core/setting-search.js"></script>
   <script src="src/renderer/core/workspace-style.js"></script>
@@ -281,6 +298,7 @@
   <script src="src/renderer/core/nexus-locate.js"></script>
   <script src="src/renderer/core/nexus-options.js"></script>
   <script src="src/renderer/core/welcome.js"></script>
+  <script src="src/renderer/core/nexus-create.js"></script>
   <script src="src/renderer/core/router.js"></script>
   <script src="src/renderer/core/shortcuts.js"></script>
   <script>__splash.set(35)</script>

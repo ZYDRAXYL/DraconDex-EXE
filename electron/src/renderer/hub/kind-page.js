@@ -40,9 +40,9 @@ const KIND_PAGE = {
 // click on a view switches to it, a click on the view already on (or the ⚙
 // at the end) opens that block's options. The ⚙ shows only on a page block.
 function viewBarHtml(views, active, onclick, label, opts = {}) {
-  return `<div class="viewbar" role="group">
-    ${views.map(v => `<button class="btn vitem${v === active ? ' act' : ''}" aria-pressed="${v === active}" onclick="${v === active ? 'pbViewOpts(this)' : onclick(v)}"${opts.noI18n ? ' data-no-i18n' : ''}>${label(v)}</button>`).join('')}
-    <button class="btn vitem vgear" onclick="pbViewOpts(this)" title="${x(t('pbOptions'))}" aria-label="${x(t('pbOptions'))}">${I.settings}</button>
+  return `<div class="seg viewbar" role="group">
+    ${views.map(v => `<button class="btn seg-opt vitem${v === active ? ' act' : ''}" aria-pressed="${v === active}" onclick="${v === active ? 'pbViewOpts(this)' : onclick(v)}"${opts.noI18n ? ' data-no-i18n' : ''}>${label(v)}</button>`).join('')}
+    <button class="btn seg-opt vitem vgear" onclick="pbViewOpts(this)" title="${x(t('pbOptions'))}" aria-label="${x(t('pbOptions'))}">${I.settings}</button>
   </div>`;
 }
 function pbViewOpts(btn) {

@@ -1,4 +1,4 @@
-/* Welcome window (v4.6.0) — src/renderer/core/welcome.js.
+/* Welcome window (v4.6.0) — src/renderer/core/welcome.js and the Create Nexus window (core/nexus-create.js).
    The Welcome screen runs in its own Electron window (main.js
    createWelcomeWindow) but shares index.html, so it starts life wearing the
    whole app shell. body.welcome-mode strips that back to a bare two-column
@@ -42,16 +42,8 @@ body.welcome-mode #main-inner{display:flex;align-items:center;justify-content:ce
 	font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));text-transform:uppercase;
 	letter-spacing:.06em;text-align:left;
 }
-.welcome-recent-row{display:flex;flex-direction:column;gap:var(--sp-1)}
-.welcome-recent-card{
-	display:flex;align-items:center;gap:var(--sp-3);width:100%;
-	padding:var(--sp-4) var(--sp-5);
-	background:var(--raised);border:1px solid var(--border);border-radius:var(--r);
-	color:var(--t1);font-size:var(--fs-body);font-family:inherit;text-align:left;
-	cursor:pointer;transition:background var(--ease),border-color var(--ease);
-}
-.welcome-recent-card:hover{background:var(--hover);border-color:var(--accent)}
-.welcome-recent-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* the rows are the shared list's (core/list.js, Procress 21) */
+.welcome-recent-list .ls-row{background:var(--raised)}
 
 /* ── First-run setup wizard ─────────────────────────────────────────── */
 /* The wizard has no left panel — it is one centered column, so the step lists
@@ -127,7 +119,7 @@ body.welcome-wizard-mode #left-panel{display:none}
 
 /* Layout step: "recommended" pin. Top-LEFT is taken by .prefs-theme-check. */
 .welcome-reco{
-	position:absolute;top:6px;right:6px;z-index:1;
+	position:absolute;top:6px;right:6px;z-index:calc(var(--z-base) + 1);
 	background:var(--accent);color:var(--on-accent);border-radius:var(--rs);
 	padding:1px var(--sp-2);font-size:var(--fs-micro);font-weight:600;
 }
@@ -144,3 +136,83 @@ body.welcome-wizard-mode #left-panel{display:none}
 .btn.wz-purpose.active{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
 .btn.wz-purpose .kli-text{display:flex;flex-direction:column;flex:1}
 .btn.wz-purpose .kli-desc{color:var(--t2);font-size:calc(var(--fs-meta) * var(--fsc,1))}
+
+/* ═══ Create a new Nexus (Procress 25) ═══════════════════════════════════
+   src/renderer/core/nexus-create.js. A Welcome-family window of its own
+   (main.js createNexusCreateWindow, ?createNexus=1) sharing index.html:
+   body.create-nexus-mode strips the app shell, and the page itself wears the
+   app's modal — head (the title bar) · body · foot, --surface, the .fg form —
+   at full window size, with Unity Hub's New project split: templates ~65 %
+   left, the form ~35 % right. Here, last in the cascade, for the same reason
+   as the Welcome rules above. */
+
+/* ── Chrome this window has no use for ──────────────────────────────── */
+body.create-nexus-mode #nav-sidebar,
+body.create-nexus-mode #nav-sidebar-resize,
+body.create-nexus-mode #nav-toolbar-h,
+body.create-nexus-mode #left-panel,
+body.create-nexus-mode #left-panel-resize,
+body.create-nexus-mode #workspace-toolbar,
+body.create-nexus-mode #side-panel,
+body.create-nexus-mode #side-panel-resize,
+body.create-nexus-mode #status-bar,
+body.create-nexus-mode #layout-menu-wrap,
+body.create-nexus-mode #settings-menu-wrap,
+body.create-nexus-mode #titlebar-update-btn{display:none}
+body.create-nexus-mode #main-inner{padding:0;display:flex;overflow:hidden}
+
+/* ── The two panes and the foot ─────────────────────────────────────── */
+.cn{
+	display:grid;width:100%;height:100%;min-height:0;
+	grid-template-columns:minmax(0,65fr) minmax(300px,35fr);
+	grid-template-rows:minmax(0,1fr) auto;
+	background:var(--surface);
+}
+.cn-left{display:grid;grid-template-columns:168px minmax(0,1fr);min-height:0;border-right:1px solid var(--border)}
+.cn-cats{padding:var(--sp-3) var(--sp-2);border-right:1px solid var(--border);overflow-y:auto;background:var(--bg)}
+/* the grid scrolls; the detail under it stays in view, capped */
+.cn-main{display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);min-height:0;overflow:hidden}
+.cn-search{width:100%;flex-shrink:0}
+.cn-scroll{flex:1 1 auto;min-height:150px;overflow-y:auto;padding:2px}
+.cn-grid{grid-template-columns:repeat(auto-fill,minmax(168px,1fr));margin:0}
+.cn-form{padding:var(--sp-5) 18px;overflow-y:auto;min-height:0}
+.cn-foot{
+	grid-column:1 / -1;display:flex;gap:var(--sp-2);align-items:center;
+	padding:12px 18px;border-top:1px solid var(--border);
+}
+.cn-foot-gap{flex:1}
+.cn-back,.cn-next{display:none}
+
+/* The template card is the Home gallery's (.home-tpl, components.css); a
+   grid you pick from adds its chosen state — the list's: a 3 px accent bar
+   plus a surface, never colour alone (UX-LAYOUT §12.3). */
+.btn.home-tpl.on{border-color:var(--accent);background:var(--raised);box-shadow:inset 3px 0 0 var(--accent)}
+.btn.home-tpl:focus-visible{outline:var(--focus-ring,2px) solid var(--accentH);outline-offset:-2px}
+
+/* What the chosen template makes */
+.cn-detail{flex:0 1 auto;max-height:42%;overflow-y:auto;border-top:1px solid var(--border);padding-top:var(--sp-3);display:flex;flex-direction:column;gap:var(--sp-2)}
+.cn-detail > *{flex-shrink:0}
+.cn-dh{margin:0;font-size:var(--fs-lg);color:var(--t1);font-weight:600}
+.cn-dd{margin:0;color:var(--t2);font-size:var(--fs-body);line-height:var(--lh-relaxed,1.5)}
+.cn-dc{margin:0;color:var(--t3-aa,var(--t2));font-size:var(--fs-meta)}
+.cn-dacts{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);flex-wrap:wrap}
+
+/* App Docs · tour */
+.cn-checks{border-top:1px solid var(--border);padding-top:var(--sp-4);margin-top:var(--sp-2);display:flex;flex-direction:column;gap:var(--sp-3)}
+.cn-check{display:flex;gap:var(--sp-2);align-items:flex-start;cursor:pointer;color:var(--t1);font-size:var(--fs-body)}
+.cn-check input{width:auto;margin-top:3px;flex-shrink:0}
+.cn-check b{font-weight:600}
+.cn-check .sync-hint{display:block;margin:2px 0 0}
+.cn-check.cn-off{cursor:default;color:var(--t3-aa,var(--t2))}
+
+/* ── Under 1000 px: two steps — pick a template, then the form ─────── */
+@media (max-width:999px){
+	.cn{grid-template-columns:minmax(0,1fr)}
+	.cn-left{border-right:0;grid-template-columns:132px minmax(0,1fr)}
+	.cn[data-step="pick"] .cn-form,
+	.cn[data-step="form"] .cn-left{display:none}
+	.cn[data-step="pick"] .cn-create{display:none}
+	.cn[data-step="pick"] .cn-next,
+	.cn[data-step="form"] .cn-back{display:inline-flex}
+	.cn[data-step="form"] .cn-form{max-width:560px;width:100%;justify-self:center}
+}

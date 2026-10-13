@@ -19,6 +19,7 @@ function renderWelcomeWindow() {
   // One switch for both directions: the wizard runs without a left panel, the
   // vault list needs it back. Toggling here rather than inside the two render
   // functions is what stops "finish the wizard" leaving the panel hidden.
+  if (S.isCreateNexus) return; // a Welcome-family window with a page of its own (core/nexus-create.js)
   document.body.classList.toggle('welcome-wizard-mode', S.welcomeStep != null);
   if (S.welcomeStep != null) return renderWelcomeWizard();
   const recent = recentNexuses(3, null);
@@ -31,31 +32,20 @@ function renderWelcomeWindow() {
     <div class="ph"><h4>${t('nexus')}</h4>
       <button class="btn btn-p btn-sm" onclick="welcomeCreateNexus()">+ ${t('nexusNew')}</button>
     </div>
-    ${ordered.map(n => `
-      <div class="module-item nexus-item" onclick="welcomeOpenNexus(${n.id})" title="${t('wmOpenNexus')}">
-        <span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>
-        <span class="module-name">${x(n.name)}</span>
-        <span class="nexus-count">${n.project_count}</span>
-        ${nexusRowButtonsHtml(n)}
-      </div>`).join('')}
+    ${hasVaults ? listHtml({ list: 'nexuses', aria: t('nexus'), body: ordered.map(n => nexusRowHtml(n, `welcomeOpenNexus(${n.id})`, t('wmOpenNexus'))).join('') }) : ''}
     ${hasVaults ? '' : `<div class="welcome-side-empty">${t('nexusEmpty')}</div>`}`;
   q('#left-panel-foot').innerHTML = '';
   q('#main-inner').innerHTML = `
     <div class="welcome-hero">
-      <div class="ei"><img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img" alt="DraconDex" style="height:72px;width:72px;opacity:.4"></div>
+      <div class="ei"><img src="../src/assets/brand/web/DraconDex_WhiteOut.webp" class="brand-img" alt="DraconDex" style="height:72px;width:72px;opacity:.4"></div>
       <h2 class="welcome-title">${t('wmTitle')}</h2>
       <p class="welcome-text">${hasVaults ? t('nexusSelect') : t('wmText')}</p>
       ${recent.length ? `
         <div class="welcome-recent">
           <div class="welcome-recent-label">${t('wmRecent')}</div>
-          <div class="welcome-recent-row">
-            ${recent.map(n => `
-              <div class="welcome-recent-card" onclick="welcomeOpenNexus(${n.id})" title="${t('wmOpenNexus')}">
-                <span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>
-                <span class="welcome-recent-name">${x(n.name)}</span>
-                <span class="nexus-count">${n.project_count}</span>
-              </div>`).join('')}
-          </div>
+          ${listHtml({ list: 'nexus-recent', aria: t('wmRecent'), cls: 'welcome-recent-list', body: recent.map(n => listRowHtml({
+            icon: `<span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>`,
+            title: n.name, count: n.project_count, onclick: `welcomeOpenNexus(${n.id})`, tip: t('wmOpenNexus'), attrs: 'data-no-i18n' })).join('') })}
         </div>` : ''}
       <div class="welcome-actions">
         <button class="btn btn-p" onclick="welcomeCreateNexus()">${t('wmCreateNew')}</button>
@@ -69,14 +59,16 @@ function renderWelcomeWindow() {
 // away, and the new window reads the list at boot.
 async function welcomeOpenNexus(id) {
   pushRecentNexus(id);
+  // In the Create Nexus window (an import made a vault there): main opens it
+  // and closes this window and the Welcome window behind it.
+  if (S.isCreateNexus) return api.window.createNexusDone({ nexusId: id });
   await api.window.openNexusReplace(id);
 }
 
-// "Create new Nexus" opens the standard vault form with the optional tour
-// checkbox. createNexusSubmit (nexus.js) reads it after the vault is created
-// and, in this window, defers the tour to the app window it opens.
+// "Create new Nexus" opens the Create Nexus window (Procress 25,
+// core/nexus-create.js) over this one.
 async function welcomeCreateNexus() {
-  openNexusModal(null, { showGuideChoice: true });
+  openCreateNexusWindow();
 }
 
 // ═══ FIRST-RUN SETUP WIZARD ════════════════════════════
@@ -178,16 +170,14 @@ function welcomeWizardFinish() {
 // calls applyUiSettings(), so the ✓ would not move). Re-rendering here means
 // the wizard never depends on which branch it happened to take.
 function welcomeSetUi(key, value) {
-  setUiSetting(key, value);
+  const loading = setUiSetting(key, value); // a language not loaded yet (F8)
+  if (loading) return loading.then(renderWelcomeWindow);
   renderWelcomeWindow();
 }
 
 // ── Step 1: language ──
 function welcomeStepLangHtml() {
-  const rows = UI_LANGUAGE_OPTIONS.map(lang => `
-    <div class="lang-item${S.settings.language === lang ? ' active' : ''}" data-preview-lang="${lang}" onclick="welcomeSetUi('language','${lang}')">
-      <span data-no-i18n>${x(LANGUAGE_LABELS[lang] || lang)}</span>${S.settings.language === lang ? `<span class="theme-check">${I.check}</span>` : ''}
-    </div>`).join('');
+  const rows = listHtml({ list: 'wizard-langs', aria: t('language'), body: UI_LANGUAGE_OPTIONS.map(lang => langRowHtml(lang, `welcomeSetUi('language','${lang}')`)).join('') });
   return `<div class="prefs-lang-shell">
     <div class="lang-list">${rows}</div>
     <div class="prefs-lang-preview">${settingLangPreviewHtml(S.settingPreviewLang || S.settings.language)}</div>
@@ -264,7 +254,7 @@ function welcomeLoginBodyHtml(st) {
   // No client id/secret baked into this build — sign-in cannot start at all,
   // so point at where the credentials go instead of a button that would fail.
   if (!st?.ok || !st.configured) return `<div class="settings-hint">${t('driveNotConnected')}</div>`;
-  if (!st.connected) return `<button class="btn btn-p" id="welcome-login-btn" onclick="welcomeLoginClick()">☁ ${t('driveConnect')}</button>`;
+  if (!st.connected) return `<button class="btn btn-p" id="welcome-login-btn" onclick="welcomeLoginClick()">${I.cloud}${t('driveConnect')}</button>`;
   return `<div class="sync-status-row"><span>${t('settingAccountLoggedInAs')}</span><b data-no-i18n>${x(st.email || '')}</b></div>`;
 }
 

@@ -1,10 +1,9 @@
 'use strict';
 // ═══ FIRST-RUN COACH-MARKS GUIDE ═════════════════════════════════════════
 // Lazy-loaded (loadModule) and started for a first-time user right after their
-// first Nexus is created — by createNexusSubmit() when the vault was created
-// from inside an app window, or by init() (boot.js) picking up
-// NEXUS_PENDING_GUIDE_KEY when it was created from the Welcome window, whose
-// renderer closes before the tour could run — so the real vault-home UI
+// first Nexus is created — by runPendingCreate() (core/nexus-create.js),
+// which the new vault's window runs at boot when the Create Nexus window left
+// "show the tour" in NEXUS_PENDING_GUIDE_KEY (Procress 25) — so the real vault-home UI
 // (module rail, hub sections, backup buttons, switch control) already exists to
 // point at. A dimmed spotlight highlights each target while a popover explains
 // it; Back/Next/Skip drive the tour, Esc/←/→ on the keyboard. Steps whose target
@@ -103,14 +102,5 @@ function _guidePaint() {
 
   // Place the popover: prefer below the target, flip above if it would overflow,
   // then clamp horizontally into the viewport.
-  const pop = ov.querySelector('.guide-pop');
-  const pw = pop.offsetWidth || 280;
-  const ph = pop.offsetHeight || 140;
-  const gap = 12;
-  let top = r.bottom + gap;
-  if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - gap);
-  let left = r.left + r.width / 2 - pw / 2;
-  left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
-  pop.style.left = `${left}px`;
-  pop.style.top = `${top}px`;
+  placeFloating(ov.querySelector('.guide-pop'), r, { placement: 'bottom-center', gap: 12 }); // core/popover.js
 }

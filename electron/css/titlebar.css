@@ -95,7 +95,7 @@ body:not([data-workspace="wyvern"]):not(.welcome-mode) #settings-menu-wrap{displ
 #settings-menu{
 	position:absolute;top:38px;right:0;width:292px;background:var(--surface);
 	border:1px solid var(--border);border-radius:0 0 var(--r) var(--r);
-	box-shadow:var(--shadow-menu);padding:12px;z-index:300;
+	box-shadow:var(--shadow-menu);padding:12px;z-index:calc(var(--z-dropdown) + 200);
 	color:var(--t1);
 }
 #settings-menu.hidden{display:none}
@@ -128,30 +128,9 @@ body:not([data-workspace="wyvern"]):not(.welcome-mode) #settings-menu-wrap{displ
 }
 .settings-select:focus{border-color:var(--accent)}
 .settings-select option{background:var(--surface);color:var(--t1)}
-.theme-list{
-	display:flex;flex-direction:column;gap:5px;
-	/* Plan part3 setting#1: show exactly 4 rows before scrolling — .theme-item
-	   is 33px tall (19px swatch + 12px padding + 2px border), gap 5px. */
-	max-height:calc(33px * 4 + 5px * 3);overflow-y:auto;padding-right:3px;
-}
-.theme-item{
-	display:flex;align-items:center;gap:9px;width:100%;
-	padding:6px 8px;border:1px solid var(--border);border-radius:var(--rs);
-	background:var(--bg);color:var(--t2);cursor:pointer;font-family:inherit;
-	font-size:calc(12px * var(--fsc,1));font-weight:600;text-align:left;transition:background var(--ease),border-color var(--ease);
-}
-.theme-item:hover{background:var(--hover);color:var(--t1)}
-.theme-item.active{border-color:var(--accent);color:var(--t1)}
-/* Procress 10 part 2 — a catalog uistyle package not yet downloaded, same
-   treatment as .prefs-theme-cell.locked/.lang-item.locked (components.css).
-   A plain div, not a button like the selectable rows above: it has no
-   onclick of its own, only the Download button nested inside it does. */
-.theme-item.locked{cursor:default;opacity:.55}
-.theme-item.locked:hover{background:var(--bg);color:var(--t2)}
-.theme-item.locked .btn{opacity:1}
-/* Procress 10 part 2: a locked UI style's shape sample (catalog preview). */
-.theme-item.locked.has-preview{opacity:1;border-style:dashed}
-.theme-item.locked.has-preview .theme-name{color:var(--t2)}
+/* Procress 21: the theme list is the shared list (core/list.js) — its rows
+   are list.css's; only the scroll box and the swatches live here. */
+.theme-list .ls-list{max-height:calc(var(--row-compact) * 8);overflow-y:auto}
 .uistyle-sample{flex:0 0 auto;width:40px;height:26px;margin-right:10px;background:var(--raised);border:1px solid var(--border);display:inline-flex;align-items:flex-end;padding:4px;box-sizing:border-box}
 .uistyle-sample i{display:block;width:16px;height:7px;background:var(--accent)}
 .theme-swatches{
@@ -159,7 +138,6 @@ body:not([data-workspace="wyvern"]):not(.welcome-mode) #settings-menu-wrap{displ
 	border:1px solid var(--border);
 }
 .theme-swatches i{width:13px;height:19px;display:block}
-.theme-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .theme-check{flex-shrink:0;color:var(--accent-text,var(--accent));font-weight:700;font-size:calc(var(--fs-body) * var(--fsc,1))}
 .settings-slider{width:100%;accent-color:var(--accent);cursor:pointer}
 .settings-slider-scale{

@@ -57,7 +57,7 @@ async function openExportModal(moduleId, itemKey = null) {
         <div class="ex-grid" role="radiogroup" aria-label="${t('exportFormat')}">${EXPORT_FORMATS.map((f) => {
           const why = exportBlocked(f, m.kind);
           const act = why ? 'aria-disabled="true"' : `tabindex="0" onclick="exportPick('${f.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();exportPick('${f.id}')}"`;
-          return `<div class="ex-card${why ? ' ex-off' : ''}" role="radio" data-ex="${f.id}" ${act}>
+          return `<div class="card card-link ex-fmt${why ? ' ex-off' : ''}" role="radio" data-ex="${f.id}" ${act}>
             <span class="ex-fi" data-f="${f.id}">${f.ext.toUpperCase()}</span>
             <b>${t(f.title)}</b>
             <span class="ex-card-d${why ? ' ex-why' : ''}">${why ? x(why) : t(f.desc)}</span></div>`;
@@ -74,7 +74,7 @@ async function openExportModal(moduleId, itemKey = null) {
       <span class="exd-file" id="ex-file"></span>
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" id="ex-go" onclick="runExport()">${t('exportGo')}</button>
-    </div>`, { size: 'xl', focus: '.ex-card.active' });
+    </div>`, { size: 'lg', focus: '.ex-fmt.active' });
   exportPick(_ex.prefs.fmt);
   // The element names the preview lists — the same walk a module PDF takes.
   try {
@@ -93,7 +93,7 @@ async function openExportModal(moduleId, itemKey = null) {
 function exportPick(fmt) {
   if (!_ex) return;
   _ex.prefs.fmt = fmt;
-  document.querySelectorAll('.ex-card').forEach((el) => {
+  document.querySelectorAll('.ex-fmt').forEach((el) => {
     const on = el.dataset.ex === fmt;
     el.classList.toggle('active', on);
     el.setAttribute('aria-checked', on ? 'true' : 'false');
@@ -134,7 +134,7 @@ function exportScopeHtml(fmt) {
   if (fmt === 'pdf') { key = 'scope'; opts = [['page', t('exportScopePage')]]; if (!_ex.itemKey) opts.push(['module', t('exportScopeModule')]); }
   if (fmt === 'md') { key = 'mdScope'; opts = [['module', t('exportScopeInside')], ['nexus', t('exportScopeNexus')]]; }
   if (!key || opts.length < 2) return '';
-  return `<h6 class="exd-h">${t('exportScope')}</h6><div class="pb-seg exd-seg" role="radiogroup" aria-label="${t('exportScope')}">${opts.map(([v, label]) =>
+  return `<h6 class="exd-h">${t('exportScope')}</h6><div class="seg" role="radiogroup" aria-label="${t('exportScope')}">${opts.map(([v, label]) =>
     `<button class="btn${p[key] === v ? ' on' : ''}" role="radio" aria-checked="${p[key] === v}" onclick="exportSet('${key}','${v}')">${label}</button>`).join('')}</div>`;
 }
 

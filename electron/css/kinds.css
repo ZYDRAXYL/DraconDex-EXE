@@ -8,14 +8,8 @@
 #nav-sidebar .nav-btn.create{background:var(--accent);color:var(--on-accent);border-radius:var(--r)}
 #nav-sidebar .nav-btn.create:hover{background:var(--accentH)}
 /* module header chips row (tags + link count) */
-.module-head .kind-chip{
-	display:inline-block;font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:500;color:var(--t2);
-	border:1px solid var(--border);border-radius:var(--rl);padding:1px 9px;
-	vertical-align:2px;margin-left:6px;
-}
+.module-head .chip{vertical-align:2px;margin-left:6px}
 /* ── Chronicler: one-line event rows, side-by-side dates, graph icons ── */
-.chr-ev-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.chr-ev-date{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));flex-shrink:0;margin-right:6px}
 .chr-daterow{display:flex;gap:14px;flex-wrap:wrap}
 /* 300px is the width a full 5-box date row actually needs (52+52+70+52+52 plus
    separators). Below that the two dates wrap to their own lines instead of
@@ -35,7 +29,7 @@
 .module-head .mtags{display:flex;gap:6px;margin-top:7px;align-items:center;flex-wrap:wrap}
 /* floating canvas toolbar (mockup 03) */
 .ctoolbar-float{
-	position:absolute;top:12px;left:14px;z-index:3;display:flex;gap:5px;
+	position:absolute;top:12px;left:14px;z-index:calc(var(--z-base) + 3);display:flex;gap:5px;
 	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:5px;
 }
 .czoom .zsep{width:1px;height:12px;background:var(--border);margin:0 3px}
@@ -47,7 +41,6 @@
 /* Chronicler event inspector (Plan part3 #2/#2.1/#2.2): shared below-graph
    (One-line) and per-row dropdown (Down-line) editable panel, one open at a time */
 .chr-insp-row{margin-bottom:8px}
-.chr-insp-row .objrow .tree-chev{margin-left:2px}
 .chr-insp-body{
 	padding:14px 16px 4px;margin-top:6px;
 	background:var(--raised);border:1px solid var(--border);border-radius:var(--r);
@@ -60,7 +53,7 @@
 .chr-cal-barwrap{position:relative}
 .chr-cal-bar{margin-bottom:10px}
 .chr-cal-panel{
-	position:absolute;top:0;left:0;right:0;z-index:5;
+	position:absolute;top:0;left:0;right:0;z-index:calc(var(--z-base) + 5);
 	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
 	box-shadow:var(--shadow-menu);padding:8px 10px 12px;max-height:70vh;overflow-y:auto;
 }
@@ -109,7 +102,7 @@
 .chr-cal-cell{background:var(--surface);min-height:64px;padding:4px 5px;display:flex;flex-direction:column;gap:2px}
 .chr-cal-daynum{font-size:11px;color:var(--t3-aa,var(--t2))}
 .chr-cal-ev{
-	font-size:10.5px;color:#fff;border-radius:var(--rs);padding:1px 5px;cursor:pointer;
+	font-size:10.5px;color:var(--on-media);border-radius:var(--rs);padding:1px 5px;cursor:pointer;
 	white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 /* Classifier grid card icon (mockup 21) */
@@ -143,7 +136,7 @@
    #toast's transform+opacity+transition, repositioned to slide down from
    the top-center of the board instead of up from the bottom-right. Lives
    as a sibling of #nar-graph so it never pans/zooms with the board. */
-.nar-notice{position:absolute;top:14px;left:50%;z-index:5;
+.nar-notice{position:absolute;top:14px;left:50%;z-index:calc(var(--z-base) + 5);
 	background:var(--raised);border:1px solid var(--border);border-radius:var(--r);
 	padding:9px 15px;font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t1);
 	box-shadow:var(--shadow-float);
@@ -210,10 +203,9 @@
 
 /* Book "Author" (Phase 11, mockup 12) */
 .author-layout{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;min-height:480px}
-.author-chapters{width:230px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:10px 0;overflow-y:auto}
+.author-chapters{width:230px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:10px 6px;overflow-y:auto}
+.sk-pages{max-width:560px}
 .au-col-label{padding:0 14px 8px;font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:700;letter-spacing:.05em;color:var(--t2)}
-.author-chapters .li{margin:0 6px}
-.author-chapters .li.au-add{color:var(--t3-aa,var(--t2));gap:6px}
 .author-main{flex:1;min-width:0;padding:14px 18px;overflow-y:auto;background:var(--bg)}
 .au-editor{height:calc(100vh - 300px);min-height:420px;display:flex;flex-direction:column}
 /* Author rich-text (contenteditable) editor (Plan part5 Author #1/#2) */
@@ -272,8 +264,6 @@
 .chs-inputrow input:focus{outline:none;border-color:var(--accent)}
 .chs-snippet{display:block;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));font-weight:400;
 	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.author-chapters .li .cnt{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));background:var(--raised);
-	border-radius:var(--r);padding:1px 7px;flex-shrink:0}
 .chs-transcript{padding:14px 18px}
 .chs-tr-row{display:flex;gap:12px;padding:5px 0;border-bottom:1px dashed var(--border);font-size:calc(var(--fs-body) * var(--fsc,1))}
 .chs-tr-time{color:var(--t3-aa,var(--t2));flex-shrink:0;font-size:calc(var(--fs-meta) * var(--fsc,1));padding-top:1px;min-width:110px}
@@ -286,13 +276,12 @@
 
 /* Analys "Viewer" / Relation "Connector" (Phase 14, mockups 14/32/33/15) */
 .vw-filterlabel{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2))}
-.vw-chip{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);border:1px solid var(--accent);border-radius:var(--rl);padding:2px 9px}
 .vw-chip-or{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));font-weight:700}
 
-/* Obsidian-style filter popup (Plan part6 #1-2) — reuses .kind-popup's base
+/* Obsidian-style filter popup (Plan part6 #1-2) — reuses .popover's base
    floating-panel chrome, wider than the 280px icon/kind-list baseline since
    nested group/rule rows need more horizontal room. Live-saves on every
-   control, no Save/Cancel footer, matching every other .kind-popup. */
+   control, no Save/Cancel footer, matching every other .popover. */
 .filter-popup{padding:12px;width:380px;max-height:calc(100vh - 40px);overflow-y:auto}
 .fp-groups{display:flex;flex-direction:column;gap:2px}
 .fp-group{border:1px solid var(--border);border-radius:var(--rs);padding:8px;background:var(--raised)}
@@ -342,7 +331,7 @@ select.fp-input[multiple]{padding:2px}
 .cn-wrap{position:relative}
 /* An empty Designer canvas: the kind's empty state floats over the board,
    which stays usable around it — only the card takes clicks. */
-.cn-empty{position:absolute;left:0;right:0;top:40px;z-index:2;pointer-events:none}
+.cn-empty{position:absolute;left:0;right:0;top:40px;z-index:calc(var(--z-base) + 2);pointer-events:none}
 .cn-empty .kind-empty{pointer-events:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl,12px);padding:18px 20px}
 .cn-board{height:600px}
 /* v5 Exhibitor Scene (mod/exhibitor-scene.js): Hierarchy | canvas | Inspector */
@@ -368,7 +357,7 @@ select.fp-input[multiple]{padding:2px}
 .exh-stage-wrap .is-panning{cursor:grabbing}
 .exh-linking{outline:2px dashed var(--accent);outline-offset:-2px}
 .exh-linkbar{position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
-	padding:6px 10px;background:var(--raised);border:1px solid var(--accent);border-radius:var(--r);z-index:2}
+	padding:6px 10px;background:var(--raised);border:1px solid var(--accent);border-radius:var(--r);z-index:calc(var(--z-base) + 2)}
 #cn-graph{position:relative;width:1600px;height:1100px;transform-origin:0 0}
 #cn-edges{position:absolute;inset:0;pointer-events:none}
 .cn-node{position:absolute;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:grab;user-select:none;width:52px}
@@ -384,10 +373,10 @@ select.fp-input[multiple]{padding:2px}
    drawing surface (like the Gallery/Export thumbnails' #0b0b10), not the
    ambient app theme: pen strokes include near-white (#f8fafc), which would
    vanish against a light theme's background otherwise. */
-.sk-board{height:600px;background:#0b0b10;background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1px);background-size:22px 22px}
+.sk-board{height:600px;background:var(--canvas-dark);background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1px);background-size:22px 22px}
 #sk-stage{position:relative;transform-origin:0 0}
 #sk-canvas{position:absolute;inset:0;cursor:crosshair;touch-action:none}
-.sk-tools{position:absolute;left:14px;top:14px;z-index:4;display:flex;align-items:center;gap:6px;
+.sk-tools{position:absolute;left:14px;top:14px;z-index:calc(var(--z-base) + 4);display:flex;align-items:center;gap:6px;
 	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:6px 10px;
 	box-shadow:0 4px 16px rgba(0,0,0,.35)}
 .sk-tools .btn.act{background:var(--accent);color:var(--on-accent)}
@@ -395,7 +384,7 @@ select.fp-input[multiple]{padding:2px}
 /* v5 Part 6 §10.6: Chronicler's advanced tier floats over its graph, the
    .sk-tools pattern — the top bar keeps only Add Event and the view chips. */
 .chr-stage{position:relative}
-.chr-tools{position:absolute;right:10px;top:8px;z-index:4;display:flex;align-items:center;gap:6px;
+.chr-tools{position:absolute;right:10px;top:8px;z-index:calc(var(--z-base) + 4);display:flex;align-items:center;gap:6px;
 	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:4px 8px;
 	box-shadow:0 4px 16px rgba(0,0,0,.35)}
 .chr-tools select{max-width:160px}
@@ -404,8 +393,8 @@ select.fp-input[multiple]{padding:2px}
 .btn.sk-width{display:flex;align-items:center;width:24px;min-height:24px;cursor:pointer;padding:0;border-radius:var(--rs);background:none}
 .sk-width span{display:block;width:100%;background:var(--t2);border-radius:2px}
 .sk-width.act span{background:var(--accentH)}
-.sk-export{position:absolute;right:14px;top:14px;z-index:4}
-.sk-pin{position:absolute;z-index:3;display:flex;align-items:center;gap:5px;cursor:grab;user-select:none;
+.sk-export{position:absolute;right:14px;top:14px;z-index:calc(var(--z-base) + 4)}
+.sk-pin{position:absolute;z-index:calc(var(--z-base) + 3);display:flex;align-items:center;gap:5px;cursor:grab;user-select:none;
 	background:var(--surface);border:1.5px solid var(--accent);border-radius:var(--r);padding:5px 10px;
 	font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--accentH);box-shadow:0 3px 12px rgba(0,0,0,.3)}
 .sk-pin small{color:var(--t3-aa,var(--t2))}
@@ -413,12 +402,12 @@ select.fp-input[multiple]{padding:2px}
 .sk-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 .sk-thumb{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px;cursor:pointer}
 .sk-thumb:hover{border-color:var(--accent)}
-.sk-thumb img{width:100%;border-radius:var(--rs);background:#0b0b10;aspect-ratio:16/11;object-fit:cover}
+.sk-thumb img{width:100%;border-radius:var(--rs);background:var(--canvas-dark);aspect-ratio:16/11;object-fit:cover}
 .sk-thumb span{display:block;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);margin-top:6px}
 .sk-exportview{max-width:820px}
 
 /* Graph "Designer" (Phase 16, mockup 31) */
-.dg-node{position:absolute;z-index:2;transform:translate(-50%,-50%);cursor:grab;user-select:none;
+.dg-node{position:absolute;z-index:calc(var(--z-base) + 2);transform:translate(-50%,-50%);cursor:grab;user-select:none;
 	display:flex;align-items:center;justify-content:center;text-align:center;
 	background:var(--surface);border:2px solid var(--accent);border-radius:var(--r);
 	min-width:110px;min-height:40px;padding:8px 14px;font-size:calc(var(--fs-body) * var(--fsc,1));font-weight:600}
@@ -428,7 +417,7 @@ select.fp-input[multiple]{padding:2px}
 .dg-diamond{background:transparent;border:none;width:130px;height:130px}
 .dg-diamond .dg-diamond-box{position:absolute;inset:14px;background:var(--surface);
 	border:2px solid var(--accent);transform:rotate(45deg);border-radius:var(--r)}
-.dg-diamond .dg-label{position:relative;z-index:1;max-width:90px}
+.dg-diamond .dg-label{position:relative;z-index:calc(var(--z-base) + 1);max-width:90px}
 /* Process 8 part 2 — the wider shape palette.
    Border-drawable shapes are plain rules on the node itself. The rest are
    .dg-poly: a clip-path plate painted in the node colour with an inset copy
@@ -440,7 +429,7 @@ select.fp-input[multiple]{padding:2px}
 .dg-poly{background:transparent;border:none;width:132px;height:100px}
 .dg-poly .dg-poly-box{position:absolute;inset:0;background:var(--dg-col,var(--accent))}
 .dg-poly .dg-poly-box::after{content:'';position:absolute;inset:2px;background:var(--surface)}
-.dg-poly .dg-label{position:relative;z-index:1;max-width:88px}
+.dg-poly .dg-label{position:relative;z-index:calc(var(--z-base) + 1);max-width:88px}
 .dg-hexagon .dg-poly-box,.dg-hexagon .dg-poly-box::after{clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
 .dg-parallelogram .dg-poly-box,.dg-parallelogram .dg-poly-box::after{clip-path:polygon(18% 0,100% 0,82% 100%,0 100%)}
 .dg-triangle .dg-poly-box,.dg-triangle .dg-poly-box::after{clip-path:polygon(50% 4%,100% 100%,0 100%)}
@@ -477,8 +466,6 @@ select.fp-input[multiple]{padding:2px}
 .sh-node .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
 
 /* Import Dock section + file viewer (Phase 18, mockup 29) */
-.dock-folder{display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer}
-.dock-folder .cnt{margin-left:auto;font-weight:400}
 .dock-ficon{font-size:calc(12px * var(--fsc,1));color:var(--t3-aa,var(--t2))}
 .dock-png,.dock-jpg,.dock-jpeg,.dock-gif,.dock-webp,.dock-svg{color:#38bdf8}
 .dock-md{color:#34d399}
@@ -494,14 +481,11 @@ select.fp-input[multiple]{padding:2px}
 .asset-missing .name{text-decoration:line-through dotted}
 .module-assets{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 4px;font-size:calc(var(--fs-meta) * var(--fsc,1))}
 .module-assets .pk{color:var(--t3-aa,var(--t2))}
-.module-assets .htag{cursor:pointer}
+.module-assets .chip{cursor:pointer}
 .fv-media{display:flex;justify-content:center;padding:18px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
 .fv-media video{max-width:100%;max-height:520px}
 .fv-media audio{width:100%;max-width:560px}
 .fv-url{word-break:break-all;color:var(--t2)}
-.dock-chip{margin-left:auto;flex-shrink:0;font-size:calc(var(--fs-meta) * var(--fsc,1));border:1px solid var(--border);border-radius:var(--r);
-	padding:1px 7px;color:var(--accentH);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dock-chip.ghost{color:var(--t3-aa,var(--t2))}
 .fv-wrap{min-height:0}
 .fv-imgwrap{height:520px;overflow:auto;display:flex;align-items:center;justify-content:center;
 	border:1px solid var(--border);border-radius:var(--r);
@@ -527,7 +511,7 @@ select.fp-input[multiple]{padding:2px}
    The two solid shadows paint over the scroller's top padding and the
    head's own bottom margin, so content scrolling past never shows through
    a gap above or below the pinned bar. */
-.page-navbar{position:sticky;top:0;z-index:6;background:var(--bg);padding-left:12px;padding-top:6px;
+.page-navbar{position:sticky;top:0;z-index:calc(var(--z-base) + 6);background:var(--bg);padding-left:12px;padding-top:6px;
 	box-shadow:0 -24px 0 0 var(--bg),0 12px 0 0 var(--bg)}
 .page-navbar .navbar-row{display:flex;align-items:center;gap:8px}
 .page-navbar .navbar-h{margin:0;font-size:calc(var(--fs-title) * var(--fsc,1));display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap}
@@ -549,8 +533,8 @@ select.fp-input[multiple]{padding:2px}
 .ph-pop-h{font-weight:600;margin-bottom:6px}
 .ph-pop-label{font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));margin:10px 0 4px}
 .ph-pop-hint{font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));margin-top:8px}
-.ph-seg{display:flex;gap:4px}
-.ph-seg .btn{flex:1;justify-content:center}
+.ph-acts{display:flex;gap:4px}
+.ph-acts .btn{flex:1;justify-content:center}
 .ph-pop .fg{margin:0}
 .ph-icon-inp{font-size:calc(16px * var(--fsc,1))}
 .ph-covers{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:180px;overflow-y:auto}
@@ -644,3 +628,5 @@ select.fp-input[multiple]{padding:2px}
 .au-card-pov{display:inline-flex;align-items:center;gap:3px;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);overflow:hidden}
 .au-card-pov .icon{width:12px;height:12px}
 .au-card-add{align-items:center;justify-content:center;color:var(--t3-aa,var(--t2));cursor:pointer;border-style:dashed}
+/* a table cell that opens what it names (Sage hut) */
+td.lk{cursor:pointer}

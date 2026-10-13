@@ -1,13 +1,13 @@
 'use strict';
 // ═══ Context-menu engine (v5 Part 3, APP docs/V5.md §7.2) ════════════════
 // Built on the popup plumbing in hub/popups.js (closeAllPopups,
-// positionPopupNear, positionSubmenuNear, ctxAnchor, the submenu grace
+// placeFloating + ctxAnchor (core/popover.js), the submenu grace
 // timer) rather than beside it. Adds:
 //   ctxMenu(ev, items)      a whole menu from data — [{label, icon, onClick,
 //                           danger, disabled, checked, hint, sub, subHtml,
 //                           sep, head}] — (subHtml: a hand-built flyout, e.g. the
 //                           grouped kind list) —
-//                           instead of another hand-built .kind-popup
+//                           instead of another hand-built .popover
 //   openCtxSubmenu(ev, html) the one hover-flyout opener the four copies in
 //                           popups.js / builder.js now call
 //   CTX_PROVIDERS           surface id -> (ctx) => items, looked up by
@@ -81,13 +81,8 @@ function ctxMenu(ev, items, opts = {}) {
   closeAllPopups();
   if (ev && ev.clientX != null) S.ctxMenuPos = { x: ev.clientX, y: ev.clientY };
   _ctxActions = [];
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup context-menu-popup';
-  pop.setAttribute('role', 'menu');
-  pop.innerHTML = ctxItemsHtml(items);
-  document.body.appendChild(pop);
+  const pop = openPopover(opts.anchor || ctxAnchor(ev), ctxItemsHtml(items), { cls: 'context-menu-popup', role: 'menu', keep: true, focus: false });
   wireCtxItems(pop);
-  positionPopupNear(pop, (opts.anchor || ctxAnchor(ev)).getBoundingClientRect());
   // Opened from the keyboard (Shift+F10 / the Menu key) → start on item 1.
   if (ev && ev.type === 'keydown') ctxFocusItem(pop, 0);
   return pop;
@@ -116,25 +111,19 @@ function openCtxSubmenu(ev, html) {
     if (existing._ctxOwner === owner) return existing;
     existing.remove();
   }
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup kind-list-popup ctx-submenu';
-  pop.setAttribute('role', 'menu');
+  const pop = openPopover(owner, html, { cls: 'popover-menu ctx-submenu', role: 'menu', placement: 'right-start', keep: true, focus: false });
   pop._ctxOwner = owner;
-  pop.innerHTML = html;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', (e) => e.stopPropagation());
   pop.addEventListener('mouseenter', cancelCtxSubmenuClose);
   pop.addEventListener('mouseleave', scheduleCtxSubmenuClose);
-  if (owner) positionSubmenuNear(pop, owner.getBoundingClientRect());
   return pop;
 }
 
 // ── Keyboard + ARIA for every menu ──────────────────────────────────────
-const CTX_MENU_SEL = '.context-menu-popup, .kind-list-popup, [role="menu"]';
+const CTX_MENU_SEL = '.context-menu-popup, .popover-menu, [role="menu"]';
 const ctxMenuItems = (pop) => [...pop.querySelectorAll('.kind-list-item')]
   .filter((el) => el.offsetParent !== null && el.getAttribute('aria-disabled') !== 'true');
 const ctxTopMenu = () => {
-  const menus = [...document.querySelectorAll(CTX_MENU_SEL)].filter((el) => el.classList.contains('kind-popup'));
+  const menus = [...document.querySelectorAll(CTX_MENU_SEL)].filter((el) => el.classList.contains('popover'));
   return menus[menus.length - 1] || null;
 };
 
@@ -146,9 +135,9 @@ function ctxFocusItem(pop, idx) {
 }
 
 // Stamp roles onto hand-built menus as they are appended, so the older 20
-// .kind-popup sites get the same semantics without each being rewritten.
+// .popover sites get the same semantics without each being rewritten.
 function ariaStampMenu(el) {
-  if (!el.classList?.contains('kind-popup') || !el.matches(CTX_MENU_SEL.replace(', [role="menu"]', ''))) return;
+  if (!el.classList?.contains('popover') || !el.matches(CTX_MENU_SEL.replace(', [role="menu"]', ''))) return;
   if (!el.getAttribute('role')) el.setAttribute('role', 'menu');
   el.querySelectorAll('.kind-list-item').forEach((row) => {
     if (!row.getAttribute('role')) row.setAttribute('role', 'menuitem');
@@ -167,7 +156,7 @@ function initCtxMenuEngine() {
   // Capture phase + stopPropagation: the top popup owns Escape and the
   // arrows, so a modal or the builder underneath never sees them.
   document.addEventListener('keydown', (e) => {
-    const popups = document.querySelectorAll('.kind-popup');
+    const popups = document.querySelectorAll('.popover');
     if (!popups.length) return;
     const top = popups[popups.length - 1];
     if (e.key === 'Escape') {

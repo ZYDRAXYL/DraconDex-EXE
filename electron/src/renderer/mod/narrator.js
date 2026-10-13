@@ -75,18 +75,13 @@ function buildNarratorMainHtml(m, c) {
 // One dropdown open at a time (single id, not a Set) — same precedent as
 // Chronicler's inspectorEventId.
 function buildNarratorDialogueListHtml(d) {
-  let html = `<div class="objlist">`;
+  let html = `<div class="objlist ls-list" role="listbox" aria-label="${x(NARRATOR_VIEW_LABEL.dialogue || '')}">`;
   for (const dl of d.dialogues) {
     const open = d.openDialogueId === dl.id;
     html += `<div class="chr-insp-row${open ? ' open' : ''}">
-      <div class="objrow" onclick="toggleNarratorDialogueOpen(${dl.id})">
-        <div class="odot" style="background:${x(dl.color_code || '#6366f1')}"></div>
-        <div style="flex:1;min-width:0">
-          <div class="oname">${x(dl.name)}</div>
-          <div style="font-size:calc(12px * var(--fsc,1));color:var(--t3-aa,var(--t2));margin-top:2px" data-no-i18n>${dl.speaker_count || 0} ${t('speaker')} · ${dl.talk_count || 0} ${t('conversation')}${dl.choice_count ? ` · ${dl.choice_count} ${t('choice')}` : ''}</div>
-        </div>
-        <svg class="icon tree-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="${open ? '6 9 12 15 18 9' : '9 18 15 12 9 6'}"/></svg>
-      </div>
+      ${listRowHtml({ expanded: open, onclick: `toggleNarratorDialogueOpen(${dl.id})`, title: dl.name, attrs: 'data-no-i18n',
+        icon: `<span class="odot" style="background:${x(dl.color_code || 'var(--accent)')}"></span>`,
+        meta: `${dl.speaker_count || 0} ${t('speaker')} · ${dl.talk_count || 0} ${t('conversation')}${dl.choice_count ? ` · ${dl.choice_count} ${t('choice')}` : ''}` })}
       ${open ? `<div class="chr-insp-body">
         <div class="fg"><label>${t('description')}</label><textarea data-wiki onchange="saveNarratorDialogueDescription(${dl.id},this)">${x(dl.description || '')}</textarea></div>
       </div>` : ''}
@@ -212,6 +207,7 @@ function initNarratorPan() {
   const d = S.narratorData;
   if (!wrap || !graph || !d) return;
   bindCanvasCtx(wrap, 'narrator.canvas');
+  const signal = boardSignal(wrap, '_narAbort'); // window listeners die with this wrap (Procress 19 RAM)
   let panning = false, sx = 0, sy = 0, s0 = { x: 0, y: 0 };
   wrap.addEventListener('mousedown', (e) => {
     if (e.button !== 2) return;
@@ -224,8 +220,8 @@ function initNarratorPan() {
     if (!panning) return;
     narratorPan[d.moduleId] = { x: s0.x + (e.clientX - sx), y: s0.y + (e.clientY - sy) };
     graph.style.transform = narratorTransform(d.moduleId);
-  });
-  window.addEventListener('mouseup', () => { panning = false; wrap.classList.remove('is-panning'); });
+  }, { signal });
+  window.addEventListener('mouseup', () => { panning = false; wrap.classList.remove('is-panning'); }, { signal });
   wrap.addEventListener('wheel', (e) => { if (e.ctrlKey) { e.preventDefault(); zoomNarrator(e.deltaY < 0 ? 1 : -1); } }, { passive: false });
 }
 

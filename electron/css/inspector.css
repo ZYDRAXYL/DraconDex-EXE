@@ -17,21 +17,15 @@
 .prop .pv[contenteditable]:focus{border-color:var(--accent);outline:none}
 .prop .pv.ghost{color:var(--t3-aa,var(--t2));font-style:italic}
 .prop .acts{margin-left:auto}
-.insp-attr:hover .acts{display:flex}
-.insp-attr .acts{display:none;gap:2px}
-.insp-chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 14px 10px;align-items:center}
-.htag{font-size:calc(var(--fs-meta) * var(--fsc,1));border:1px solid var(--border);border-radius:var(--rl);padding:1px 8px;display:inline-flex;align-items:center;min-height:24px;color:var(--t2);background:transparent;cursor:default}
-.htag.lk{border-color:var(--accent);color:var(--accentH);cursor:pointer}
-.htag.lk:hover{background:var(--hover)}
+/* Procress 24 (UX-LAYOUT §13.1): ✎ / delete always shown — no button on a
+   path may appear only under the pointer */
+.insp-attr .acts{display:flex;gap:2px}
+.insp-attr .pk-link{cursor:pointer}
+.insp-attr .pk-link:hover{color:var(--t1);text-decoration:underline}
+.insp-attr .pk-link:focus-visible{outline:var(--focus-ring) solid var(--accentH,var(--accent));outline-offset:2px}
 
 /* Icon Collection picker (progress.md Phase 5) */
-.ipk-tabs{display:flex;gap:6px;margin-bottom:10px}
-.ipk-tab{padding:5px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--raised);
-	color:var(--t2);font-size:calc(12px * var(--fsc,1));font-family:inherit;cursor:pointer}
-.ipk-tab:hover{background:var(--hover);color:var(--t1)}
-.ipk-tab.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.ipk-tab-disabled{opacity:.4;cursor:default}
-.ipk-tab-disabled:hover{background:var(--raised);color:var(--t2)}
+.ipk-tabs{margin-bottom:10px}
 .ipk-symbol{font-size:calc(17px * var(--fsc,1))}
 .ipk-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:10px}
 .ipk-cell{width:36px;height:36px;border:1px solid var(--border);border-radius:var(--rs);background:var(--raised);
@@ -76,16 +70,10 @@
 .kindgrid.locked .kindcard{cursor:default}
 .kindgrid.locked .kindcard:hover{border-color:var(--accent)}
 
-/* Instant-create / icon-edit popups (position set inline via JS — hub.js's
-   positionPopupNear) — same floating-above-everything z-index as .wlink-float */
-.kind-popup{
-	position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);
-	border-radius:var(--r);box-shadow:var(--shadow-menu);
-}
-.kind-list-popup{width:280px;max-height:360px;overflow-y:auto;padding:6px}
+/* .popover / .popover-menu: css/popover.css (Procress 22) */
 /* v5 kind picker (hub/menus.js buildKindListHtml): search, Artisan row,
    recent, and the structure / view / data headings of V5.md §9.5. */
-.kind-search{width:100%;margin:0 0 6px;position:sticky;top:0;z-index:1}
+.kind-search{width:100%;margin:0 0 6px;position:sticky;top:0;z-index:calc(var(--z-base) + 1)}
 .kind-artisan-row{border:1px dashed var(--border);border-radius:var(--rs);margin-bottom:4px}
 .kind-list-head{padding:6px 8px 2px;font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--t3-aa,var(--t2))}
 .kind-list-cat{margin-top:4px;border-top:1px solid var(--border);padding-top:8px;color:var(--t2)}
@@ -113,7 +101,7 @@
    override for a flex-column crop UI, not a swatch grid, and its 220x220px
    crop canvas would clip badly inside a 162px box. */
 #ipk-icon-grid,#ipk-symbol-grid{max-height:162px;overflow-y:auto}
-/* Right-click context menu (hub.js) — reuses .kind-popup base + .kind-list-item
+/* Right-click context menu (hub.js) — reuses .popover base + .kind-list-item
    rows; Major-module variant appends action rows below the full create-list,
    so it gets the same docked scrollable max-height as .icon-edit-popup above. */
 .context-menu-popup{width:280px;max-height:min(72vh,520px);overflow-y:auto;padding:6px}
@@ -172,7 +160,7 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .tg.on::after{left:auto;right:2px;background:var(--on-accent)}
 /* Nest-tree options popup rows (Plan part1 #2) — .togglerow's own
    margin-top:7px is tuned for stacking inside a modal body, not a
-   .kind-popup, so give these their own tighter row padding/hover. */
+   .popover, so give these their own tighter row padding/hover. */
 .nest-opt-row{padding:7px 8px;margin-top:0;border-radius:var(--rs);cursor:pointer}
 .nest-opt-row:hover{background:var(--hover)}
 /* the one 3-way row among the Nest options — not a toggle, so it opts out of
@@ -180,7 +168,6 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .nest-sig-row{cursor:default;padding-top:9px}
 .nest-sig-row:hover{background:none}
 .nest-sig-label{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));margin-bottom:5px}
-.nest-sig-row .name-mode-seg{gap:4px}
 /* nowrap + a popup floor: the longest label ("Type name") wraps to two lines in
    several locales otherwise, which leaves the three buttons different heights */
 .nest-sig-row .name-mode-seg .btn{padding:4px 6px;font-size:calc(var(--fs-meta) * var(--fsc,1));white-space:nowrap}
@@ -188,28 +175,24 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 
 /* Classifier views (progress.md Phase 5) */
 .classifier-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
-.viewbar{display:inline-flex;align-items:center;gap:0;margin-left:auto;border:1px solid var(--border);
-	border-radius:var(--rs);overflow:hidden;background:var(--surface)}
-.viewbar .vlbl{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));padding:0 8px}
-/* Procress 17 U2: 14 px, ≥ 28 px tall, text at t1 (≥ 4.5:1) */
-.viewbar .vitem{font-size:calc(14px * var(--fsc,1));color:var(--t1);min-height:28px;padding:3px 12px;border:0;border-left:1px solid var(--border);border-radius:0;background:none;cursor:pointer}
-.viewbar .vitem:first-child{border-left:0}
-.viewbar .vgear{display:none;padding:3px 8px}
-.pblock .viewbar .vgear{display:inline-flex}
-.viewbar .vitem:hover{background:var(--hover);color:var(--t1)}
-.viewbar .vitem.act{background:var(--accent);color:var(--on-accent);font-weight:600}
+.viewbar{margin-left:auto} /* the view bar is a segmented control (.seg, css/controls.css) + ⚙ */
+.viewbar .vlbl{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t1);padding:0 8px;align-self:center}
+.seg.viewbar > .vitem{min-height:var(--ctl-md)}
+.seg.viewbar > .vgear{display:none;padding:0 8px}
+.pblock .seg.viewbar > .vgear{display:inline-flex}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;flex-shrink:0;vertical-align:middle}
 .cls-table-wrap{overflow-x:auto}
 .cls-table{width:100%;border-collapse:collapse;font-size:calc(var(--fs-body) * var(--fsc,1))}
 .cls-table th{color:var(--t3-aa,var(--t2));text-align:left;font-weight:600;font-size:calc(var(--fs-meta) * var(--fsc,1));letter-spacing:.04em;
 	text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.cls-table th .btn{height:auto;min-height:var(--ctl-sm);padding:0 var(--sp-1);margin-left:calc(-1 * var(--sp-1));color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
+.cls-table th .btn:hover{color:var(--t1)}
 .cls-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--t2)}
 .cls-table td:first-child{color:var(--t1);white-space:nowrap}
 .cls-cell:focus{outline:1px solid var(--accent);outline-offset:-1px;background:var(--raised)}
 .cls-rowacts{display:flex;gap:2px;white-space:nowrap}
 .cls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
-.cls-card{border:1px solid var(--border);border-radius:var(--r);padding:14px 10px;text-align:center;cursor:pointer;background:var(--surface)}
-.cls-card:hover{background:var(--hover)}
+.card.cls-tile{padding:14px 10px;text-align:center}
 .cls-card-dot{width:26px;height:26px;border-radius:50%;margin:0 auto 8px}
 .cls-card-name{font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t1)}
 .cls-listdetail{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;min-height:260px}
@@ -248,14 +231,6 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .cls-lv-empty{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));padding:3px 2px}
 .cls-link-label{margin-top:10px}
 .cls-link-list{padding:0 14px}
-.cls-link-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
-.cls-link-row:last-child{border-bottom:none}
-.cls-link-name{flex:1;min-width:0;font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t1);cursor:pointer;
-	overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cls-link-name:hover{color:var(--accentH);text-decoration:underline}
-.cls-link-mod{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));flex-shrink:0}
-.cls-link-lbl{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);border:1px solid var(--accent);
-	border-radius:var(--rl);padding:0 7px;flex-shrink:0}
 .cls-tpl-editing{border-left:2px solid var(--accent)}
 /* v5 Part 3 (V5.md §7.4): folded level tables, inline "+ field", private
    fields and the Level & Condition disclosure in the fields modal. */
@@ -275,19 +250,18 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .cls-adv>summary{cursor:pointer;font-size:calc(12px * var(--fsc,1));color:var(--t2)}
 
 /* Manager view (progress.md Phase 6) */
-.mgr-card{display:flex;flex-direction:column;align-items:center;gap:4px}
+.card.mgr-tile{display:flex;flex-direction:column;align-items:center;gap:4px}
 .mgr-card-icon{display:flex;align-items:center;justify-content:center}
 .mgr-card-icon .icon{width:22px;height:22px}
 .mgr-card-icon .kicon-img-icon{width:22px;height:22px;border-radius:50%;object-fit:cover}
 .mgr-card-count{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2))}
 /* Process 8 part 2: "<majors below> / <own minors>" on a Manager list row. */
-.mgr-row-count{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));margin-left:8px;flex-shrink:0}
 
 /* Canvas chrome: pan/zoom hint pill + zoom control (progress.md Phase 7,
    cross-cutting per Section A.3 #6 — every canvas/graph kind gets these) */
-.chint{position:absolute;left:14px;bottom:14px;z-index:3;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));
+.chint{position:absolute;left:14px;bottom:14px;z-index:calc(var(--z-base) + 3);font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));
 	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:4px 10px}
-.czoom{position:absolute;right:14px;bottom:14px;z-index:3;display:flex;align-items:center;gap:7px;
+.czoom{position:absolute;right:14px;bottom:14px;z-index:calc(var(--z-base) + 3);display:flex;align-items:center;gap:7px;
 	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:4px 8px}
 .btn.zbtn{width:24px;height:24px;padding:0;border:1px solid var(--border);border-radius:var(--rs);display:inline-flex;
 	align-items:center;justify-content:center;color:var(--t2);font-size:calc(12px * var(--fsc,1));background:var(--raised);cursor:pointer}

@@ -10,7 +10,7 @@
 // menu is worth having rather than a second Edit dialog.
 //
 // The popup plumbing is hub/popups.js's, unchanged: closeAllPopups() sweeps
-// `.kind-popup`, positionPopupNear() flips above and clamps horizontally.
+// `.popover`, placeFloating() flips above and clamps horizontally.
 // Rows follow hub/menus.js's shape so this menu behaves like every other
 // context menu in the app.
 
@@ -19,11 +19,9 @@ function openNexusOptionsPopup(anchor, nexusId) {
   if (!anchor) return;
   const n = (S.nexuses || []).find((v) => v.id === nexusId);
   if (!n) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup nexus-options-popup';
   const row = (fn, label, cls = '') =>
     `<div class="kind-list-item ${cls}" onclick="closeAllPopups();${fn}"><span class="kli-name">${label}</span></div>`;
-  pop.innerHTML = `
+  openPopover(anchor, `
     ${row(`openNexusModal(${n.id})`, t('edit'))}
     ${row(`nexusDuplicate(${n.id})`, t('nexusDuplicate'))}
     ${row(`nexusExportFile(${n.id})`, t('nexusExport'))}
@@ -32,20 +30,22 @@ function openNexusOptionsPopup(anchor, nexusId) {
     ${row(`nexusShare(${n.id})`, t('nexusShare'))}
     ${row(`nexusRevealFile(${n.id})`, t('nexusRevealFile'))}
     <div class="ctx-sep"></div>
-    ${row(`delNexus(${n.id})`, t('delete'), 'kli-danger')}`;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', (e) => e.stopPropagation());
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+    ${row(`delNexus(${n.id})`, t('delete'), 'kli-danger')}`, { cls: 'nexus-options-popup', role: 'menu', keep: true, focus: false });
 }
 
 // The ⋯ button itself, shared by welcome.js and nexus.js's fallback picker so
 // the two lists cannot drift apart.
-function nexusRowButtonsHtml(n) {
-  return `
-    <button class="btn-icon" onclick="event.stopPropagation();openNexusModal(${n.id})" title="${t('edit')}">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-    </button>
-    <button class="btn-icon" onclick="event.stopPropagation();openNexusOptionsPopup(this,${n.id})" title="${t('nexusOptionsTitle')}">${I.options}</button>`;
+// Procress 21: a vault row of the shared list (core/list.js) — the Welcome
+// window's list and the no-vault picker. Edit is the row's F2; ⋯ (and a
+// right click) the vault's options.
+function nexusRowHtml(n, open, tip = '') {
+  return listRowHtml({
+    icon: `<span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>`,
+    title: n.name, count: n.project_count, onclick: open, tip: tip || n.name, attrs: 'data-no-i18n',
+    actions: listActHtml({ icon: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+      name: t('edit'), key: 'F2', onclick: `openNexusModal(${n.id})` }),
+    menu: `event.preventDefault();openNexusOptionsPopup(this,${n.id})`,
+  });
 }
 
 async function nexusDuplicate(id) {

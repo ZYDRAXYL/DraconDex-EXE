@@ -16,8 +16,8 @@ function buildExhibitorHierarchyRows(d, parentId, depth) {
         onclick="selectExhibitorNode(${n.id})" ondblclick="openExhibitorNodeTarget(${n.id})">
       <span class="name" data-no-i18n>${x(exhNodeTitle(n))}</span>
       <span class="acts">
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();patchExhibitorNode(${n.id},{hidden:${n.hidden ? 0 : 1}})" title="${x(t('exhibitorHidden'))}" data-no-i18n>${n.hidden ? '◌' : '●'}</button>
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();patchExhibitorNode(${n.id},{locked:${n.locked ? 0 : 1}})" title="${x(t('exhibitorLocked'))}" data-no-i18n>${n.locked ? '⊠' : '□'}</button>
+        <button class="btn btn-g btn-i" onclick="event.stopPropagation();patchExhibitorNode(${n.id},{hidden:${n.hidden ? 0 : 1}})" title="${x(t('exhibitorHidden'))}" >${n.hidden ? I.eyeOff : I.eye}</button>
+        <button class="btn btn-g btn-i" onclick="event.stopPropagation();patchExhibitorNode(${n.id},{locked:${n.locked ? 0 : 1}})" title="${x(t('exhibitorLocked'))}" >${n.locked ? I.lock : I.unlock}</button>
       </span>
     </div>${kids}`;
   }).join('');
@@ -31,15 +31,12 @@ function buildExhibitorInspectorHtml(d, n) {
     const out = r.from_key === n.linker_key;
     const other = out ? r.to_key : r.from_key;
     const arrow = r.directed === 0 ? '—' : out ? '→' : '←';
-    return `<div class="cls-link-row">
-      <span data-no-i18n>${arrow}</span>
-      <span class="cls-link-name" onclick="openExhibitorRelationModal(${r.id})">${x(exhNameOf(other))}</span>
-      ${r.label || r.rel_type ? `<span class="cls-link-lbl">${x([r.label, r.rel_type && `(${exhRelTypeText(r.rel_type)})`, exhSpanText(r)].filter(Boolean).join(' '))}</span>` : ''}
-    </div>`;
+    return listLinkRowHtml({ arrow, name: exhNameOf(other), onclick: `openExhibitorRelationModal(${r.id})`,
+      label: r.label || r.rel_type ? [r.label, r.rel_type && `(${exhRelTypeText(r.rel_type)})`, exhSpanText(r)].filter(Boolean).join(' ') : '' });
   }).join('');
   return `<aside class="exh-insp">
     <div class="exh-hier-head"><span data-no-i18n>${x(exhNodeTitle(n))}</span>
-      <button class="btn btn-g btn-i" onclick="selectExhibitorNode(null)" title="${x(t('cancel'))}" data-no-i18n>✕</button></div>
+      <button class="btn btn-g btn-i" onclick="selectExhibitorNode(null)" title="${x(t('cancel'))}">${I.close}</button></div>
     ${it ? `<div class="drafter-hint" data-no-i18n>${VIEWER_KIND_LABEL[it.kind] || it.kind}${it.moduleName ? ` · ${x(it.moduleName)}` : ''}</div>
       <button class="btn btn-s btn-sm" onclick="openExhibitorNodeTarget(${n.id})">${t('exhibitorOpenItem')}</button>` : ''}
     <div class="fg"><label>${t('exhibitorLabel')}</label>
@@ -58,7 +55,7 @@ function buildExhibitorInspectorHtml(d, n) {
     <label class="fv-useimg"><input type="checkbox" ${n.locked ? 'checked' : ''} onchange="patchExhibitorNode(${n.id},{locked:this.checked?1:0})"> ${t('exhibitorLocked')}</label>
     <label class="fv-useimg"><input type="checkbox" ${n.hidden ? 'checked' : ''} onchange="patchExhibitorNode(${n.id},{hidden:this.checked?1:0})"> ${t('exhibitorHidden')}</label>
     ${n.linker_key ? `<div class="insp-label cls-link-label">${t('linkedElements')}</div>
-      <div class="cls-link-list">${relRows || `<div class="cls-lv-empty">${t('noLinkedElements')}</div>`}</div>
+      ${listLinksHtml(relRows)}
       <button class="btn btn-p btn-sm" onclick="startExhibitorLink(${n.id})">${I.relation} ${t('exhibitorLinkTo')}</button>` : ''}
     <button class="btn btn-d btn-sm" onclick="removeExhibitorNode(${n.id})">${t('exhibitorRemoveNode')}</button>
   </aside>`;

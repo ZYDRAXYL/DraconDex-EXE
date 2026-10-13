@@ -1,0 +1,162 @@
+/* Glass — the `glass` UI style (Procress 23, APP Plan.md; rules in APP
+   docs/UX-LAYOUT.md "Glass" and docs/COMPONENTS.md §9). Same layer plan as
+   APK's DdxGlass: chrome and flyouts are translucent, content is not.
+
+     glass  title bar · rail · Nest · Properties · status bar   (tint only)
+            popover / menu / Setting window / Ctrl+P / toast     (tint + blur)
+            modal                                (tint; its scrim blurs the page)
+     solid  the page itself, list rows, tables, editors — long reading stays
+            on an opaque floor
+
+   The chrome takes tint only, no blur: nothing scrolls under it — it sits
+   straight on the window backdrop, a smooth gradient, and blurring a gradient
+   draws the same pixels at a real cost. Blur is spent where something busy
+   is behind: the flyouts. core/glass.js caps those at 4 at once and drops
+   blur while the window resizes or something is dragged (body.glass-moving).
+
+   Tokens come from SDB's generated tokens.css (layer `glass`): --glass-blur,
+   --glass-tint (raised per theme so t1 / t3-aa keep 4.5:1 over the worst
+   backdrop), --glass-stroke, --glass-shadow, --glass-backdrop-from/-to. A
+   uistyle package may carry the first four (body[data-glass], set by
+   applyUiSettings); the backdrop falls back to the theme's own --bg/--accent.
+
+   Two switches turn every layer solid: the OS (prefers-reduced-transparency)
+   and Settings → Appearance → Reduce transparency (body[data-reduce-
+   transparency], which also covers fluent's Acrylic and the scrims' blur).
+   Windows high contrast (forced-colors) turns glass off entirely.
+
+   Loaded after fluent.css (it restyles components, not tokens); only
+   welcome.css follows. */
+
+body:is([data-ui-style="glass"],[data-glass]){
+	--glass-fill:color-mix(in srgb,var(--surface) var(--glass-tint,72%),transparent);
+	--glass-fill-raised:color-mix(in srgb,var(--raised) var(--glass-tint,72%),transparent);
+	/* over a scrim (modal) or floating over content without blur: more of the surface */
+	--glass-fill-dense:color-mix(in srgb,var(--surface) min(100%,calc(var(--glass-tint,72%) + 16%)),transparent);
+	/* the colour a tinted pane reads as over the backdrop's start — for the few
+	   things that must be opaque inside a glass pane (a sticky head over rows) */
+	--glass-solid:color-mix(in srgb,var(--surface) var(--glass-tint,72%),var(--glass-backdrop-from,var(--bg)));
+	--glass-filter:blur(var(--glass-blur,24px)) saturate(1.4);
+	--glass-edge:var(--glass-stroke,color-mix(in srgb,var(--t1) 14%,transparent));
+}
+
+/* ── the backdrop: the theme's --bg toward its --accent, like fluent's Mica ── */
+body:is([data-ui-style="glass"],[data-glass]) #window-frame{
+	background-color:var(--glass-backdrop-from,var(--bg));
+	background-image:linear-gradient(135deg,var(--glass-backdrop-from,var(--bg)) 0%,var(--glass-backdrop-to,color-mix(in srgb,var(--bg) 65%,var(--accent))) 100%);
+}
+
+/* "Use system glass" (experimental, off by default): main has put the OS
+   material (Windows 11 acrylic / macOS vibrancy) behind the window and set
+   html[data-system-glass] — the backdrop steps aside so it shows through.
+   Never set on linux, or with either Reduce transparency switch on. */
+html[data-system-glass] body:is([data-ui-style="glass"],[data-glass]),
+html[data-system-glass] body:is([data-ui-style="glass"],[data-glass]) #window-frame{
+	background:transparent;
+}
+
+/* ── chrome: tint only ── */
+body:is([data-ui-style="glass"],[data-glass]) #title-tab-bar,
+body:is([data-ui-style="glass"],[data-glass]) #nav-sidebar,
+body:is([data-ui-style="glass"],[data-glass]) #left-panel,
+body:is([data-ui-style="glass"],[data-glass]) #status-bar{
+	background:var(--glass-fill);border-color:var(--glass-edge);
+}
+body:is([data-ui-style="glass"],[data-glass]) #side-panel{
+	--bg:var(--glass-fill-raised);background:var(--glass-fill-raised);border-color:var(--glass-edge);
+}
+/* rows sit on the pane, not on an opaque strip; a hovered/selected row keeps
+   its own opaque floor (list.css), so its trailing buttons still cover the title */
+body:is([data-ui-style="glass"],[data-glass]) #left-panel,
+body:is([data-ui-style="glass"],[data-glass]) #side-panel{--ls-floor:transparent}
+body:is([data-ui-style="glass"],[data-glass]) #left-panel .ls-group-head{background:var(--glass-solid)}
+body:is([data-ui-style="glass"],[data-glass]) #side-panel .ls-group-head{background:var(--glass-solid)}
+/* the page is content: an opaque layer with the corner toward the chrome */
+body:is([data-ui-style="glass"],[data-glass]) #main-area{
+	border:1px solid var(--glass-edge);border-right:0;border-bottom:0;border-radius:var(--rl) 0 0 0;
+}
+/* Properties floats over the page under 1100 px (layout.css) — over content, so denser */
+@media (max-width:1100px){
+	body:is([data-ui-style="glass"],[data-glass]) #side-panel{--bg:var(--glass-fill-dense);background:var(--glass-fill-dense)}
+}
+
+/* ── flyouts: tint + blur ── */
+body:is([data-ui-style="glass"],[data-glass]) .popover,
+body:is([data-ui-style="glass"],[data-glass]) .floating-panel,
+body:is([data-ui-style="glass"],[data-glass]) #qs-box,
+body:is([data-ui-style="glass"],[data-glass]) #toast,
+body:is([data-ui-style="glass"],[data-glass]) #settings-menu,
+body:is([data-ui-style="glass"],[data-glass]) #layout-menu{
+	--ls-floor:transparent;
+	background:var(--glass-fill);border-color:var(--glass-edge);box-shadow:var(--glass-shadow,var(--shadow-menu));
+}
+body:is([data-ui-style="glass"],[data-glass]) #qs-input{background:transparent}
+body:is([data-ui-style="glass"],[data-glass]) .floating-panel .ls-group-head{background:var(--glass-solid)}
+body:is([data-ui-style="glass"],[data-glass]) #modal{
+	background:var(--glass-fill-dense);border-color:var(--glass-edge);box-shadow:var(--glass-shadow,var(--shadow-modal));
+}
+@supports (backdrop-filter:blur(1px)){
+	body:is([data-ui-style="glass"],[data-glass]) .popover,
+	body:is([data-ui-style="glass"],[data-glass]) .floating-panel,
+	body:is([data-ui-style="glass"],[data-glass]) #qs-box,
+	body:is([data-ui-style="glass"],[data-glass]) #toast.show,
+	body:is([data-ui-style="glass"],[data-glass]) #settings-menu,
+	body:is([data-ui-style="glass"],[data-glass]) #layout-menu{backdrop-filter:var(--glass-filter)}
+	body:is([data-ui-style="glass"],[data-glass]) #modal-overlay{backdrop-filter:blur(calc(var(--glass-blur,24px) / 3))}
+}
+/* No backdrop-filter (or over budget / mid-drag): the same layers, tint only
+   and denser, so what is behind cannot show through sharp. */
+@supports not (backdrop-filter:blur(1px)){
+	body:is([data-ui-style="glass"],[data-glass]) .popover,
+	body:is([data-ui-style="glass"],[data-glass]) .floating-panel,
+	body:is([data-ui-style="glass"],[data-glass]) #qs-box,
+	body:is([data-ui-style="glass"],[data-glass]) #toast,
+	body:is([data-ui-style="glass"],[data-glass]) #settings-menu,
+	body:is([data-ui-style="glass"],[data-glass]) #layout-menu{background:var(--glass-fill-dense)}
+}
+body:is([data-ui-style="glass"],[data-glass]) :is(.popover,.floating-panel,#qs-box,#toast,#settings-menu,#layout-menu,#modal-overlay)[data-glass-flat],
+body:is([data-ui-style="glass"],[data-glass]).glass-moving :is(.popover,.floating-panel,#qs-box,#toast,#settings-menu,#layout-menu,#modal-overlay){
+	backdrop-filter:none;
+}
+body:is([data-ui-style="glass"],[data-glass]) :is(.popover,.floating-panel,#qs-box,#toast,#settings-menu,#layout-menu)[data-glass-flat],
+body:is([data-ui-style="glass"],[data-glass]).glass-moving :is(.popover,.floating-panel,#qs-box,#toast,#settings-menu,#layout-menu){
+	background:var(--glass-fill-dense);
+}
+
+/* ── Reduce transparency: every layer the same colour, solid ── */
+@media (prefers-reduced-transparency:reduce){
+	body:is([data-ui-style="glass"],[data-glass]){
+		--glass-fill:var(--surface);--glass-fill-raised:var(--raised);--glass-fill-dense:var(--surface);
+		--glass-solid:var(--surface);--glass-filter:none;
+	}
+	body:is([data-ui-style="glass"],[data-glass]) #window-frame{background-image:none}
+	body:is([data-ui-style="glass"],[data-glass]) #modal-overlay{backdrop-filter:none}
+}
+/* the Settings switch reaches every style's translucency, not just glass */
+body[data-reduce-transparency]{
+	--glass-fill:var(--surface);--glass-fill-raised:var(--raised);--glass-fill-dense:var(--surface);
+	--glass-solid:var(--surface);--glass-filter:none;
+	--material-layer:var(--surface);--material-acrylic:var(--surface);
+}
+body[data-reduce-transparency] #window-frame{background-image:none}
+body[data-reduce-transparency] :is(#modal-overlay,#confirm-overlay,.popover,.ctx-submenu,.floating-panel,#qs-box,#toast,#settings-menu,#layout-menu,#left-panel,.pb-pop){backdrop-filter:none}
+body[data-reduce-transparency][data-theme="rainbow"] #left-panel{background:var(--l-side)}
+
+/* ── Windows high contrast: no glass at all — system colours, no blur ── */
+@media (forced-colors:active){
+	body:is([data-ui-style="glass"],[data-glass]){--glass-filter:none}
+	body:is([data-ui-style="glass"],[data-glass]) #window-frame{background-image:none}
+	body:is([data-ui-style="glass"],[data-glass]) :is(#title-tab-bar,#nav-sidebar,#left-panel,#side-panel,#status-bar,.popover,.floating-panel,#qs-box,#toast,#settings-menu,#layout-menu,#modal){
+		background:Canvas;border-color:CanvasText;backdrop-filter:none;box-shadow:none;
+	}
+	body:is([data-ui-style="glass"],[data-glass]) #modal-overlay{backdrop-filter:none}
+}
+
+/* ── Settings → Appearance: the glass row's sample ── */
+.uistyle-sample.glass-sample{
+	background:linear-gradient(135deg,var(--bg),color-mix(in srgb,var(--bg) 55%,var(--accent)));
+}
+.uistyle-sample.glass-sample i{
+	width:24px;height:12px;border:1px solid color-mix(in srgb,var(--t1) 14%,transparent);border-radius:var(--rs);
+	background:color-mix(in srgb,var(--surface) 72%,transparent);backdrop-filter:blur(4px);
+}

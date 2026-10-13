@@ -35,6 +35,22 @@ async function mineBundles() {
 }
 const bundleOrMine = async (id) => (String(id).startsWith('u:') ? (S._mineBundles || []).find((b) => b.id === id) : bundleById(id)) || null;
 
+// One template card (Procress 25): the Home gallery (builder.js
+// fillHomeTemplates) and the Create Nexus window (core/nexus-create.js) draw
+// the same component — a picture of what the template makes (its modules, by
+// kind and colour), its name and one line. `icon` replaces the picture for a
+// card with no modules (Create Nexus's "Blank").
+const bundleKindsOf = (spec) => [...(spec?.modules || []), ...(spec?.folders || []).flatMap((f) => f.modules || [])]
+  .map((m) => m.kind).filter((k) => KIND_ICON[k]).slice(0, 8);
+function templateCardHtml(b, { onclick = '', attrs = '', on = false, icon = null } = {}) {
+  const pic = icon ? `<i>${I[icon] || ''}</i>`
+    : bundleKindsOf(b.spec).map((k) => `<i style="color:${x(KIND_COLOR[k] || 'var(--accent)')}">${I[KIND_ICON[k]]}</i>`).join('');
+  return `<button class="btn home-tpl${on ? ' on' : ''}"${onclick ? ` onclick="${onclick}"` : ''}${attrs ? ` ${attrs}` : ''}>
+      <span class="home-tpl-pic" aria-hidden="true">${pic}</span>
+      <span class="kli-name" data-no-i18n>${x(b.name)}</span><span class="kli-desc" data-no-i18n>${x(b.description || '')}</span>
+    </button>`;
+}
+
 const BUNDLE_TABS = ['classic', 'genre', 'mine'];
 const BUNDLE_SAMPLE_COLS = ['objects', 'events', 'chapters', 'dialogues', 'sessions'];
 const bundleSamplesOf = (m) => BUNDLE_SAMPLE_COLS
@@ -139,7 +155,7 @@ async function openBundlePicker(parentId = null, tab = null, sel = null) {
   openModal(t('bundleTitle'), `<div class="art">
       <div class="art-left"><div class="bundle-tabs">${tabs}</div><div class="art-grid">${cards}${guide}</div></div>
       <aside class="art-detail">${pick ? bundleDetailHtml(pick, pid) : empty}</aside>
-    </div>`, { size: 'xl', focus: '.art-card.on' });
+    </div>`, { size: 'lg', focus: '.art-card.on' });
 }
 
 // What the selected bundle will build: the tree, the links, and the one
@@ -224,7 +240,7 @@ async function openBundleAdjust(id, parentId) {
       </div>`).join('')}
     </div>
     <div class="mfoot">
-      <button class="btn btn-s" onclick="openBundlePicker(${parentId ?? 'null'})">${t('guideBack')}</button>
+      <button class="btn btn-s" onclick="${S.isCreateNexus ? 'closeModal()' : `openBundlePicker(${parentId ?? 'null'})`}">${t('guideBack')}</button>
       <button class="btn btn-p" onclick="submitBundleAdjust('${id}',${parentId ?? 'null'})">${t('bundleCreate')}</button>
     </div>`);
 }
@@ -264,6 +280,7 @@ async function submitBundleAdjust(id, parentId) {
   const spec = { ...b.spec, name, icon: b.icon, modules: out };
   if (spec.home && !kept.has(spec.home)) delete spec.home;
   if (q('#bd-samples') && !q('#bd-samples').checked) spec.includeSamples = false;
+  if (S.isCreateNexus) return cnAdjusted(id, spec); // Procress 25: made later, in the new Nexus's window
   await createBundleNow(id, parentId, spec);
 }
 

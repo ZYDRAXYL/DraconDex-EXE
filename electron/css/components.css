@@ -82,7 +82,7 @@
 	border:3px solid transparent;transition:all var(--ease);
 }
 .cswatch:hover{transform:scale(1.15)}
-.cswatch.sel{border-color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.3)}
+.cswatch.sel{border-color:var(--on-media);box-shadow:0 0 0 1px rgba(255,255,255,.3)}
 
 .symswatch{
 	width:30px;height:30px;padding:0;border-radius:var(--rs);cursor:pointer;
@@ -109,12 +109,12 @@
 #modal-overlay{
 	position:fixed;inset:0;background:rgba(0,0,0,.65);
 	display:flex;align-items:center;justify-content:center;
-	z-index:100;backdrop-filter:blur(4px);
+	z-index:var(--z-dropdown);backdrop-filter:blur(4px);
 }
 #modal-overlay.hidden{display:none}
 #modal{
 	background:var(--surface);border:1px solid var(--border);
-	border-radius:var(--rl);width:480px;max-width:95vw;
+	border-radius:var(--rl);width:var(--modal-md);max-width:95vw;
 	max-height:88vh;display:flex;flex-direction:column;
 	box-shadow:var(--shadow-modal);
 }
@@ -123,22 +123,28 @@
 	border-bottom:1px solid var(--border);
 }
 #modal-title{flex:1;font-size:calc(14px * var(--fsc,1));font-weight:700}
-#modal-close{
-	background:none;border:none;color:var(--t3-aa,var(--t2));cursor:pointer;
-	font-size:calc(15px * var(--fsc,1));padding:3px 6px;border-radius:var(--rs);line-height:1;
-}
+#modal-close{color:var(--t3-aa,var(--t2))}
 #modal-close:hover{color:var(--t1)}
 #modal-body{padding:18px;overflow-y:auto;flex:1}
-#modal[data-size="xl"]{width:min(1100px,95vw);height:min(760px,88vh)}
+/* three sizes, from the tokens (Procress 22) */
+#modal[data-size="sm"]{width:var(--modal-sm)}
+#modal[data-size="md"]{width:var(--modal-md)}
+#modal[data-size="lg"]{width:min(var(--modal-lg),95vw);height:min(760px,88vh)}
+/* the foot: buttons, primary rightmost; a destructive one on the far left */
+#modal-foot{padding:12px 18px;border-top:1px solid var(--border)}
+#modal-foot[hidden]{display:none}
+#modal-foot > .mfoot{margin:0;padding:0;border:0;align-items:center}
 .mfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+.mfoot > .btn-d:first-child:not(:last-child){margin-right:auto}
 
 /* FLOATING (MODELESS) PANEL — like #modal but no backdrop, so the app below
    stays interactive (Plan part3 setting#2). */
 .floating-panel{
+	--ls-floor:var(--surface);
 	position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
 	max-width:95vw;max-height:90vh;
 	background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);
-	box-shadow:0 24px 60px rgba(0,0,0,.5);z-index:150;display:flex;flex-direction:column;overflow:hidden;
+	box-shadow:0 24px 60px rgba(0,0,0,.5);z-index:calc(var(--z-dropdown) + 50);display:flex;flex-direction:column;overflow:hidden;
 }
 .fp-head{
 	display:flex;align-items:center;justify-content:space-between;padding:15px 18px;
@@ -158,19 +164,6 @@
    pages moved in from there). */
 .setting-shell{display:flex;height:100%;gap:16px}
 .setting-sidebar{width:190px;flex-shrink:0;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
-.setting-nav-head{
-	text-align:left;padding:8px 10px;color:var(--t2);
-	font-family:inherit;font-size:calc(var(--fs-body) * var(--fsc,1));font-weight:700;
-	text-transform:uppercase;letter-spacing:.02em;
-}
-.setting-nav-group.open>.setting-nav-head{color:var(--t1)}
-.setting-nav-pages{display:flex;flex-direction:column;gap:1px;padding-left:8px;margin-bottom:4px}
-.setting-nav-item{
-	text-align:left;padding:7px 10px;border:none;border-radius:var(--rs);background:transparent;
-	color:var(--t2);cursor:pointer;font-family:inherit;font-size:calc(12px * var(--fsc,1));
-}
-.setting-nav-item:hover{background:var(--hover);color:var(--t1)}
-.setting-nav-item.active{background:var(--accent);color:var(--on-accent)}
 .setting-content{flex:1;min-width:0;overflow-y:auto}
 /* v5 Part 6 §10.3: the rule between the two halves of a merged Setting page. */
 .setting-merge-sep{border-top:1px solid var(--border);margin:22px 0 16px}
@@ -194,13 +187,10 @@
 /* PREFERENCES PANEL — sidebar-nav layout hosted inside .floating-panel */
 .prefs-shell{display:flex;height:100%;gap:16px}
 .prefs-sidebar{width:160px;flex-shrink:0;display:flex;flex-direction:column;gap:2px}
-.prefs-nav-item{
-	text-align:left;padding:8px 10px;border:none;border-radius:var(--rs);background:transparent;
-	color:var(--t2);cursor:pointer;font-family:inherit;font-size:calc(var(--fs-body) * var(--fsc,1));font-weight:600;
-}
-.prefs-nav-item:hover{background:var(--hover);color:var(--t1)}
-.prefs-nav-item.active{background:var(--accent);color:var(--on-accent)}
 .prefs-content{flex:1;min-width:0;overflow-y:auto}
+/* a .togglerow that is a real switch (role=switch, Tab + Enter/Space) */
+.togglerow.setting-switch{min-height:var(--ctl-sm);color:var(--t1);cursor:pointer}
+.togglerow.setting-switch:focus-visible{outline:var(--focus-ring) solid var(--accentH,var(--accent));outline-offset:2px}
 .prefs-theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:4px}
 .prefs-theme-cell{
 	position:relative;border:1px solid var(--border);border-radius:var(--r);padding:8px;cursor:pointer;
@@ -232,37 +222,31 @@
 	background:var(--surface);border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;
 	font-size:calc(var(--fs-meta) * var(--fsc,1))}
 .prefs-theme-add{
-	display:flex;align-items:center;justify-content:center;min-height:112px;
-	border:1px dashed var(--border);color:var(--t3-aa,var(--t2));font-size:28px;font-weight:300;
+	display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp-1);min-height:112px;
+	border:1px dashed var(--border);color:var(--t3-aa,var(--t2));font-size:calc(var(--fs-meta) * var(--fsc,1));
 }
-.prefs-theme-add:hover{border-color:var(--accentH);color:var(--accentH)}
+.prefs-theme-add .icon{width:22px;height:22px}
+.prefs-theme-add-group{font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.prefs-theme-add-label{color:var(--t1);font-weight:600}
+.prefs-theme-add:hover{border-color:var(--accentH)}
+.prefs-theme-add:focus-visible{outline:var(--focus-ring) solid var(--accentH,var(--accent));outline-offset:2px}
+.setting-wide-btns .btn{width:100%;margin-bottom:6px}
 .prefs-lang-shell{display:flex;gap:16px;margin-top:4px}
-.lang-list{width:220px;flex-shrink:0;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
-.lang-item{
-	display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;
-	border:1px solid var(--border);border-radius:var(--rs);background:var(--bg);color:var(--t2);
-	cursor:pointer;font-size:calc(12px * var(--fsc,1));font-weight:600;
-}
-.lang-item:hover{background:var(--hover);color:var(--t1)}
-.lang-item.active{border-color:var(--accent);color:var(--t1)}
-/* Procress 10 part 2 — see .prefs-theme-cell.locked above; same treatment. */
-.lang-item.locked{opacity:.55;cursor:default}
-.lang-item.locked:hover{background:var(--bg);color:var(--t2)}
-.lang-item.locked .btn{opacity:1}
+.lang-list{width:240px;flex-shrink:0;max-height:320px;overflow-y:auto}
 .prefs-lang-preview{
 	flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);
 	padding:14px;display:flex;flex-direction:column;gap:8px;font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t1);
 }
 .prefs-advanced{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
 
-#confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)}
+#confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:var(--z-modal);backdrop-filter:blur(4px)}
 #confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);width:360px;max-width:92vw;padding:20px;box-shadow:var(--shadow-modal)}
 .confirm-msg{font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t1);line-height:1.5;white-space:pre-wrap}
 .confirm-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
 /* setBusy() — the app's only loading affordance (see core.js). Theme tokens
    only; sits above panel content but below every dialog layer. */
 .busy-veil{
-	position:absolute;inset:0;z-index:90;
+	position:absolute;inset:0;z-index:calc(var(--z-dropdown) - 10);
 	display:flex;align-items:center;justify-content:center;gap:10px;
 	background:color-mix(in srgb, var(--bg) 72%, transparent);
 	backdrop-filter:blur(1px);font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t2);
@@ -299,7 +283,7 @@
    highest of which is #guide-overlay at 1200; it is removed from the DOM once
    faded, so nothing here ever competes with the app for a click. */
 #splash{
-	position:fixed;inset:0;z-index:2000;
+	position:fixed;inset:0;z-index:calc(var(--z-tooltip) + 100);
 	display:flex;flex-direction:column;align-items:center;justify-content:center;
 	gap:var(--sp-7);background:var(--bg);
 	transition:opacity .26s ease;
@@ -327,7 +311,7 @@
 #confirm-box .fg textarea{min-height:110px;font-family:var(--mono,ui-monospace,monospace);font-size:calc(12px * var(--fsc,1))}
 
 /* First-run coach-marks guide (src/renderer/guide.js) — theme-token colors only */
-#guide-overlay{position:fixed;inset:0;z-index:1200;pointer-events:none}
+#guide-overlay{position:fixed;inset:0;z-index:var(--z-tooltip);pointer-events:none}
 .guide-catch{position:absolute;inset:0;pointer-events:auto}
 .guide-spotlight{position:fixed;border-radius:var(--r);pointer-events:none;
 	box-shadow:0 0 0 9999px rgba(0,0,0,.6),0 0 0 2px var(--accent);
@@ -350,18 +334,6 @@
 	color:var(--t2);font-size:calc(var(--fs-body) * var(--fsc,1));line-height:1.45;
 }
 .modal-hint .icon{width:14px;height:14px;flex-shrink:0;margin-top:1px;color:var(--accent-text,var(--accent))}
-.modal-section-h{
-	display:flex;align-items:center;gap:8px;
-	font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:700;color:var(--t3-aa,var(--t2));
-	text-transform:uppercase;letter-spacing:.05em;
-	margin:16px 0 6px;
-}
-.modal-section-h.first{margin-top:4px}
-.modal-section-h .count{
-	background:var(--raised);border:1px solid var(--border);
-	color:var(--t2);border-radius:999px;
-	padding:0 7px;font-size:calc(var(--fs-meta) * var(--fsc,1));line-height:16px;font-weight:600;
-}
 /* Data rows inside a modal aren't row-clickable — only their action button is */
 .modal-data .li{cursor:default;background:var(--bg);border:1px solid var(--border);margin-bottom:4px}
 .modal-data .li:hover{background:var(--bg);color:var(--t2)}
@@ -372,7 +344,7 @@
    "tell the user why" message in the app was effectively invisible. Bottom
    right, above modals (100/150) and the confirm dialog (1000) so the result
    of a confirmed action shows, below the 2000 full-window layer. */
-#toast{position:fixed;right:18px;bottom:18px;z-index:1100;max-width:min(420px,calc(100vw - 36px));
+#toast{position:fixed;right:18px;bottom:18px;z-index:var(--z-toast);max-width:min(420px,calc(100vw - 36px));
 	padding:10px 16px;border-radius:var(--r);border:1px solid var(--border);border-left:4px solid var(--accent);
 	background:var(--raised);color:var(--t1);font-size:calc(var(--fs-body) * var(--fsc,1));box-shadow:var(--shadow-float);
 	transform:translateY(24px);opacity:0;pointer-events:none;transition:transform .2s ease,opacity .2s ease}
@@ -385,14 +357,10 @@
 #toast .toast-act{flex-shrink:0}
 #toast.warn{border-left-color:var(--warn)}
 /* v5 Part 7 §11.4: the Trash panel (hub/trash.js). */
-.trash-list{max-height:min(420px,60vh);overflow-y:auto}
-.trash-list .li{gap:8px}
-.trash-list .acts{margin-left:auto;display:flex;gap:4px}
+#modal .trash-list .ls-list{max-height:min(420px,60vh);overflow-y:auto}
 
 /* ── Genre bundles + guide picker (v5 Part 7, V5.md §11.7–§11.8) ── */
 .bundle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
-.bundle-card{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
-.bundle-card.bundle-guide{border-style:dashed}
 .bundle-head{display:flex;align-items:center;gap:8px}
 .bundle-head .kicon .icon{width:18px;height:18px}
 .bundle-mods{display:flex;flex-wrap:wrap;gap:4px}
@@ -412,7 +380,7 @@
 .art-card:hover{border-color:var(--t3)}
 .art-card.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .art-card.art-note{cursor:default;border-style:dashed;background:transparent}
-.art-cover{display:flex;align-items:center;height:56px;padding:0 12px;color:#fff;background-size:cover}
+.art-cover{display:flex;align-items:center;height:56px;padding:0 12px;color:var(--on-media);background-size:cover}
 .art-cover .icon{width:22px;height:22px}
 .art-cbody{display:flex;flex-direction:column;gap:3px;padding:9px 12px 11px;min-width:0}
 .art-cbody b{font-size:calc(var(--fs-body) * var(--fsc,1))}
@@ -420,7 +388,7 @@
 .art-chips{display:flex;gap:4px;margin-top:4px}
 .art-chips i{width:10px;height:10px;border-radius:var(--rs)}
 .art-detail{min-height:0;overflow:auto;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
-.art-dh{padding:14px 16px;color:#fff;background-size:cover}
+.art-dh{padding:14px 16px;color:var(--on-media);background-size:cover}
 .art-dh h3{display:flex;align-items:center;gap:8px;font-size:calc(16px * var(--fsc,1))}
 .art-dh h3 .icon{width:20px;height:20px}
 .art-dh p{font-size:calc(12px * var(--fsc,1));margin-top:4px;opacity:.95}
@@ -453,12 +421,17 @@
 .setting-hit-row{display:flex;width:100%;justify-content:flex-start;text-align:left;padding:7px 10px;color:var(--t1)}
 .setting-hit-row:hover{background:var(--hover)}
 .setting-hit{outline:2px solid var(--accent);outline-offset:3px;border-radius:var(--rs);transition:outline-color .6s}
-/* Procress 17 P1: core/ui.js lazyRows sentinel — invisible, spans a whole grid row */
-.lazy-more{height:1px;grid-column:1/-1}
+/* Procress 17 P1: core/ui.js lazyRows sentinel — invisible, spans a whole grid row.
+   Procress 19 F10: also the spacers of a recycled list, so never the scroll
+   anchor (the rows are) and, as a table row, no cell padding of its own. */
+.lazy-more{height:1px;grid-column:1/-1;overflow-anchor:none}
+.lazy-more>td{padding:0;border:0}
 /* Procress 17 P2: "N more ›" after a module's first 50 elements in the Nest */
 .nest-item-more .name{color:var(--t3-aa,var(--t2));font-style:italic}
 /* Procress 16 B6: the Nest's "Unsorted (N)" virtual folder (was the Import Dock) */
 .nest-unsorted .cnt{margin-left:auto;color:var(--t3-aa,var(--t2));font-size:calc(var(--fs-meta) * var(--fsc,1))}
+/* Procress 21: its files, as a shared list (core/list.js), one step in */
+.nest-unsorted-list{padding-left:var(--sp-5)}
 .wyvern-unsorted{margin-top:16px}
 /* Procress 17 P4: a borrowed view not drawn yet keeps roughly its space */
 .pb-defer{min-height:120px}
@@ -467,7 +440,6 @@
 .home-start h2{font-size:calc(22px * var(--fsc,1));font-weight:650;margin:0}
 .home-actions{display:flex;gap:8px;flex-wrap:wrap}
 .home-sec h3{font-size:calc(var(--fs-body) * var(--fsc,1));font-weight:600;color:var(--t2);margin:0 0 6px;text-transform:none}
-.home-list .li{border-radius:var(--r)}
 .home-organise{align-self:flex-start}
 /* Procress 18 part 1: identity row = icon · name · kind · save state · primary · ⋯ */
 .page-title .navbar-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -493,8 +465,7 @@
 .props-row{display:grid;grid-template-columns:92px 1fr;gap:8px;align-items:center;padding:3px 0;font-size:calc(var(--fs-body) * var(--fsc,1))}
 .props-k{color:var(--t3-aa,var(--t2));font-size:calc(12px * var(--fsc,1))}
 .props-v{min-width:0;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
-.props-links .li{padding:3px 6px}
-.props-unresolved .name{color:var(--danger)}
+.props-unresolved .ls-title{color:var(--danger)}
 .props-acts{flex-direction:row;display:flex;gap:6px;flex-wrap:wrap}
 
 /* Procress 18 part 5: no state is told by colour alone. A toast says what
@@ -508,7 +479,6 @@
 #toast.info{border-left-color:var(--info)}
 .li.sel,.li.active{box-shadow:inset 3px 0 0 var(--accent)}
 .project-tab.active{box-shadow:inset 0 2px 0 var(--accent)}
-.pb-seg .btn.on{font-weight:600}
 /* Procress 16 part 5: Home phase B */
 .home-portal{display:contents}
 .home-featured{cursor:pointer;border:1px solid var(--border);border-radius:var(--r);padding:var(--sp-3);max-width:520px}
@@ -524,3 +494,7 @@
 .home-tpl-pic{display:flex;flex-wrap:wrap;gap:4px;padding:var(--sp-2);border-radius:var(--rs);background:var(--raised);width:100%;min-height:40px}
 .home-tpl-pic i{display:inline-flex}.home-tpl-pic .icon{width:18px;height:18px}
 .btn.home-tpl .kli-desc{color:var(--t2);font-size:calc(var(--fs-meta) * var(--fsc,1))}
+
+/* Procress 22: an icon inline with text (a lock after a name) */
+.inline-ico{display:inline-flex;vertical-align:-2px}
+.inline-ico .icon{width:var(--icon-sm);height:var(--icon-sm)}

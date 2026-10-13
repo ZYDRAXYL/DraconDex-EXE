@@ -60,9 +60,9 @@ registerComponent('core.properties', {
 
 function pbTagChipsHtml(moduleId, p) {
   // Procress 16 part 5: a label is a category — its chip opens the category page
-  const chips = (p.tags || []).map((tg) => `<a class="htag" role="link" tabindex="0" onclick="openCategoryPage(${xj(tg.tag_name)})" onkeydown="if(event.key==='Enter')openCategoryPage(${xj(tg.tag_name)})" style="border-color:${x(tg.color_code || '#6366f1')};color:${x(tg.color_code || '#6366f1')}">#${x(tg.tag_name)}</a>`).join('');
+  const chips = (p.tags || []).map((tg) => chipHtml({ label: `#${tg.tag_name}`, variant: 'tag', color: tg.color_code, onclick: `openCategoryPage(${xj(tg.tag_name)})`, noI18n: true })).join('');
   const n = (p.links?.outgoing?.length || 0) + (p.links?.backlinks?.length || 0);
-  const links = `<span class="htag lk" data-no-i18n title="${t('openInExhibitor')}" onclick="openExhibitorFor(${moduleId},'module_${moduleId}')">🔗 ${n}</span>`;
+  const links = chipHtml({ label: String(n), variant: 'link', icon: 'relation', title: t('openInExhibitor'), onclick: `openExhibitorFor(${moduleId},'module_${moduleId}')`, noI18n: true });
   return `${chips}${links}<button class="btn btn-g btn-i" onclick="openModuleTagPopup(${moduleId}, this)" title="${t('tagLink')}">${I.plus}</button>`;
 }
 
@@ -74,7 +74,7 @@ function pbPropInputHtml(c, r) {
     case 'number': return `<input class="pv-input" type="number" value="${x(v)}" ${on}>`;
     case 'date': return `<input class="pv-input" type="date" value="${x(v)}" ${on}>`;
     case 'checkbox': return `<input type="checkbox" ${v === '1' ? 'checked' : ''} ${on}>`;
-    case 'url': return `<input class="pv-input" type="url" value="${x(v)}" ${on}>${/^https?:\/\//i.test(v) ? ` <a class="htag lk" href="${x(v)}" target="_blank" rel="noopener">↗</a>` : ''}`;
+    case 'url': return `<input class="pv-input" type="url" value="${x(v)}" ${on}>${/^https?:\/\//i.test(v) ? ` <a class="chip chip-link" href="${x(v)}" target="_blank" rel="noopener" aria-label="${x(v)}">${I.external}</a>` : ''}`;
     default: return `<input class="pv-input" value="${x(v)}" ${on}>`;
   }
 }
@@ -136,13 +136,13 @@ registerComponent('core.related', {
   render: (c) => {
     const links = c.page.props?.links || { outgoing: [], backlinks: [] };
     const mid = c.page.moduleId;
-    const chip = (l) => (l.key ? `<span class="htag lk" onclick="openEntityByKey(${xj(l.key)})">${x(l.name)}</span>` : `<span class="htag" style="opacity:.5">[[${x(l.name)}]]</span>`);
+    const chip = (l) => (l.key ? chipHtml({ label: l.name, variant: 'link', onclick: `openEntityByKey(${xj(l.key)})` }) : chipHtml({ label: `[[${l.name}]]`, cls: 'chip-unresolved' }));
     const key = c.itemKey ?? `module_${mid}`;
     return `<div class="pb-related">
       <div class="pb-label">${t('outgoingLinks')}</div>
-      <div class="insp-chips">${links.outgoing.length ? links.outgoing.map(chip).join('') : `<span class="pv ghost">—</span>`}</div>
+      <div class="chip-set">${links.outgoing.length ? links.outgoing.map(chip).join('') : `<span class="pv ghost">—</span>`}</div>
       <div class="pb-label">${t('backlinks')}</div>
-      <div class="insp-chips">${links.backlinks.length ? links.backlinks.map(chip).join('') : `<span class="pv ghost">${t('noBacklinks')}</span>`}</div>
+      <div class="chip-set">${links.backlinks.length ? links.backlinks.map(chip).join('') : `<span class="pv ghost">${t('noBacklinks')}</span>`}</div>
       <button class="btn btn-g btn-sm" onclick="openExhibitorFor(${mid},${xj(key)})">${I.relation} ${t('openInExhibitor')}</button>
     </div>`;
   },
@@ -242,7 +242,7 @@ async function pbSetImage(iid, key) {
   await reloadModulePage(i.moduleId, i.itemKey);
 }
 
-// Live-saves on every tag add/remove (matches every other .kind-popup) —
+// Live-saves on every tag add/remove (matches every other .popover) —
 // no Save/Cancel footer. hashtagSelector/addModalTag/removeModalTag
 // (core.js) are shared with modals that save on a button, so this wraps
 // them with a delegated click listener instead of changing them.
@@ -250,13 +250,9 @@ async function openModuleTagPopup(moduleId, anchor) {
   closeAllPopups();
   if (!anchor) return;
   const current = (pageOf(moduleId)?.props?.tags || []).map((tg) => tg.id);
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup tag-link-popup';
-  pop.innerHTML = await hashtagSelector('modtag', current);
-  document.body.appendChild(pop);
+  const pop = openPopover(anchor, await hashtagSelector('modtag', current), { cls: 'tag-link-popup', keep: true, aria: t('hashtag') });
   pop.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    if (e.target.closest('.htag-item') || e.target.closest('.htag-chip button')) {
+    if (e.target.closest('.htag-item') || e.target.closest('.chip-x')) {
       await api.module.setTags(moduleId, getModalTagIds('modtag'));
       // Only the chips: a whole-page render would pull this popup's anchor
       // out from under it.
@@ -270,7 +266,7 @@ async function openModuleTagPopup(moduleId, anchor) {
     }
   });
   renderModalTagSuggestions('modtag');
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+  repositionPopover(pop, anchor); // the suggestions changed its height
 }
 
 // ── footnotes across the page (Procress 14, TEMPLATES §7.3) ─────────────

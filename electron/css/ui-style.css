@@ -31,3 +31,12 @@ body[data-ui-style="fluent"]{
   --shadow-modal: var(--elev-28);
 }
 
+
+body[data-ui-style="glass"]{
+  /* Procress 23: Glass. The pane shadow comes from SDB's glass layer
+     (generated tokens.css); the panes themselves are css/glass.css. Corners
+     stay the app's own --r/--rs/--rl. */
+  --shadow-pop:   var(--glass-shadow);
+  --shadow-float: var(--glass-shadow);
+  --shadow-menu:  var(--glass-shadow);
+}

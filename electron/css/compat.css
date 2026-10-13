@@ -10,16 +10,6 @@
 .detail-head{border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:16px}
 .detail-head h2{font-weight:700}
 
-/* ── Tag chip → mirror .htag-item / pill chips ── */
-.tag-chip{
-	display:inline-flex;align-items:center;gap:5px;
-	padding:5px 12px;border-radius:20px;border:1px solid var(--border);
-	background:transparent;color:var(--t2);cursor:pointer;
-	font-size:calc(var(--fs-body) * var(--fsc,1));font-weight:600;font-family:inherit;transition:all var(--ease);
-}
-.tag-chip:hover{background:var(--raised);color:var(--t1)}
-.tag-chip.active,.tag-chip.selected{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
-
 /* ── Small buttons → match .btn tokens ── */
 .btn-sm{
 	display:inline-flex;align-items:center;gap:5px;
@@ -37,21 +27,9 @@
 	display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
 	gap:14px;align-items:stretch;
 }
-.artisan-card{
-	display:flex;flex-direction:column;
-	background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
-	padding:14px;cursor:pointer;
-	transition:border-color var(--ease),background var(--ease);
-}
-.artisan-card:hover{border-color:var(--accent);background:var(--raised)}
 .artisan-card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .artisan-card-head h4{margin:0;font-size:calc(14px * var(--fsc,1));color:var(--t1)}
 .artisan-card-icon{display:flex;align-items:center;color:var(--accent-text,var(--accent))}
-.artisan-card p{margin:0 0 10px;font-size:calc(var(--fs-body) * var(--fsc,1));line-height:1.45;color:var(--t2);flex:1}
 .artisan-inc{font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--t3-aa,var(--t2));margin-bottom:5px}
 .artisan-inc-list{display:flex;flex-wrap:wrap;gap:5px}
-.artisan-chip{
-	font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);background:var(--raised);
-	border:1px solid var(--border);border-radius:var(--rl);padding:2px 8px;
-}
 

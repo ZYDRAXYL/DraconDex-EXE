@@ -98,18 +98,15 @@ function buildAuthorMainHtml(m, c) {
   // Native HTML5 drag-and-drop (Plan part5 Author #3) — a 2-zone
   // before/after split since chapters don't nest, smaller than hub.js's
   // 3-zone module-tree version.
-  const rows = d.chapters.map((c, i) => `
-    <div class="li${c.id === d.selectedId ? ' sel' : ''}" onclick="selectAuthorChapter(${c.id})"
-      draggable="true" ondragstart="onAuthorChapterDragStart(event,${c.id})" ondragover="onAuthorChapterDragOver(event,this)" ondragleave="this.classList.remove('drop-before','drop-after')" ondrop="onAuthorChapterDrop(event,${m.id},${c.id})">
-      <span class="name">${x(c.chapter_label || String(i + 1))}. ${x(c.name)}</span>
-      <span class="acts">
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();openAuthorChapterModal(${m.id},${c.id})" title="${t('edit')}">${I.edit}</button>
-      </span>
-    </div>`).join('');
+  // Procress 21: compact rows of the shared list (core/list.js), the drag
+  // handle first — where every reorderable list keeps it. F2 = Edit.
+  const rows = d.chapters.map((c, i) => listRowHtml({ density: 'compact', drag: true, state: { selected: c.id === d.selectedId },
+    title: `${c.chapter_label || String(i + 1)}. ${c.name}`, onclick: `selectAuthorChapter(${c.id})`,
+    attrs: `draggable="true" ondragstart="onAuthorChapterDragStart(event,${c.id})" ondragover="onAuthorChapterDragOver(event,this)" ondragleave="this.classList.remove('drop-before','drop-after')" ondrop="onAuthorChapterDrop(event,${m.id},${c.id})"`,
+    actions: listActHtml({ icon: I.edit, name: t('edit'), key: 'F2', onclick: `openAuthorChapterModal(${m.id},${c.id})` }) })).join('');
   const column = `<div class="author-chapters">
     <div class="au-col-label" data-no-i18n>CHAPTERS · ${x(m.name)}</div>
-    ${rows}
-    <div class="li au-add" onclick="openAuthorChapterModal(${m.id})">${I.plus}<span class="name">${t('writeChapterNew')}</span></div>
+    ${listHtml({ list: 'author-chapters', aria: m.name, body: rows + listRowHtml({ density: 'compact', icon: I.plus, title: t('writeChapterNew'), cls: 'ls-add', onclick: `openAuthorChapterModal(${m.id})` }) })}
   </div>`;
   // 'book': its own layout (a jump-to-chapter nav, not the select/switch
   // column every other view shares) since all chapters render concatenated.
@@ -237,10 +234,8 @@ function buildAuthorReadingHtml(d) {
 // ── Book view: all chapters concatenated + paginated, .doc export ──────
 // (Plan part5 Author #5)
 function buildAuthorBookHtml(m, d) {
-  const navRows = d.chapters.map((c, i) => `
-    <div class="li" onclick="scrollToAuthorBookChapter(${c.id})">
-      <span class="name">${x(c.chapter_label || String(i + 1))}. ${x(c.name)}</span>
-    </div>`).join('');
+  const navRows = listHtml({ list: 'author-book', aria: m.name, body: d.chapters.map((c, i) => listRowHtml({ density: 'compact',
+    title: `${c.chapter_label || String(i + 1)}. ${c.name}`, onclick: `scrollToAuthorBookChapter(${c.id})`, attrs: 'data-no-i18n' })).join('') });
   return `<div class="author-layout">
     <div class="author-chapters">
       <div class="au-col-label" data-no-i18n>CHAPTERS · ${x(m.name)}</div>

@@ -125,7 +125,7 @@ registerComponent('core.pdf', {
         <button class="btn btn-g btn-i" onclick="pcPdfStep(${xj(c.iid)},1)" aria-label="${t('pbNext')}">${I.chevronRight}</button>
         <span class="pc-pdf-grow"></span>
         <button class="btn btn-g btn-sm" onclick="pcPdfFull(${xj(c.iid)})">${t('pcPdfFull')}</button>
-        <button class="btn btn-g btn-sm" onclick="api.importdock.openPath(${id})">${t('pcOpenExternal')} ↗</button>
+        <button class="btn btn-g btn-sm" onclick="api.importdock.openPath(${id})">${t('pcOpenExternal')}${I.external}</button>
       </div>
       <div class="pc-pdf-body"><div class="pc-loading">${t('loading')}</div></div>
       <img class="pc-pdf-poster" src="${pcImgSrc(id, true)}" alt="" onerror="this.remove()"></div>`;

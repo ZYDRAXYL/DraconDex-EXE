@@ -89,14 +89,14 @@ function filterRuleLabel(r) {
 }
 
 function filterChipsHtml(def) {
-  if (!def.groups.length) return `<span class="vw-chip">${t('filterAll')}</span>`;
-  return def.groups.map(g => `<span class="vw-chip">${g.rules.map(filterRuleLabel).join(' &amp; ') || '—'}</span>`)
+  if (!def.groups.length) return `<span class="chip">${t('filterAll')}</span>`;
+  return def.groups.map(g => `<span class="chip">${g.rules.map(filterRuleLabel).join(' &amp; ') || '—'}</span>`)
     .join(`<span class="vw-chip-or" data-no-i18n>${t('filterOr')}</span>`);
 }
 
 // ── Saved-filter editor popup ────────────────────────────────────────────
 // Obsidian-style: groups of rules OR'd together, each group's rules AND'd.
-// Live-saves on every structural change (matches every other .kind-popup in
+// Live-saves on every structural change (matches every other .popover in
 // this codebase) — no Save/Cancel footer. Free-text rule values (hashtag/
 // name) debounce-save ~500ms after typing stops instead of on every
 // keystroke.
@@ -168,12 +168,8 @@ async function openSavedFilterPopup(anchor, moduleId, def) {
   const r = anchor.getBoundingClientRect();
   S.filterPopupAnchorRect = { top: r.top, bottom: r.bottom, left: r.left };
   S.filterPopupTags = (await api.hashtag.getAll()).map(h => h.tag_name);
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup filter-popup';
-  pop.innerHTML = renderFilterPopupBody();
-  document.body.appendChild(pop);
+  const pop = openPopover(S.filterPopupAnchorRect, renderFilterPopupBody(), { cls: 'filter-popup', keep: true, aria: t('editFilter') });
   wireFilterPopup(pop);
-  positionPopupNear(pop, S.filterPopupAnchorRect);
 }
 
 function wireFilterPopup(pop) {
@@ -226,6 +222,6 @@ async function persistFilterDraft(pop, rerenderPopup = true) {
   if (!document.body.contains(pop)) return; // closed mid-save
   if (rerenderPopup) {
     pop.innerHTML = renderFilterPopupBody();
-    positionPopupNear(pop, S.filterPopupAnchorRect);
+    placeFloating(pop, S.filterPopupAnchorRect);
   }
 }

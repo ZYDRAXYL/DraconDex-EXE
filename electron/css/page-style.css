@@ -43,11 +43,11 @@
 .pblock.pb-v-hero .pb-heading{font-size:calc(24px * var(--fsc,1))}
 /* white belongs to the hero's own ground only: a surface inside it (an
    infobox, a card, an editor, a nested block) goes back to the theme */
-.pblock.pb-v-hero .pb-body :is(.pbc-core-properties,.pc-infobox,.pc-callout,.pc-stat,.pc-roster-card,.pc-toc,.pc-seealso,
+.pblock.pb-v-hero .pb-body :is(.pbc-core-properties,.pc-infobox,.pc-callout,.pc-stat,.pc-roster-tile,.pc-toc,.pc-seealso,
 	.mded,input:not(.pb-heading),select,textarea,.pblock.pb-v-card,.pblock.pb-v-outline,.pblock.pb-v-tinted,[class*="-card"]){
 	--t1:var(--th-t1);--t2:var(--th-t2);--t3-aa:var(--th-t3);color:var(--th-t1)}
-.pblock.pb-v-hero .pb-body :is(.pbc-core-properties,.pc-infobox,.pc-callout,.pc-stat,.pc-roster-card,.pc-toc,.pc-seealso){background:var(--surface)}
-.pblock.pb-v-hero a{color:#fff;text-decoration:underline}
+.pblock.pb-v-hero .pb-body :is(.pbc-core-properties,.pc-infobox,.pc-callout,.pc-stat,.pc-roster-tile,.pc-toc,.pc-seealso){background:var(--surface)}
+.pblock.pb-v-hero a{color:var(--on-media);text-decoration:underline}
 
 /* width — "normal" is the page's own column, as before §6. A readable
    page caps each BLOCK at 46rem (not the whole stack, as it did), so wide
@@ -78,7 +78,7 @@
 	padding:0 0 8px}
 .pb-head .pb-ico{display:inline-flex;color:var(--pb-acc,var(--accent));font-size:calc(15px * var(--fsc,1))}
 .pb-head .pb-ico svg{width:16px;height:16px}
-.pblock.pb-v-hero .pb-head .pb-ico{color:#fff}
+.pblock.pb-v-hero .pb-head .pb-ico{color:var(--on-media)}
 .pb-head-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pblock.pb-collapsible > .pb-head{cursor:pointer;user-select:none;border-radius:var(--r)}
 .pblock.pb-collapsible > .pb-head:hover .pb-head-t{text-decoration:underline}
@@ -99,7 +99,7 @@ body.ddx-site .pblock.pb-closed > .pb-head{padding-bottom:8px}
 
 /* the ⚙ popover (page/style-pop.js) */
 .pb-gear.active{background:var(--hover);color:var(--accentH)}
-.pb-pop{position:fixed;z-index:900;width:320px;max-height:min(560px,calc(100vh - 24px));overflow:auto;
+.pb-pop{position:fixed;z-index:var(--z-popover);width:320px;max-height:min(560px,calc(100vh - 24px));overflow:auto;
 	background:var(--material-base,var(--surface));border:1px solid var(--border);border-radius:var(--rl);
 	box-shadow:var(--shadow-menu);padding:12px;color:var(--t1);font-size:calc(var(--fs-body) * var(--fsc,1))}
 @supports (backdrop-filter:blur(1px)){
@@ -109,11 +109,7 @@ body.ddx-site .pblock.pb-closed > .pb-head{padding-bottom:8px}
 .pb-pop-top b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pb-pop h6{font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:700;letter-spacing:.05em;text-transform:uppercase;
 	color:var(--t3-aa,var(--t2));margin:10px 0 4px}
-.pb-seg{display:inline-flex;flex-wrap:wrap;gap:2px;background:var(--raised);border:1px solid var(--border);border-radius:var(--r);padding:2px}
-.pb-seg .btn{min-height:24px;padding:2px 8px;font-size:calc(var(--fs-meta) * var(--fsc,1));border:0;background:transparent;color:var(--t2)}
-.pb-seg .btn.on{background:var(--surface);color:var(--t1);box-shadow:0 1px 2px rgba(0,0,0,.18)}
-.pb-seg.pb-tabs2{display:flex;margin-bottom:4px}
-.pb-seg.pb-tabs2 .btn{flex:1}
+.pb-tabs2{margin-bottom:4px} /* the segmented control itself: .seg (css/controls.css) */
 .pb-sw{display:flex;gap:6px;flex-wrap:wrap}
 .pb-sw .btn{width:22px;height:22px;min-height:22px;padding:0;border-radius:50%;background:var(--pb-acc);border:2px solid transparent}
 .pb-sw .btn.on{border-color:var(--t1);box-shadow:0 0 0 2px var(--surface) inset}

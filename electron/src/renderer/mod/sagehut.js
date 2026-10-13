@@ -55,10 +55,10 @@ function buildSageHutHtml() {
   const st = d.stats;
   const viewBar = viewBarHtml(SAGEHUT_VIEWS, d.tab, v => `openSageTab('${v}')`, v => SAGEHUT_VIEW_LABEL[v], { noI18n: true });
   const tiles = `<div class="sh-tiles">
-    <div class="sh-tile" style="border-top-color:#2dd4bf"><span class="sh-k" data-no-i18n>Objects</span><span class="sh-v" data-no-i18n>${st.objects}</span></div>
-    <div class="sh-tile" style="border-top-color:#6366f1"><span class="sh-k" data-no-i18n>Modules</span><span class="sh-v" data-no-i18n>${st.modules}</span></div>
-    <div class="sh-tile" style="border-top-color:#facc15"><span class="sh-k" data-no-i18n>Links</span><span class="sh-v" data-no-i18n>${st.links}</span></div>
-    <div class="sh-tile" style="border-top-color:#f472b6"><span class="sh-k">${t('sageDataSize')}</span><span class="sh-v" data-no-i18n>${fmtBytes(st.bytes)}</span></div>
+    <div class="sh-tile" style="border-top-color:var(--success)"><span class="sh-k" data-no-i18n>Objects</span><span class="sh-v" data-no-i18n>${st.objects}</span></div>
+    <div class="sh-tile" style="border-top-color:var(--accent)"><span class="sh-k" data-no-i18n>Modules</span><span class="sh-v" data-no-i18n>${st.modules}</span></div>
+    <div class="sh-tile" style="border-top-color:var(--warn)"><span class="sh-k" data-no-i18n>Links</span><span class="sh-v" data-no-i18n>${st.links}</span></div>
+    <div class="sh-tile" style="border-top-color:var(--info)"><span class="sh-k">${t('sageDataSize')}</span><span class="sh-v" data-no-i18n>${fmtBytes(st.bytes)}</span></div>
   </div>`;
   let body;
   if (d.tab === 'linkerList') body = buildSageHutLinkerListHtml(d);
@@ -70,7 +70,7 @@ function buildSageHutHtml() {
   else body = buildSageHutBarsHtml(d, d.tab === 'dataSize');
   return wrapPageView(`${pageHeadHtml({
       icon: I.sage, title: '<span data-no-i18n>Sage Hut</span>', titleText: 'Sage Hut',
-      after: '<span class="kind-chip" data-no-i18n>Analytics</span>',
+      after: '<span class="chip" data-no-i18n>Analytics</span>',
       sub: `${t('sageHutSubtitle')} ${x(S.nexus.name)}`,
     })}
     <div class="classifier-toolbar">${viewBar}</div>

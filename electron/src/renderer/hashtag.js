@@ -1,13 +1,13 @@
 async function renderHashtagView(){
   q('#left-panel-inner').innerHTML=`<div class="ph"><h4>ป้ายกำกับ</h4></div><div class="empty" style="padding:30px 10px"><div class="ei" style="font-size:calc(28px * var(--fsc,1));opacity:.3">🏷️</div></div>`;
   const tags=await api.hashtag.getAll();
-  let h=`<div class="ch"><h2>🏷️ ป้ายกำกับ</h2><button class="btn btn-p" onclick="openHashtagModal()">+ เพิ่ม Tag</button></div>`;
-  if(!tags.length){ h+=`<div class="empty"><div class="ei">🏷️</div><h3>ยังไม่มี Tag</h3></div>`; }
+  let h=`<div class="ch"><h2>${I.hashtag}ป้ายกำกับ</h2><button class="btn btn-p" onclick="openHashtagModal()">+ เพิ่ม Tag</button></div>`;
+  if(!tags.length){ h+=`<div class="empty"><div class="ei">${I.hashtag}</div><h3>ยังไม่มี Tag</h3></div>`; }
   else {
     h+=`<div class="htags-grid">`;
     for(const t of tags){
-      const col=t.color_code||'#6366f1';
-      h+=`<div class="htag-item" id="tag-item-${t.id}" style="--tc:${col}"><span class="hn">#${x(t.tag_name)}</span><button class="btn btn-g btn-i" onclick="openHashtagModal(${t.id})" style="opacity:.6;color:var(--tc)">✏️</button></div>`;
+      const col=t.color_code||'var(--accent)';
+      h+=`<div class="htag-item" id="tag-item-${t.id}" style="--tc:${col}"><span class="hn">#${x(t.tag_name)}</span><button class="btn btn-g btn-i" onclick="openHashtagModal(${t.id})" title="${window.t('edit')}" aria-label="${window.t('edit')}">${I.edit}</button></div>`;
     }
     h+=`</div>`;
   }
@@ -16,7 +16,7 @@ async function renderHashtagView(){
 
 async function openHashtagModal(id=null){
   const tag=id?(await api.hashtag.getAll()).find(t=>t.id===id):null;
-  openModal(tag?'✏️ แก้ไข Tag':'🏷️ Tag ใหม่',`
+  openModal(tag?'แก้ไข Tag':'Tag ใหม่',`
     <div class="fg"><label>ชื่อ Tag *</label><input id="ht-n" value="${x(tag?.tag_name||'')}" placeholder="ชื่อ (ไม่ต้องใส่ #)"></div>
     <div class="fg"><label>สี</label>${await colorPicker(tag?.tag_color)}</div>
     <div class="mfoot">${tag?`<button class="btn btn-d" onclick="delHashtag(${id})">ลบ</button>`:''}<button class="btn btn-s" onclick="closeModal()">ยกเลิก</button><button class="btn btn-p" onclick="${tag?'saveHashtag('+id+')':'createHashtag()'}">${tag?'บันทึก':'สร้าง'}</button></div>`);
@@ -37,9 +37,9 @@ async function renderColorSettings(){
   const paletteHTML = S.colors.map(c=>`<div class="palette-item">
     <div class="palette-swatch" style="background:${c.color_code}"></div>
     <span class="palette-code">${c.color_code}</span>
-    <button class="btn btn-g btn-i" onclick="deleteColorSwatch(${c.id})" style="color:var(--danger)" title="ลบสีนี้">❌</button>
+    <button class="btn btn-g btn-i" onclick="deleteColorSwatch(${c.id})" style="color:var(--danger)" title="ลบสีนี้">${I.delete}</button>
   </div>`).join('');
-  q('#main-inner').innerHTML=`<div class="ch"><h2>🎨 จัดการสี</h2></div>
+  q('#main-inner').innerHTML=`<div class="ch"><h2>${I.colors}จัดการสี</h2></div>
     <div class="color-settings-grid">
       <div class="cwheel-section">
         <h3 class="cs-title">Color Wheel</h3>

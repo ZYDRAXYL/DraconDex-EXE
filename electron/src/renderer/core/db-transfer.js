@@ -11,8 +11,10 @@ function settingDatabasePageHtml(){
   settingRefreshDatabaseSection();
   settingRefreshHistorySection();
   // v5 Part 7 (§11.9): Import / Export DB moved here off the rail (and are in Ctrl+P).
+  if (typeof hasLocate === 'function' && hasLocate()) settingRefreshLocateSection();
   return `<div class="settings-label">${t('settingDbWhole')}</div>
     <div class="setting-db-io">${cmdBtn('db.import', {}, { cls: 'btn-s' })}${cmdBtn('db.export', {}, { cls: 'btn-s' })}</div>
+    ${typeof hasLocate === 'function' && hasLocate() ? `<div class="settings-label">${t('settingLocateRoot')}</div><div id="setting-locate-body">${t('syncWorking')}</div>` : ''}
     <div id="setting-db-legacy"></div><div class="settings-label">${t('settingDbNexusList')}</div><div id="setting-db-body">${t('syncWorking')}</div>
     <div class="settings-label" style="margin-top:18px">${t('settingHistoryLimit')}</div>
     <div id="setting-history-body">${t('syncWorking')}</div>`;
@@ -95,7 +97,7 @@ function settingDbModuleRowsHtml(list, nexusId, depth = 0){
   return list.map((m) => `
     <div class="li" style="padding-left:${depth * 16}px">
       <span class="name" data-no-i18n>${x(m.name)}</span>
-      <span class="tag" data-no-i18n>${x(kindLabel(m.kind))}</span>
+      <span class="chip" data-no-i18n>${x(kindLabel(m.kind))}</span>
       <button class="btn btn-s btn-sm" onclick="settingDbExportModule(${nexusId},${m.id})">${t('settingDbExportModule')}</button>
       <button class="btn btn-s btn-sm" onclick="settingDbImportModule(${nexusId},${m.id})">${t('settingDbImportModule')}</button>
     </div>
@@ -191,5 +193,26 @@ async function clearHistoryClick(kind){
   await api.history[fn]();
   toast(t('historyCleared'), 'ok');
   settingRefreshHistorySection();
+}
+// Procress 20: where NEW Nexus folders go (existing ones move from their own
+// Nexus settings), and — for the open Nexus — the asset files it still keeps
+// outside its folder, gathered in only on request.
+async function settingRefreshLocateSection(){
+  const [root, st] = await Promise.all([api.nexus.locateRoot(), S.nexus ? api.nexus.locateStatus(S.nexus.id) : null]);
+  const el = q('#setting-locate-body');
+  if (!el) return;
+  el.innerHTML = `<div class="sync-hint">${t('settingLocateRootHint')}</div>
+    <div class="sync-key-row">
+      <input readonly value="${x(root || '')}" title="${x(root || '')}" data-no-i18n>
+      <button class="btn btn-s btn-sm" onclick="settingPickLocateRoot()">${t('nexusChangeLocation')}</button>
+    </div>
+    ${st?.outside ? `<div class="sync-upload-actions"><button class="btn btn-s btn-sm" onclick="gatherNexusAssets(S.nexus.id, ${Number(st.outside)})">${t('locateGather')}</button>
+      <span class="sync-hint">${t('locateOutside').replace('{n}', st.outside)}</span></div>` : ''}`;
+}
+async function settingPickLocateRoot(){
+  const r = await api.nexus.locatePickRoot();
+  if (!r || r.canceled) return;
+  toast(t('applied'), 'ok');
+  settingRefreshLocateSection();
 }
 registerSettingPage('appdata', 'database', settingDatabasePageHtml);

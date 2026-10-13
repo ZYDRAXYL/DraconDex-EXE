@@ -47,13 +47,16 @@ const SKIP_DIRS = new Set(['node_modules', 'vendor', 'flutter', 'old_db_data', '
 
 // Data files: long by nature, exempt from the size bands. Plan.md names this
 // exemption explicitly ("เว้นแต่เป็นไฟล์ข้อมูล (เช่น i18n, constants)").
+// Procress 19 F8 split i18n.js into one file per language under i18n/ —
+// each one still a data file, so the whole folder is exempt.
+const DATA_DIRS = [app('src/renderer/i18n/')];
 const DATA_FILES = new Set([
-  app('src/renderer/i18n.js'),
   app('src/db/schema/ddl.js'),
   app('src/db/schema/indexes.js'),
   app('src/db/schema/seed.js'),
   app('css/themes.css'),
 ]);
+const isDataFile = (f) => DATA_FILES.has(f) || DATA_DIRS.some((d) => f.startsWith(d));
 
 const walk = (dir) => {
   const abs = path.join(root, dir);
@@ -90,7 +93,7 @@ console.log('=== size bands (Plan.md) ===');
   for (const f of targets) {
     if (!existsSync(path.join(root, f))) { err(`${f} does not exist`); continue; }
     const n = lineCount(f);
-    if (DATA_FILES.has(f)) { if (n >= 500) note(`${f} — ${n} lines (data file, exempt)`); continue; }
+    if (isDataFile(f)) { if (n >= 500) note(`${f} — ${n} lines (data file, exempt)`); continue; }
     if (n >= 500) big.push([f, n]);
   }
   big.sort((a, b) => b[1] - a[1]);
@@ -109,7 +112,7 @@ console.log('=== size bands (Plan.md) ===');
 // reviewer can see the seams instead of guessing.
 console.log('=== responsibility signal (>500 lines) ===');
 {
-  const targets = (argvFiles.length ? argvFiles : allSource).filter((f) => f.endsWith('.js') && !DATA_FILES.has(f));
+  const targets = (argvFiles.length ? argvFiles : allSource).filter((f) => f.endsWith('.js') && !isDataFile(f));
   let flagged = 0;
   for (const f of targets) {
     if (!existsSync(path.join(root, f))) continue;

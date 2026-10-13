@@ -54,15 +54,10 @@ function wyvernCreateParentId(){
 // points (Plan process2 part2 #1.2).
 function openWyvernViewSetMenu(anchor){
   closeAllPopups();
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup kind-list-popup';
-  pop.innerHTML = `
+  const pop = openPopover(anchor, `
     <div class="kind-list-item" onclick="closeAllPopups();goToNexusNestHub()"><span class="kli-name">${x(t('nexusNest'))}</span></div>
     <div class="kind-list-item" onclick="closeAllPopups();openSageTab('dataSize')"><span class="kli-name">${x(t('sageHut'))}</span></div>
-  `;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+  `, { cls: 'popover-menu', keep: true });
 }
 
 // ═══ Drill-down browse (replaces the docked Nexus Nest tree) ════════════
@@ -90,7 +85,7 @@ function wyvernBrowseCardHtml(m, totalModules){
   const canOpen = m.kind !== 'collector';
   const primary = hasChildren || !canOpen ? `wyvernDrillInto(${m.id})` : `openModuleNode(${m.id})`;
   return `<div class="typecard" onclick="${primary}" oncontextmenu="openModuleContextMenu(event,${m.id})">
-    <h5 style="color:${x(m.icon_color_code || m.color_code || '#6366f1')}" data-no-i18n>${moduleIconHtml(m)} ${x(m.name)}</h5>
+    <h5 style="color:${x(m.icon_color_code || m.color_code || 'var(--accent)')}" data-no-i18n>${moduleIconHtml(m)} ${x(m.name)}</h5>
     <p data-no-i18n>${x(kindLabel(m.kind))}${hasChildren ? ` · ${m.children.length}:${totalModules}` : ''}</p>
     ${hasChildren && canOpen ? `<button class="btn btn-s btn-sm" onclick="event.stopPropagation();openModuleNode(${m.id})">${t('open')}</button>` : ''}
   </div>`;
@@ -131,7 +126,7 @@ function buildWyvernPageHtml(){
 // mirror it into #main-inner too (same row markup, reused verbatim).
 function buildWyvernNexusPickerHtml(){
   return `<div class="ph"><h4>${t('nexus')}</h4>
-      <button class="btn btn-p btn-sm" onclick="openNexusModal()">+ ${t('nexusNew')}</button>
+      <button class="btn btn-p btn-sm" onclick="openCreateNexusWindow()">+ ${t('nexusNew')}</button>
     </div>
     <div class="typegrid">${S.nexuses.map(n => `
       <div class="typecard" onclick="selectNexus(${n.id})">

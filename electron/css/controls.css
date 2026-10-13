@@ -1,0 +1,99 @@
+/* Shared controls (Procress 22, APP docs/COMPONENTS.md) — chip, segmented,
+   card, icon button sizes, field states. core/controls.js writes the HTML
+   (chipHtml, segmentedHtml, cardHtml, iconBtnHtml, fieldHtml). Every size is
+   a token (--ctl-*, --icon-*); every colour pair below is one that SDB's
+   tokens.mjs holds at 4.5:1 in all 32 themes:
+     text on a chip / segment     --t1 on --raised / --hover
+     selected filter / segment    --on-accent on --accent
+     status                       --t1 text + a dot in the status colour
+   Never --t2/--t3 on --hover, never --accent/--success/--danger as text. */
+
+/* ── Chip ────────────────────────────────────────────────────────────── */
+.chip{
+	display:inline-flex;align-items:center;gap:4px;min-height:var(--ctl-sm);max-width:100%;
+	padding:0 8px;border:1px solid var(--border);border-radius:999px;background:var(--raised);
+	color:var(--t1);font-size:calc(var(--fs-meta) * var(--fsc,1));line-height:1.2;white-space:nowrap;
+	overflow:hidden;text-overflow:ellipsis;vertical-align:middle;
+}
+.chip .icon{width:12px;height:12px;flex-shrink:0}
+.chip-t{overflow:hidden;text-overflow:ellipsis}
+.chip-unresolved{opacity:.6}
+.chip-set{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+/* tag (#name): the user's colour is a dot, the text stays --t1 */
+.chip-tag::before,.chip-status::before{content:'';width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--chip-c,var(--accent))}
+/* link: opens something */
+.chip-link{cursor:pointer;border-color:var(--accent);text-decoration:none}
+.chip-link:hover,.chip-link:focus-visible{background:var(--hover)}
+/* filter: toggles; on = filled */
+.chip-filter{cursor:pointer;font:inherit;font-size:calc(var(--fs-meta) * var(--fsc,1))}
+.chip-filter:hover{background:var(--hover)}
+.chip-filter.on,.chip-filter[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+/* status: a dot in the status colour */
+.chip-status[data-status="ok"]{--chip-c:var(--success)}
+.chip-status[data-status="warn"]{--chip-c:var(--warn)}
+.chip-status[data-status="info"]{--chip-c:var(--info)}
+.chip-status[data-status="danger"]{--chip-c:var(--danger)}
+/* count: a number */
+.chip-count{padding:0 6px;font-variant-numeric:tabular-nums;background:var(--hover)}
+/* the remove ✕ inside a chip — a 24 px target */
+.chip .chip-x{display:inline-flex;align-items:center;justify-content:center;width:var(--ctl-sm);height:var(--ctl-sm);margin-right:-8px;
+	border:0;background:none;color:var(--t1);cursor:pointer;border-radius:50%}
+.chip .chip-x:hover{background:var(--hover)}
+
+/* ── Segmented ───────────────────────────────────────────────────────── */
+.seg{display:inline-flex;align-items:stretch;border:1px solid var(--border);border-radius:var(--rs);overflow:hidden;background:var(--surface);max-width:100%}
+.seg > .seg-opt,.seg > .btn{
+	display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:var(--ctl-md);padding:0 12px;
+	border:0;border-left:1px solid var(--border);border-radius:0;background:none;color:var(--t1);
+	font-size:calc(var(--fs-body) * var(--fsc,1));cursor:pointer;white-space:nowrap;box-shadow:none;
+}
+.seg > :first-child{border-left:0}
+.seg > .seg-opt:hover,.seg > .btn:hover{background:var(--hover);color:var(--t1)}
+.seg > .on,.seg > .act,.seg > [aria-pressed="true"],.seg > [aria-selected="true"],.seg > [aria-checked="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
+.seg-sm > .seg-opt,.seg-sm > .btn{min-height:var(--ctl-sm);padding:0 8px;font-size:calc(var(--fs-meta) * var(--fsc,1))}
+.seg-fill{display:flex}
+.seg-fill > *{flex:1}
+.seg-wrap{flex-wrap:wrap}
+
+/* ── Card ────────────────────────────────────────────────────────────── */
+.card{display:block;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:var(--sp-3) var(--sp-4);color:var(--t1)}
+.card-link{cursor:pointer;text-align:left;font:inherit}
+.card-link:hover,.card-link:focus-visible{border-color:var(--accent);background:var(--hover)}
+.card-link.on,.card-link.active,.card-link[aria-checked="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.card-preview{padding:0;overflow:hidden}
+.card-preview > .card-media{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--raised)}
+.card-preview > .card-body{padding:var(--sp-3) var(--sp-4)}
+.card-title{font-weight:600;font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t1)}
+.card-meta{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);margin-top:2px}
+
+/* ── Icon button sizes (.btn-i is the one name) ──────────────────────── */
+/* .btn-i-sm (components.css) = --ctl-sm 24 px — the size modifier */
+
+/* ── Fields: sizes, error, disabled, read-only ───────────────────────── */
+.fg .ctl-sm,.ctl-sm:is(input,select){min-height:var(--ctl-sm)}
+.fg :is(input,select):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]){min-height:var(--ctl-md)}
+.fg .ctl-lg,.ctl-lg:is(input,select){min-height:var(--ctl-lg)}
+.fg [aria-invalid="true"],:is(input,select,textarea)[aria-invalid="true"]{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger)}
+.fg .fg-error{display:flex;align-items:center;gap:4px;margin-top:4px;color:var(--t1);font-size:calc(var(--fs-meta) * var(--fsc,1))}
+.fg .fg-error::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--danger);flex-shrink:0}
+.fg .fg-hint{margin-top:4px;color:var(--t2);font-size:calc(var(--fs-meta) * var(--fsc,1))}
+.fg :is(input,select,textarea):disabled{opacity:.55;cursor:not-allowed}
+.fg :is(input,textarea)[readonly]{background:var(--raised);border-style:dashed}
+
+/* ── The component gallery (dev only — src/renderer/gallery.js) ──────── */
+.gal{padding:var(--sp-5) var(--sp-6);max-width:1100px}
+.gal .ch{display:flex;align-items:center;gap:var(--sp-3)}
+.gal-sec{margin-top:var(--sp-5)}
+.gal-h{font-size:calc(var(--fs-section) * var(--fsc,1));margin-bottom:var(--sp-3);color:var(--t1)}
+.gal-set{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
+.gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--sp-3);width:100%}
+.gal-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--sp-3);width:100%}
+.gal-list{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);width:100%}
+.gal-media{height:80px;aspect-ratio:auto;background:linear-gradient(135deg,var(--accent),var(--info))}
+.gal-p{margin:var(--sp-2) 0 0;color:var(--t1)}
+.gal-icons{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.gal-icon{display:inline-flex;flex-direction:column;align-items:center;gap:2px;width:72px;color:var(--t1)}
+.gal-icon small{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
+/* ── colour dot button (colorDotBtnHtml): a user's colour, clicked to change ── */
+.btn-i .color-dot{display:block;width:12px;height:12px;border-radius:50%;background:var(--dot-c,transparent);border:1px solid var(--t3-aa,var(--t2))}

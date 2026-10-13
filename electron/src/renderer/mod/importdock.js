@@ -121,58 +121,25 @@ async function moveAssetToModule(id, moduleId) {
 }
 
 // ── Dock tray (unfiled) ─────────────────────────────────────────────────
-// Unfiled files keep the old provenance tree (folder string split into
-// segments) so a pre-v5 vault's Dock looks exactly as it did until the user
-// starts filing things.
-function buildImportFolderTree(files) {
-  const root = { name: null, path: '', children: new Map(), files: [] };
-  for (const f of files) {
-    const segs = (f.folder || '').split('/').filter(Boolean);
-    let node = root, cum = '';
-    for (const seg of segs) {
-      cum = cum ? `${cum}/${seg}` : seg;
-      if (!node.children.has(seg)) node.children.set(seg, { name: seg, path: cum, children: new Map(), files: [] });
-      node = node.children.get(seg);
-    }
-    node.files.push(f);
-  }
-  return root;
-}
+// Procress 21: the unfiled files are one list of the shared kind
+// (core/list.js), grouped by what they are — images, audio, video, … — each
+// group with its count, folding; one thumbnail size (--icon-sm) for every
+// picture, here and in the Nest leaves. Where a file came from (its import
+// folder) is the row's meta.
+const ASSET_GROUPS = [['image', 'assetGroupImage'], ['audio', 'assetGroupAudio'], ['video', 'assetGroupVideo'], ['doc', 'assetGroupDoc'],
+  ['track', 'assetGroupTrack'], ['model', 'assetGroupModel'], ['url', 'assetGroupUrl']];
 
-function importNodeFileCount(node) {
-  let n = node.files.length;
-  for (const c of node.children.values()) n += importNodeFileCount(c);
-  return n;
-}
-
-function buildImportFolderNode(node, depth) {
-  const collapsed = S.importFolderCollapsed.has(node.path);
-  const indentCls = depth ? ` indent${Math.min(depth, 5)}` : '';
-  let html = `<div class="li dock-folder${indentCls}" data-no-i18n onclick="toggleImportFolder(${x(JSON.stringify(node.path))})">
-    <svg class="icon tree-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="${collapsed ? '9 18 15 12 9 6' : '6 9 12 15 18 9'}"/></svg>
-    ${I.folder || ''} ${x(node.name)}/<span class="cnt">${importNodeFileCount(node)} files</span></div>`;
-  if (!collapsed) {
-    for (const child of node.children.values()) html += buildImportFolderNode(child, depth + 1);
-    for (const f of node.files) html += buildImportFileRow(f, depth + 1);
-  }
-  return html;
-}
-
-function buildImportFileRow(f, depth) {
-  const indentCls = depth ? ` indent${Math.min(depth, 5)}` : '';
-  const chip = f.entity
-    ? `<span class="dock-chip lk" data-no-i18n>→ ${x(f.entity.name)}</span>`
-    : `<span class="dock-chip ghost">${t('notLinked')}</span>`;
-  return `<div class="li${indentCls}${S.filePreview?.id === f.id && !S.activeModuleNode ? ' sel' : ''}${f.missing ? ' asset-missing' : ''}"
-      draggable="true" ondragstart="onAssetDragStart(event,${f.id})" ondragend="S.dragAsset=null"
-      onclick="openImportFile(${f.id})" oncontextmenu="openImportFileContextMenu(event,${f.id})">
-    <span class="dock-ficon dock-${x(assetClass(f))}" data-no-i18n>${assetGlyph(f)}</span>
-    <span class="name" data-no-i18n>${x(f.file_name)}${f.use_as_image ? ' ★' : ''}</span>
-    ${chip}
-    <span class="acts">
-      <button class="btn btn-g btn-i" onclick="event.stopPropagation();deleteImportFileRow(${f.id})" title="${t('delete')}">${I.delete}</button>
-    </span>
-  </div>`;
+function buildImportFileRow(f) {
+  return listRowHtml({
+    density: 'compact', onclick: `openImportFile(${f.id})`, menu: `openImportFileContextMenu(event,${f.id})`,
+    icon: `<span class="dock-ficon dock-${x(assetClass(f))}" data-no-i18n>${nestAssetIcon(f)}</span>`,
+    title: `${f.file_name}${f.use_as_image ? ' ★' : ''}`, meta: f.folder || '',
+    tip: f.missing ? t('assetMissing') : f.file_name,
+    trailing: f.entity ? `<span class="ls-chip ls-on" data-no-i18n>→ ${x(f.entity.name)}</span>` : `<span class="ls-chip">${t('notLinked')}</span>`,
+    actions: listActHtml({ icon: I.delete, name: t('delete'), danger: true, key: 'Delete', onclick: `deleteImportFileRow(${f.id})` }),
+    state: { selected: S.filePreview?.id === f.id && !S.activeModuleNode }, cls: f.missing ? 'ls-missing' : '',
+    attrs: `data-no-i18n draggable="true" ondragstart="onAssetDragStart(event,${f.id})" ondragend="S.dragAsset=null"`,
+  });
 }
 
 // Procress 16 B6: the Import Dock is gone — files not yet filed under any
@@ -185,14 +152,15 @@ function nestUnsortedHtml() {
   const unfiled = (S.importFiles || []).filter(f => f.module_ref == null);
   if (!unfiled.length) return '';
   const open = S.importFolderCollapsed.has(UNSORTED_OPEN);
-  let html = `<div class="li nest-unsorted" onclick="toggleImportFolder('${UNSORTED_OPEN}')">
+  const html = `<div class="li nest-unsorted" onclick="toggleImportFolder('${UNSORTED_OPEN}')">
     <svg class="icon tree-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="${open ? '6 9 12 15 18 9' : '9 18 15 12 9 6'}"/></svg>
     <span class="kicon" aria-hidden="true">${I.folder || ''}</span><span class="name">${x(t('nestUnsorted'))}</span><span class="cnt" data-no-i18n>${unfiled.length}</span></div>`;
   if (!open) return html;
-  const tree = buildImportFolderTree(unfiled);
-  for (const child of tree.children.values()) html += buildImportFolderNode(child, 1);
-  for (const f of tree.files) html += buildImportFileRow(f, 1);
-  return html;
+  const byName = (a, b) => a.file_name.localeCompare(b.file_name);
+  const body = ASSET_GROUPS.map(([cls, key]) => [cls, key, unfiled.filter(f => assetClass(f) === cls).sort(byName)]).filter(([, , fs]) => fs.length)
+    .map(([cls, key, fs]) => listGroupHtml({ list: 'assets', id: cls, title: t(key), count: fs.length, rows: listRowsHtml('assets', fs, buildImportFileRow, { key: cls }) }))
+    .join('');
+  return html + listHtml({ list: 'assets', aria: t('nestUnsorted'), cls: 'nest-unsorted-list', body });
 }
 
 function toggleImportFolder(folder) {
@@ -322,7 +290,7 @@ async function deleteImportFileRow(id) {
 // Nest leaves.
 function buildModuleAssetsStripHtml(m) {
   const list = nestAssetsOf(m.id);
-  const chips = list.map(f => `<span class="htag${f.missing ? ' asset-missing' : ''}" data-no-i18n draggable="true"
+  const chips = list.map(f => `<span class="chip chip-link${f.missing ? ' asset-missing' : ''}" role="link" tabindex="0" data-no-i18n draggable="true"
       ondragstart="onAssetDragStart(event,${f.id})" ondragend="S.dragAsset=null"
       onclick="openImportFile(${f.id})" oncontextmenu="openImportFileContextMenu(event,${f.id})">${assetGlyph(f)} ${x(f.file_name)}</span>`).join('');
   return `<div class="module-assets">

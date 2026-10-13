@@ -117,7 +117,7 @@ function tplGalleryOpen() {
       <label class="fv-useimg tpg-fields" id="tpg-fields"><input type="checkbox" checked onchange="_tg.fields=this.checked"> ${t('tplFields')}</label>
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" id="tpg-go" onclick="tplGalleryGo()">${create ? t('create') : t('apply')}</button>
-    </div>`, { size: 'xl', focus: '.tpg-card.on' });
+    </div>`, { size: 'lg', focus: '.tpg-opt.on' });
   tplGalleryRender();
 }
 
@@ -147,12 +147,12 @@ function tplGalleryRender() {
   main.innerHTML = `
     <div class="tpg-head"><span class="tpg-dot" style="background:${KIND_COLOR[_tg.kind] || 'var(--t3)'}"></span><b>${x(kindLabel(_tg.kind))}</b>
       <span class="tpg-sub">${create ? '' : t('tplUseHint')}</span></div>
-    <div class="tpg-grid" role="radiogroup">${list.map((e) => `<div class="tpg-card${e.ref === _tg.sel ? ' on' : ''}" role="radio" aria-checked="${e.ref === _tg.sel}" tabindex="0"
+    <div class="tpg-grid" role="radiogroup">${list.map((e) => `<div class="card card-link tpg-opt${e.ref === _tg.sel ? ' on' : ''}" role="radio" aria-checked="${e.ref === _tg.sel}" tabindex="0"
         onclick="tplGallerySel(null,${xj(e.ref)})" ondblclick="tplGalleryGo()" onkeydown="if(event.key==='Enter')tplGalleryGo();else if(event.key===' '){event.preventDefault();tplGallerySel(null,${xj(e.ref)})}">
         <span class="tpt">${tplThumbHtml(e.page)}</span>
         <span class="tpg-cn"><b${e.own ? ' data-no-i18n' : ''}>${x(e.name)}</b>${e.star ? `<span class="tpl-star">${I.star} ${t('tplDefault')}</span>` : e.own ? `<span class="tpl-own">${t('tplMine')}</span>` : ''}</span>
         ${e.desc ? `<span class="tpg-cd">${x(e.desc)}</span>` : ''}</div>`).join('')}
-      ${create ? '' : `<div class="tpg-card tpg-add" role="button" tabindex="0" onclick="closeModal();openSavePresetModal(${_tg.moduleId})" onkeydown="if(event.key==='Enter'){closeModal();openSavePresetModal(${_tg.moduleId})}">
+      ${create ? '' : `<div class="card card-link tpg-opt tpg-add" role="button" tabindex="0" onclick="closeModal();openSavePresetModal(${_tg.moduleId})" onkeydown="if(event.key==='Enter'){closeModal();openSavePresetModal(${_tg.moduleId})}">
         <span class="tpg-plus">+</span><span class="tpg-cn"><b>${t('tplSave')}</b></span></div>`}
     </div>
     ${cur ? `<div class="tpg-prev">

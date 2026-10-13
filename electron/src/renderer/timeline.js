@@ -93,9 +93,7 @@ function bindTimelineGraphInteractions(tlid){
   let nodeDrag = null;
   let movedNode = false;
   // One binding per board element — a second board elsewhere keeps its own.
-  board._tgAbort?.abort();
-  const controller = new AbortController();
-  board._tgAbort = controller;
+  const signal = boardSignal(board, '_tgAbort');
 
   const svgX = (clientX) => {
     const rect = svg.getBoundingClientRect();
@@ -221,8 +219,8 @@ function bindTimelineGraphInteractions(tlid){
     pan = { x:e.clientX, tx:st.tx };
     board.classList.add('is-panning');
   };
-  document.addEventListener('mousemove', onMove, { signal: controller.signal });
-  document.addEventListener('mouseup', onUp, { signal: controller.signal });
+  document.addEventListener('mousemove', onMove, { signal });
+  document.addEventListener('mouseup', onUp, { signal });
 
   function onMove(e){
     if(pan){

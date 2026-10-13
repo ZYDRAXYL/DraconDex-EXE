@@ -28,14 +28,14 @@
 .nav-logo-btn.is-return{color:var(--accent-text,var(--accent))}
 .nav-logo-btn .brand-img{width:70%;height:70%}
 .nav-logo-btn .icon{width:24px;height:24px}
-.brand-img{height:30px;width:30px;object-fit:contain;display:block;content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="daylight"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
-body[data-theme="moonlight"] .brand-img{content:url('../../src/assets/brand/DraconDex_Color.png')}
-body[data-theme="midnight"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteOut.png')}
-body[data-theme="rainbow"] .brand-img{content:url('../../src/assets/brand/DraconDex_Color.png')}
+.brand-img{height:30px;width:30px;object-fit:contain;display:block;content:url('../../src/assets/brand/web/DraconDex_WhiteOut.webp')}
+body[data-theme="daylight"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_WhiteIn.webp')}
+body[data-theme="moonlight"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_Color.webp')}
+body[data-theme="midnight"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_WhiteOut.webp')}
+body[data-theme="rainbow"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_Color.webp')}
 /* A custom or package theme is only a palette, so applyUiSettings() stamps
    data-theme-tone from its --bg; the default above already covers dark. */
-body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../../src/assets/brand/DraconDex_WhiteIn.png')}
+body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_WhiteIn.webp')}
 .nav-btn{
 	position:relative;
 	width:70%;aspect-ratio:1;height:auto;border:none;
@@ -85,20 +85,8 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 .split-btn{display:inline-flex;align-items:stretch;border-radius:var(--rs);overflow:hidden;margin-right:2px}
 .split-btn .btn{border-radius:0;min-height:26px}
 .split-btn .split-main{padding:0 8px;gap:4px}
-.split-btn .split-more{padding:0 5px;border-left:1px solid color-mix(in srgb,var(--on-accent,#fff) 30%,transparent)}
+.split-btn .split-more{padding:0 5px;border-left:1px solid color-mix(in srgb,var(--on-accent) 30%,transparent)}
 .split-btn .icon{width:14px;height:14px}
-
-/* MODULE ITEM (nexus left panel) */
-.module-item{
-  display:flex;align-items:center;gap:10px;
-  padding:9px 12px;border-radius:var(--r);
-  cursor:pointer;color:var(--t1);font-size:calc(14px * var(--fsc,1));font-weight:500;
-  transition:all var(--ease);
-}
-.module-item:hover{background:var(--hover)}
-.module-icon{display:flex;align-items:center;color:var(--accent-text,var(--accent));flex-shrink:0}
-.module-name{flex:1}
-.module-chevron{width:14px;height:14px;color:var(--t3-aa,var(--t2));flex-shrink:0}
 
 /* NEXUS VAULT PICKER */
 .nexus-vault-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -115,18 +103,10 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 /* Workspace switcher — dropdown of every Nexus, opened above the vault-head
    name (hub.js's positionPopupNear flips it upward near the panel bottom) */
 .nexus-switcher-popup{width:220px;max-height:300px;overflow-y:auto;padding:6px}
-.nexus-switcher-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--rs);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.nexus-switcher-item:hover{background:var(--hover)}
-.nexus-switcher-item.active{color:var(--accent-text,var(--accent))}
 /* Last row of the dropdown (v4.6.0): the list stops at 3 recent vaults, and
    this is the way to the full list — the Welcome window. */
-.nexus-switcher-more{border-top:1px solid var(--border);margin-top:6px;padding-top:9px;color:var(--t2)}
-.nexus-switcher-more:hover{color:var(--t1)}
-.nexus-item .btn-icon{opacity:0;border:none;background:none;color:var(--t3-aa,var(--t2));cursor:pointer;padding:2px;border-radius:var(--rs);display:flex;align-items:center}
-.nexus-item:hover .btn-icon{opacity:1}
-.nexus-item .btn-icon:hover{color:var(--t1)}
-.nexus-item .btn-icon .icon{width:14px;height:14px}
-.nexus-count{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));background:var(--hover);border-radius:var(--rl);padding:1px 8px;flex-shrink:0}
+.nexus-switcher-popup .nexus-switcher-more{border-top:1px solid var(--border);margin-top:var(--sp-1);border-radius:0}
+.nexus-switcher-popup .nexus-switcher-more:first-child{border-top:0;margin-top:0}
 
 /* ═══ V3 MODULE SYSTEM — Nexus nest hub (progress.md Phases 1-3) ═══ */
 .hub-toggle{
@@ -262,12 +242,8 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 .left-dest-body{flex:1;min-height:0;overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:4px}
 .left-search-input{width:100%}
 .left-search-res{display:flex;flex-direction:column;gap:2px}
-.left-search-row .name{white-space:normal}
 .left-search-row b{color:var(--accent-text,var(--accent))}
 .setting-db-io{display:flex;gap:8px;margin-bottom:14px}
-.prob-row{align-items:flex-start}
-.prob-row .name{white-space:normal}
-.prob-drops{display:flex;gap:6px;padding:6px 8px;border-radius:var(--rs,6px);background:var(--raised)}
 .csv-preview{max-height:320px;overflow:auto;border:1px solid var(--border);border-radius:var(--rs,6px)}
 .csv-preview table{border-collapse:collapse;font-size:calc(12px * var(--fsc,1));width:max-content;min-width:100%}
 .csv-preview th,.csv-preview td{padding:4px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;white-space:nowrap}
@@ -287,6 +263,9 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 #hub-body > .nest-create{padding:0 8px 6px;flex-shrink:0}
 #hub-body > .nest-create .split-btn{display:flex}
 #hub-body > .nest-create .split-main{flex:1;justify-content:center}
+/* Procress 20: the Nexus's folder is on a drive that is not connected */
+#hub-body > .nest-locate-warn{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 8px 6px;padding:6px 8px;border:1px solid var(--border);border-left:3px solid var(--warn);border-radius:var(--rs);background:var(--raised);color:var(--t2);font-size:calc(var(--fs-meta) * var(--fsc,1));line-height:1.4;flex-shrink:0}
+#hub-body > .nest-locate-warn span{flex:1;min-width:120px}
 #hub-body > .nest-filter{flex-shrink:0}
 .nest-filter-box{position:relative;display:flex;align-items:center}
 .nest-filter-box input{flex:1;padding-right:28px}
@@ -305,7 +284,9 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 .nest-thumb{width:16px;height:16px;object-fit:cover;border-radius:var(--rs);display:block}
 /* Procress 18 part 2 — Nest rows: 12 px per level (was 16, guides moved with
    it), ⋯ at the end on hover / keyboard focus, a count badge, a grab cursor */
-#nest-tree-body .li{cursor:grab}
+/* Procress 21 (UX-LAYOUT §12.2): the tree is a compact list — every row,
+   module, element or file, is --row-compact tall, at any UI Size. */
+#nest-tree-body .li{cursor:grab;min-height:var(--row-compact);padding-top:0;padding-bottom:0}
 #nest-tree-body .li:active{cursor:grabbing}
 #nest-tree-body .li:focus-visible{outline:2px solid var(--accentH,var(--accent));outline-offset:-2px}
 .li .nest-row-more{visibility:hidden;width:22px;height:22px;margin-left:2px;flex-shrink:0}
@@ -316,7 +297,7 @@ body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../..
 /* Setting hover preview (core/settings.js): a ring at the cursor fills over
    SETTING_PREVIEW_DELAY_MS, then the hovered theme/language previews. Lives
    on <html>, outside body's theme vars — color is set inline from --accent. */
-#preview-ring{position:fixed;left:0;top:0;width:20px;height:20px;margin:14px 0 0 10px;pointer-events:none;z-index:2147483647;opacity:0;transition:opacity .12s}
+#preview-ring{position:fixed;left:0;top:0;width:20px;height:20px;margin:14px 0 0 10px;pointer-events:none;z-index:var(--z-max);opacity:0;transition:opacity .12s}
 #preview-ring.on{opacity:1}
 #preview-ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
 #preview-ring circle{fill:none;stroke:currentColor;stroke-width:3}

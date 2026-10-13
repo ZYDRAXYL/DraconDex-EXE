@@ -185,15 +185,8 @@ async function openChatBubbleColorPopup(msgId, anchor) {
   const messages = sessionId ? await api.chatscribe.getMessages(sessionId) : [];
   const g = messages.find(m => m.id === msgId);
   if (!g) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup icon-edit-popup';
-  pop.innerHTML = await colorPicker(g.color || null);
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => {
-    e.stopPropagation();
-    if (e.target.closest('.cswatch')) saveChatBubbleColorLive(msgId);
-  });
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+  openPopover(anchor, await colorPicker(g.color || null), { cls: 'icon-edit-popup', keep: true, focus: false,
+    onClick: (e) => { if (e.target.closest('.cswatch')) saveChatBubbleColorLive(msgId); } });
 }
 
 async function saveChatBubbleColorLive(msgId) {

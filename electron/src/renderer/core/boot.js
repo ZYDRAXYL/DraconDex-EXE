@@ -18,6 +18,11 @@ async function init() {
   // precisely so the Welcome window can draw vault colours and run
   // colorPicker() when creating a vault.
   S.isWelcome = new URLSearchParams(location.search).get('welcome') === '1';
+  // Procress 25: the Create Nexus window (core/nexus-create.js) — no vault
+  // either, so it is a Welcome-family window: S.isWelcome makes the shared
+  // import / hand-off paths (core/views.js) behave as they do there.
+  S.isCreateNexus = new URLSearchParams(location.search).get('createNexus') === '1';
+  if (S.isCreateNexus) S.isWelcome = true;
   const [colors, recentColors, nexuses, windowId, installedPackages] = await Promise.all([
     api.color.getAll(),
     api.color.getRecent(),
@@ -69,6 +74,16 @@ async function init() {
   // away from it.
   bindPopupDismiss();
 
+  if (S.isCreateNexus) {
+    document.body.classList.add('create-nexus-mode');
+    document.body.dataset.workspace = 'drake'; // same reason as the Welcome window below
+    bindCreateNexusChrome();
+    observeUiLanguage(); // the colour picker's words come from COMMON_UI_TEXT
+    translateStaticChrome();
+    await renderCreateNexusWindow();
+    window.__splash?.finish();
+    return;
+  }
   if (S.isWelcome) {
     document.body.classList.add('welcome-mode');
     // This window has one layout of its own and never renders a workspace
@@ -115,7 +130,7 @@ async function init() {
   S.moduleCollapsed.load(S.nexus.id); // and its fold state (core/state.js)
   if (S.nexus && typeof reportRelationDedupe === 'function') reportRelationDedupe();
   if (S.nexus) reportParentNormalize();
-  if (S.nexus) scheduleMirrorSync(3000);
+  if (S.nexus) scheduleMirrorSync(3000, 'open');
   window.__splash?.set(88);
   // Set before the first render below — builderPaneHeadHtml (builder.js)
   // reads S.isPopup to decide whether to show the "move to main window" tab
@@ -163,18 +178,12 @@ async function init() {
     const meta = builderTabMeta(popupTabKey);
     if (meta) document.title = meta.name;
   }
-  // Onboarding tour handoff (v4.6.0): the vault was created in the Welcome
-  // window, which closed itself before the tour could run, so it left the new
-  // vault's id behind for whichever window opened it. Clear the flag first —
-  // it must fire exactly once even if the tour script fails to load.
-  if (!isPopup && S.nexus && localStorage.getItem(NEXUS_PENDING_GUIDE_KEY) === String(S.nexus.id)) {
-    localStorage.removeItem(NEXUS_PENDING_GUIDE_KEY);
-    // v5 Part 7 (§11.8): the example folder, then the tour over it.
-    Promise.resolve(createGuideBundle({ quiet: true })).catch(() => {})
-      .then(() => loadModule('src/renderer/guide.js'))
-      .then(() => { if (typeof startNexusGuide === 'function') startNexusGuide(); })
-      .catch(() => {});
-  }
+  // Pending work from the Create Nexus window (Procress 25, was the tour-only
+  // handoff of v4.6.0): the vault was made there, but its template, App Docs
+  // and tour need an open vault — this one. runPendingCreate (core/
+  // nexus-create.js) clears the key first, so it fires exactly once.
+  // Kept as S.pendingCreate so a test can wait for it.
+  if (!isPopup && S.nexus) S.pendingCreate = runPendingCreate().catch(() => {});
   bindNav();
   bindWikilinkClicks();
   bindGlobalShortcuts();
@@ -182,6 +191,8 @@ async function init() {
   initDriveAutoBackup();   // fire-and-forget — must not block first paint
   initVersionCheck();      // fire-and-forget — must not block first paint
   initLegacyDataCheck();   // fire-and-forget — must not block first paint
+  // Procress 22: dev builds get the component gallery (Ctrl+P, or --gallery)
+  api.window.devInfo().then((d) => { S.devMode = !!d?.dev; if (d?.gallery) runCommand('dev.gallery'); }).catch(() => {});
   window.__splash?.finish();
 }
 
@@ -189,7 +200,7 @@ async function init() {
 function bindPopupDismiss(){
   document.addEventListener('click', () => {
     document.querySelectorAll('.np-dropdown').forEach(d => d.style.display = 'none');
-    document.querySelectorAll('.kind-popup').forEach(d => d.remove());
+    document.querySelectorAll('.popover').forEach(d => d.remove());
   });
 }
 

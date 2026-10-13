@@ -13,7 +13,7 @@ function buildViewerTableHtml(d) {
       <td>${x(it.moduleName)}</td>
       <td data-no-i18n>${VIEWER_KIND_LABEL[it.kind] || it.kind}</td>
       <td data-no-i18n>${x(viewerTimeText(it))}</td>
-      <td>${(it.tags || []).map(tg => `<span class="htag">#${x(tg)}</span>`).join(' ')}</td>
+      <td>${(it.tags || []).map(tg => `<span class="chip chip-tag">#${x(tg)}</span>`).join(' ')}</td>
     </tr>`).join('');
   return `<table class="vw-table">
     <thead><tr><th>${t('name')}</th><th data-no-i18n>Module</th><th>${t('moduleKind')}</th><th>${t('timeLabel')}</th><th data-no-i18n>Tags</th></tr></thead>
@@ -29,7 +29,7 @@ function buildViewerCardsHtml(d) {
         <span class="vw-card-kind" data-no-i18n>${VIEWER_KIND_LABEL[it.kind] || it.kind}</span></div>
       <div class="vw-card-src" data-no-i18n>Module: ${x(it.moduleName)}</div>
       ${viewerTimeText(it) ? `<div class="vw-card-time" data-no-i18n>${x(viewerTimeText(it))}</div>` : ''}
-      ${(it.tags || []).length ? `<div class="vw-card-tags">${it.tags.map(tg => `<span class="htag">#${x(tg)}</span>`).join(' ')}</div>` : ''}
+      ${(it.tags || []).length ? `<div class="vw-card-tags">${it.tags.map(tg => `<span class="chip chip-tag">#${x(tg)}</span>`).join(' ')}</div>` : ''}
     </div>`).join('')}</div>`;
 }
 
@@ -67,7 +67,7 @@ function buildExhibitorEdgesHtml(d) {
   const rows = exhibitorEdgesAmong(keys).map(e2 => `
     <tr>
       <td>${x(exhNameOf(e2.from))}</td>
-      <td>${e2.wiki ? `<span class="htag" data-no-i18n>[[wiki]]</span>` : x(e2.label || '—')}</td>
+      <td>${e2.wiki ? `<span class="chip" data-no-i18n>[[wiki]]</span>` : x(e2.label || '—')}</td>
       <td>${x(e2.relType || '')}${e2.span ? `<div class="drafter-hint" data-no-i18n>${x(e2.span)}</div>` : ''}</td>
       <td data-no-i18n>${e2.wiki ? '┄' : e2.directed ? '→' : '—'}</td>
       <td>${x(exhNameOf(e2.to))}</td>

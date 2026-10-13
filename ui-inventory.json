@@ -1,0 +1,42 @@
+{
+  "note": "Procress 22 baseline — written by tools/ui-inventory.mjs --update; numbers may only go down",
+  "variants": {
+    "modal": 2,
+    "popup": 10,
+    "input": 15,
+    "segmented": 12,
+    "card": 11,
+    "button": 20,
+    "empty": 14,
+    "list": 55,
+    "chip": 15
+  },
+  "hexJs": 70,
+  "hexCss": 41,
+  "inlineStyle": 297,
+  "zIndexRaw": 0,
+  "iconsSvg": 283,
+  "iconsChar": 91,
+  "hexByFile": {
+    "electron/src/renderer/core/pickers.js": 1,
+    "electron/src/renderer/core/settings.js": 3,
+    "electron/src/renderer/hashtag.js": 2,
+    "electron/src/renderer/hub/export-view.js": 3,
+    "electron/src/renderer/hub/kinds.js": 18,
+    "electron/src/renderer/map.js": 4,
+    "electron/src/renderer/mod/chronicler.js": 2,
+    "electron/src/renderer/mod/classifier.js": 2,
+    "electron/src/renderer/mod/designer.js": 6,
+    "electron/src/renderer/mod/exhibitor-panels.js": 1,
+    "electron/src/renderer/mod/exhibitor-scene.js": 7,
+    "electron/src/renderer/mod/narrator-dialogue.js": 1,
+    "electron/src/renderer/mod/narrator.js": 2,
+    "electron/src/renderer/mod/sketcher.js": 9,
+    "electron/src/renderer/mod/wanderer.js": 6,
+    "electron/src/renderer/quickswitch.js": 1,
+    "electron/src/renderer/transfer.js": 2,
+    "electron/css/kinds.css": 8,
+    "electron/css/page-style.css": 12,
+    "electron/css/page.css": 21
+  }
+}

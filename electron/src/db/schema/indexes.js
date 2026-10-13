@@ -1,7 +1,19 @@
 'use strict';
 // Every CREATE INDEX, as one SQL string. DATA FILE (see ddl.js). Applied by
-// ensureIndexes() in schema/migrations.js.
-const INDEX_SQL = `
+// ensureIndexes() in schema/migrations.js, after the migrations.
+//
+// Two halves since Procress 19 part 2 (2026-10-10):
+//   VAULT_INDEX_SQL — the tables v5 uses. VENDORED from DraconDex-SDB
+//     (vault.sql's @indexes section), shared with APK. Add or change one
+//     THERE, never here: test/indexes.test.mjs in SDB holds both apps' hot
+//     queries to "no full table scan".
+//   LEGACY_INDEX_SQL — Director / Navigator / Hero / Writer, the systems only
+//     this app still reads. Stays here.
+// INDEX_SQL is both, and is what schemaStamp() hashes, so a new SDB index
+// re-runs ensureIndexes on every existing vault.
+const { VAULT_INDEX_SQL } = require('../../../../src/schema/generated/vault-ddl.electron.js');
+
+const LEGACY_INDEX_SQL = `
     -- Director
     CREATE INDEX IF NOT EXISTS idx_project_nexus             ON project(nexus_ref);
     CREATE INDEX IF NOT EXISTS idx_world_project_nexus       ON world_project(nexus_ref);
@@ -15,14 +27,7 @@ const INDEX_SQL = `
     CREATE INDEX IF NOT EXISTS idx_object_category           ON object(category_id);
     CREATE INDEX IF NOT EXISTS idx_object_attribute_template ON object_attribute(template_id);
     CREATE INDEX IF NOT EXISTS idx_timeline_project          ON timeline(project_id);
-    CREATE INDEX IF NOT EXISTS idx_timeline_module            ON timeline(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_timeline_event_timeline   ON timeline_event(timeline_id);
-    CREATE INDEX IF NOT EXISTS idx_timeline_event_start      ON timeline_event(start_at);
-    CREATE INDEX IF NOT EXISTS idx_timeline_event_end        ON timeline_event(end_at);
     CREATE INDEX IF NOT EXISTS idx_map_project               ON map(project_id);
-    CREATE INDEX IF NOT EXISTS idx_map_module                ON map(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_map_area_map              ON map_area(map_id);
-    CREATE INDEX IF NOT EXISTS idx_map_point_area            ON map_point(area_id);
     CREATE INDEX IF NOT EXISTS idx_relation_project          ON relation(project_id);
     CREATE INDEX IF NOT EXISTS idx_relation_type_ref         ON relation(relation_type);
     CREATE INDEX IF NOT EXISTS idx_relation_obob_relation    ON relation_obob(relation_id);
@@ -93,62 +98,13 @@ const INDEX_SQL = `
     CREATE INDEX IF NOT EXISTS idx_write_word_link_wiki      ON write_word_link(wiki_id);
     CREATE INDEX IF NOT EXISTS idx_write_note_project        ON write_note(project_id);
 
-    -- Scribe (v2.8)
-    CREATE INDEX IF NOT EXISTS idx_note_nexus                ON note(nexus_ref);
-    CREATE INDEX IF NOT EXISTS idx_note_folder_ref           ON note(folder_ref);
-    CREATE INDEX IF NOT EXISTS idx_note_folder_nexus         ON note_folder(nexus_ref);
-    CREATE INDEX IF NOT EXISTS idx_note_folder_parent        ON note_folder(parent_ref);
-    CREATE INDEX IF NOT EXISTS idx_wiki_link_src             ON wiki_link(src_key);
-    CREATE INDEX IF NOT EXISTS idx_wiki_link_target          ON wiki_link(target_key);
-
-    -- Module system (v3)
-    CREATE INDEX IF NOT EXISTS idx_module_nexus            ON module(nexus_ref);
-    CREATE INDEX IF NOT EXISTS idx_module_parent           ON module(parent_id);
-    CREATE INDEX IF NOT EXISTS idx_page_block_page         ON page_block(module_ref, item_key, block_order);
-    CREATE INDEX IF NOT EXISTS idx_module_ui_module        ON module_ui(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_module_hashtag_tag      ON module_hashtag(hashtag_id);
-
-    -- Classifier (Phase 5)
-    CREATE INDEX IF NOT EXISTS idx_classifier_object_module    ON classifier_object(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_classifier_template_module  ON classifier_template(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_classifier_template_object  ON classifier_template(object_ref);
-    CREATE INDEX IF NOT EXISTS idx_classifier_attribute_object ON classifier_attribute(object_ref);
-    CREATE INDEX IF NOT EXISTS idx_classifier_attribute_tmpl   ON classifier_attribute(template_ref);
-    CREATE INDEX IF NOT EXISTS idx_classifier_level_object   ON classifier_level(object_ref, template_ref);
-
-    -- FK columns that were queried in WHERE/JOIN but had no index. These matter
-    -- twice over: once for the lookups themselves, and once because
-    -- foreign_keys=ON with ON DELETE CASCADE makes SQLite full-scan every child
-    -- table on each parent-row delete when its FK column is unindexed.
-    CREATE INDEX IF NOT EXISTS idx_book_chapter_module    ON book_chapter(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_chat_session_module    ON chat_session(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_chat_message_session   ON chat_message(session_ref);
-    CREATE INDEX IF NOT EXISTS idx_story_dialogue_module  ON story_dialogue(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_story_talk_dialogue    ON story_talk(dialogue_ref);
-    CREATE INDEX IF NOT EXISTS idx_story_edge_module      ON story_edge(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_story_choice_opt_talk  ON story_choice_option(talk_ref);
-    CREATE INDEX IF NOT EXISTS idx_design_node_module     ON design_node(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_design_edge_module     ON design_edge(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_sketch_page_module     ON sketch_page(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_sketch_stroke_page     ON sketch_stroke(page_ref);
-    CREATE INDEX IF NOT EXISTS idx_sketch_pin_page        ON sketch_pin(page_ref);
-    CREATE INDEX IF NOT EXISTS idx_map_event_module       ON map_event(module_ref);
-    CREATE INDEX IF NOT EXISTS idx_map_event_event        ON map_event(event_ref);
-    CREATE INDEX IF NOT EXISTS idx_map_event_area         ON map_event(area_ref);
-    -- Not optional: with foreign_keys=ON, an unindexed FK makes SQLite
-    -- full-scan this table on every nexus-row delete.
-    CREATE INDEX IF NOT EXISTS idx_calendar_template_nexus ON calendar_template(nexus_ref);
-    CREATE INDEX IF NOT EXISTS idx_entity_relation_nexus  ON entity_relation(nexus_ref);
-    CREATE INDEX IF NOT EXISTS idx_wiki_link_nexus        ON wiki_link(nexus_ref);
-    -- Composite on purpose: _recordVersion does MAX(seq) WHERE module_ref=? and
-    -- ORDER BY seq DESC LIMIT ? in its prune subquery, so this covers both and
-    -- turns 3 full scans per edit into 3 seeks.
-    CREATE INDEX IF NOT EXISTS idx_module_version_module  ON module_version(module_ref, seq);
-    -- Composite matches addImportFiles' dedupe probe exactly (nexus_ref + file_path).
-    CREATE INDEX IF NOT EXISTS idx_import_file_nexus      ON import_file(nexus_ref, file_path);
-    -- v5 Asset Nest: the Nest tree and a module's Assets strip list by owner.
-    CREATE INDEX IF NOT EXISTS idx_import_file_module     ON import_file(module_ref);
+    -- idx_module_nexus (module(nexus_ref)) is superseded by SDB's
+    -- idx_module_nexus_parent (nexus_ref, parent_id), whose prefix answers
+    -- every query it did. Dropped so a vault does not maintain both.
+    DROP INDEX IF EXISTS idx_module_nexus;
 `;
 
 
-module.exports = { INDEX_SQL };
+const INDEX_SQL = VAULT_INDEX_SQL + LEGACY_INDEX_SQL;
+
+module.exports = { INDEX_SQL, VAULT_INDEX_SQL, LEGACY_INDEX_SQL };

@@ -57,7 +57,7 @@ function settingTokenSyncPageHtml(){
   }
   return `<div class="settings-label">${t('settingPageTokenSync')}</div>
     <div class="sync-status-row"><span>${t('syncTitle')}</span><b data-no-i18n>${x(S.nexus.name)}</b></div>
-    <button class="btn btn-p" onclick="openSyncModal()">☁ ${t('syncTitle')}</button>`;
+    <button class="btn btn-p" onclick="openSyncModal()">${I.cloud}${t('syncTitle')}</button>`;
 }
 registerSettingPage('appdata', 'tokensync', settingTokenSyncPageHtml);
 
@@ -69,7 +69,7 @@ function syncDevHintHtml(st) {
 // --- state: server not configured (also reachable from the other states)
 async function syncRenderConfig() {
   const cfg = await api.sync.getConfig();
-  openModal(`☁ ${t('syncTitle')} — ${t('syncServerSettings')}`, `
+  openModal(`${t('syncTitle')} — ${t('syncServerSettings')}`, `
     <div class="modal-hint">${I.info}<span>${t('syncConfigHint')}</span></div>
     <div class="fg"><label>${t('syncUrl')}</label><input id="sync-url" placeholder="https://xxxx.supabase.co" value="${x(cfg.url || '')}"></div>
     <div class="fg"><label>${t('syncAnonKey')}</label><input id="sync-anon-key" type="password" value="${x(cfg.anonKey || '')}"></div>
@@ -94,13 +94,13 @@ async function syncSaveConfig() {
 
 // --- state: configured, not logged in
 function syncRenderLoggedOut(st = {}) {
-  openModal(`☁ ${t('syncTitle')}`, `
+  openModal(`${t('syncTitle')}`, `
     ${syncDevHintHtml(st)}
     <div class="modal-hint">${I.info}<span>${t('syncLoggedOutHint')}</span></div>
     <div class="mfoot">
       ${st.dev ? '' : `<button class="btn btn-s" onclick="syncRenderConfig()">${t('syncServerSettings')}</button>`}
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" id="sync-login-btn" onclick="syncLoginNow()">☁ ${t('syncLoginGoogle')}</button>
+      <button class="btn btn-p" id="sync-login-btn" onclick="syncLoginNow()">${I.cloud}${t('syncLoginGoogle')}</button>
     </div>`);
 }
 
@@ -125,7 +125,7 @@ function syncUploadRowHtml(u, st) {
   return `
     <div class="sync-upload-row${isThis ? ' sync-upload-row-mine' : ''}">
       <div>
-        <b>${x(u.name)}</b>${isThis ? `<span class="sync-tag-chip">${t('syncThisNexus')}</span>` : ''}${u.hasPassword ? ' 🔒' : ''}
+        <b>${x(u.name)}</b>${isThis ? `<span class="chip chip-status" data-status="info">${t('syncThisNexus')}</span>` : ''}${u.hasPassword ? ` <span class="inline-ico">${I.lock}</span>` : ''}
         <div class="sync-hint">${syncFmtSize(u.sizeBytes)} · ${t('syncExpires')} ${syncFmtTime(u.expiresAt)}</div>
       </div>
       <div class="sync-upload-actions">
@@ -153,7 +153,7 @@ function syncRenderMain(st) {
     : `<div class="modal-hint">${I.info}<span>${t('syncNoUploads')}</span></div>`;
   const tierLabel = st.tier === 'pro' ? t('syncTierPro') : t('syncTierFree');
 
-  openModal(`☁ ${t('syncTitle')} — ${x(st.email || '')}`, `
+  openModal(`${t('syncTitle')} — ${x(st.email || '')}`, `
     ${syncDevHintHtml(st)}
     <div class="sync-status-row"><span>${t('syncSlots')}</span><b>${st.uploads.length}/${st.maxSlots} (${tierLabel})</b></div>
     ${rows}
@@ -161,7 +161,7 @@ function syncRenderMain(st) {
     <div class="fg"><label>${t('syncPush')}</label>
       <div class="sync-hint">${t('syncPushHint')}</div>
       <input id="sync-push-password" type="password" placeholder="${t('syncPasswordOptional')}">
-      <button class="btn btn-p" id="sync-push-btn" onclick="syncPushNow()">☁ ${t('syncPush')}</button>
+      <button class="btn btn-p" id="sync-push-btn" onclick="syncPushNow()">${I.cloud}${t('syncPush')}</button>
     </div>
     <div class="fg"><label>${t('syncEnterToken')}</label>
       <div class="sync-key-row">

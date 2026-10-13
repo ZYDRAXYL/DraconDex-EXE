@@ -38,6 +38,31 @@ function categoryOf(name) {
 const categoryLinkHtml = (name, count = null) => `<a class="pc-cat" role="link" tabindex="0" onclick="openCategoryPage(${xj(name)})"
   onkeydown="if(event.key==='Enter'){openCategoryPage(${xj(name)})}" data-no-i18n>#${x(name)}${count != null ? ` <span class="cnt">${count}</span>` : ''}</a>`;
 
+// The colour of a label (hashtag), from the app's palette (the same swatches
+// as every colour picker). One click from the Labels page.
+async function openTagColorPopover(btn, tagId) {
+  const tag = _catIndex?.tags.find((tg) => tg.id === tagId);
+  if (!tag) return;
+  if (!S.colors?.length) S.colors = await api.color.getAll();
+  const pop = openPopover(btn, `<div class="popover-head">${t('tagColor')} — <span data-no-i18n>#${x(tag.tag_name)}</span></div>
+    <div class="cpicker-wrap"><div class="cgrid">${buildColorSwatches(sortColorsByHex(S.colors), tag.tag_color)}</div><input type="hidden" id="sel-color" value=""></div>`,
+    { size: 'sm', aria: t('tagColor'), cls: 'tag-color-pop' });
+  for (const sw of pop.querySelectorAll('.cswatch')) {
+    sw.tabIndex = 0; sw.setAttribute('role', 'button');
+    sw.setAttribute('aria-label', (S.colors.find((c) => c.id === Number(sw.dataset.cid)) || {}).color_code || t('color'));
+    sw.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sw.click(); } });
+  }
+  pop.querySelector('.cswatch')?.focus();
+  pop.addEventListener('click', async (e) => {
+    const sw = e.target.closest('.cswatch');
+    if (!sw) return;
+    await api.hashtag.update(tag.id, tag.tag_name, Number(sw.dataset.cid));
+    closeAllPopups();
+    await loadCategoryIndex();
+    renderNexusHome();
+  });
+}
+
 function buildCategoryPageHtml() {
   const name = S.categoryPage || '';
   if (!_catIndex || _catIndex.nx !== S.nexus?.id) { loadCategoryIndex().then(() => renderNexusHome()).catch(() => {}); return '<div class="pb-loading"></div>'; }
@@ -46,13 +71,29 @@ function buildCategoryPageHtml() {
   const title = name ? `#${name}` : t('catTitle');
   const head = pageHeadHtml({ color: 'var(--accent)', icon: I.hashtag, title: `<span data-no-i18n>${x(title)}</span>`, titleText: title,
     addr: { label: title }, acts: `<button class="btn btn-s btn-sm" onclick="loadModule('src/renderer/hashtag.js').then(() => openHashtagModal())">${I.plus} ${t('hashtag')}</button>` });
-  const row = (m) => `<a class="li cat-member wikilink" data-key="module_${m.id}"><span class="kicon" aria-hidden="true">${moduleIconHtml(m)}</span>
-    <span class="name" data-no-i18n>${x(m.name)}</span><span class="cnt" data-no-i18n>${x(kindLabel(m.kind))}</span></a>`;
-  if (!name && !subs.length) return `<div class="module-page cat-page">${head}<p class="drafter-hint">${t('catEmpty')}</p></div>`;
+  // Procress 21: both lists are the shared list (core/list.js). Labels sort
+  // by how much they hold, then by name; the pages take a filter and a sort.
+  const row = (m) => listRowHtml({ icon: moduleIconHtml(m), title: m.name, meta: kindLabel(m.kind), cls: 'cat-member wikilink',
+    attrs: `data-key="module_${m.id}" data-no-i18n` });
+  if (!name && !subs.length) return `<div class="module-page cat-page">${head}${emptyStateHtml({ icon: I.hashtag, text: t('catEmpty') })}</div>`;
+  // Procress 24: the dot before a label is its colour — click it to change it.
+  const tagOf = (nm) => _catIndex.tags.find((tg) => tg.tag_name === nm);
+  const subRow = (c) => { const tg = tagOf(c.name);
+    return listRowHtml({ lead: tg ? colorDotBtnHtml(tg.color_code, `${t('tagColor')} — #${c.name}`, `openTagColorPopover(this,${tg.id})`) : '',
+      icon: tg ? null : I.hashtag, title: `#${c.name}`, count: c.count, onclick: `openCategoryPage(${xj(c.name)})`, attrs: 'data-no-i18n' }); };
+  const subsBody = () => { const v = listView('cat-subs', [...subs].sort((p2, q2) => q2.count - p2.count || p2.name.localeCompare(q2.name)), { name: (c) => c.name });
+    return v.length ? v.map(subRow).join('') : emptyStateHtml({ icon: I.search, text: t('listNoMatch') }); };
+  const memBody = () => { const v = listView('cat-members', [...members].sort((p2, q2) => p2.name.localeCompare(q2.name)), { name: (m) => m.name, kind: (m) => kindLabel(m.kind) });
+    return v.length ? listRowsHtml('cat-members', v, row) : emptyStateHtml({ icon: I.search, text: t('listNoMatch') }); };
+  listRegister('cat-subs', subsBody); listRegister('cat-members', memBody, { sort: 'name' });
+  const subsHtml = subsBody(), memHtml = memBody();
   return `<div class="module-page cat-page">${head}
     ${parent != null ? `<p class="cat-up">${categoryLinkHtml(parent)} ›</p>` : ''}
-    ${subs.length ? `<section class="cat-sec"><h3>${name ? t('catSub') : t('catTitle')}</h3><div class="cat-subs">${subs.map((s) => categoryLinkHtml(s.name, s.count)).join('')}</div></section>` : ''}
-    ${name ? `<section class="cat-sec"><h3>${t('catPages')} <span class="cnt" data-no-i18n>${members.length}</span></h3>
-      ${members.length ? `<div class="cat-members">${members.sort((a, b) => a.name.localeCompare(b.name)).map(row).join('')}</div>` : `<p class="drafter-hint">${t('catNone')}</p>`}</section>` : ''}
+    ${subs.length ? `<section class="cat-sec"><h3>${name ? t('catSub') : t('catTitle')}</h3>${listHtml({ list: 'cat-subs', aria: name ? t('catSub') : t('catTitle'),
+      head: subs.length > 8 ? listHeadHtml({ list: 'cat-subs', count: listState('cat-subs').shownCount }) : '', body: subsHtml })}</section>` : ''}
+    ${name ? `<section class="cat-sec"><h3>${t('catPages')}</h3>
+      ${members.length ? listHtml({ list: 'cat-members', aria: t('catPages'), body: memHtml,
+        head: listHeadHtml({ list: 'cat-members', count: listState('cat-members').shownCount, sorts: ['name', 'kind'] }) })
+        : emptyStateHtml({ icon: I.hashtag, text: t('catNone') })}</section>` : ''}
   </div>`;
 }

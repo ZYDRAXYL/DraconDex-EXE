@@ -21,6 +21,26 @@ function canvasFrameChromeHtml(c) {
     <div class="cf-grip" title="${t('cfResize')}"></div>`;
 }
 
+// Procress 19 (RAM): a board's window/document listeners are bound under an
+// AbortController so the next bind can drop them. But a page re-render makes
+// a NEW board element, so `board._x?.abort()` never found the old controller:
+// each open of Chronicler, Narrator or Locator left its listeners on window,
+// and through their closures the whole previous page (~400–480 nodes, ~80–95
+// listeners per open). boardSignal() aborts the board's previous binding and
+// every binding whose board has since left the document.
+const _boardBindings = new Set(); // { board, ac }
+function boardSignal(board, key) {
+  board[key]?.abort();
+  for (const b of _boardBindings) {
+    if (b.board.isConnected && !b.ac.signal.aborted) continue;
+    b.ac.abort();
+    _boardBindings.delete(b);
+  }
+  const ac = board[key] = new AbortController();
+  _boardBindings.add({ board, ac });
+  return ac.signal;
+}
+
 // Wire one board: engagement for the wheel, the grip, and a resize hook.
 // Engagement alone, for a canvas without the frame's chrome (a timeline
 // strip): pressing on it lets the wheel zoom it until the pointer leaves.

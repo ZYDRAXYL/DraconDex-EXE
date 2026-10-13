@@ -17,7 +17,7 @@ function updateTopNavButton(){
     } else {
       logoBtn.innerHTML = inModule
         ? I.return
-        : `<img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img" alt="DraconDex">`;
+        : `<img src="../src/assets/brand/web/DraconDex_WhiteOut.webp" class="brand-img" alt="DraconDex">`;
       const title = !inModule ? 'DraconDex' : tr('Back to Nexus');
       logoBtn.setAttribute('title', title);
       logoBtn.classList.toggle('is-return', inModule);
@@ -76,7 +76,7 @@ function toggleLayoutMenu(force){
 
 function updateTitlebarVault(){
   const el = q('#titlebar-vault');
-  if(el) el.textContent = S.nexus ? `${S.nexus.name} — DraconDex` : 'DraconDex';
+  if(el) el.textContent = S.nexus ? `${S.nexus.name} — DraconDex` : S.isCreateNexus ? t('cnTitle') : 'DraconDex';
 }
 
 // v3 module tabs are pane-scoped now (Phase 19): opening a module books it

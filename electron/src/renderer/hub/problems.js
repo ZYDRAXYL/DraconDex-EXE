@@ -20,23 +20,21 @@ function closeProblemsPanel() {
   renderLeftPanel();
 }
 
+// Procress 21: the shared list (core/list.js) — one group per kind of
+// problem with its count, a filter on top; every row opens its place.
 async function loadProblemsPanel() {
   const box = q('#left-problems');
   if (!box || !S.nexus) return;
   const rows = await api.tools.problems(S.nexus.id);
+  const groups = [];
   const drops = S.lastImportDrops;
   const dropN = drops ? (drops.relations || 0) + (drops.pins || 0) : 0;
-  let html = dropN ? `<div class="prob-row prob-drops"><span class="kicon" aria-hidden="true">${I.import}</span>
-      <span class="name">${t('probDrops').replace('{n}', dropN)}<small class="chs-snippet" data-no-i18n>${x(String(drops.at || '').slice(0, 16).replace('T', ' '))}</small></span></div>` : '';
-  if (!rows.length && !dropN) html = `<div class="empty"><p>${t('probNone')}</p></div>`;
+  if (dropN) groups.push({ id: 'drops', items: [{ icon: I.import, title: t('probDrops').replace('{n}', dropN), meta: String(drops.at || '').slice(0, 16).replace('T', ' ') }] });
   for (const type of ['link', 'relation', 'empty']) {
     const list = rows.filter(r => r.type === type);
-    if (!list.length) continue;
-    html += `<div class="kind-list-head">${t(PROBLEM_TYPE_KEY[type])} <span class="cnt" data-no-i18n>${list.length}</span></div>`
-      + list.map(r => `<div class="li prob-row"${r.key ? ` onclick="openEntityByKey(${xj(r.key)})"` : ''}>
-          <span class="kicon" aria-hidden="true">${I[PROBLEM_TYPE_ICON[type]]}</span>
-          <span class="name" data-no-i18n>${x(r.name)}<small class="chs-snippet">${x(type === 'empty' ? kindLabel(r.detail) : r.detail)}</small></span>
-        </div>`).join('');
+    if (list.length) groups.push({ id: type, title: t(PROBLEM_TYPE_KEY[type]), count: list.length, items: list.map(r => ({
+      icon: I[PROBLEM_TYPE_ICON[type]], title: r.name, meta: type === 'empty' ? kindLabel(r.detail) : r.detail,
+      onclick: r.key ? `openEntityByKey(${xj(r.key)})` : '' })) });
   }
   // Procress 16 B6: files whose source is gone — was the Import Dock's job.
   // Opening Problems is an explicit check, so stat the files again (a file
@@ -45,14 +43,46 @@ async function loadProblemsPanel() {
   if (typeof loadImportFiles === 'function') await loadImportFiles();
   const missing = (S.importFiles || []).filter(f => f.missing);
   if (missing.length) {
-    if (html.includes('class="empty"')) html = '';
-    html += `<div class="kind-list-head">${t('probMissing')} <span class="cnt" data-no-i18n>${missing.length}</span></div>`
-      + missing.map(f => `<div class="li prob-row" onclick="relinkImportFile(${f.id})" title="${x(t('assetRelink'))}">
-          <span class="kicon" aria-hidden="true">${I.folder || ''}</span><span class="name" data-no-i18n>${x(f.file_name)}<small class="chs-snippet">${x(f.file_path || '')}</small></span>
-        </div>`).join('')
-      + `<div class="li prob-row" data-cmd="dock.relinkFolder" onclick="runCommand('dock.relinkFolder')"><span class="kicon" aria-hidden="true">${I.folder || ''}</span><span class="name">${t('assetRelinkFolder')}</span></div>`;
+    groups.push({ id: 'missing', title: t('probMissing'), count: missing.length, items: [
+      ...missing.map(f => ({ icon: I.folder || '', title: f.file_name, meta: f.file_path || '', tip: t('assetRelink'), onclick: `relinkImportFile(${f.id})` })),
+      { icon: I.folder || '', title: t('assetRelinkFolder'), onclick: `runCommand('dock.relinkFolder')`, attrs: 'data-cmd="dock.relinkFolder"', cmd: true },
+    ] });
   }
-  box.innerHTML = html;
+  // Procress 20: the Nexus's folder — out of reach (its drive is gone), or
+  // asset files a Nexus from before then still keeps outside it.
+  const ls = typeof hasLocate === 'function' && hasLocate() ? await api.nexus.locateStatus(S.nexus.id).catch(() => null) : null;
+  if (ls && (ls.driveGone || ls.outside)) {
+    groups.push({ id: 'locate', title: t('probLocate'), items: [
+      ...(ls.driveGone ? [{ icon: I.folder || '', title: t('nexusLocalFolderDriveGone'), meta: ls.dir || '', onclick: 'moveNexusLocate(S.nexus.id)', cmd: true }] : []),
+      ...(ls.outside ? [{ icon: I.import || '', title: t('locateGather'), meta: t('locateOutside').replace('{n}', ls.outside), onclick: `gatherNexusAssets(S.nexus.id, ${Number(ls.outside)})`, cmd: true }] : []),
+    ] });
+  }
+  const s = listRegister('problems', problemsBodyHtml);
+  s.groups = groups;
+  const body = problemsBodyHtml();
+  box.innerHTML = listHtml({ list: 'problems', aria: t('probTitle'), body,
+    head: groups.length ? listHeadHtml({ list: 'problems', count: s.shownCount }) : '' });
+}
+
+function problemRowHtml(it) {
+  return listRowHtml({ icon: it.icon, title: it.title, meta: it.meta, onclick: it.onclick, tip: it.tip ?? null,
+    attrs: `${it.attrs || ''}${it.cmd ? '' : ' data-no-i18n'}` });
+}
+
+function problemsBodyHtml() {
+  const s = listState('problems');
+  const groups = s.groups || [];
+  if (!groups.length) { s.shownCount = 0; return emptyStateHtml({ icon: I.check, text: t('probNone') }); }
+  let n = 0;
+  const html = groups.map((g) => {
+    const items = listView('problems', g.items, { name: (it) => it.title, text: (it) => [it.title, it.meta] });
+    n += items.length;
+    if (!items.length) return '';
+    const rows = listRowsHtml('problems', items, problemRowHtml, { key: g.id });
+    return g.title ? listGroupHtml({ list: 'problems', id: g.id, title: g.title, count: g.count != null ? items.length : null, rows }) : rows;
+  }).join('');
+  s.shownCount = n;
+  return n ? html : emptyStateHtml({ icon: I.search, text: t('listNoMatch') });
 }
 
 function openProblemsPanel() {

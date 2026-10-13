@@ -127,12 +127,12 @@ async function importAsNewNexus(filePath, kind){
   }
 }
 // .dxpack (APP docs/ASSET-PACK.md): the tree and the files the APK / PWA
-// sorted into folders. main.js asks for a Locate folder when the Nexus has
-// none (the files need a place on disk); a cancel there is not an error.
+// sorted into folders. They land in the Nexus's Locate folder, which every
+// Nexus has since Procress 20 — nothing is asked.
 async function finishAssetPackImport(nexusId, filePath){
   const r = await api.db.importAssetPackAt(nexusId, null, filePath);
   if (r?.canceled) return false;
-  if (!r?.ok) { toast(t('packImportErr'), 'error'); return false; }
+  if (!r?.ok) { toast(t(r?.code === 'no_dir' ? 'nexusLocalFolderDriveGone' : 'packImportErr'), 'error'); return false; }
   const s = r.summary || {};
   const msg = t('packImportOk').replace('{folders}', s.collectors || 0).replace('{files}', s.files || 0);
   if (s.missing > 0) toast(`${msg} — ${t('packImportMissing').replace('{n}', s.missing)}`, 'warn');

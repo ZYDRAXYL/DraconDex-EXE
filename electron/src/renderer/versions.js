@@ -44,18 +44,25 @@ function toggleVersionPanel(moduleId) {
 
 const closeVersionPanel = () => closeSidePanel();
 
+// Procress 21: the shared list (core/list.js) — grouped by day (today /
+// this week / older), the latest marked current, Restore at the row's end.
+function versionRowHtml(v, latest) {
+  return listRowHtml({
+    title: `v${v.seq} — ${versionActionLabel(v.action)}`,
+    meta: [v.detail, versionRelTime(v.create_at)].filter(Boolean).join(' · '),
+    state: { current: latest }, attrs: 'data-no-i18n',
+    trailing: latest ? `<span class="ls-chip ls-on">${x(t('vCurrent'))}</span>` : '',
+    actions: latest ? '' : listActHtml({ icon: I.return, name: t('trashRestore'), text: true, key: 'Enter', onclick: `restoreVersionRow(${v.id})` }),
+  });
+}
+
 function buildVersionListHtml(d) {
-  const rows = d.rows.map((v, i) => `
-    <div class="vh-row${i === 0 ? ' vh-latest' : ''}">
-      <div class="vh-head">
-        <span class="vh-title" data-no-i18n>v${v.seq} — ${x(versionActionLabel(v.action))}</span>
-        ${i === 0 ? `<span class="vh-current">${t('vCurrent')}</span>`
-          : `<button class="btn btn-s btn-sm" onclick="restoreVersionRow(${v.id})" data-no-i18n>↩ Restore</button>`}
-      </div>
-      ${v.detail ? `<div class="vh-detail" data-no-i18n>${x(v.detail)}</div>` : ''}
-      <div class="vh-time" data-no-i18n>${x(versionRelTime(v.create_at))}</div>
-    </div>`).join('');
-  return `<div class="vh-list">${rows || `<div class="empty" style="padding:24px 10px"><p>${t('vEmpty')}</p></div>`}</div>
+  const latest = d.rows[0];
+  const body = d.rows.length
+    ? listByDate(d.rows, (v) => v.create_at).map(([id, title, group]) => listGroupHtml({ list: 'versions', id, title, count: group.length,
+      rows: listRowsHtml('versions', group, (v) => versionRowHtml(v, v === latest), { key: id }) })).join('')
+    : emptyStateHtml({ icon: I.timeline, text: t('vEmpty') });
+  return `<div class="vh-list">${listHtml({ list: 'versions', aria: t('versionHistory'), body })}</div>
     <div class="vh-foot">${t('vFootNote')}</div>`;
 }
 

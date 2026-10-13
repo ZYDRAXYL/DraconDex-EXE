@@ -89,7 +89,7 @@ function buildManagerMainHtml(m, c) {
     return toolbar + kindEmptyStateHtml(m, { note: t('managerEmpty') });
   }
   let body;
-  if (view === 'list') body = rows.map(r => buildManagerListRow(r)).join('');
+  if (view === 'list') body = listHtml({ list: 'manager', aria: m.name, body: rows.map(r => buildManagerListRow(r, d)).join('') });
   else if (view === 'table') body = renderManagerTable(rows);
   else if (view === 'graph') body = renderManagerGraphHtml(d);
   else body = renderManagerCards(rows);
@@ -108,7 +108,7 @@ function managerRowIcon(r) {
 
 function renderManagerCards(rows) {
   return `<div class="cls-grid">${rows.map(r => `
-    <div class="cls-card mgr-card" ${managerRowEvents(r)}>
+    <div class="card card-link cls-tile mgr-tile" ${managerRowEvents(r)}>
       <span class="disp-thumb"><img data-display-key="module_${r.id}" alt=""></span>
       <div class="mgr-card-icon" style="color:${x(r.color || 'var(--accent)')}">${managerRowIcon(r)}</div>
       <div class="cls-card-name" data-no-i18n>${x(r.name)}</div>
@@ -141,28 +141,22 @@ function buildManagerListRow(r, d) {
   const mm = findModuleNode(r.id);
   if (mm && ITEM_KIND[mm.kind] && open) ensureNestItemsLoaded(r.id);
   const items = Array.isArray(S.nestItems.get(r.id)) ? S.nestItems.get(r.id) : [];
-  const chev = items.length
-    ? `<svg class="icon tree-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
-        onclick="event.stopPropagation();toggleManagerListRow(${r.id})"><polyline points="${open ? '6 9 12 15 18 9' : '9 18 15 12 9 6'}"/></svg>`
-    : '<span class="tree-chev-spacer"></span>';
+  // Procress 21: rows of the shared list (core/list.js); a module with
+  // elements folds open into them, one step in. (The open set used to be
+  // read from an argument nobody passed, so the chevron never opened.)
+  const fold = items.length
+    ? `<span class="ls-fold" role="button" tabindex="-1" aria-label="${x(r.name)}" aria-expanded="${open}" onclick="event.stopPropagation();toggleManagerListRow(${r.id})">${open ? I.chevronDown : I.chevronRight}</span>`
+    : '<span class="ls-fold"></span>';
   const below = open && mm ? items.map(it => buildManagerListItemRow(it, mm.kind, r.id)).join('') : '';
-  return `<div class="li" ${managerRowEvents(r)}>
-    ${chev}
-    <span class="kicon" aria-hidden="true" style="color:${x(r.color || 'var(--accent)')}">${managerRowIcon(r)}</span>
-    <span class="name" data-no-i18n>${x(r.name)}</span>
-    <span class="kind">${x(kindLabel(r.ownKind))}</span>
-    <span class="mgr-row-count" data-no-i18n title="${t('minorElements')}">${items.length}</span>
-  </div>${below}`;
+  return listRowHtml({ lead: fold, icon: `<span style="color:${x(r.color || 'var(--accent)')}">${managerRowIcon(r)}</span>`, title: r.name,
+    meta: kindLabel(r.ownKind), count: items.length, onclick: `openModuleNode(${r.id})`, menu: `openManagerRowMenu(event,${r.id})`, attrs: 'data-no-i18n' }) + below;
 }
 
 function buildManagerListItemRow(item, kind, moduleId) {
   const reg = ITEM_KIND[kind];
   if (!reg) return '';
-  return `<div class="li nest-item-row indent1" onclick="openItemNode('${kind}',${moduleId},${item.id})">
-    <span class="tree-chev-spacer"></span>
-    <span class="kicon" aria-hidden="true" style="color:var(--t3-aa,var(--t2))">${reg.icon()}</span>
-    <span class="name">${x(reg.nameOf(item))}</span>
-  </div>`;
+  return listRowHtml({ cls: 'ls-indent', icon: `<span style="color:var(--t3-aa,var(--t2))">${reg.icon()}</span>`, title: reg.nameOf(item),
+    onclick: `openItemNode('${kind}',${moduleId},${item.id})`, attrs: 'data-no-i18n' });
 }
 
 function toggleManagerListRow(id) {

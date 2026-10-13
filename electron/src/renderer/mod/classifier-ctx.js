@@ -14,6 +14,16 @@ const clsObjectById = (id) => clsFindObject(id)
 
 // v5 Part 6: rows are commands (core/commands.js). The selected object is
 // the palette's target for the object commands; a level row has none.
+// Procress 24: a table column's head → that field (type · name · delete) —
+// the Structure tab's ✎ / delete, one click from the table.
+CTX_PROVIDERS['classifier.field'] = ({ moduleId, tplId }) => {
+  const c = { moduleId, tplId };
+  return [cmdItem('classifier.fieldType', c), cmdItem('classifier.fieldRename', c), { sep: true }, cmdItem('classifier.fieldDelete', c)];
+};
+function openClsFieldMenu(btn, moduleId, tplId) {
+  ctxMenu(null, CTX_PROVIDERS['classifier.field']({ moduleId, tplId }), { anchor: btn });
+}
+
 CTX_PROVIDERS['classifier.object'] = ({ moduleId, objectId }) => {
   const c = { moduleId, objectId };
   return [

@@ -23,19 +23,22 @@
 // renderer, run one after the other (SETTING_PAGE_MERGE), so the files that
 // register them (account.js, drive.js, plugin.js, db-transfer.js) did not
 // change. An old id still opens the page it now lives on (SETTING_PAGE_ALIAS).
+// Procress 24 (UX-LAYOUT §13): Appearance split in two again — theme + UI
+// style, then Language & text — so neither needs scrolling to find; and
+// "This Nexus" (name, colour, Locate folder) joins the group, so the open
+// vault is changed here instead of from the Welcome window.
 const SETTING_GROUPS = {
-  workspace: ['theme', 'tooltoggle', 'style', 'startup'],
+  workspace: ['theme', 'textsize', 'thisnexus', 'tooltoggle', 'style', 'startup'],
   user: ['account'],
   appdata: ['tokensync', 'transfer', 'database', 'cloudstorage', 'versions'],
   plugin: ['extension', 'plugin', 'packages'],
 };
 const SETTING_PAGE_MERGE = {
-  theme: ['theme', 'textsize'],
   account: ['account', 'profile'],
   database: ['database', 'backup'],
   plugin: ['plugin', 'pluginsettings'],
 };
-const SETTING_PAGE_ALIAS = { textsize: 'theme', profile: 'account', backup: 'database', pluginsettings: 'plugin' };
+const SETTING_PAGE_ALIAS = { profile: 'account', backup: 'database', pluginsettings: 'plugin' };
 function settingGroupPages(group){
   const pages = SETTING_GROUPS[group] || SETTING_GROUPS.workspace;
   return cloudSyncAvailable() ? pages : pages.filter(p => p !== 'tokensync');
@@ -45,7 +48,7 @@ const SETTING_GROUP_LABEL_KEY = {
   appdata: 'settingGroupAppdata', plugin: 'settingGroupPlugin',
 };
 const SETTING_PAGE_LABEL_KEY = {
-  theme: 'settingPageAppearance', textsize: 'settingPageTextSize', tooltoggle: 'settingPageToolToggle',
+  theme: 'settingPageAppearance', textsize: 'settingPageTextSize', thisnexus: 'settingPageThisNexus', tooltoggle: 'settingPageToolToggle',
   style: 'settingPageWorkspaceStyle', startup: 'settingPageStartup',
   account: 'settingPageAccount', profile: 'settingPageProfile',
   tokensync: 'settingPageTokenSync', transfer: 'settingPageTransfer',
@@ -68,11 +71,15 @@ function registerSettingPage(group, page, fn){
 // (start at top, same as opening the window fresh) — reset on open so the
 // window always starts at the top the moment it's shown.
 let _settingWindowLastKey = null;
+// Procress 24 (UX-LAYOUT §13.1): Settings opens on the page that fits where
+// it was opened from (the caller names it); opened plainly — the ⚙ — it is
+// Appearance, always, not whichever page was looked at last.
 function openSettingWindow(group, page){
   page = SETTING_PAGE_ALIAS[page] || page;
-  S.settingGroup = group || S.settingGroup || 'workspace';
+  if (!group) { group = 'workspace'; page = 'theme'; }
+  S.settingGroup = group;
   const pages = settingGroupPages(S.settingGroup);
-  S.settingPage = page || (pages.includes(S.settingPage) ? S.settingPage : pages[0]);
+  S.settingPage = page && pages.includes(page) ? page : pages[0];
   _settingWindowLastKey = null;
   openFloatingPanel('setting-window', `${I.settings} ${t('settingWindowTitle')}`, settingWindowBodyHtml(), {width:1040, height:680});
   _settingWindowLastKey = `${S.settingGroup}.${S.settingPage}`;
@@ -105,19 +112,15 @@ function renderSettingWindow(){
 function settingWindowNavHtml(){
   // Plan part2 "session head": every group's page list stays open (no more
   // single-open accordion), and the group header is plain text now that
-  // clicking it has nothing left to toggle — page buttons below are the only
-  // way to select a page.
-  return Object.keys(SETTING_GROUPS).map(g => {
+  // clicking it has nothing left to toggle — page rows below are the only
+  // way to select a page. Procress 21: compact rows of the shared list
+  // (core/list.js), the open page as the selected row.
+  return listHtml({ list: 'setting-nav', aria: t('settingWindowTitle'), body: Object.keys(SETTING_GROUPS).map(g => {
     const openGroup = S.settingGroup === g;
-    const pages = settingGroupPages(g).map(p => {
-      const active = openGroup && S.settingPage === p;
-      return `<button type="button" class="setting-nav-item${active?' active':''}" onclick="selectSettingPage('${g}','${p}')">${t(SETTING_PAGE_LABEL_KEY[p])}</button>`;
-    }).join('');
-    return `<div class="setting-nav-group${openGroup?' open':''}">
-      <div class="setting-nav-head">${t(SETTING_GROUP_LABEL_KEY[g])}</div>
-      <div class="setting-nav-pages">${pages}</div>
-    </div>`;
-  }).join('');
+    const rows = settingGroupPages(g).map(p => listRowHtml({ density: 'compact', title: t(SETTING_PAGE_LABEL_KEY[p]),
+      state: { selected: openGroup && S.settingPage === p }, onclick: `selectSettingPage('${g}','${p}')` })).join('');
+    return listGroupHtml({ list: 'setting-nav', id: g, title: t(SETTING_GROUP_LABEL_KEY[g]), rows, collapsible: false });
+  }).join('') });
 }
 function settingWindowBodyHtml(){
   const parts = (SETTING_PAGE_MERGE[S.settingPage] || [S.settingPage])
@@ -160,7 +163,7 @@ function settingThemeGridCellHtml(key, name, vars, {active, isCustom, onclick, t
     <div class="prefs-theme-name" data-no-i18n>${x(name)}</div>
     ${tools ? `<div class="prefs-theme-tools">
       <span onclick="event.stopPropagation();duplicateTheme(${xj(key)})" title="${t('duplicate')}">⧉</span>
-      ${isCustom ? `<span onclick="event.stopPropagation();openCustomThemeModal(${xj(rawId)})" title="${t('edit')}">✎</span>
+      ${isCustom ? `<span onclick="event.stopPropagation();openCustomThemeModal(${xj(rawId)})" title="${t('edit')}">${I.edit}</span>
                     <span onclick="event.stopPropagation();deleteCustomTheme(${xj(rawId)})" title="${t('delete')}">×</span>` : ''}
     </div>` : ''}
     ${active ? `<span class="prefs-theme-check">${I.check}</span>` : ''}
@@ -192,6 +195,10 @@ registerSettingPage('workspace', 'theme', settingThemePageHtml);
 // there's nothing real to preview here.
 function settingThemeCatalogCellHtml(p){
   const btnSel = `#pkg-inline-${p.id}`;
+  if (p.appTooOld) return `<div class="prefs-theme-cell locked" title="${x(pkgNeedsAppText(p))}">
+    <div class="ctm-preview mini prefs-theme-cell-lockglyph">${I.info}</div>
+    <div class="prefs-theme-name" data-no-i18n>${x(pkgDisplayName(p))}</div>
+  </div>`;
   // The catalog's preview.vars (validated in main) is enough to draw the real
   // mockup; an entry without one (older catalog) keeps the plain glyph.
   const pv = p.preview?.vars;
@@ -212,7 +219,11 @@ function settingThemeSectionHtml(){
   const customs = (S.settings.customThemes || []).map(ct =>
     settingThemeGridCellHtml(`custom:${ct.id}`, ct.name, ct.vars || {}, {active: S.settings.theme === `custom:${ct.id}`, isCustom: true})
   ).join('');
-  const addBox = `<div class="prefs-theme-cell prefs-theme-add" onclick="openCustomThemeModal()" title="${t('customThemeNew')}">+</div>`;
+  // Procress 24: a card that says what it is — "Your themes" over "Create
+  // custom theme" — not a bare +; and a real button for the keyboard.
+  const addBox = `<div class="prefs-theme-cell prefs-theme-add" role="button" tabindex="0" onclick="openCustomThemeModal()"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" title="${t('customThemeNew')}" aria-label="${t('customThemeNew')}">
+    <span class="prefs-theme-add-group">${t('themeGroupCustom')}</span>${I.plus}<span class="prefs-theme-add-label">${t('customThemeNew')}</span></div>`;
   // Not-yet-downloaded catalog themes only ever show once expanded — the
   // collapsed 3-slot view is reserved for the app's own basics, same rule
   // custom themes already follow just above.
@@ -240,21 +251,26 @@ function toggleSettingThemeExpanded(){
 const UI_STYLE_LABEL_KEY = {
   roundedMinimal: 'uiStyleRoundedMinimal', cleanMinimal: 'uiStyleCleanMinimal',
   fluent: 'uiStyleFluent', hardBlock: 'uiStyleHardBlock', oldPlain: 'uiStyleOldPlain',
+  glass: 'uiStyleGlass',
 };
+// Procress 23: a built-in style's sample — the glass one shows a frosted pane
+// over the current theme's backdrop (css/glass.css), the others their shape.
+function uiStyleSampleHtml(key){
+  return `<span class="uistyle-sample${key === 'glass' ? ' glass-sample' : ''}" aria-hidden="true"><i></i></span>`;
+}
 // Procress 10 part 2: a catalog uistyle package not yet downloaded — locked,
 // no onclick, Download button where the checkmark slot would be.
 function settingUiStyleCatalogItemHtml(p){
   const btnSel = `#pkg-inline-${p.id}`;
+  // Procress 23: made for a newer app (minAppVersion) — say so, no Download.
+  if (p.appTooOld) return listRowHtml({ title: pkgDisplayName(p), meta: pkgNeedsAppText(p), state: { disabled: true }, attrs: 'data-no-i18n' });
   // A shape sample drawn from the catalog's preview.vars: the preset's own
   // corner radius and popup shadow, on the current theme's colours.
   const pv = p.preview?.vars;
   const sample = pv
     ? `<span class="uistyle-sample" style="border-radius:${x(pv['--rl'])};box-shadow:${x(pv['--shadow-pop'])}"><i style="border-radius:${x(pv['--rs'])}"></i></span>` : '';
-  return `<div class="theme-item locked${pv ? ' has-preview' : ''}" title="${t('pkgPreviewHint')}">
-    ${sample}
-    <span class="theme-name" data-no-i18n>${x(pkgDisplayName(p))}</span>
-    <button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}">${I.import}</button>
-  </div>`;
+  return listRowHtml({ lead: sample, title: pkgDisplayName(p), tip: t('pkgPreviewHint'), state: { disabled: true }, attrs: 'data-no-i18n',
+    trailing: `<button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}" aria-label="${t('pkgInstall')}">${I.import}</button>` });
 }
 function settingUiStyleSectionHtml(){
   const expanded = !!S.settingUiStyleExpanded;
@@ -269,10 +285,9 @@ function settingUiStyleSectionHtml(){
     const label = UI_STYLE_LABEL_KEY[key]
       ? t(UI_STYLE_LABEL_KEY[key])
       : pkgDisplayName(INSTALLED_PACKAGES.uistyles.find(u => `pkg:${u.id}` === key)) || key;
-    return `<button type="button" class="theme-item${active ? ' active' : ''}" onclick="setUiSetting('uiStyle','${key}')">
-      <span class="theme-name"${UI_STYLE_LABEL_KEY[key] ? '' : ' data-no-i18n'}>${x(label)}</span>
-      ${active ? `<span class="theme-check">${I.check}</span>` : ''}
-    </button>`;
+    return listRowHtml({ lead: UI_STYLE_LABEL_KEY[key] ? uiStyleSampleHtml(key) : '', title: label, state: { selected: active }, onclick: `setUiSetting('uiStyle','${key}')`,
+      meta: key === 'glass' ? t('uiStyleGlassHint') : '',
+      attrs: UI_STYLE_LABEL_KEY[key] ? '' : 'data-no-i18n', trailing: active ? `<span class="theme-check">${I.check}</span>` : '' });
   }).join('');
   const notDownloaded = expanded
     ? pkgCatalogGap('uistyle', UI_STYLE_OPTIONS_BUILTIN).map(settingUiStyleCatalogItemHtml).join('') : '';
@@ -281,8 +296,26 @@ function settingUiStyleSectionHtml(){
         <span class="settings-label">${t('settingUiStyle')}</span>
         <button class="btn btn-s btn-sm" onclick="toggleSettingUiStyleExpanded()">${expanded ? t('settingCollapse') : t('settingShowAll')}</button>
       </div>
-      <div class="theme-list">${cells}${notDownloaded}</div>
+      ${listHtml({ list: 'uistyles', aria: t('settingUiStyle'), body: cells + notDownloaded })}
+      ${settingReduceTransparencyHtml()}
+      ${settingSystemGlassHtml()}
     </div>`;
+}
+// Procress 23: app-wide, not glass-only — it also turns fluent's Acrylic and
+// the dimmed scrims behind dialogs solid. The OS setting applies on its own.
+function settingReduceTransparencyHtml(){
+  const on = !!S.settings.reduceTransparency;
+  return `<div class="togglerow setting-switch" role="switch" tabindex="0" aria-checked="${on}" onclick="setUiSetting('reduceTransparency', ${!on})"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><span class="tg${on ? ' on' : ''}"></span>${t('settingReduceTransparency')}</div>`;
+}
+// Procress 23: the OS's own glass material — experimental, off by default,
+// only offered where it could exist (Windows / macOS) and only for the glass
+// style it backs.
+function settingSystemGlassHtml(){
+  if (S.settings.uiStyle !== 'glass' || typeof systemGlassPlatform !== 'function' || !systemGlassPlatform()) return '';
+  const on = !!S.settings.systemGlass;
+  return `<div class="togglerow setting-switch" role="switch" tabindex="0" aria-checked="${on}" onclick="setUiSetting('systemGlass', ${!on})"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><span class="tg${on ? ' on' : ''}"></span>${t('settingSystemGlass')}</div>`;
 }
 function toggleSettingUiStyleExpanded(){
   S.settingUiStyleExpanded = !S.settingUiStyleExpanded;
@@ -302,6 +335,9 @@ function settingLangPreviewHtml(lang){
 }
 function settingPreviewLang(lang){
   S.settingPreviewLang = lang;
+  // Procress 19 F8: only the saved language is parsed at boot — load the
+  // hovered one, then draw it if the pointer is still on it.
+  if (!i18nLoaded(lang)) return i18nLoad(lang).then(() => { if (S.settingPreviewLang === lang) settingPreviewLang(lang); });
   const el = q('.prefs-lang-preview');
   if (el) el.innerHTML = settingLangPreviewHtml(lang);
 }
@@ -353,16 +389,23 @@ function sliderNumberRowHtml(labelHtml, { min, max, step = 1, value, commit }) {
 // checkmark slot.
 function settingLangCatalogItemHtml(p){
   const btnSel = `#pkg-inline-${p.id}`;
-  return `<div class="lang-item locked">
-    <span data-no-i18n>${x(pkgDisplayName(p))}</span>
-    <button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}">${I.import}</button>
-  </div>`;
+  return listRowHtml({ title: pkgDisplayName(p), state: { disabled: true }, attrs: 'data-no-i18n',
+    trailing: `<button class="btn btn-p btn-i btn-i-sm" id="pkg-inline-${x(p.id)}" onclick="event.stopPropagation();pkgInstallInline('${x(p.id)}','${btnSel}')" title="${t('pkgInstall')}" aria-label="${t('pkgInstall')}">${I.import}</button>` });
+}
+// Procress 21: one language row of the shared list (core/list.js) — its own
+// name, and as meta its name in the language the app speaks now. Hovering
+// it previews the language (data-preview-lang, core/settings.js).
+function langNameHere(lang) {
+  try { const n = new Intl.DisplayNames([S.settings.language], { type: 'language' }).of(lang); return n && n !== lang ? n : ''; } catch (_) { return ''; }
+}
+function langRowHtml(lang, onclick) {
+  const on = S.settings.language === lang;
+  return listRowHtml({ title: LANGUAGE_LABELS[lang], meta: langNameHere(lang), state: { selected: on }, onclick, attrs: `data-preview-lang="${lang}" data-no-i18n`,
+    trailing: on ? `<span class="theme-check">${I.check}</span>` : '' });
 }
 function settingTextSizePageHtml(){
-  const rows = UI_LANGUAGE_OPTIONS.map(lang => `
-    <div class="lang-item${S.settings.language===lang?' active':''}" data-preview-lang="${lang}" onclick="setUiSetting('language','${lang}')">
-      <span>${LANGUAGE_LABELS[lang]}</span>${S.settings.language===lang?`<span class="theme-check">${I.check}</span>`:''}
-    </div>`).join('') + pkgCatalogGap('lang', UI_LANGUAGE_OPTIONS_BUILTIN).map(settingLangCatalogItemHtml).join('');
+  const rows = listHtml({ list: 'langs', aria: t('language'), body: UI_LANGUAGE_OPTIONS.map(lang => langRowHtml(lang, `setUiSetting('language','${lang}')`)).join('')
+    + pkgCatalogGap('lang', UI_LANGUAGE_OPTIONS_BUILTIN).map(settingLangCatalogItemHtml).join('') });
   const areaRows = Object.keys(SETTING_AREA_CONTAINERS).map(key =>
     sliderNumberRowHtml(`${t('settingArea_'+key)} (%)`, { min: 50, max: 150, value: (S.settings.areaScale||{})[key] ?? 100, commit: `setAreaScale('${key}', this.value)` })).join('');
   return `<div class="settings-label">${t('language')}</div>
@@ -385,8 +428,8 @@ function settingTextSizePageHtml(){
       <div class="settings-label">${t('settingAreaScale')}</div>
       ${areaRows}
       <div class="settings-label">${t('help')}</div>
-      <button class="btn btn-s" style="width:100%;margin-bottom:6px" onclick="openShortcutsModal()">${I.info} ${t('shortcuts')}</button>
-      <button class="btn btn-s" style="width:100%" onclick="replayGuideTour()">${I.book} ${t('replayTour')}</button>
+      <div class="setting-wide-btns"><button class="btn btn-s" onclick="openShortcutsModal()">${I.info} ${t('shortcuts')}</button>
+      <button class="btn btn-s" onclick="replayGuideTour()">${I.book} ${t('replayTour')}</button></div>
     </div>` : ''}`;
 }
 function toggleSettingAdvanced(){
@@ -394,3 +437,20 @@ function toggleSettingAdvanced(){
   renderSettingWindow();
 }
 registerSettingPage('workspace', 'textsize', settingTextSizePageHtml);
+
+// ═══ Workspace → This Nexus (Procress 24) ═══════════════════════════════
+// The open vault's name, memo, colour, file and Locate folder — the same
+// fields as its Edit modal (nexusEditFieldsHtml, core/nexus.js), and the same
+// saveNexus(). Async (the colour picker reads the palette), so it patches its
+// own box once ready, like the plugin and package pages.
+function settingThisNexusPageHtml(){
+  const n = S.nexus;
+  if (!n) return `<div class="settings-label">${t('settingPageThisNexus')}</div><p class="drafter-hint">${t('nexusEmpty')}</p>`;
+  nexusEditFieldsHtml(n.id).then((html) => {
+    const el = q('#setting-thisnexus');
+    if (!el || S.settingPage !== 'thisnexus') return;
+    el.innerHTML = `${html}<div class="mfoot"><button class="btn btn-p" onclick="saveNexus(${n.id})">${t('save')}</button></div>`;
+  }).catch(() => {});
+  return `<div class="settings-label">${t('settingPageThisNexus')}</div><div id="setting-thisnexus">${t('syncWorking')}</div>`;
+}
+registerSettingPage('workspace', 'thisnexus', settingThisNexusPageHtml);

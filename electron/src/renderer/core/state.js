@@ -30,6 +30,8 @@ const I = {
   plus: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
   minus: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
   options: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>`,
+  // Procress 24: "display options" (the Nest's) — ⋯ stays "more actions"
+  sliders: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="4" x2="14" y2="4"/><line x1="10" y1="4" x2="3" y2="4"/><line x1="21" y1="12" x2="12" y2="12"/><line x1="8" y1="12" x2="3" y2="12"/><line x1="21" y1="20" x2="16" y2="20"/><line x1="12" y1="20" x2="3" y2="20"/><line x1="14" y1="2" x2="14" y2="6"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="16" y1="18" x2="16" y2="22"/></svg>`,
   close: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
   search: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
   star: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
@@ -72,7 +74,17 @@ const I = {
   narrator: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>`,
   sketcher: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>`,
   wanderer: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="12 7 14 12 12 17 10 12 12 7"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/></svg>`,
-  home: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>`
+  home: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>`,
+  // Procress 22: icons that replaced characters/emoji in buttons, menus and status
+  cloud: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>`,
+  external: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
+  arrowUp: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`,
+  arrowDown: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`,
+  arrowRight: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`,
+  alert: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  lock: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+  unlock: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`,
+  eraser: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16a2 2 0 0 1 0-2.83L13.17 3a2 2 0 0 1 2.83 0L21 8a2 2 0 0 1 0 2.83L12 20"/><line x1="6" y1="11" x2="13" y2="18"/></svg>`,
 };
 
 const UI_SETTINGS_KEY = 'novel-manager-ui-settings';
@@ -219,7 +231,9 @@ const WORKSPACE_STYLE_OPTIONS = ['drake', 'wyvern', 'dragon'];
 // uistyle package, so every existing UI_STYLE_OPTIONS.includes(x) call site
 // keeps working with no change.
 // Procress 10 part 2 (slim): fluent stays built in, Procress 13 outgrows 7 tokens.
-const UI_STYLE_OPTIONS_BUILTIN = ['oldPlain', 'fluent'];
+// Procress 23: glass — translucent chrome + blurred flyouts (css/glass.css),
+// built in for the same reason as fluent: it restyles components, not tokens.
+const UI_STYLE_OPTIONS_BUILTIN = ['oldPlain', 'fluent', 'glass'];
 const PACKAGED_UISTYLES = ['roundedMinimal', 'cleanMinimal', 'hardBlock'];
 const UI_STYLE_OPTIONS = UI_STYLE_OPTIONS_BUILTIN.slice();
 // Nav orientation (Process 5 part1) is vertical-only since the UX-LAYOUT
@@ -273,6 +287,12 @@ const CUSTOM_THEME_TOKENS = ['--bg','--surface','--raised','--hover','--border',
 // one of these before setting the ones a pkg: uistyle provides (there is no
 // optional subset here, unlike theme — a uistyle package must set all 7).
 const CUSTOM_UISTYLE_TOKENS = ['--r','--rs','--rl','--shadow-pop','--shadow-float','--shadow-menu','--shadow-modal'];
+// Procress 23: the optional glass group a uistyle package may add on top of
+// the 7 — all four or none (src/db/pkg-rules.js checks that before install).
+// Cleared and set by applyUiSettings() exactly like the 7; a package that
+// sets them only shows them under body[data-ui-style="glass"]-shaped rules,
+// so applyUiSettings() also marks <body> data-glass for such a package.
+const CUSTOM_GLASS_TOKENS = ['--glass-blur','--glass-tint','--glass-stroke','--glass-shadow'];
 
 // Cloud Sync (Supabase Token Sync) is switched off since v4.5.0. The repo is
 // open source now, and making every user or forker stand up their own
@@ -374,7 +394,14 @@ function loadUiSettings(){
   // preset is the "advanced" sub-setting, only meaningful while enabled.
   const animationsEnabled = saved.animationsEnabled !== false;
   const animationSpeed = ['fast', 'normal', 'slow'].includes(saved.animationSpeed) ? saved.animationSpeed : 'normal';
-  return { theme: theme2, language, size, nameMode, fontScale, customThemes, nestShowItems, nestShowMajorIcon, nestShowMinorIcon, nestSignatureMode, quickExtras, navToggles, hubQuickToggles, statusToggles, workspaceStyle, uiStyle, navOrientation, navHorizontalDisplay, navVerticalAlwaysLabel, dragonView, animationsEnabled, animationSpeed, autoCollapseLeft: saved.autoCollapseLeft !== false };
+  // Procress 23: "Reduce transparency" — every translucent layer drawn solid,
+  // whatever the UI style. Off by default; the OS preference
+  // (prefers-reduced-transparency) applies on its own in css/glass.css.
+  const reduceTransparency = saved.reduceTransparency === true;
+  // Procress 23: "Use system glass" — experimental, off until tested on real
+  // hardware (core/glass.js systemGlassSync, src/db/system-glass.js).
+  const systemGlass = saved.systemGlass === true;
+  return { reduceTransparency, systemGlass, theme: theme2, language, size, nameMode, fontScale, customThemes, nestShowItems, nestShowMajorIcon, nestShowMinorIcon, nestSignatureMode, quickExtras, navToggles, hubQuickToggles, statusToggles, workspaceStyle, uiStyle, navOrientation, navHorizontalDisplay, navVerticalAlwaysLabel, dragonView, animationsEnabled, animationSpeed, autoCollapseLeft: saved.autoCollapseLeft !== false };
 }
 
 // Kind display names (Phase 22): the Unique set (KIND_LABEL, locale-

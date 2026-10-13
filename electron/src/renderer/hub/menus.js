@@ -149,12 +149,7 @@ function openNavSidebarContextMenu(ev) {
   ev.preventDefault();
   closeAllPopups();
   S.ctxMenuPos = { x: ev.clientX, y: ev.clientY };
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup context-menu-popup nav-pin-popup';
-  pop.innerHTML = buildNavPinListHtml();
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  positionPopupNear(pop, ctxAnchor(ev).getBoundingClientRect());
+  const pop = openPopover(ctxAnchor(ev), buildNavPinListHtml(), { cls: 'context-menu-popup nav-pin-popup', keep: true });
 }
 function buildNavPinListHtml() {
   if (!S.moduleTree.length) return `<div class="kind-list-item" style="opacity:.6;pointer-events:none"><span class="kli-name">${x(t('nestEmpty'))}</span></div>`;
@@ -163,7 +158,7 @@ function buildNavPinListHtml() {
   // and toggle nested modules too, not just root-level ones.
   return flattenModuleTree(S.moduleTree, 0).map(({ m, depth }) => `
     <div class="kind-list-item" style="padding-left:${10 + depth * 14}px" onclick="toggleNavPinAndRefresh(${m.id})">
-      <span class="kicon" aria-hidden="true" style="color:${x(m.icon_color_code || m.color_code || '#6366f1')}">${moduleIconHtml(m)}</span>
+      <span class="kicon" aria-hidden="true" style="color:${x(m.icon_color_code || m.color_code || 'var(--accent)')}">${moduleIconHtml(m)}</span>
       <span class="kli-name">${x(m.name)}</span>
       <span class="ctx-check">${m.pinned ? I.check : ''}</span>
     </div>`).join('');
@@ -198,12 +193,7 @@ function openHubQuickMenuContextMenu(ev) {
   ev.stopPropagation();
   closeAllPopups();
   S.ctxMenuPos = { x: ev.clientX, y: ev.clientY };
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup context-menu-popup hub-quickmenu-popup';
-  pop.innerHTML = buildHubQuickMenuToggleHtml();
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  positionPopupNear(pop, ctxAnchor(ev).getBoundingClientRect());
+  const pop = openPopover(ctxAnchor(ev), buildHubQuickMenuToggleHtml(), { cls: 'context-menu-popup hub-quickmenu-popup', keep: true });
 }
 function buildHubQuickMenuToggleHtml() {
   const hqt = S.settings.hubQuickToggles || {};
@@ -224,26 +214,19 @@ function toggleHubQuickMenuAndRefresh(key) {
 }
 
 // Nexus Nest display options popup (Plan part1 #2) — 4 toggles driven by
-// S.settings, same .kind-popup + positionPopupNear idiom as every other
+// S.settings, same .popover + openPopover idiom as every other
 // popup in this file.
 function openNestOptionsPopup(anchor) {
   closeAllPopups();
   if (!anchor) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup nest-options-popup';
-  pop.innerHTML = buildNestOptionsPopupHtml();
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+  const pop = openPopover(anchor, buildNestOptionsPopupHtml(), { cls: 'nest-options-popup', keep: true });
 }
 function buildNestOptionsPopupHtml() {
   const s = S.settings;
   const row = (onclick, on, labelKey) =>
     `<div class="togglerow nest-opt-row" onclick="${onclick}"><span class="tg${on ? ' on' : ''}"></span>${t(labelKey)}</div>`;
-  // Same .name-mode-seg control the Preferences panel uses (nameModeSegHtml,
-  // core/settings.js) — btn-p marks the active option, btn-s the rest.
-  const sig = (mode, labelKey) =>
-    `<button class="btn ${s.nestSignatureMode === mode ? 'btn-p' : 'btn-s'}" onclick="setNestSignatureMode('${mode}')">${t(labelKey)}</button>`;
+  // The shared segmented control (core/controls.js), as in Preferences.
+  const sig = [['name', 'nestSigName'], ['icon', 'nestSigIcon'], ['handle', 'nestSigHandle']].map(([value, k]) => ({ value, text: t(k) }));
   return [
     row("toggleNestOption('nestShowItems')", s.nestShowItems !== false, 'nestOptShowItems'),
     row("toggleNestOption('nestShowMajorIcon')", s.nestShowMajorIcon !== false, 'nestOptShowMajorIcon'),
@@ -254,7 +237,9 @@ function buildNestOptionsPopupHtml() {
     // 3-way, so a segmented row rather than a 4th toggle switch — the other
     // three rows above are genuine booleans and stay as they are.
     `<div class="nest-opt-row nest-sig-row"><div class="nest-sig-label">${t('nestOptSignature')}</div>
-      <div class="name-mode-seg">${sig('name', 'nestSigName')}${sig('icon', 'nestSigIcon')}${sig('handle', 'nestSigHandle')}</div></div>`,
+      ${segmentedHtml(sig, s.nestSignatureMode, { size: 'sm', fill: true, aria: t('nestOptSignature'), onclick: (v) => `setNestSignatureMode('${v}')` })}</div>`,
+    // Procress 24: the rest of how the workspace looks — Settings opens on that page.
+    `<div class="popover-foot"><button class="btn btn-s btn-sm" onclick="closeAllPopups();openSettingWindow('workspace','style')">${t('nestOptMoreLayout')}</button></div>`,
   ].join('');
 }
 
@@ -262,12 +247,7 @@ function buildNestOptionsPopupHtml() {
 function openKindPopup(parentId, anchor) {
   closeAllPopups();
   if (!anchor) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup kind-list-popup';
-  pop.innerHTML = buildKindListHtml(parentId, false, true);
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+  const pop = openPopover(anchor, buildKindListHtml(parentId, false, true), { cls: 'popover-menu', keep: true });
   // §9.5: 3 headings + 5 sub-headings + 14 rows will scroll in 360px, so
   // the search box matters more, not less — it takes focus on open.
   setTimeout(() => pop.querySelector('.kind-search')?.focus(), 0);
@@ -311,7 +291,7 @@ function buildKindListHtml(parentId, excludeCollector = false, withSearch = fals
   let html = '';
   if (withSearch) {
     html += `<input class="kind-search" placeholder="${x(t('kindSearch'))}" oninput="filterKindList(this)"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();this.closest('.kind-popup').querySelector('[data-kind-row]:not([hidden])')?.click()}">`;
+      onkeydown="if(event.key==='Enter'){event.preventDefault();this.closest('.popover').querySelector('[data-kind-row]:not([hidden])')?.click()}">`;
   }
   // v5 Part 7 (§11.7): "start from template" is a genre bundle — a whole
   // project in one click (hub/bundles.js). A bundle is a folder, so it can
@@ -355,7 +335,7 @@ function buildKindListHtml(parentId, excludeCollector = false, withSearch = fals
 // a query is active so the result reads as one flat list.
 function filterKindList(inp) {
   const needle = inp.value.trim().toLowerCase();
-  const pop = inp.closest('.kind-popup');
+  const pop = inp.closest('.popover');
   pop.querySelectorAll('[data-kind-row]').forEach(r => { r.hidden = !!needle && !r.dataset.search.includes(needle); });
   pop.querySelectorAll('[data-kind-head], .kind-artisan-row').forEach(h => { h.hidden = !!needle; });
 }

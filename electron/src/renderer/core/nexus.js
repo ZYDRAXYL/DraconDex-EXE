@@ -51,16 +51,15 @@ function toggleNexusSwitcher(e) {
   if (document.querySelector('.nexus-switcher-popup')) { closeAllPopups(); return; }
   closeAllPopups();
   const anchor = e.currentTarget;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup nexus-switcher-popup';
-  pop.innerHTML = recentNexuses(3).map(n => `
-    <div class="nexus-switcher-item" onclick="openNexusWindow(${n.id})">
-      <span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>${x(n.name)}
-    </div>`).join('') + `
-    <div class="nexus-switcher-item nexus-switcher-more" onclick="openWelcomeWindow()">${t('wmChangeNexus')}</div>`;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', ev => ev.stopPropagation());
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+  // Procress 21: a menu, so compact rows of the shared list (core/list.js)
+  openPopover(anchor, listHtml({ list: 'nexus-switcher', aria: t('wmChangeNexus'), body: recentNexuses(3).map(n => listRowHtml({ density: 'compact',
+    icon: `<span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>`,
+    title: n.name, state: { current: n.id === S.nexus?.id }, onclick: `openNexusWindow(${n.id})`, attrs: 'data-no-i18n' })).join('')
+    // Procress 24 (UX-LAYOUT §13): what you change about THIS Nexus, here, in
+    // this window — the ✎ used to live only in the Welcome window's list.
+    + (S.nexus ? listRowHtml({ density: 'compact', icon: I.settings, title: t('nexusSettingsThis'), cls: 'nexus-switcher-edit', onclick: `closeAllPopups();openNexusModal(${S.nexus.id})` })
+      + listRowHtml({ density: 'compact', icon: I.globe, title: t('publishSite'), cls: 'nexus-switcher-publish', onclick: "closeAllPopups();runCommand('app.publishSite')" }) : '')
+    + listRowHtml({ density: 'compact', icon: I.projects, title: t('wmChangeNexus'), cls: 'nexus-switcher-more', onclick: 'openWelcomeWindow()' }) }), { cls: 'nexus-switcher-popup', keep: true, focus: false });
 }
 
 // Every "let me pick a different vault" entry point funnels here: the switcher
@@ -91,7 +90,7 @@ function renderNexusPicker() {
         <button class="btn btn-p btn-sm" onclick="openWelcomeWindow()">+ ${t('nexusNew')}</button>
       </div>`;
     q('#main-inner').innerHTML = `<div class="empty" style="margin-top:80px">
-      <div class="ei"><img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img" alt="DraconDex" style="height:64px;width:64px;opacity:.35"></div>
+      <div class="ei"><img src="../src/assets/brand/web/DraconDex_WhiteOut.webp" class="brand-img" alt="DraconDex" style="height:64px;width:64px;opacity:.35"></div>
       <h3>${t('nexusWelcomeTitle')}</h3>
       <p>${t('nexusEmpty')}</p>
       <div style="display:flex;flex-direction:column;gap:8px;align-items:center;margin-top:18px">
@@ -103,17 +102,11 @@ function renderNexusPicker() {
   }
   q('#left-panel-inner').innerHTML = `
     <div class="ph"><h4>${t('nexus')}</h4>
-      <button class="btn btn-p btn-sm" onclick="openNexusModal()">+ ${t('nexusNew')}</button>
+      <button class="btn btn-p btn-sm" onclick="openCreateNexusWindow()">+ ${t('nexusNew')}</button>
     </div>
-    ${S.nexuses.map(n => `
-      <div class="module-item nexus-item" onclick="selectNexus(${n.id})">
-        <span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>
-        <span class="module-name">${x(n.name)}</span>
-        <span class="nexus-count">${n.project_count}</span>
-        ${nexusRowButtonsHtml(n)}
-      </div>`).join('')}`;
+    ${listHtml({ list: 'nexuses', aria: t('nexus'), body: S.nexuses.map(n => nexusRowHtml(n, `selectNexus(${n.id})`)).join('') })}`;
   q('#main-inner').innerHTML = `<div class="empty" style="margin-top:80px">
-    <div class="ei"><img src="../src/assets/brand/DraconDex_WhiteOut.png" class="brand-img" alt="DraconDex" style="height:64px;width:64px;opacity:.35"></div>
+    <div class="ei"><img src="../src/assets/brand/web/DraconDex_WhiteOut.webp" class="brand-img" alt="DraconDex" style="height:64px;width:64px;opacity:.35"></div>
     <h3>${t('nexusWelcomeTitle')}</h3>
     <p>${t('nexusSelect')}</p>
   </div>`;
@@ -154,7 +147,7 @@ async function selectNexus(id) {
   S.moduleCollapsed.load(S.nexus.id); // and its fold state (core/state.js)
   if (typeof reportRelationDedupe === 'function') reportRelationDedupe();
   reportParentNormalize();
-  scheduleMirrorSync(3000); // v5 Part 4: bring a located folder up to date, in the background
+  scheduleMirrorSync(3000, 'open'); // v5 Part 4 / Procress 20: the Nexus's folder — made if it has none — brought up to date, in the background
   renderNexusHome();
   renderModuleRail();
   updateStatusBar({ item: null, words: null, saveState: null });
@@ -174,26 +167,38 @@ async function reportParentNormalize() {
 // switcher's last row now open the Welcome window instead and leave this
 // window on its vault, so nothing called it any more.
 
-async function openNexusModal(id = null, { showGuideChoice = false } = {}) {
-  await reloadNexuses();
-  const n = id ? S.nexuses.find(v => v.id === id) : null;
-  openModal(n ? `✏️ ${t('nexusEdit')}` : `🗄️ ${t('nexusNew')}`, `
-    <div class="fg"><label>${t('name')} *</label><input id="nx-name" value="${x(n?.name || '')}"></div>
-    <div class="fg"><label>${t('memo')}</label><textarea id="nx-memo">${x(n?.memo || '')}</textarea></div>
-    <div class="fg"><label>${t('color')}</label>${await colorPicker(n?.color)}</div>
-    ${n ? nexusFileRowHtml(n) : await nexusSaveLocationHtml()}
-    ${n ? nexusLocateRowHtml(n) : ''}
-    ${!n && showGuideChoice ? `<div class="fg"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="nx-guide" type="checkbox" checked> ${t('nexusTourOption')}</label></div>` : ''}
+// Editing a Nexus. Creating one is the Create Nexus window's job (Procress
+// 25, core/nexus-create.js) — one way in, looked after in one place — so a
+// call with no id opens that window instead.
+async function openNexusModal(id = null) {
+  if (!id) return openCreateNexusWindow();
+  const fields = await nexusEditFieldsHtml(id);
+  if (!fields) return;
+  openModal(t('nexusEdit'), `
+    ${fields}
     <div class="mfoot">
-      ${n ? `<button class="btn btn-d" onclick="delNexus(${id})">${t('delete')}</button>`
-          : `<button class="btn btn-s" onclick="closeModal();importDatabaseFile()">${t('importDb')}</button>`}
+      <button class="btn btn-d" onclick="delNexus(${id})">${t('delete')}</button>
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="${n ? `saveNexus(${id})` : 'createNexusSubmit()'}">${n ? t('save') : t('create')}</button>
+      <button class="btn btn-p" onclick="saveNexus(${id})">${t('save')}</button>
     </div>`);
   setTimeout(() => q('#nx-name').focus(), 60);
 }
 
-// Where the vault file goes. Shown in every build, dev included, with the
+// The edit fields, shared by the modal above and Settings → This Nexus
+// (Procress 24). saveNexus() reads them by id.
+async function nexusEditFieldsHtml(id) {
+  await reloadNexuses();
+  const n = S.nexuses.find(v => v.id === id);
+  if (!n) return '';
+  return `
+    <div class="fg"><label for="nx-name">${t('name')} *</label><input id="nx-name" value="${x(n.name || '')}"></div>
+    <div class="fg"><label for="nx-memo">${t('memo')}</label><textarea id="nx-memo">${x(n.memo || '')}</textarea></div>
+    <div class="fg"><label>${t('color')}</label>${await colorPicker(n.color)}</div>
+    ${nexusFileRowHtml(n)}
+    ${nexusLocateRowHtml(n)}`;
+}
+
+// Where the vault file goes (the Create Nexus window's form). Shown in every build, dev included, with the
 // default already filled in — the dialog only opens if the user clicks Change,
 // which is what keeps the run-dracondex driver able to create a Nexus without
 // a native dialog blocking it forever.
@@ -248,34 +253,6 @@ async function relinkNexusLocation(id) {
   renderNexusHome();
 }
 
-async function createNexusSubmit() {
-  const name = q('#nx-name').value.trim(); if (!name) return;
-  S._guideAfterCreate = Boolean(q('#nx-guide')?.checked);
-  try {
-    const newId = await api.nexus.create(name, q('#nx-memo').value.trim(), q('#sel-color').value || null, S._nexusSavePath || null);
-    closeModal();
-    await reloadNexuses();
-    toast(t('nexusCreated'), 'ok');
-    // Created from the Welcome window: this window is about to close, so hand
-    // the new vault to a fresh app window and let the tour start over there
-    // (boot.js picks the flag up) instead of running it in a dying renderer.
-    if (S.isWelcome) {
-      if (S._guideAfterCreate) localStorage.setItem(NEXUS_PENDING_GUIDE_KEY, String(newId));
-      S._guideAfterCreate = false;
-      await welcomeOpenNexus(newId);
-      return;
-    }
-    await selectNexus(newId);
-    // Users who opted in get the coach-marks tour once the vault home is rendered.
-    if (S._guideAfterCreate) {
-      S._guideAfterCreate = false;
-      await createGuideBundle({ quiet: true }); // v5 Part 7 (§11.8): the example folder first
-      await loadModule('src/renderer/guide.js');
-      if (typeof startNexusGuide === 'function') startNexusGuide();
-    }
-  } catch (e) { toast(t('nexusNameTaken'), 'error'); }
-}
-
 async function saveNexus(id) {
   const name = q('#nx-name').value.trim(); if (!name) return;
   try {
@@ -292,6 +269,7 @@ async function delNexus(id) {
   const r = await api.nexus.delete(id);
   if (r?.blocked) { toast(t('nexusDeleteBlocked'), 'error'); return; }
   closeModal();
+  await offerTrashNexusFolder(r?.locateDir); // Procress 20: its folder stays unless the user says so
   if (S.nexus?.id === id) { S.nexus = null; localStorage.removeItem(NEXUS_ACTIVE_KEY); clearWorkspaceTabs(); }
   dropRecentNexus(id);
   await reloadNexuses();

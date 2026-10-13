@@ -33,24 +33,12 @@ const cmdModule = (c) => (c.moduleId != null ? findModuleNode(c.moduleId) : null
 const isFolderCtx = (c) => cmdModule(c)?.kind === 'collector';
 const cmdAsset = (c) => (c.fileId != null ? (S.importFiles || []).find(v => v.id === c.fileId) || (S.filePreview?.id === c.fileId ? S.filePreview : null) : null);
 
-// Where a palette-run command anchors a popup it opens: upper middle of the
-// window, where the palette itself was.
-function paletteAnchor() {
-  const x0 = Math.round(window.innerWidth / 2), y0 = Math.round(window.innerHeight * 0.22);
-  return { getBoundingClientRect: () => ({ left: x0, top: y0, bottom: y0, right: x0 }) };
-}
-
 // A hand-built submenu opened on its own (the palette has no row to hang it
-// on) — same .kind-popup the menus use, so Escape / arrows / closeAllPopups
+// on) — same .popover the menus use, so Escape / arrows / closeAllPopups
 // all apply.
 function openHtmlPopup(html, anchor) {
   closeAllPopups();
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup kind-list-popup';
-  pop.innerHTML = html;
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => e.stopPropagation());
-  positionPopupNear(pop, (anchor || paletteAnchor()).getBoundingClientRect());
+  const pop = openPopover(anchor || paletteAnchor(), html, { cls: 'popover-menu', keep: true });
   setTimeout(() => pop.querySelector('.kind-search, .kind-list-item')?.focus(), 0);
   return pop;
 }
@@ -94,6 +82,10 @@ const COMMANDS = {
   'db.import': { label: 'importDb', icon: 'import', scope: 'app', run: () => importDatabaseFile(), surfaces: ['setting.data'] },
   'db.export': { label: 'exportDb', icon: 'export', scope: 'app', run: () => exportDatabaseFile(), surfaces: ['setting.data'] },
   'app.exportHtml': { label: 'htmlExport', icon: 'export', scope: 'app', when: (c) => !!(c?.nexusId || S.nexus), run: (c) => openHtmlExportModal(c?.nexusId || S.nexus.id), surfaces: ['nexus.options', 'left.panel'] },
+  // Procress 24: the publish profile straight away — the same modal as
+  // app.exportHtml, named for what people come for, from the Nexus menu and
+  // the page's ⋯ (Export… keeps its format grid for every other file type).
+  'app.publishSite': { label: 'publishSite', icon: 'globe', scope: 'app', when: () => !!S.nexus, run: () => openHtmlExportModal(S.nexus.id), surfaces: ['page.head'] }, // + the Nexus switcher (core/nexus.js)
   'app.exportMarkdown': { label: 'exportMarkdown', icon: 'export', scope: 'app', when: (c) => !!(c?.nexusId || S.nexus), run: (c) => nexusExportMarkdown(c?.nexusId || S.nexus.id), surfaces: ['nexus.options', 'left.panel'] },
   'app.createGuide': { label: 'guideCreate', icon: 'info', scope: 'app', when: () => !!S.nexus, run: () => createGuideBundle(), surfaces: ['bundle.picker', 'left.panel'] },
   'app.newProject': { label: 'bundleTitle', icon: 'artisan', scope: 'app', when: () => !!S.nexus, run: (c) => openBundlePicker(c?.parentId ?? null), surfaces: ['kind.picker', 'left.panel'] },
@@ -111,12 +103,17 @@ const COMMANDS = {
   'page.properties': { label: 'pbProperties', icon: 'fields', scope: 'app', hint: 'Ctrl+Alt+B', when: () => !!(S.activeModuleNode || S.activeItemNode), run: () => togglePropsPanel(), surfaces: ['page.head'] },
   'page.css': { label: 'pageCss', icon: 'edit', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode, run: () => openPageCssModal(S.activeModuleNode.id), surfaces: ['page.head'] },
   'page.history': { label: 'versionHistory', icon: 'timeline', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode, run: () => toggleVersionPanel(S.activeModuleNode.id), surfaces: ['page.head'] },
+  // Procress 22: the component gallery — dev builds only (S.devMode), APP docs/COMPONENTS.md
+  'dev.gallery': { label: 'componentGallery', icon: 'list', scope: 'app', hint: 'Ctrl+Alt+Shift+G', when: () => !!S.devMode, run: async () => { await loadModule('src/renderer/gallery.js'); openGallery(); }, surfaces: ['shortcut'] },
   'app.focusMode': { label: 'focusMode', icon: 'eye', scope: 'app', hint: 'Ctrl+Shift+F', run: () => toggleFocusMode(), surfaces: ['shortcut'] },
   // Procress 13 part 4 (REDESIGN.md C6): the title's own layout, per page.
   'page.useTemplate': { label: 'tplUse', icon: 'layer', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode?.itemKey, run: () => openTemplateGallery(S.activeModuleNode.id), surfaces: ['page.head'] },
   'page.saveTemplate': { label: 'tplSave', icon: 'star', scope: 'app', when: () => !!S.activeModuleNode && !S.activeItemNode?.itemKey, run: () => openSavePresetModal(S.activeModuleNode.id), surfaces: ['page.head'] },
   'page.export': { label: 'exportTitle', icon: 'export', scope: 'app', when: () => !!(S.activeModuleNode || S.activeItemNode?.itemKey), run: () => openExportModal(S.activeItemNode?.itemKey ? S.activeItemNode.moduleId : S.activeModuleNode.id, S.activeItemNode?.itemKey || null), surfaces: ['page.head'] },
   'page.layout': { label: 'pageLayout', icon: 'fields', scope: 'app', when: () => !!(S.activeModuleNode || S.activeItemNode?.itemKey), run: (c, el) => openPageLayoutPopup(el), surfaces: ['page.head'] },
+  // Procress 24: the app's layout (Workspace style), always in the page ⋯'s
+  // View group — the teach tip that used to be the visible way vanished once dismissed.
+  'page.chooseLayout': { label: 'pageChooseLayout', icon: 'panelLeft', scope: 'app', run: () => openSettingWindow('workspace', 'style'), surfaces: ['page.head'] },
   'page.readable': { label: 'pageReadable', icon: 'document', scope: 'app', when: () => !!(S.activeModuleNode || S.activeItemNode?.itemKey), run: () => togglePageReadable(), surfaces: ['page.head'] },
   'history.undo': { label: 'scUndo', icon: 'return', scope: 'app', hint: 'Ctrl+Z', run: () => handleHistoryShortcut('undo'), surfaces: ['shortcut'] },
   'history.redo': { label: 'scRedo', icon: 'return', scope: 'app', hint: 'Ctrl+Shift+Z', run: () => handleHistoryShortcut('redo'), surfaces: ['shortcut'] },
@@ -214,6 +211,9 @@ const COMMANDS = {
   'classifier.quickStart': { label: 'clsQuickStart', icon: 'plus', scope: 'kind:classifier', when: (c) => !clsData(c?.moduleId).objects.length || c.always, run: (c) => classifierQuickStart(c.moduleId), surfaces: ['empty.state'] },
   'classifier.addObject': { label: 'addObject', icon: 'plus', scope: 'kind:classifier', run: (c) => openClassifierObjectModal(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
   'classifier.fields': { label: 'clsFieldsOfCategory', icon: 'edit', scope: 'kind:classifier', run: (c) => openClassifierFieldsModal(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
+  'classifier.fieldType': { label: 'clsFieldChangeType', icon: 'fields', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFieldsModal(c.moduleId, c.tplId), surfaces: ['classifier.ctx'] },
+  'classifier.fieldRename': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFieldsModal(c.moduleId, c.tplId), surfaces: ['classifier.ctx'] },
+  'classifier.fieldDelete': { label: 'delete', icon: 'delete', danger: true, scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => deleteClassifierFieldUndoable(c.tplId), surfaces: ['classifier.ctx'] },
   'classifier.openObject': { label: 'open', icon: 'eye', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openItemNode('classifier', c.moduleId, c.objectId), surfaces: ['classifier.ctx'] },
   'classifier.renameObject': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openClassifierObjectModal(c.moduleId, c.objectId), surfaces: ['classifier.ctx'] },
   'classifier.objectIcon': { label: 'clsColorIcon', icon: 'colors', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openClassifierObjectModal(c.moduleId, c.objectId), surfaces: ['classifier.ctx'] },

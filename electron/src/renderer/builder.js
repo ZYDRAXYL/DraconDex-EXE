@@ -922,9 +922,10 @@ function builderEmptyPaneHtml() {
       <button class="btn btn-p" onclick="openKindPopup(null,this)">${I.plus} ${t('homeCreate')}</button>
       <button class="btn btn-s" onclick="openEntityByKey(${xj(last || '')})"${last ? '' : ' disabled'}>${I.return} ${t('homeOpenRecent')}</button>
     </div>
-    <section class="home-sec"><h3>${t('homeContinue')}</h3><div id="home-continue" class="home-list"><p class="drafter-hint">${t('recentEmpty')}</p></div></section>
+    <section class="home-sec"><h3>${t('homeContinue')}</h3><div id="home-continue"><p class="drafter-hint">${t('recentEmpty')}</p></div></section>
     <section class="home-sec"><h3>${t('homePinned')}</h3>${pinned.length
-      ? `<div class="home-list">${pinned.map((m) => `<div class="li" onclick="openModuleNode(${m.id})"><span class="kicon" aria-hidden="true">${moduleIconHtml(m)}</span><span class="name" data-no-i18n>${x(m.name)}</span></div>`).join('')}</div>`
+      ? listHtml({ list: 'home-pinned', aria: t('homePinned'), body: pinned.map((m) => listRowHtml({ icon: moduleIconHtml(m), title: m.name,
+        meta: kindLabel(m.kind), onclick: `openModuleNode(${m.id})`, attrs: 'data-no-i18n' })).join('') })
       : `<p class="drafter-hint">${t('homePinHint')}</p>`}</section>
     <button class="btn btn-g home-organise" onclick="homeOrganise()">${I.folder || ''} ${t('homeOrganise')}</button>
     <div id="home-templates" class="home-portal"></div>
@@ -950,12 +951,12 @@ async function fillHomePortal() {
   const elements = qi.filter((e) => !/^module_/.test(e.key) && e.type !== 'alias').length;
   const links = Object.values(counts).reduce((a, n) => a + n, 0);
   const when = (at) => { const d = new Date(`${String(at).replace(' ', 'T')}Z`); return isNaN(d) ? '' : d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); };
-  const changed = changes.map((c) => `<div class="li"${c.moduleId && findModuleNode(c.moduleId) ? ` role="button" tabindex="0" onclick="openModuleNode(${c.moduleId})"` : ''}>
-    <span class="name" data-no-i18n>${x(c.name || '—')}<small class="chs-snippet">${x(when(c.at))}</small></span></div>`).join('');
+  const changed = changes.map((c) => listRowHtml({ icon: I.edit, title: c.name || '—', meta: when(c.at), attrs: 'data-no-i18n',
+    onclick: c.moduleId && findModuleNode(c.moduleId) ? `openModuleNode(${c.moduleId})` : '' })).join('');
   const cats = typeof categoryOf === 'function' && _catIndex ? categoryOf('').subs : [];
   box.innerHTML = `
     ${featured ? `<section class="home-sec"><h3>${t('homeFeatured')}</h3><div class="home-featured" role="button" tabindex="0" onclick="openEntityByKey(${xj(top[0])})">${pbSummaryHtml(featured)}</div></section>` : ''}
-    ${changed ? `<section class="home-sec"><h3>${t('homeEdited')}</h3><div class="home-list">${changed}</div></section>` : ''}
+    ${changed ? `<section class="home-sec"><h3>${t('homeEdited')}</h3>${listHtml({ list: 'home-changed', aria: t('homeEdited'), body: changed })}</section>` : ''}
     ${cats.length ? `<section class="home-sec"><h3>${t('catTitle')}</h3><div class="cat-subs">${cats.map((c) => categoryLinkHtml(c.name, c.count)).join('')}</div></section>` : ''}
     <section class="home-sec"><h3>${t('homeStats')}</h3><p class="home-stats" data-no-i18n>${mods.length} ${x(t('statModules'))} · ${elements} ${x(t('statElements'))} · ${links} ${x(t('statLinks'))}</p>
       ${mods.length ? `<button class="btn btn-s btn-sm" onclick="openRandomPage()">${t('homeRandom')}</button>` : ''}</section>`;
@@ -968,7 +969,7 @@ function openRandomPage() {
 async function fillHomeContinue() {
   const box = q('#home-continue');
   const html = box && await recentRowsHtml(6);
-  if (box && html) box.innerHTML = html;
+  if (box && html) box.innerHTML = listHtml({ list: 'home-continue', aria: t('homeContinue'), body: html });
   fillHomeTemplates();
   fillHomePortal();
 }
@@ -984,12 +985,8 @@ async function fillHomeTemplates() {
   const rank = (b) => (pref.includes(b.id) ? pref.indexOf(b.id) : 99);
   const list = (await bundleCatalog()).filter((b) => b.group === 'genre').sort((a, b) => rank(a) - rank(b) || (a.order ?? 0) - (b.order ?? 0)).slice(0, 6);
   if (!list.length || q('#home-templates') !== box) return;
-  const kindsOf = (spec) => [...(spec?.modules || []), ...(spec?.folders || []).flatMap((f) => f.modules || [])].map((m) => m.kind).filter((k) => KIND_ICON[k]).slice(0, 8);
-  box.innerHTML = `<section class="home-sec"><h3>${t('artStartTemplate')}</h3><div class="home-tpls">${list.map((b) => `
-    <button class="btn home-tpl" onclick="openBundlePicker(null,'genre',${xj(b.id)})">
-      <span class="home-tpl-pic" aria-hidden="true">${kindsOf(b.spec).map((k) => `<i style="color:${x(KIND_COLOR[k] || 'var(--accent)')}">${I[KIND_ICON[k]]}</i>`).join('')}</span>
-      <span class="kli-name" data-no-i18n>${x(b.name)}</span><span class="kli-desc" data-no-i18n>${x(b.description || '')}</span>
-    </button>`).join('')}</div>
+  box.innerHTML = `<section class="home-sec"><h3>${t('artStartTemplate')}</h3><div class="home-tpls">${list.map((b) =>
+    templateCardHtml(b, { onclick: `openBundlePicker(null,'genre',${xj(b.id)})` })).join('')}</div>
     <button class="btn btn-g btn-sm" onclick="runCommand('app.newProject',{parentId:null})">${t('tplBrowse')}</button></section>`;
 }
 function homeOrganise() {

@@ -61,7 +61,7 @@ function createMarkdownEditor(container, opts) {
     <div class="mded-head">
       <span class="mded-title">${x(opts.title || '')}</span>
       <span class="mded-save-state"></span>
-      <button class="btn btn-s btn-sm mded-links-toggle" title="${t('backlinks')}">🔗</button>
+      <button class="btn btn-s btn-sm mded-links-toggle" title="${t('backlinks')}" aria-label="${t('backlinks')}">${I.relation}</button>
       <button class="btn btn-s btn-sm mded-toggle" title="Ctrl+E"></button>
     </div>
     ${opts.toolbar ? `<div class="mded-fmtbar" data-no-i18n>${FMT_ACTIONS.map((a, i) =>

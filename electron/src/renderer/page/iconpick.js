@@ -17,9 +17,7 @@ async function openPbIconPick(anchor, onPick) {
   el.setAttribute('aria-label', t('pbChooseIcon'));
   document.body.appendChild(el);
   pbIpkRender();
-  const r = anchor?.getBoundingClientRect?.() || { left: 80, bottom: 80 };
-  el.style.left = `${Math.max(8, Math.min(window.innerWidth - el.offsetWidth - 8, r.left))}px`;
-  el.style.top = `${Math.max(8, Math.min(window.innerHeight - el.offsetHeight - 8, r.bottom + 6))}px`;
+  placeFloating(el, anchor?.getBoundingClientRect ? anchor : pointAnchor(80, 80)); // core/popover.js
   el.querySelector('input')?.focus();
   try { _pbIpk.symbols = await api.color.getSymbolCollection(); } catch (_) { _pbIpk.symbols = []; }
 }
@@ -38,10 +36,10 @@ function pbIpkRender() {
   if (s.tab === 'icons') {
     const cats = Object.keys(ICON_CATS);
     const keys = iconCatalogKeys().filter((k) => (!s.cat || k.cat === s.cat) && iconMatches(k.key, s.query));
-    body = `<div class="pb-seg pb-ipk-cats">${['', ...cats].map((c) => `<button class="btn${s.cat === c ? ' on' : ''}" onclick="pbIpkSet({cat:'${c}'})">${t(c ? `iconCat${pbCap(c)}` : 'iconCatAll')}</button>`).join('')}</div>
+    body = `<div class="seg seg-sm seg-wrap pb-ipk-cats">${['', ...cats].map((c) => `<button class="btn${s.cat === c ? ' on' : ''}" onclick="pbIpkSet({cat:'${c}'})">${t(c ? `iconCat${pbCap(c)}` : 'iconCatAll')}</button>`).join('')}</div>
       <div class="pb-ipk-grid">${keys.map((k) => cell(`svg:${k.key}`, I[k.key], k.key)).join('') || `<p class="drafter-hint">${t('pbNoMatch')}</p>`}</div>`;
   } else if (s.tab === 'emoji') {
-    body = `<div class="pb-seg pb-ipk-cats">${Object.keys(EMOJI_CATS).map((c) => `<button class="btn${s.cat === c ? ' on' : ''}" onclick="pbIpkSet({cat:'${c}'})">${t(`emojiCat${pbCap(c)}`)}</button>`).join('')}</div>
+    body = `<div class="seg seg-sm seg-wrap pb-ipk-cats">${Object.keys(EMOJI_CATS).map((c) => `<button class="btn${s.cat === c ? ' on' : ''}" onclick="pbIpkSet({cat:'${c}'})">${t(`emojiCat${pbCap(c)}`)}</button>`).join('')}</div>
       <div class="pb-ipk-grid pb-ipk-emoji">${emojiList(EMOJI_CATS[s.cat] ? s.cat : '').map((e) => cell(`sym:${e}`, `<span data-no-i18n>${e}</span>`)).join('')}</div>`;
   } else {
     const syms = s.symbols || [];
@@ -51,7 +49,7 @@ function pbIpkRender() {
   el.innerHTML = `<div class="pb-pop-top"><b>${t('pbChooseIcon')}</b>
       <button class="btn btn-g btn-sm" onclick="pbIpkPick('')">${t('pbNoIcon')}</button>
       <button class="btn btn-g btn-i" onclick="closePbIconPick()" title="${t('close')}" aria-label="${t('close')}">${I.close}</button></div>
-    <div class="pb-seg pb-tabs2" role="tablist">${tab('icons', 'iconTabIcons')}${tab('emoji', 'iconTabEmoji')}${tab('symbols', 'iconTabSymbols')}</div>
+    <div class="seg seg-sm seg-fill pb-tabs2" role="tablist">${tab('icons', 'iconTabIcons')}${tab('emoji', 'iconTabEmoji')}${tab('symbols', 'iconTabSymbols')}</div>
     ${s.tab === 'icons' ? `<input type="search" class="pb-ipk-q" value="${x(s.query)}" placeholder="${x(t('iconSearchPh'))}" aria-label="${x(t('iconSearchPh'))}"
       oninput="_pbIpk.query=this.value;clearTimeout(this._t);this._t=setTimeout(()=>{pbIpkRender();const i=q('#pb-ipk .pb-ipk-q');i.focus();i.setSelectionRange(i.value.length,i.value.length)},120)">` : ''}
     ${recent.length ? `<h6>${t('iconRecent')}</h6><div class="pb-ipk-grid">${recent.map((r) => cell(r, pbIconHtml(r))).join('')}</div>` : ''}

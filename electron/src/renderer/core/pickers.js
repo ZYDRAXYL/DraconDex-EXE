@@ -52,7 +52,7 @@ async function hashtagSelector(prefix, selectedIds){
     <input id="${prefix}-tag-search" class="tag-search-input" type="text" placeholder="พิมพ์ค้นหา Tag..." oninput="renderModalTagSuggestions('${prefix}')">
     <div class="tag-add-box">
       <div class="tag-suggestions" id="${prefix}-tag-sug"></div>
-      <div class="htag-row" id="${prefix}-tag-list">${selectedTags.map(t=>`<span class="htag-chip" style="border-color:${t.color_code||'#6366f1'}"><span class="hn" style="color:${t.color_code||'#6366f1'}">#${x(t.tag_name)}</span><button class="btn btn-s btn-i" type="button" onclick="removeModalTag('${prefix}',${t.id})">✕</button></span>`).join('')}</div>
+      <div class="chip-set" id="${prefix}-tag-list">${selectedTags.map(tg => chipHtml({ label: `#${tg.tag_name}`, variant: 'tag', color: tg.color_code, remove: `removeModalTag('${prefix}',${tg.id})`, noI18n: true })).join('')}</div>
     </div>
     <input type="hidden" id="${prefix}-tag-value" value="${selected.join(',')}">
   </div>`;
@@ -80,7 +80,7 @@ async function renderModalTagSuggestions(prefix){
     .sort((a,b)=> (b.update_at||'').localeCompare(a.update_at||''))
     .slice(0,5);
   container.innerHTML = recent.length
-    ? recent.map(t=>`<div class="htag-item" style="border-color:${t.color_code||'#6366f1'};cursor:pointer" onclick="addModalTag('${prefix}',${t.id})"><span class="hn" style="color:${t.color_code||'#6366f1'}">#${x(t.tag_name)}</span></div>`).join('')
+    ? recent.map(t=>`<div class="htag-item" style="border-color:${t.color_code||'var(--accent)'};cursor:pointer" onclick="addModalTag('${prefix}',${t.id})"><span class="hn" style="color:${t.color_code||'var(--accent)'}">#${x(t.tag_name)}</span></div>`).join('')
     : `<div class="empty" style="padding:10px 6px;font-size:calc(12px * var(--fsc,1));color:var(--t3-aa,var(--t2))">ไม่มี Tag ให้เลือก</div>`;
 }
 
@@ -90,7 +90,7 @@ function renderModalSelectedTags(prefix){
   if(!list) return;
   api.hashtag.getAll().then(tags => {
     const selectedTags = tags.filter(t => ids.has(t.id));
-    list.innerHTML = selectedTags.map(t=>`<span class="htag-chip" style="border-color:${t.color_code||'#6366f1'}"><span class="hn" style="color:${t.color_code||'#6366f1'}">#${x(t.tag_name)}</span><button class="btn btn-s btn-i" type="button" onclick="removeModalTag('${prefix}',${t.id})">✕</button></span>`).join('');
+    list.innerHTML = selectedTags.map(tg => chipHtml({ label: `#${tg.tag_name}`, variant: 'tag', color: tg.color_code, remove: `removeModalTag('${prefix}',${tg.id})`, noI18n: true })).join('');
   });
 }
 

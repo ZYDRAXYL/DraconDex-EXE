@@ -143,25 +143,21 @@ async function openPageLayoutPopup(anchor) {
   closeAllPopups();
   const { images } = await pageHeadImages(true);
   const lay = pageHeadLayout(tgt.moduleId, tgt.itemKey);
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup ph-pop';
-  const seg = PAGE_HEAD_ALIGN.map((a) => `<button type="button" class="btn btn-sm ${lay.align === a ? 'btn-p' : 'btn-s'}" data-align="${a}">${t(`align${a[0].toUpperCase()}${a.slice(1)}`)}</button>`).join('');
+  const seg = PAGE_HEAD_ALIGN.map((a) => `<button type="button" class="seg-opt${lay.align === a ? ' on' : ''}" aria-pressed="${lay.align === a}" data-align="${a}">${t(`align${a[0].toUpperCase()}${a.slice(1)}`)}</button>`).join('');
   const covers = images.slice(0, 24).map((f) => `<div role="button" tabindex="0" class="ph-cover-opt${lay.cover === f.sha256 ? ' active' : ''}" data-cover="${x(f.sha256)}" title="${x(f.file_name)}" style="background-image:url(&quot;${x(displayImageUrl(f.id))}&quot;)"></div>`).join('');
-  pop.innerHTML = `<div class="ph-pop-h">${t('pageLayout')}</div>
+  const pop = openPopover(anchor || document.querySelector('.page-title') || pointAnchor(200, 80), `<div class="ph-pop-h">${t('pageLayout')}</div>
     <div class="ph-pop-label">${t('titleAlign')}</div>
-    <div class="ph-seg">${seg}</div>
+    <div class="seg seg-sm seg-fill" role="group" aria-label="${t('titleAlign')}">${seg}</div>
     <div class="ph-pop-label">${t('pageIcon')}</div>
     <div class="fg"><input class="ph-icon-inp" maxlength="16" value="${x(lay.icon || '')}" placeholder="✦" data-no-i18n></div>
     <div class="ph-pop-label">${t('pageCover')}</div>
     ${images.length
-      ? `<div class="ph-covers"><div role="button" tabindex="0" class="ph-cover-opt ph-cover-none${lay.cover ? '' : ' active'}" data-cover="" title="${t('pageCoverNone')}">✕</div>${covers}</div>`
+      ? `<div class="ph-covers"><div role="button" tabindex="0" class="ph-cover-opt ph-cover-none${lay.cover ? '' : ' active'}" data-cover="" title="${t('pageCoverNone')}">${I.close}</div>${covers}</div>`
       : `<div class="ph-pop-hint">${t('pageCoverEmpty')}</div>`}
-    <div class="ph-seg"><button type="button" class="btn btn-s btn-sm" data-more="1">${t('pageCoverMore')}</button>
+    <div class="ph-acts"><button type="button" class="btn btn-s btn-sm" data-more="1">${t('pageCoverMore')}</button>
       ${lay.cover ? `<button type="button" class="btn btn-s btn-sm" data-focus="1">${t('pbFocusTitle')}</button>` : ''}</div>
-    <div class="ph-pop-hint">${t('pageLayoutScope')}</div>`;
-  document.body.appendChild(pop);
+    <div class="ph-pop-hint">${t('pageLayoutScope')}</div>`, { cls: 'ph-pop', keep: true, focus: false, aria: t('pageLayout') });
   pop.addEventListener('click', async (e) => {
-    e.stopPropagation();
     const a = e.target.closest('[data-align]');
     const c = e.target.closest('[data-cover]');
     if (e.target.closest('[data-more]')) { pop.remove(); pageCoverPick(tgt); return; }
@@ -174,7 +170,6 @@ async function openPageLayoutPopup(anchor) {
   const inp = pop.querySelector('.ph-icon-inp');
   inp.addEventListener('change', () => setPageHeadLayout(tgt.moduleId, tgt.itemKey, { icon: inp.value.trim() || null }));
   inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
-  positionPopupNear(pop, (anchor || document.querySelector('.page-title'))?.getBoundingClientRect() || { left: 200, top: 80, right: 200, bottom: 80, width: 0, height: 0 });
 }
 
 // Any picture in the Nexus as the cover, through the picture picker (D4):

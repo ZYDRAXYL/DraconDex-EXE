@@ -88,6 +88,8 @@ English `text=` selectors.
 
 ## Conventions the checkers enforce
 
+**Before building new UI, read `docs/COMPONENTS.md` in DraconDex-APP** — the shared popover, modal, chip, segmented, card, field and list (`core/popover.js`, `core/controls.js`, `core/list.js`); `npm run ui:check` fails if a component group, hex colour, raw z-index or character icon count goes up.
+
 - Every `window.api.<ns>.<fn>()` needs a matching `preload.js` entry and a
   matching `main.js` handler.
 - Every `t('key')` must exist in **all 18 locale blocks** in `i18n.js`. A missing
@@ -97,6 +99,17 @@ English `text=` selectors.
 
 Warnings are metrics against a baseline (42 as of the split). New code should add
 zero new warnings; don't chase the pre-existing ones unless asked.
+
+## The plugin contract is vendored downstream
+
+`electron/src/db/plugin-manifest.js` (the manifest rules) and
+`electron/preload-plugin.js` (the `window.pluginApi` surface) are a contract:
+`DraconDex-PGI-Template` and `DraconDex-EXT-Template` sit downstream of this
+repo (`EXE → PGI, EXT`, carries `plugin-contract`) and ship a byte-identical
+copy of `plugin-manifest.js` as their validator. Keep that file requiring
+nothing — the templates load it with plain Node. After changing either file,
+run `chained-updated` (or `node tools/chain-propagate.mjs --to PGI` / `--to EXT`)
+so the templates re-vendor; plugins made from them move their own pin.
 
 ## Releases
 

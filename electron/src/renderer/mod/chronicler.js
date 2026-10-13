@@ -306,14 +306,10 @@ function renderChroniclerEventLinksHtml(ev) {
     const otherKey = l.from_key === self ? l.to_key : l.from_key;
     const e = _chrLinkIndex[otherKey];
     const from = e ? `${e.moduleName || '—'}${e.moduleKind ? ` · ${kindLabel(e.moduleKind)}` : ''}` : '—';
-    return `<div class="cls-link-row">
-      <span class="cls-link-name" onclick="openEntityByKey('${x(otherKey)}')">${x(e ? e.name : otherKey)}</span>
-      <span class="cls-link-mod">${x(from)}</span>
-      ${l.label ? `<span class="cls-link-lbl">${x(l.label)}</span>` : ''}
-    </div>`;
+    return listLinkRowHtml({ name: e ? e.name : otherKey, onclick: `openEntityByKey(${xj(otherKey)})`, meta: from, label: l.label || '' });
   }).join('');
   return `<div class="insp-label cls-link-label">${t('linkedElements')}</div>
-    <div class="cls-link-list">${rows || `<div class="cls-lv-empty">${t('noLinkedElements')}</div>`}</div>
+    ${listLinksHtml(rows)}
     <button class="btn btn-g" style="margin:4px 0" onclick="openExhibitorFor(${S.activeItemNode?.moduleId ?? S.activeModuleNode?.id ?? 'null'},'tlev_${ev.id}')">${I.relation} ${t('openInExhibitor')}</button>`;
 }
 
@@ -336,15 +332,8 @@ async function openChroniclerEventIconPopup(evId, anchor, tlid) {
   const evs = await api.timeline.getEvents(tlid);
   const ev = evs.find(e => e.id === evId);
   if (!ev) return;
-  const pop = document.createElement('div');
-  pop.className = 'kind-popup icon-edit-popup';
-  pop.innerHTML = await iconPicker(ev.icon || null, ev.color || null, ev.event_name);
-  document.body.appendChild(pop);
-  pop.addEventListener('click', e => {
-    e.stopPropagation();
-    if (e.target.closest('.ipk-cell') || e.target.closest('.cswatch')) saveChroniclerEventIconLive(evId, tlid);
-  });
-  positionPopupNear(pop, anchor.getBoundingClientRect());
+  openPopover(anchor, await iconPicker(ev.icon || null, ev.color || null, ev.event_name), { cls: 'icon-edit-popup', keep: true, focus: false,
+    onClick: (e) => { if (e.target.closest('.ipk-cell') || e.target.closest('.cswatch')) saveChroniclerEventIconLive(evId, tlid); } });
 }
 
 async function saveChroniclerEventIconLive(evId, tlid) {
@@ -394,7 +383,7 @@ async function saveChroniclerInspectorField(evId, tlid) {
 // whichever other row was open.
 async function buildChroniclerEventListHtml(evs, tlid, col, inspectorEventId) {
   if (!evs.length) return '';
-  let html = `<div class="ph"><h4>${t('name')}</h4><button class="btn btn-p" style="padding:6px 12px;font-size:calc(12.5px * var(--fsc,1))" onclick="openChroniclerEventModal(${tlid})">${I.plus} ${t('addEvent')}</button></div><div class="objlist">`;
+  let html = `<div class="ph"><h4>${t('name')}</h4><button class="btn btn-p" style="padding:6px 12px;font-size:calc(12.5px * var(--fsc,1))" onclick="openChroniclerEventModal(${tlid})">${I.plus} ${t('addEvent')}</button></div><div class="objlist ls-list" role="listbox" aria-label="${x(t('addEvent'))}">`;
   for (const ev of evs) {
     const ec = ev.color_code || col;
     const sTxt = fmtDate(ev.s_day, ev.s_month, ev.s_years, ev.s_hour, ev.s_minute);
@@ -406,12 +395,9 @@ async function buildChroniclerEventListHtml(evs, tlid, col, inspectorEventId) {
     // one four-line block. Delete moved into the expanded body (below), so the
     // collapsed row carries nothing destructive.
     html += `<div class="chr-insp-row${open ? ' open' : ''}">
-      <div class="objrow" onclick="toggleChroniclerInspector(${tlid},${ev.id})">
-        <div class="odot" style="background:${ec};cursor:pointer" onclick="event.stopPropagation();openChroniclerEventIconPopup(${ev.id},this,${tlid})"></div>
-        <div class="oname chr-ev-name">${x(ev.event_name || '—')}</div>
-        <div class="chr-ev-date">${x(dateTxt)}</div>
-        <svg class="icon tree-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="${open ? '6 9 12 15 18 9' : '9 18 15 12 9 6'}"/></svg>
-      </div>
+      ${listRowHtml({ expanded: open, onclick: `toggleChroniclerInspector(${tlid},${ev.id})`, title: ev.event_name || '—', meta: dateTxt, attrs: 'data-no-i18n',
+        icon: `<span class="odot" style="background:${x(ec)};cursor:pointer" onclick="event.stopPropagation();openChroniclerEventIconPopup(${ev.id},this,${tlid})"></span>`,
+        actions: listActHtml({ hidden: true, key: 'Delete', name: t('delete'), onclick: `deleteChroniclerEvent(${ev.id},${tlid})` }) })}
       ${open ? `<div class="chr-insp-body" id="chr-insp-body-${ev.id}">${await buildChroniclerEventInspectorHtml(ev, tlid)}
         <div class="chr-insp-foot"><button class="btn btn-d" onclick="deleteChroniclerEvent(${ev.id},${tlid})">${I.delete} ${t('delete')}</button></div>
       </div>` : ''}

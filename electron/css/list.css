@@ -1,0 +1,111 @@
+/* ═══ The one list (Procress 21, APP docs/UX-LAYOUT.md §12) ═════════════════
+   Every rule for the shared list lives here and only here — the markup comes
+   from src/renderer/core/list.js. Sizes are SDB tokens (src/design/generated/
+   tokens.css): two row heights, --row-compact 28 / --row-comfy 40, nothing
+   else; --fs-* are already multiplied by the font scale (--fsc), so no calc
+   here; UI Size is the body zoom and scales both heights together.
+   After components.css (it is one) and before kinds.css / page*.css, so a
+   module file could still place a list — none restyles a row. */
+
+.ls{display:flex;flex-direction:column;min-width:0;min-height:0}
+.ls-list{display:flex;flex-direction:column;min-width:0}
+
+/* ── the row (§12.1, §12.2) ── */
+.ls-row{
+	display:flex;align-items:center;gap:var(--sp-3);flex-shrink:0;position:relative;
+	min-width:0;min-height:var(--row-comfy);padding:0 var(--sp-3) 0 var(--sp-4);
+	border-radius:var(--rs);color:var(--t2);font-size:var(--fs-body);line-height:var(--lh-snug);
+	cursor:pointer;user-select:none;transition:background var(--dur-fast) var(--ease-standard);
+}
+.ls-row.ls-compact{min-height:var(--row-compact);gap:var(--sp-2);padding:0 var(--sp-1) 0 var(--sp-3)}
+.ls-icon{flex:none;display:inline-flex;align-items:center;justify-content:center;width:var(--icon-sm);height:var(--icon-sm);
+	font-size:var(--fs-body);line-height:var(--lh-flat);color:var(--t2)}
+.ls-icon .icon,.ls-icon svg{width:var(--icon-sm);height:var(--icon-sm)}
+/* one thumbnail size everywhere (§12 part 3, Assets) */
+.ls-icon img{width:var(--icon-sm);height:var(--icon-sm);object-fit:cover;border-radius:var(--rs)}
+.ls-grip{flex:none;display:inline-flex;color:var(--t3-aa,var(--t2));cursor:grab}
+.ls-grip .icon{width:var(--icon-sm);height:var(--icon-sm)}
+.ls-main{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.ls-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-meta{font-size:var(--fs-sm);line-height:var(--lh-snug);color:var(--t3-aa,var(--t2));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-meta.ls-side{flex:0 1 auto;max-width:40%}
+.ls-count{flex:none;font-size:var(--fs-sm);color:var(--t3-aa,var(--t2));font-variant-numeric:tabular-nums}
+.ls-chip{flex:none;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fs-sm);
+	color:var(--t3-aa,var(--t2));border:1px solid var(--border);border-radius:var(--r);padding:0 var(--sp-2)}
+.ls-chip.ls-on{color:var(--accentH,var(--accent));border-color:var(--accent)}
+
+/* a relation row (listLinkRowHtml): this end, the arrow, the other end */
+.ls-link-own{color:var(--t1);cursor:pointer}
+.ls-link-own:hover{color:var(--accentH,var(--accent));text-decoration:underline}
+.ls-link-arrow{color:var(--t3-aa,var(--t2))}
+
+/* ── trailing actions: on hover / focus / selected; ⋯ always on touch (§12.1) ── */
+/* They float over the row's end instead of holding its space: a narrow panel
+   keeps the whole title until the pointer or the focus asks for the buttons,
+   and nothing moves when they appear. Their floor is the row's own. */
+.ls-row{--ls-row-bg:var(--ls-floor,var(--surface))}
+.ls-acts{position:absolute;top:0;bottom:0;right:var(--sp-1);display:flex;align-items:center;gap:var(--sp-0);
+	padding-left:var(--sp-3);background:var(--ls-row-bg);visibility:hidden}
+.ls-row:hover .ls-acts,.ls-row:focus .ls-acts,.ls-row:focus-within .ls-acts,.ls-row.sel .ls-acts{visibility:visible}
+@media (hover:none){.ls-acts{position:static;padding-left:0;background:none;visibility:visible}}
+.ls-act.btn-i{width:var(--ctl-sm);height:var(--ctl-sm);padding:0}
+.ls-act.btn-i .icon{width:var(--icon-sm);height:var(--icon-sm)}
+.ls-act.btn-sm{height:var(--ctl-sm);padding:0 var(--sp-3);font-size:var(--fs-sm);gap:var(--sp-1)}
+.ls-act.btn-sm .icon{width:var(--icon-sm);height:var(--icon-sm)}
+.ls-act.ls-danger{color:var(--danger)}
+.ls-act[hidden]{display:none}
+.ls-row.sel .ls-more{visibility:visible}
+
+/* ── states (§12.3): hover · selected = bar + floor, never colour alone · focus ring · drag · off ── */
+.ls-row:hover{--ls-row-bg:var(--hover);background:var(--hover);color:var(--t1)}
+.ls-row.sel{--ls-row-bg:var(--raised);background:var(--raised);color:var(--t1);box-shadow:inset 3px 0 0 var(--accent)}
+.ls-row.sel .ls-title{font-weight:600}
+.ls-row.ls-current .ls-title{color:var(--t1);font-weight:600}
+/* inside the row's edge: a list scrolls, and its box would clip a ring outside */
+.ls-row:focus-visible,.ls-group-head:focus-visible{outline:var(--focus-ring) solid var(--accentH,var(--accent));outline-offset:calc(-1 * var(--focus-ring))}
+.ls-row.ls-off{color:var(--t3-aa,var(--t2));cursor:default}
+.ls-row.ls-off:hover{background:transparent}
+.ls-row.ls-dragging{opacity:.5}
+.ls-row.drop-before{box-shadow:inset 0 2px 0 0 var(--accent)}
+.ls-row.drop-after{box-shadow:inset 0 -2px 0 0 var(--accent)}
+.ls-row.ls-add{color:var(--t3-aa,var(--t2))}
+.ls-row.ls-missing .ls-title{text-decoration:line-through;color:var(--t3-aa,var(--t2))}
+
+/* ── groups (§12.4): sticky head with its count, folds ── */
+.ls-group{display:flex;flex-direction:column}
+.ls-group-head{
+	position:sticky;top:0;z-index:var(--z-sticky);display:flex;align-items:center;gap:var(--sp-2);
+	min-height:var(--row-compact);padding:0 var(--sp-3);background:var(--ls-floor,var(--surface));
+	color:var(--t3-aa,var(--t2));font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+}
+.ls-group-head[role="button"]{cursor:pointer}
+.ls-group-head[role="button"]:hover{color:var(--t1)}
+.ls-group-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-group-head .ls-count{font-weight:400;letter-spacing:0;font-size:var(--fs-xs)}
+.ls-chev{display:inline-flex;transition:transform var(--dur-fast) var(--ease-standard)}
+.ls-chev .icon{width:var(--icon-sm);height:var(--icon-sm)}
+.ls-folded .ls-chev,.ls-chev.ls-shut{transform:rotate(-90deg)}
+.ls-row .ls-chev{flex:none;color:var(--t3-aa,var(--t2))}
+/* a tree inside a list: the fold chevron before the icon, children a step in */
+.ls-row .ls-fold{flex:none;display:inline-flex;width:var(--icon-sm);justify-content:center;color:var(--t3-aa,var(--t2))}
+.ls-row .ls-fold .icon{width:var(--icon-sm);height:var(--icon-sm)}
+.ls-row.ls-indent{padding-left:calc(var(--sp-4) + var(--icon-sm) + var(--sp-3))}
+.ls-folded .ls-group-body{display:none}
+.ls-group-body{display:flex;flex-direction:column}
+/* the floor a sticky head needs, per place a list sits */
+#left-panel{--ls-floor:var(--l-side)}
+#side-panel{--ls-floor:var(--surface)}
+
+/* ── the list header (§12.4): filter → sort → total ── */
+.ls-head{display:flex;align-items:center;gap:var(--sp-3);min-height:var(--row-comfy);padding:0 var(--sp-1)}
+.ls-head .ls-filter{flex:1;min-width:0;height:var(--ctl-sm);padding:0 var(--sp-3);font-size:var(--fs-sm)}
+.ls-head .ls-sort{flex:none;height:var(--ctl-sm);padding:0 var(--sp-2);font-size:var(--fs-sm)}
+.ls-head-title{flex:1;min-width:0;color:var(--t3-aa,var(--t2));font-size:var(--fs-sm)}
+.ls-total{flex:none;min-width:var(--icon-sm);text-align:right;font-size:var(--fs-sm);color:var(--t3-aa,var(--t2));font-variant-numeric:tabular-nums}
+
+/* ── empty state (§12.5): icon + one sentence + at most one button ── */
+.ls-empty{display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);padding:var(--sp-7) var(--sp-5);
+	text-align:center;color:var(--t3-aa,var(--t2));font-size:var(--fs-body);line-height:var(--lh-normal)}
+.ls-empty-icon{display:inline-flex;color:var(--t3-aa,var(--t2))}
+.ls-empty-icon .icon{width:var(--icon-md);height:var(--icon-md)}
+.ls-empty .btn .icon{width:var(--icon-sm);height:var(--icon-sm)}

@@ -14,6 +14,7 @@
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -87,51 +88,32 @@ const mainChannels = new Set();
 for (const m of mainSrc.matchAll(/\bh\('([^']+)'/g)) mainChannels.add(m[1]);
 for (const m of mainSrc.matchAll(/ipcMain\.(?:handle|on)\('([^']+)'/g)) mainChannels.add(m[1]);
 
-// --- parse i18n dict L in src/renderer/i18n.js ---
-function parseLocales(src) {
-  const start = src.indexOf('const L = {');
-  const locales = {}; // name -> Set(keys)
-  let depth = 0, current = null;
-  for (const line of src.slice(start).split('\n')) {
-    const localeOpen = line.match(/^  ([A-Za-z_]+): \{/);
-    if (depth === 1 && localeOpen) { current = localeOpen[1]; locales[current] = new Set(); }
-    if (depth >= 2 || (depth === 1 && localeOpen)) {
-      const inBlock = stripStrings(line);
-      for (const m of inBlock.matchAll(/([A-Za-z0-9_]+)\s*:/g)) {
-        if (current && m[1] !== current) locales[current].add(m[1]);
-      }
-    }
-    depth += (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
-    if (depth <= 0 && current) break; // closed const L
-  }
-  return locales;
+// --- the i18n tables: src/renderer/i18n/<lang>.js ---
+// Procress 19 F8: src/renderer/i18n.js holds only the loader now. Each
+// language is its own file, one call: i18nAdd(lang, keys, common) — the
+// t('key') table, then that language's column of COMMON_UI_TEXT. Run each
+// file against a stub i18nAdd and read back exactly what the app would get
+// (the old brace-counting parse of one 1.9 MB literal could only approximate).
+const I18N_DIR = app('src/renderer/i18n');
+const i18nFiles = existsSync(path.join(root, I18N_DIR))
+  ? readdirSync(path.join(root, I18N_DIR)).filter(f => f.endsWith('.js'))
+    .sort((a, b) => (a === 'en.js' ? -1 : b === 'en.js' ? 1 : a.localeCompare(b))) : [];
+const locales = {}; // name -> Set(keys)
+const commonUi = new Map(); // COMMON_UI_TEXT source string -> Set(locales that translate it)
+const i18nFileErrors = [];
+for (const f of i18nFiles) {
+  try {
+    vm.runInNewContext(read(`${I18N_DIR}/${f}`), {
+      i18nAdd: (lang, keys, common) => {
+        // the loader fetches i18n/<code>.js by the code it was asked for
+        if (`${lang}.js` !== f) i18nFileErrors.push(`${I18N_DIR}/${f} registers '${lang}' — the loader would never find it`);
+        locales[lang] = new Set(Object.keys(keys || {}));
+        for (const k of Object.keys(common || {})) (commonUi.get(k) ?? commonUi.set(k, new Set()).get(k)).add(lang);
+      },
+    }, { filename: f });
+  } catch (e) { i18nFileErrors.push(`${I18N_DIR}/${f} does not run: ${e.message}`); }
 }
-const locales = parseLocales(i18nSrc);
 const localeNames = Object.keys(locales);
-
-// --- parse the COMMON_UI_TEXT fallback dict in src/renderer/i18n.js ---
-// Entries are one per line: `'source': { en:'…', ja:'…', … },`. Unlike `L`,
-// the dict key is itself the source string, so the locale it is already
-// written in needs no field — but every *other* shipped locale does, or
-// tr()/translateCommonUiText() silently serve English instead.
-function parseCommonUiText(src) {
-  const start = src.indexOf('const COMMON_UI_TEXT = {');
-  if (start < 0) return null;
-  const entries = [];
-  let depth = 0;
-  for (const line of src.slice(start).split('\n')) {
-    const entry = depth === 1 && line.match(/^\s*('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")\s*:\s*\{/);
-    if (entry) {
-      const tags = new Set();
-      for (const m of stripStrings(line.slice(entry[0].length - 1)).matchAll(/([A-Za-z0-9_]+)\s*:/g)) tags.add(m[1]);
-      entries.push({ key: entry[1].slice(1, -1), locales: tags });
-    }
-    const bare = stripStrings(line);
-    depth += (bare.match(/\{/g) || []).length - (bare.match(/\}/g) || []).length;
-    if (depth <= 0 && entries.length) break; // closed const COMMON_UI_TEXT
-  }
-  return entries;
-}
 
 // --- CSS classes defined in style.css ---
 const cssClasses = new Set();
@@ -148,6 +130,14 @@ console.log('=== IPC chain (preload -> main.js) ===');
 // ═══ Global check 2: i18n locale parity vs en ═══
 console.log(`=== i18n parity (${localeNames.length} locales: ${localeNames.join(', ')}) ===`);
 {
+  i18nFileErrors.forEach(err);
+  if (!i18nFiles.length) err(`no language files in ${I18N_DIR}/ — t() would return every key verbatim`);
+  // i18n.js picks the file to load from LANGUAGE_LABELS' codes; a picker
+  // entry with no file 404s at boot and leaves that language on English.
+  const labels = /const LANGUAGE_LABELS = \{([^\n]*)\}/.exec(i18nSrc);
+  const codes = labels ? [...labels[1].matchAll(/(?:^|,)\s*([a-z]{2,8})\s*:/g)].map(m => m[1]) : [];
+  if (!labels) warn(`could not locate \`const LANGUAGE_LABELS\` in ${app('src/renderer/i18n.js')}`);
+  for (const code of codes) if (!locales[code]) err(`LANGUAGE_LABELS offers '${code}' but ${I18N_DIR}/${code}.js does not exist`);
   const en = locales.en || new Set();
   let gaps = 0;
   for (const name of localeNames) {
@@ -165,8 +155,8 @@ console.log(`=== i18n parity (${localeNames.length} locales: ${localeNames.join(
 // check (it is how it/nl/pl/uk/tr shipped in the picker but not in this dict).
 console.log('=== i18n parity (COMMON_UI_TEXT fallback dict) ===');
 {
-  const entries = parseCommonUiText(i18nSrc);
-  if (!entries) warn('could not locate `const COMMON_UI_TEXT` in src/renderer/i18n.js');
+  const entries = [...commonUi].map(([key, tags]) => ({ key, locales: tags }));
+  if (!entries.length) warn(`no COMMON_UI_TEXT entries in ${I18N_DIR}/*.js`);
   else {
     const isThai = s => /[฀-๿]/.test(s);
     const gaps = new Map(); // locale -> [keys]
@@ -344,6 +334,60 @@ console.log('=== command registry (core/commands.js) ===');
   else ok(`${seen.size} top-level const/let/class names, none declared twice`);
 }
 
+// ═══ Procress 21: a list row comes from core/list.js ═══
+// APP docs/UX-LAYOUT.md §12. Every list row is listRowHtml() (class ls-row);
+// a NEW `*-row` / `*-item` class written by hand, without .ls-row beside it,
+// is a list nobody can learn once (L1: ~60 such classes, each its own size).
+// The classes below were there before the shared list (2026-10-11) and are
+// not migrated yet — many
+// are not list rows at all (form rows, toolbars) and stay. The list only
+// shrinks: when a class is migrated or deleted, take it out (the checker
+// prints a note for every entry it no longer finds).
+const LEGACY_ROW_CLASSES = new Set([
+  'addr-row', 'art-row', 'bundle-adj-row', 'chr-cal-row', 'chr-insp-row', 'chs-row', 'chs-tr-row',
+  'crecent-row', 'ctm-row', 'div-hist-row', 'ex-row', 'exh-pal-row', 'fp-rule-row',
+  'htag-item', 'hx-row', 'ipk-color-row', 'ipk-preview-row', 'kind-artisan-row',
+  'kind-list-item', 'layout-menu-item', 'mded-ac-item', 'mgr-pick-row',
+  'module-rail-item', 'nar-logic-row', 'nar-row', 'navbar-row', 'nest-asset-row',
+  'nest-item-row', 'nest-opt-row', 'nest-sig-row', 'palette-item',
+  'pb-ii-row', 'pb-le-row', 'pb-props-row', 'pc-bar-row', 'pc-gal-item', 'pc-ib-row', 'pc-navbox-row',
+  'pc-toc-row', 'plugin-preview-row', 'props-row', 'sb-item', 'setting-hit-row',
+  'settings-label-row', 'sh-bar-row', 'size-slider-row', 'sync-key-row',
+  'sync-status-row', 'sync-upload-row', 'tpt-row', 'tpv-row', 'welcome-name-row',
+  'wnd-area-row',
+]);
+// …and no raw px font-size in a row's own rule (§12.1: --fs-body / --fs-sm),
+// or UI Size moves one list and not the next (L2). Selectors grandfathered:
+const LEGACY_ROW_PX = new Set(['.plugin-preview-row', '.div-hist-row']);
+const ROW_CLASS = /^[a-z][\w-]*-(row|item)$/;
+const rowClassesSeen = new Set();
+
+// ═══ Procress 22: a popup goes through openPopover / openModal ═══
+// APP docs/COMPONENTS.md. A floating layer built by hand (position:fixed, or
+// appended straight to <body>) is a popup with its own placement, its own
+// Escape and its own z-index — the 4 positioners and 24 z-index values that
+// Procress 22 folded into core/popover.js. The files and classes below did it
+// before the shared popover (2026-10-11) and are not all migrated; the lists
+// only shrink (a note names every entry the checker no longer finds).
+const LEGACY_HAND_POPUP_FILES = new Set([
+  'core/popover.js', 'core/ui.js', // the shared popover and modal themselves
+  'core/titlebar-tabs.js', 'core/views.js', 'core/wiki-field.js', 'guide.js', 'mod/author.js',
+  'page/components/decor.js', 'page/components/media.js', 'page/iconpick.js', 'page/links.js',
+  'page/style-pop.js', 'quickswitch.js', 'transfer.js',
+]);
+const LEGACY_FIXED_CLASSES = new Set([
+  'popover', 'modal-overlay', 'confirm-overlay', 'toast', 'skip-link', 'splash', // the shared layers
+  'addr-sugg', 'au-book-measure', 'bpane-head', 'floating-panel', 'guide-overlay', 'guide-pop', 'guide-spotlight',
+  'hx-host', 'pb-hover', 'pb-lightbox', 'pb-pop', 'pblock', 'preview-ring', 'qs-overlay', 'wiki-field-ac',
+]);
+const HAND_POPUP = /position\s*:\s*fixed|\.position\s*=\s*['"]fixed|document\.body\.(?:appendChild|append)\(/;
+const handPopupSeen = new Set();
+// …and a character or emoji as the icon of a NEW button (COMPONENTS.md §1:
+// icons are SVG in I.*). `→` inside a sentence is text, not an icon — this only
+// looks inside <button>…</button>. No file is grandfathered: the last two went
+// in Procress 22.
+const CHAR_ICON = /[\u2190-\u21FF\u2300-\u23FF\u25A0-\u27BF\u2B00-\u2BFF\u{1F300}-\u{1FAFF}]/u;
+
 // ═══ Per-file lint ═══
 // Recursive: renderer code lives in src/renderer/{,mod/,core/,hub/,navigator/,
 // hero/}. A flat readdir here used to skip mod/ entirely and would now skip
@@ -352,7 +396,9 @@ const walkJs = (dir) => readdirSync(path.join(root, dir), { withFileTypes: true 
   .sort((a, b) => a.name.localeCompare(b.name))
   .flatMap(e => e.isDirectory() ? walkJs(`${dir}/${e.name}`) : (e.name.endsWith('.js') ? [`${dir}/${e.name}`] : []));
 
-const targets = files.length ? files : walkJs(app('src/renderer'));
+// The language files are translations, not UI code — every Thai line in them
+// is meant to be there, and none has t() calls or markup to check.
+const targets = files.length ? files : walkJs(app('src/renderer')).filter(f => !f.startsWith(`${I18N_DIR}/`));
 
 const usedT = new Set();
 for (const file of targets) {
@@ -407,14 +453,15 @@ for (const file of targets) {
   // buttons without .btn class
   const badBtn = [];
   for (const m of src.matchAll(/<button[^>]*/g)) {
-    if (!/class="[^"]*\bbtn\b/.test(stripInterp(m[0])) && !/class=\$\{|class="\$\{/.test(m[0])) badBtn.push(`L${lineOf(m.index)}`);
+    // Procress 22: the shared controls (core/controls.js) are buttons of their own
+    if (!/class="[^"]*\b(btn|chip-filter|chip-x|seg-opt|card-link)\b/.test(stripInterp(m[0])) && !/class=\$\{|class="\$\{/.test(m[0])) badBtn.push(`L${lineOf(m.index)}`);
   }
   if (badBtn.length) warn(`${badBtn.length} <button> without .btn class (${badBtn.slice(0, 5).join(' ')}) — use btn btn-p/btn-s/btn-g/btn-d (+btn-i for icon)`);
 
   // Thai literals = untranslated UI strings
   const thai = [];
   lines.forEach((l, i) => { if (/[฀-๿]/.test(l)) thai.push(i + 1); });
-  if (thai.length) warn(`${thai.length} line(s) with hardcoded Thai text (use t() + add key to all locales in ${app('src/renderer/i18n.js')}): L${thai.slice(0, 8).join(' L')}${thai.length > 8 ? ' …' : ''}`);
+  if (thai.length) warn(`${thai.length} line(s) with hardcoded Thai text (use t() + add key to every ${I18N_DIR}/<lang>.js): L${thai.slice(0, 8).join(' L')}${thai.length > 8 ? ' …' : ''}`);
 
   // CSS classes used but not defined in style.css
   const unknown = new Set();
@@ -424,6 +471,27 @@ for (const file of targets) {
     }
   }
   if (unknown.size) warn(`class(es) not defined in style.css: ${[...unknown].join(', ')}`);
+
+  // Procress 21: a hand-written list row
+  const newRows = new Set();
+  for (const m of src.matchAll(/class="([^"]*)"/g)) {
+    const cls = stripInterp(m[1]).split(/\s+/).filter(Boolean);
+    for (const c of cls.filter((c) => ROW_CLASS.test(c))) {
+      rowClassesSeen.add(c);
+      if (!cls.includes('ls-row') && !LEGACY_ROW_CLASSES.has(c)) newRows.add(c);
+    }
+  }
+  if (newRows.size) warn(`new list-row class(es) without .ls-row: ${[...newRows].join(', ')} — build the row with listRowHtml() (core/list.js, UX-LAYOUT §12)`);
+
+  // Procress 22: a hand-built floating layer, and a character as a button's icon
+  const relR = file.slice(app('src/renderer/').length);
+  if (HAND_POPUP.test(src)) {
+    handPopupSeen.add(relR);
+    if (!LEGACY_HAND_POPUP_FILES.has(relR)) warn(`builds a floating layer by hand (position:fixed / appended to <body>) — open it with openPopover() (core/popover.js) or openModal() (APP docs/COMPONENTS.md)`);
+  }
+  const charBtn = [];
+  for (const m of src.matchAll(/<button\b[^>]*>([^<]*(?:<(?!\/button)[^<]*)*)<\/button>/g)) if (CHAR_ICON.test(m[1])) charBtn.push(`L${lineOf(m.index)}`);
+  if (charBtn.length) warn(`${charBtn.length} button(s) with a character/emoji icon (${charBtn.slice(0, 5).join(' ')}) — use an SVG from I.* (core/state.js; COMPONENTS.md §1)`);
 }
 
 // ═══ Wiring checks for --module <name> ═══
@@ -455,6 +523,45 @@ if (moduleName) {
   } else {
     console.log(`  note    no ${app(`src/db/${m}.js`)} (fine if the module reuses another db file)`);
   }
+}
+
+// ═══ Procress 21: row rules size their text with tokens ═══
+if (!files.length) {
+  console.log('=== list rows (core/list.js, UX-LAYOUT §12) ===');
+  const px = [];
+  for (const [, sel, body] of cssSrc.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const size = /font-size\s*:\s*([^;]+)/.exec(body)?.[1];
+    if (!size || !/\d(\.\d+)?px/.test(size)) continue;
+    for (const part of sel.split(',').map((p) => p.trim())) {
+      if (/\.(?:ls-[\w-]+|[\w-]+-(?:row|item))(?![\w-])/.test(part) && !LEGACY_ROW_PX.has(part)) px.push(`${part} { font-size: ${size.trim()} }`);
+    }
+  }
+  if (px.length) warn(`raw px font-size in list-row rule(s) — use var(--fs-body) / var(--fs-sm): ${px.slice(0, 6).join(' · ')}${px.length > 6 ? ' …' : ''}`);
+  else ok('no list-row rule sizes its text in raw px');
+  const stale = [...LEGACY_ROW_CLASSES].filter((c) => !rowClassesSeen.has(c));
+  const cssSels = new Set(cssSrc.replace(/\/\*[\s\S]*?\*\//g, '').split(/[{}]/).flatMap((p) => p.split(',').map((q) => q.trim())));
+  const stalePx = [...LEGACY_ROW_PX].filter((sel) => !cssSels.has(sel));
+  if (stale.length || stalePx.length) console.log(`  note    migrated or gone — drop from LEGACY_ROW_CLASSES / LEGACY_ROW_PX: ${[...stale, ...stalePx].join(', ')}`);
+}
+
+// ═══ Procress 22: fixed layers in css/ ═══
+if (!files.length) {
+  console.log('=== floating layers (core/popover.js, COMPONENTS.md) ===');
+  const fixed = new Set();
+  for (const [, sel, body] of cssSrc.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!/position\s*:\s*fixed/.test(body)) continue;
+    for (const part of sel.split(',').map((p) => p.trim())) {
+      const names = [...part.matchAll(/[.#]([\w-]+)/g)].map((x) => x[1]);
+      const own = /\s/.test(part) || part.startsWith('body') ? names[names.length - 1] : names[0];
+      if (own) fixed.add(own);
+    }
+  }
+  const newFixed = [...fixed].filter((c) => !LEGACY_FIXED_CLASSES.has(c));
+  if (newFixed.length) warn(`new position:fixed layer(s) in css/: ${newFixed.join(', ')} — a popup is a .popover from openPopover(); a dialog is openModal()`);
+  else ok(`${fixed.size} fixed layers, all of them the shared ones or grandfathered`);
+  const staleP = [...LEGACY_HAND_POPUP_FILES].filter((f) => !handPopupSeen.has(f));
+  const staleF = [...LEGACY_FIXED_CLASSES].filter((c) => !fixed.has(c));
+  if (staleP.length || staleF.length) console.log(`  note    migrated or gone — drop from LEGACY_HAND_POPUP_FILES / LEGACY_FIXED_CLASSES: ${[...staleP, ...staleF].join(', ')}`);
 }
 
 console.log(`\n${errors} error(s), ${warnings} warning(s)`);

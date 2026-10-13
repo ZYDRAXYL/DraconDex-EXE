@@ -8,7 +8,8 @@
 // A Designer shape's label is skipped too: it sits over a sibling plate (the
 // diamond / polygon box) that no ancestor walk can see.
 // Runs in the page: win.evaluate(contrastProbe).
-export function contrastProbe() {
+// `within` (optional): only text inside an element matching that selector.
+export function contrastProbe(within = null) {
   // rgb()/rgba(), and color(srgb r g b / a) — what a color-mix() computes to
   const parse = (c) => {
     let m = /rgba?\(([^)]+)\)/.exec(c || '');
@@ -43,6 +44,7 @@ export function contrastProbe() {
     const el = t.parentElement;
     const text = t.nodeValue.trim();
     if (!text || !el || seen.has(el) || !el.offsetParent) continue;
+    if (within && !el.closest(within)) continue;
     seen.add(el);
     if (el.closest('[aria-hidden="true"], [disabled], .sr-only, #qs-overlay, .hidden, svg, option, .dg-node')) continue;
     const r = el.getBoundingClientRect();

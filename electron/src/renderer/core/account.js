@@ -40,7 +40,7 @@ function settingAccountBodyHtml(st, cfg){
   if (!st.connected) {
     return `
       <div class="modal-hint">${I.info}<span>${t('settingAccountNotLoggedIn')}</span></div>
-      <button class="btn btn-p" id="setting-account-login-btn" onclick="settingAccountLoginClick()">☁ ${t('driveConnect')}</button>
+      <button class="btn btn-p" id="setting-account-login-btn" onclick="settingAccountLoginClick()">${I.cloud}${t('driveConnect')}</button>
       <div class="mfoot">
         <button class="btn btn-s btn-sm" onclick="driveShowConfigForm('#setting-account-body')">${t('syncServerSettings')}</button>
       </div>`;
@@ -52,7 +52,7 @@ function settingAccountBodyHtml(st, cfg){
       <button class="btn btn-d" onclick="settingAccountLogoutClick()">${t('driveDisconnect')}</button>
     </div>
     <div class="settings-label" style="margin-top:14px">${t('settingAccountDriveSection')}</div>
-    <button class="btn btn-s" onclick="selectSettingPage('appdata','backup')">${t('prefs_backup')} →</button>`;
+    <button class="btn btn-s" onclick="selectSettingPage('appdata','backup')">${t('prefs_backup')}${I.chevronRight}</button>`;
 }
 async function settingAccountLoginClick(){
   syncBtnBusy('#setting-account-login-btn', true);
@@ -98,7 +98,7 @@ async function settingRefreshProfileSection(){
   if (!st.connected) {
     el.innerHTML = `
       <div class="modal-hint">${I.info}<span>${t('driveNotConnected')}</span></div>
-      <button class="btn btn-s" onclick="selectSettingPage('appdata','backup')">${t('prefs_backup')} →</button>`;
+      <button class="btn btn-s" onclick="selectSettingPage('appdata','backup')">${t('prefs_backup')}${I.chevronRight}</button>`;
     return;
   }
   const r = await api.drive.listLayoutSlots();
@@ -155,6 +155,6 @@ registerSettingPage('user', 'profile', settingProfilePageHtml);
 // Compact quick-popup "User profile" extra — just a shortcut into the page.
 function quickProfileExtraHtml(){
   return `<div class="settings-group"><div class="settings-label">${t('settingPageProfile')}</div>
-    <button class="btn btn-s" style="width:100%" onclick="toggleSettingsMenu(false);openSettingWindow('user','profile')">${t('settingPageProfile')} →</button>
+    <button class="btn btn-s" style="width:100%" onclick="toggleSettingsMenu(false);openSettingWindow('user','profile')">${t('settingPageProfile')}${I.chevronRight}</button>
   </div>`;
 }

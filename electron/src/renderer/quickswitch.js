@@ -215,22 +215,22 @@ async function openQuickSwitcher(seed = '', { newTab = false } = {}) {
   ov.innerHTML = `
     <div id="qs-box">
       <div class="qs-inputrow">
-        <span class="qs-glass">${I.search || '🔍'}</span>
+        <span class="qs-glass">${I.search}</span>
         <input id="qs-input" placeholder="${t('qsPlaceholder')}" autocomplete="off" spellcheck="false">
         <span class="qs-kbd" data-no-i18n>Ctrl+P</span>
       </div>
       <div class="qs-filters">
         <span class="qs-flabel">${t('qsScope')}:</span>
-        <span class="qs-chip" data-scope="vault">${t('qsScopeVault')}</span>
-        <span class="qs-chip" data-scope="level">${t('qsScopeLevel')}</span>
-        <span class="qs-chip" data-scope="subtree">${t('qsScopeSubtree')}</span>
+        <button type="button" class="chip chip-filter" aria-pressed="false" data-scope="vault">${t('qsScopeVault')}</button>
+        <button type="button" class="chip chip-filter" aria-pressed="false" data-scope="level">${t('qsScopeLevel')}</button>
+        <button type="button" class="chip chip-filter" aria-pressed="false" data-scope="subtree">${t('qsScopeSubtree')}</button>
         <span class="qs-flabel" style="margin-left:auto">${t('qsKind')}:</span>
         <select id="qs-kind">
           <option value="">${t('qsAllKinds')}</option>
           ${badges.map(b => `<option value="${x(b)}" ${b === _qsKind ? 'selected' : ''}>${x(b)}</option>`).join('')}
         </select>
       </div>
-      <div id="qs-list"></div>
+      <div id="qs-list" class="ls-list" role="listbox" aria-label="${x(t('qsPlaceholder'))}"></div>
       <div class="qs-foot">
         <span data-no-i18n>↑↓ ${t('qsSelectHint')}</span>
         <span><b data-no-i18n>Enter</b> ${t('qsOpenHint')}</span>
@@ -251,29 +251,25 @@ async function openQuickSwitcher(seed = '', { newTab = false } = {}) {
   };
 
   const paintChips = () => {
-    ov.querySelectorAll('.qs-chip').forEach(el =>
-      el.classList.toggle('act', el.dataset.scope === _qsScope));
+    ov.querySelectorAll('.chip-filter[data-scope]').forEach(el => {
+      const on = el.dataset.scope === _qsScope;
+      el.classList.toggle('on', on); el.setAttribute('aria-pressed', String(on));
+    });
   };
 
   const paint = () => {
     if (!_qsShown.length) {
-      list.innerHTML = `<div class="qs-empty">${t('qsNoResults')}</div>`;
+      list.innerHTML = emptyStateHtml({ icon: I.search, text: t('qsNoResults') });
     } else {
-      list.innerHTML = _qsShown.map((e, i) => `
-        <div class="qs-item ${i === _qsIdx ? 'active' : ''}" data-i="${i}">
-          <span class="qs-icon">${e.icon}</span>
-          <span class="dot" style="background:${e.color || 'var(--accent)'}"></span>
-          <span class="name">${x(e.name)}</span>
-          ${e.handle ? `<span class="qs-handle" data-no-i18n>@${x(e.handle)}</span>` : ''}
-          ${e.hint ? `<span class="qs-keys" data-no-i18n>${e.hint.split('+').map(k => `<kbd>${x(k)}</kbd>`).join('')}</span>` : ''}
-          ${e.recent ? `<span class="qs-recent" title="${x(t('qsRecent'))}">${I.return}</span>` : ''}
-          ${e.count ? `<span class="qs-lc" data-no-i18n>🔗 ${e.count}</span>` : ''}
-          ${canPin && !e.cmd && !e.act ? `<span class="qs-pin" data-i="${i}" title="${t('qsPinHint')}">📌</span>` : ''}
-          ${e.cmd && COMMANDS[e.cmd.id]?.scope === 'app' ? (() => { const on = quickAccess().includes(e.cmd.id); return `<span class="qs-qa${on ? ' on' : ''}" role="button" tabindex="-1" data-qa="${e.cmd.id}" aria-pressed="${on}" title="${x(t(on ? 'qaUnpin' : 'qaPin'))}">${on ? '★' : '☆'}</span>`; })() : ''}
-          <span class="qs-crumb" data-no-i18n>${x(e.crumb)}</span>
-          <span class="ek" data-no-i18n>${x(e.badge)}</span>
-        </div>`).join('');
-      list.querySelector('.qs-item.active')?.scrollIntoView({ block: 'nearest' });
+      // Procress 21: rows of the shared list (core/list.js), compact like a
+      // menu; the active pick is the selected row. Focus stays in the input
+      // (a combobox), so this list keeps its own keys below.
+      list.innerHTML = _qsShown.map((e, i) => listRowHtml({
+        density: 'compact', cls: 'qs-item', state: { selected: i === _qsIdx }, attrs: `data-i="${i}" data-no-i18n`,
+        icon: `<span class="qs-icon" style="color:${x(e.color || 'var(--accent)')}">${e.icon}</span>`, title: e.name, meta: e.crumb,
+        trailing: `${e.handle ? `<span class="qs-handle" data-no-i18n>@${x(e.handle)}</span>` : ''}${e.hint ? `<span class="qs-keys" data-no-i18n>${e.hint.split('+').map(k => `<kbd>${x(k)}</kbd>`).join('')}</span>` : ''}${e.recent ? `<span class="qs-recent" title="${x(t('qsRecent'))}">${I.return}</span>` : ''}${e.count ? `<span class="qs-lc" data-no-i18n>${I.relation}${e.count}</span>` : ''}${canPin && !e.cmd && !e.act ? `<span class="qs-pin" data-i="${i}" title="${t('qsPinHint')}">${I.pin}</span>` : ''}${e.cmd && COMMANDS[e.cmd.id]?.scope === 'app' ? (() => { const on = quickAccess().includes(e.cmd.id); return `<span class="qs-qa${on ? ' on' : ''}" role="button" tabindex="-1" data-qa="${e.cmd.id}" aria-pressed="${on}" title="${x(t(on ? 'qaUnpin' : 'qaPin'))}">${I.star}</span>`; })() : ''}<span class="ls-chip" data-no-i18n>${x(e.badge)}</span>`,
+      })).join('');
+      list.querySelector('.qs-item.sel')?.scrollIntoView({ block: 'nearest' });
     }
     const cnt = ov.querySelector('#qs-count');
     if (cnt) cnt.textContent = `${_qsShown.length} ${t('qsResults')}`;
@@ -371,7 +367,7 @@ async function openQuickSwitcher(seed = '', { newTab = false } = {}) {
 
   document.addEventListener('keydown', onKey, true);
   input.addEventListener('input', update);
-  ov.querySelectorAll('.qs-chip').forEach(el =>
+  ov.querySelectorAll('.chip-filter[data-scope]').forEach(el =>
     el.addEventListener('click', () => { _qsScope = el.dataset.scope; update(); input.focus(); }));
   ov.querySelector('#qs-kind').addEventListener('change', (e) => { _qsKind = e.target.value; update(); input.focus(); });
   list.addEventListener('click', (e) => {

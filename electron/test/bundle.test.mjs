@@ -29,8 +29,12 @@ let db;
 const core = require.resolve('../src/db/core.js');
 require.cache[core] = { id: core, filename: core, loaded: true, exports: { getDB: () => db, getVaultDB: () => db } };
 
+// In memory, and the previous one closed: 230+ vaults are built here, and as
+// files they were 230+ open handles under a folder test.after then deletes —
+// minutes per run, and on the Windows runner it never finished.
 function freshVault() {
-  db = adaptDb(new Database(join(tmp, `v${Math.random().toString(36).slice(2)}.ddx`)), 'vault');
+  try { db?.close(); } catch (_) {}
+  db = adaptDb(new Database(':memory:'), 'vault');
   db.exec('PRAGMA foreign_keys = ON');
   db.exec(VAULT_DDL_SQL);
   mig.migrateInlineColumns(db); // creates idx_entity_relation_v5 on a fresh vault too
