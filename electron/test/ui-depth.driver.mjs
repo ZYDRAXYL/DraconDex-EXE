@@ -160,6 +160,7 @@ test('depth: a new Nexus from a template, from Welcome — ≤ 3', async () => {
   await welcome.waitForSelector('.welcome-hero', { timeout: 20000 });
   const [create] = await Promise.all([ui.app.waitForEvent('window'), welcome.locator("button.btn-p[onclick='welcomeCreateNexus()']").first().click().then(() => clicks++)]);
   await create.waitForSelector('#cn-grid .home-tpl', { timeout: 20000 });
+  await create.setViewportSize({ width: 1120, height: 720 }); // a 1024-px runner would get the two-step layout (welcome.css < 1000 px)
   await create.locator('#cn-grid [data-cn-id="fantasy"]').click(); clicks++;
   await create.fill('#nx-name', 'Depth Fantasy'); // typing a value is not a step
   const [v] = await Promise.all([ui.app.waitForEvent('window'), create.click('#cn-create').catch(() => {}).then(() => clicks++)]);

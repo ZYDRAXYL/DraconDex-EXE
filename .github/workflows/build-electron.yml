@@ -104,17 +104,20 @@ jobs:
       # buttons were dead. windows-latest has a display, so no Xvfb here.
       - name: UI smoke (drives the real app)
         run: node --test electron/test/ui-smoke.driver.mjs
+        timeout-minutes: 30
 
       # Procress 17 R7: every page of the sample vault — page errors, inline
       # handlers that do not parse, white OS inputs, raw i18n keys, slow opens.
       - name: UI audit (every page)
         run: node --test electron/test/ui-audit.driver.mjs
+        timeout-minutes: 30
 
       # Procress 24 (APP docs/UX-LAYOUT.md §13): every customisation within
       # its click budget from Home — real buttons, none hover-only, no new
       # window, the same steps by keyboard.
       - name: UI depth (clicks from Home)
         run: node --test electron/test/ui-depth.driver.mjs
+        timeout-minutes: 30
 
       - name: Resolve version and release tag
         id: meta

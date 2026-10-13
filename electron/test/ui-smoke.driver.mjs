@@ -763,9 +763,10 @@ async function cnOpenWelcome() {
 // counts real pointer clicks on the path, for the depth budget (UX-LAYOUT §13)
 let cnClicks = 0;
 async function cnClick(page, sel) { cnClicks++; await page.locator(sel).first().click(); }
-async function cnOpenCreate(welcome) {
+async function cnOpenCreate(welcome, pin = true) {
   const [c] = await Promise.all([ui.app.waitForEvent('window'), cnClick(welcome, "button.btn-p[onclick='welcomeCreateNexus()']")]);
   await c.waitForSelector('#cn-grid .home-tpl', { timeout: 20000 });
+  if (pin) await c.setViewportSize({ width: 1120, height: 720 }); // a 1024-px runner would get the two-step layout (welcome.css < 1000 px)
   return c;
 }
 async function cnCreateFrom(create) {
@@ -779,7 +780,7 @@ const cnTop = (page) => page.evaluate(() => ({ top: S.moduleTree.map((m) => m.na
 
 test('25: Welcome → New opens a child window wider than Welcome; Cancel closes only the child', async () => {
   const welcome = await cnOpenWelcome();
-  const create = await cnOpenCreate(welcome);
+  const create = await cnOpenCreate(welcome, false); // measured as the app sized it
   const { area, wins } = await winsInfo();
   const w = wins.find((x) => /createNexus=1/.test(x.url));
   const wel = wins.find((x) => /welcome=1/.test(x.url));
@@ -789,6 +790,7 @@ test('25: Welcome → New opens a child window wider than Welcome; Cancel closes
   const want = area.width < 1000 ? area.width : Math.min(1120, area.width - 48);
   assert.equal(w.width, want, 'min(1120, workArea − 48)');
   if (area.width >= 1148) assert.ok(w.width >= 1100, `at least 1100 px wide (${w.width})`);
+  await create.setViewportSize({ width: 1120, height: 720 }); // the rest drives the two-pane layout
   // Blank is the default, the name is filled in and free, the Locate folder follows it
   assert.equal(await create.locator('#cn-grid .home-tpl.on').getAttribute('data-cn-id'), '');
   assert.ok((await create.inputValue('#nx-name')).length > 0);
