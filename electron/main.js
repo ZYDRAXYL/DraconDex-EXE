@@ -565,11 +565,14 @@ app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) creat
 // back up the vault file itself.
 const TX_VERB = /^(create|update|upsert|delete|add|remove|move|set|duplicate|restore|rename|save|apply|insert|reorder|clear|toggle|split|revert|link|unlink|merge|pin|attach|detach)/;
 const TX_SKIP = new Set(['nexus', 'vault', 'db', 'sync', 'drive', 'cloud', 'transfer', 'window', 'app', 'plugin', 'pkg', 'update', 'trx', 'importdock', 'asset', 'file', 'locate', 'export', 'backup']);
+// Content writes whose verb TX_VERB does not name — without them Ctrl+P kept
+// finding a trashed or undone module (the index is only rebuilt when dirty).
+const DIRTY_CHANNELS = new Set(['trash:module', 'trash:empty', 'history:undo', 'history:redo', 'nexus:locateSync', 'importdock:dropToNest']);
 const { getDB: vaultDB } = require('./src/db/core');
 const h = (ch, fn) => {
   const [ns, verb = ''] = ch.split(':');
   const tx = TX_VERB.test(verb) && !TX_SKIP.has(ns) && fn.constructor.name !== 'AsyncFunction';
-  const dirty = TX_VERB.test(verb) || /^import/.test(verb); // B3: the search index is stale after any write
+  const dirty = TX_VERB.test(verb) || /^import/.test(verb) || DIRTY_CHANNELS.has(ch); // B3: the search index is stale after any write
   const body = !tx ? fn : (...a) => {
     let d = null;
     try { d = vaultDB(); } catch (_) { /* no vault open: an app-level write */ }

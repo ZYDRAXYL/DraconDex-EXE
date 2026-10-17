@@ -19,6 +19,7 @@
 // version history (module_version is never in a snapshot) — the UI says so.
 const { getVaultDB } = require('./core');
 const { keysOwnedBy } = require('./entity-kinds');
+const { attachUndoAction } = require('./undo');
 
 function trashModule(nexusId, moduleId) {
   const sync = require('./sync');
@@ -32,15 +33,33 @@ function trashModule(nexusId, moduleId) {
   const inside = new Set(keys);
   const rows = db.prepare(`SELECT * FROM entity_relation WHERE nexus_ref=?`).all(nexusId)
     .filter((r) => inside.has(r.from_key) || inside.has(r.to_key));
+  // ONE transaction, so ONE session-undo step — and its undo is "restore
+  // from trash", not the row log: the delete's FK cascade (blocks, children,
+  // objects) removes rows no statement named, which the log never saw.
   const trashId = db.transaction(() => {
     const id = db.prepare(`INSERT INTO trash (nexus_ref, parent_ref, name, kind, module_count, payload, relations) VALUES (?,?,?,?,?,?,?)`)
       .run(nexusId, m.parent_id, m.name, m.kind, ids.length, JSON.stringify(payload), JSON.stringify({ keys, rows })).lastInsertRowid;
     // The saved rows go with the subtree; left behind, they would dangle.
     const del = db.prepare(`DELETE FROM entity_relation WHERE id=?`);
     for (const r of rows) del.run(r.id);
+    require('./module').deleteModule(moduleId);
+    const step = { trashId: id, moduleId: null };
+    attachUndoAction({
+      undo() {
+        const r = restoreTrash(nexusId, step.trashId);
+        if (!r.ok) return { ok: false, reason: 'irreversible' }; // the trash entry was deleted for good
+        step.moduleId = r.moduleId;
+        return { ok: true };
+      },
+      redo() {
+        const r = step.moduleId == null ? null : trashModule(nexusId, step.moduleId);
+        if (!r?.ok) return { ok: false, reason: 'irreversible' };
+        step.trashId = r.trashId;
+        return { ok: true };
+      },
+    });
     return id;
   })();
-  require('./module').deleteModule(moduleId);
   // v5 Part 8 (§12.2): a page's own text is content now, even on a view
   // module — the caller says how much went, so a Manager's delete is not
   // "only a layout" any more.

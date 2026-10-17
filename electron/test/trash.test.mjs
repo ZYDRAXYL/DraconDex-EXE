@@ -115,3 +115,42 @@ test('a nested module\'s snapshot imports (its root named a parent outside the p
   const got = db.prepare(`SELECT m.name, p.name AS parent FROM module m LEFT JOIN module p ON m.parent_id=p.id ORDER BY m.id`).all().map((x) => [x.name, x.parent]);
   assert.deepEqual(got, [['Inner', null], ['Leaf', 'Inner']]);
 });
+
+test('Ctrl+Z after a trash brings the module back with its blocks and empties the trash; redo trashes it again', () => {
+  freshVault();
+  db.setUndoTracking(true);
+  const folder = mkModule('World', 'collector');
+  const page = mkModule('Doomed', 'drafter', folder);
+  one(`INSERT INTO page_block (module_ref, block_type, content, block_order) VALUES (?, 'text', 'hello', 0)`, page);
+  one(`INSERT INTO page_block (module_ref, block_type, content, block_order) VALUES (?, 'heading', 'title', 1)`, page);
+  const count = () => ({
+    mod: db.prepare(`SELECT COUNT(*) c FROM module WHERE name='Doomed'`).get().c,
+    blocks: db.prepare(`SELECT COUNT(*) c FROM page_block`).get().c,
+    trash: db.prepare(`SELECT COUNT(*) c FROM trash`).get().c,
+  });
+  assert.equal(trash.trashModule(1, page).ok, true);
+  assert.deepEqual(count(), { mod: 0, blocks: 0, trash: 1 });
+
+  assert.deepEqual(db.undo(), { ok: true });
+  assert.deepEqual(count(), { mod: 1, blocks: 2, trash: 0 }, 'blocks back, trash entry gone — not an empty shell');
+  assert.equal(db.prepare(`SELECT parent_id FROM module WHERE name='Doomed'`).get().parent_id, folder);
+  assert.deepEqual(trash.listTrash(1), [], 'nothing left to Restore, so it cannot be duplicated');
+  assert.equal(db.canUndo(), true, 'the folder insert is still undoable; the restore did not log a step of its own');
+
+  assert.deepEqual(db.redo(), { ok: true });
+  assert.deepEqual(count(), { mod: 0, blocks: 0, trash: 1 });
+  assert.deepEqual(db.undo(), { ok: true }, 'undo again follows the new trash entry');
+  assert.deepEqual(count(), { mod: 1, blocks: 2, trash: 0 });
+});
+
+test('Ctrl+Z after the trash entry was deleted for good reports irreversible and changes nothing', () => {
+  freshVault();
+  db.setUndoTracking(true);
+  const page = mkModule('Gone', 'drafter');
+  const { trashId } = trash.trashModule(1, page);
+  db.setUndoTracking(false);
+  trash.deleteTrash(1, trashId); // tracked off: the trash step stays on top
+  db.setUndoTracking(true);
+  assert.equal(db.undo().ok, false);
+  assert.equal(db.prepare(`SELECT COUNT(*) c FROM module`).get().c, 0);
+});

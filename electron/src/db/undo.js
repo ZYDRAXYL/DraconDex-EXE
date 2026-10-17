@@ -26,6 +26,11 @@
 
 const MAX_GROUPS = 200;
 
+// The recorders with a group open right now, innermost last. Groups are
+// synchronous (conn.js transaction()), so db code running inside one can
+// find "its" group here — see attachUndoAction.
+const openRecorders = [];
+
 const INSERT_RE = /^\s*INSERT\s+INTO\s+["'`]?(\w+)["'`]?/i;
 const UPDATE_RE = /^\s*UPDATE\s+["'`]?(\w+)["'`]?\s+SET\b/i;
 const DELETE_RE = /^\s*DELETE\s+FROM\s+["'`]?(\w+)["'`]?\s+WHERE\b/i;
@@ -122,12 +127,14 @@ function createUndoRecorder(origPrepare) {
 
   function beginGroup() {
     depth++;
-    if (depth === 1) group = { entries: [], irreversible: false };
+    if (depth === 1) { group = { entries: [], irreversible: false, action: null }; openRecorders.push(self); }
   }
   function endGroup(commit) {
     depth = Math.max(0, depth - 1);
     if (depth === 0) {
-      if (commit && group && (group.entries.length || group.irreversible)) {
+      const at = openRecorders.lastIndexOf(self);
+      if (at >= 0) openRecorders.splice(at, 1);
+      if (commit && group && (group.entries.length || group.irreversible || group.action)) {
         undoStack.push(group);
         if (undoStack.length > MAX_GROUPS) undoStack.shift();
         redoStack = [];
@@ -169,6 +176,23 @@ function createUndoRecorder(origPrepare) {
     if (implicit) endGroup(true);
   }
 
+  // A group whose effect the row log cannot reverse (trash.js trashModule:
+  // the FK cascade removes rows no statement named) can carry an action that
+  // knows the real inverse. Its row entries are then ignored, and the action
+  // runs with recording off so it does not log itself as a new step.
+  function attachAction(action) {
+    if (!enabled || !group) return false;
+    group.action = action;
+    return true;
+  }
+  function runAction(g, direction) {
+    const was = enabled;
+    enabled = false;
+    try { return g.action[direction]() || { ok: true }; }
+    catch (e) { return { ok: false, reason: 'failed', error: String(e?.message || e) }; }
+    finally { enabled = was; }
+  }
+
   function applyGroup(g, direction) {
     const order = direction === 'undo' ? [...g.entries].reverse() : g.entries;
     for (const e of order) {
@@ -187,6 +211,12 @@ function createUndoRecorder(origPrepare) {
   function undo() {
     const g = undoStack.pop();
     if (!g) return { ok: false, reason: 'nothing' };
+    if (g.action) {
+      const r = runAction(g, 'undo');
+      if (!r.ok) { undoStack.push(g); return r; }
+      redoStack.push(g);
+      return { ok: true };
+    }
     if (g.irreversible) { undoStack.push(g); return { ok: false, reason: 'irreversible' }; }
     applyGroup(g, 'undo');
     redoStack.push(g);
@@ -195,6 +225,12 @@ function createUndoRecorder(origPrepare) {
   function redo() {
     const g = redoStack.pop();
     if (!g) return { ok: false, reason: 'nothing' };
+    if (g.action) {
+      const r = runAction(g, 'redo');
+      if (!r.ok) { redoStack.push(g); return r; }
+      undoStack.push(g);
+      return { ok: true };
+    }
     applyGroup(g, 'redo');
     undoStack.push(g);
     return { ok: true };
@@ -203,7 +239,16 @@ function createUndoRecorder(origPrepare) {
   const canRedo = () => redoStack.length > 0;
   const setEnabled = (v) => { enabled = !!v; };
 
-  return { beginGroup, endGroup, beforeRun, afterRun, undo, redo, canUndo, canRedo, setEnabled };
+  const self = { beginGroup, endGroup, beforeRun, afterRun, undo, redo, canUndo, canRedo, setEnabled, attachAction };
+  return self;
 }
 
-module.exports = { createUndoRecorder };
+// Gives the undo group open right now (the innermost transaction) a custom
+// inverse: { undo() -> {ok,...}, redo() -> {ok,...} }. False when no group
+// is open or tracking is off — there is then simply no undo step.
+const attachUndoAction = (action) => {
+  const rec = openRecorders[openRecorders.length - 1];
+  return rec ? rec.attachAction(action) : false;
+};
+
+module.exports = { createUndoRecorder, attachUndoAction };

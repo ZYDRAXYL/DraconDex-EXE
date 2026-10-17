@@ -75,3 +75,31 @@ test('rebuild sees what changed since; a forced rebuild picks up deletions', () 
   search.rebuildSearch(1, true);
   assert.equal(search.searchContent(1, 'zephyr').length, 0);
 });
+
+test('no ghost hit after a trash, and the content is found again after Ctrl+Z (B3 dirty marking)', () => {
+  freshVault();
+  db.setUndoTracking(true);
+  const trash = require('../src/db/trash.js');
+  const page = mkModule('Wyvernhold', 'drafter');
+  search.invalidateSearch(1);
+  assert.equal(search.searchContent(1, 'Wyvernhold').length, 1);
+  trash.trashModule(1, page);
+  search.markSearchDirty(); // what main.js h() does after trash:module
+  assert.deepEqual(search.searchContent(1, 'Wyvernhold'), [], 'a trashed module is not a hit');
+  assert.equal(db.undo().ok, true);
+  search.markSearchDirty(); // … and after history:undo
+  assert.equal(search.searchContent(1, 'Wyvernhold').length, 1);
+});
+
+test('main.js marks search dirty for the content writes TX_VERB does not name', async () => {
+  const { readFileSync } = await import('node:fs');
+  const main = readFileSync(new URL('../main.js', import.meta.url), 'utf8');
+  const list = /const DIRTY_CHANNELS = new Set\(\[([^\]]*)\]\)/.exec(main);
+  assert.ok(list, 'DIRTY_CHANNELS exists');
+  assert.match(main, /DIRTY_CHANNELS\.has\(ch\)/, 'h() consults it');
+  const chans = [...list[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  for (const ch of ['trash:module', 'trash:empty', 'history:undo', 'history:redo', 'nexus:locateSync', 'importdock:dropToNest']) {
+    assert.ok(chans.includes(ch), `${ch} marks search dirty`);
+    assert.ok(main.includes(`h('${ch}'`), `${ch} is registered through h()`);
+  }
+});
