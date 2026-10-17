@@ -778,40 +778,54 @@ async function cnCreateFrom(create) {
 }
 const cnTop = (page) => page.evaluate(() => ({ top: S.moduleTree.map((m) => m.name), all: flattenModulesByKind(S.moduleTree, []).map((m) => m.name) }));
 
+// What getBounds() says for a bare frameless window asked for `width`: on
+// Windows at a display scale ≠ 100 % Electron reports frameless windows a few
+// DIP wider than asked (125 %: +2, +6 when x/y are given too), app code or not.
+// The app's windows are held to exactly that, not to the raw number.
+const bareFramelessWidth = (width, xy) => ui.app.evaluate(({ BrowserWindow }, [width, xy]) => {
+  const w = new BrowserWindow({ frame: false, show: false, width, height: 480, ...(xy ? { x: 40, y: 40 } : {}) });
+  const got = w.getBounds().width; w.destroy(); return got;
+}, [width, xy]);
+
 test('25: Welcome → New opens a child window wider than Welcome; Cancel closes only the child', async () => {
   const welcome = await cnOpenWelcome();
-  const create = await cnOpenCreate(welcome, false); // measured as the app sized it
-  const { area, wins } = await winsInfo();
-  const w = wins.find((x) => /createNexus=1/.test(x.url));
-  const wel = wins.find((x) => /welcome=1/.test(x.url));
-  assert.equal(wel.width, 760, 'Welcome keeps its size');
-  assert.equal(w.parent, wel.id, 'a child of the Welcome window');
-  if (process.platform !== 'darwin') assert.ok(w.modal, 'modal over Welcome');
-  const want = area.width < 1000 ? area.width : Math.min(1120, area.width - 48);
-  assert.equal(w.width, want, 'min(1120, workArea − 48)');
-  if (area.width >= 1148) assert.ok(w.width >= 1100, `at least 1100 px wide (${w.width})`);
-  await create.setViewportSize({ width: 1120, height: 720 }); // the rest drives the two-pane layout
-  // Blank is the default, the name is filled in and free, the Locate folder follows it
-  assert.equal(await create.locator('#cn-grid .home-tpl.on').getAttribute('data-cn-id'), '');
-  assert.ok((await create.inputValue('#nx-name')).length > 0);
-  assert.match(await create.inputValue('#cn-locate'), /DraconDex[\\/]/);
-  // ←→ move the selection through the grid; the detail follows
-  await create.focus('#cn-grid .home-tpl.on');
-  await create.keyboard.press('ArrowRight');
-  const second = await create.locator('#cn-grid .home-tpl').nth(1).getAttribute('data-cn-id');
-  assert.equal(await create.locator('#cn-grid .home-tpl.on').getAttribute('data-cn-id'), second);
-  assert.equal(await create.evaluate(() => document.activeElement?.dataset.cnId), second, 'focus moves with it');
-  assert.ok((await create.locator('#cn-detail .ls-row').count()) > 0, 'the modules it makes');
-  // a taken name is said under the field, not in a toast
-  await create.fill('#nx-name', 'Smoke');
-  assert.equal(await create.locator('#nx-name-err').isVisible(), true);
-  // the page closes under the click, so the click itself may report a closed target
-  await Promise.all([create.waitForEvent('close'), create.click('.cn-foot .btn-s:has-text("Cancel")').catch(() => {})]);
-  await sleep(300);
-  const after = (await winsInfo()).wins;
-  assert.equal(after.some((x) => /createNexus=1/.test(x.url)), false, 'the child is gone');
-  assert.equal(after.some((x) => /welcome=1/.test(x.url)), true, 'Welcome stays');
-  await welcome.close();
+  try {
+    const welBefore = (await winsInfo()).wins.find((x) => /welcome=1/.test(x.url)).width;
+    const create = await cnOpenCreate(welcome, false); // measured as the app sized it
+    const { area, wins } = await winsInfo();
+    const w = wins.find((x) => /createNexus=1/.test(x.url));
+    const wel = wins.find((x) => /welcome=1/.test(x.url));
+    assert.equal(wel.width, welBefore, 'Welcome keeps its size when the child opens');
+    assert.equal(wel.width, await bareFramelessWidth(760, false), 'Welcome is 760 wide');
+    assert.equal(w.parent, wel.id, 'a child of the Welcome window');
+    if (process.platform !== 'darwin') assert.ok(w.modal, 'modal over Welcome');
+    const want = area.width < 1000 ? area.width : Math.min(1120, area.width - 48);
+    assert.equal(w.width, await bareFramelessWidth(want, true), `min(1120, workArea − 48) = ${want}`);
+    if (area.width >= 1148) assert.ok(w.width >= 1100, `at least 1100 px wide (${w.width})`);
+    await create.setViewportSize({ width: 1120, height: 720 }); // the rest drives the two-pane layout
+    // Blank is the default, the name is filled in and free, the Locate folder follows it
+    assert.equal(await create.locator('#cn-grid .home-tpl.on').getAttribute('data-cn-id'), '');
+    assert.ok((await create.inputValue('#nx-name')).length > 0);
+    assert.match(await create.inputValue('#cn-locate'), /DraconDex[\\/]/);
+    // ←→ move the selection through the grid; the detail follows
+    await create.focus('#cn-grid .home-tpl.on');
+    await create.keyboard.press('ArrowRight');
+    const second = await create.locator('#cn-grid .home-tpl').nth(1).getAttribute('data-cn-id');
+    assert.equal(await create.locator('#cn-grid .home-tpl.on').getAttribute('data-cn-id'), second);
+    assert.equal(await create.evaluate(() => document.activeElement?.dataset.cnId), second, 'focus moves with it');
+    assert.ok((await create.locator('#cn-detail .ls-row').count()) > 0, 'the modules it makes');
+    // a taken name is said under the field, not in a toast
+    await create.fill('#nx-name', 'Smoke');
+    assert.equal(await create.locator('#nx-name-err').isVisible(), true);
+    // the page closes under the click, so the click itself may report a closed target
+    await Promise.all([create.waitForEvent('close'), create.click('.cn-foot .btn-s:has-text("Cancel")').catch(() => {})]);
+    await sleep(300);
+    const after = (await winsInfo()).wins;
+    assert.equal(after.some((x) => /createNexus=1/.test(x.url)), false, 'the child is gone');
+    assert.equal(after.some((x) => /welcome=1/.test(x.url)), true, 'Welcome stays');
+  } finally {
+    await welcome.close().catch(() => {}); // a failed check must not leave Welcome open: the next openWelcome() would only focus it
+  }
 });
 
 // The click budget of this path (≤ 3 from Welcome) is ui-depth.driver.mjs's row now (Procress 24).
