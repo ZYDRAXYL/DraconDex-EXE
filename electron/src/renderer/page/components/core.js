@@ -82,8 +82,15 @@ registerFilled('core.stats', { kind: 'core', labelKey: 'pcStats' }, async (c) =>
     }
   } else {
     const src = c.source;
-    const items = S.nestItems?.get(src.id);
-    tiles.push({ name: t('pcStatItems'), value: Array.isArray(items) ? items.length : 0 });
+    let items = S.nestItems?.get(src.id);
+    // An add/delete has just invalidated the Nest cache (invalidateNestItems),
+    // and this block re-renders before the Nest refills it — ask for the list
+    // instead of showing 0.
+    if (!Array.isArray(items)) {
+      const reg = ITEM_KIND[findModuleNode(src.id)?.kind];
+      items = reg ? await reg.list(src.id) : [];
+    }
+    tiles.push({ name: t('pcStatItems'), value: items.length });
     const kids = findModuleNode(src.id)?.children?.length || 0;
     if (kids) tiles.push({ name: t('pcStatModules'), value: kids });
     const links = c.page.props?.links;

@@ -78,7 +78,9 @@ const ITEM_KIND = {
     nameOf: (c) => c.name,
     async renderBody() { return `<div id="author-item-editor" class="scribe-editor au-editor"></div>`; },
     mount(node) {
-      mountAuthorRichEditor(fq('#author-item-editor'), node.item);
+      // The HTML export renders item pages off-screen: no editor host there.
+      const host = fq('#author-item-editor');
+      if (host) mountAuthorRichEditor(host, node.item);
     },
   },
   scribe: {
