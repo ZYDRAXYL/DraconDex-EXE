@@ -6,13 +6,11 @@ tmp-user-data/
 *.log
 
 
-tmp-driver-data/
-tmp-driver-data2/
+# Scratch data dirs and screenshots from dev/driver/agent runs
+# (tmp-user-data, tmp-driver-data*, tmp-agent-*, tmp-shots, …).
+tmp-*/
 .worktrees/
 .claude/worktrees/
-tmp-driver-data-a2/
-tmp-driver-data-b/
-tmp-shots/
 
 module-showcase/
 
