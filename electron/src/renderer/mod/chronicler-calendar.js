@@ -198,7 +198,7 @@ function buildChroniclerCalendarHtml(evs, data) {
   }).join('');
 
   const viewBar = `<div class="seg viewbar">${chroniclerCalViewUnits().map(u =>
-    `<button type="button" class="seg-opt vitem${u.key === zoom ? ' act' : ''}" aria-pressed="${u.key === zoom}" onclick="setChroniclerCalZoom('${x(u.key)}')" ${chroniclerCalIsBuiltinUnit(u.key) ? '' : 'data-no-i18n'}>${x(chroniclerCalUnitLabel(u.key))}</button>`).join('')}</div>`;
+    `<button type="button" class="seg-opt vitem${u.key === zoom ? ' act' : ''}" aria-pressed="${u.key === zoom}" onclick="setChroniclerCalZoom(${xj(u.key)})" ${chroniclerCalIsBuiltinUnit(u.key) ? '' : 'data-no-i18n'}>${x(chroniclerCalUnitLabel(u.key))}</button>`).join('')}</div>`;
 
   // The panel deliberately covers the bar rather than pushing it down — the
   // Plan asks for exactly that: the custom div may cover the view bar.
@@ -251,7 +251,7 @@ function buildChroniclerCalPanelHtml(spec, data) {
   const unitKey = units.some(u => u.key === data.calPanelUnit) ? data.calPanelUnit : units[0].key;
   const unit = units.find(u => u.key === unitKey);
   const pages = units.map(u =>
-    `<button type="button" class="seg-opt vitem${u.key === unitKey ? ' act' : ''}" aria-pressed="${u.key === unitKey}" onclick="setChroniclerCalPanelUnit('${x(u.key)}')" ${chroniclerCalIsBuiltinUnit(u.key) ? '' : 'data-no-i18n'}>${x(chroniclerCalUnitLabel(u.key))}</button>`).join('');
+    `<button type="button" class="seg-opt vitem${u.key === unitKey ? ' act' : ''}" aria-pressed="${u.key === unitKey}" onclick="setChroniclerCalPanelUnit(${xj(u.key)})" ${chroniclerCalIsBuiltinUnit(u.key) ? '' : 'data-no-i18n'}>${x(chroniclerCalUnitLabel(u.key))}</button>`).join('');
 
   return `<div class="chr-cal-panel">
     <div class="chr-cal-panel-bar">
@@ -283,9 +283,9 @@ function buildChroniclerCalUnitPageHtml(spec, unit) {
   const extraRows = extras.map((o, i) => `<div class="chr-cal-row">
     <span class="chr-cal-eq">=</span>
     <input class="cls-lv-inp chr-cal-num" type="number" min="1" value="${o.count}"
-      onchange="setChroniclerCalExtraCount('${x(unit.key)}',${i},this.value)">
+      onchange="setChroniclerCalExtraCount(${xj(unit.key)},${i},this.value)">
     <span class="chr-cal-unitname" data-no-i18n>${x(chroniclerCalUnitLabel(o.unit))}</span>
-    <button class="btn btn-g btn-i" onclick="removeChroniclerCalExtra('${x(unit.key)}',${i})" title="${t('delete')}">${I.delete}</button>
+    <button class="btn btn-g btn-i" onclick="removeChroniclerCalExtra(${xj(unit.key)},${i})" title="${t('delete')}">${I.delete}</button>
   </div>`).join('');
 
   const otherUnits = spec.units.filter(u => u.key !== unit.key && u.key !== child.unit);
@@ -293,7 +293,7 @@ function buildChroniclerCalUnitPageHtml(spec, unit) {
     <span class="chr-cal-eq">=</span>
     <select id="chr-cal-extra-unit" class="chr-cal-sel">${otherUnits.map(u =>
       `<option value="${x(u.key)}">${x(chroniclerCalUnitLabel(u.key))}</option>`).join('')}</select>
-    <button class="btn btn-g" onclick="addChroniclerCalExtra('${x(unit.key)}')">${I.plus}</button>
+    <button class="btn btn-g" onclick="addChroniclerCalExtra(${xj(unit.key)})">${I.plus}</button>
   </div>` : '';
 
   // Per-child length overrides. Only meaningful when the child itself has a
@@ -303,7 +303,7 @@ function buildChroniclerCalUnitPageHtml(spec, unit) {
       <span data-no-i18n>${x(naming.names[i] || `${childLabel} ${i + 1}`)}</span>
       <input class="cls-lv-inp" type="number" min="1"
         value="${lengths.values[i] != null ? lengths.values[i] : grandchild.count}"
-        onchange="setChroniclerCalLength('${x(unit.key)}',${i},this.value)">
+        onchange="setChroniclerCalLength(${xj(unit.key)},${i},this.value)">
     </label>`).join('')}
   </div>` : '';
 
@@ -311,7 +311,7 @@ function buildChroniclerCalUnitPageHtml(spec, unit) {
     ${Array.from({ length: count }, (_, i) => `<label class="chr-cal-cellin">
       <span data-no-i18n>${i + 1}</span>
       <input class="cls-lv-inp" value="${x(naming.names[i] || '')}"
-        onchange="setChroniclerCalName('${x(unit.key)}',${i},this.value)">
+        onchange="setChroniclerCalName(${xj(unit.key)},${i},this.value)">
     </label>`).join('')}
   </div>` : '';
 
@@ -320,16 +320,16 @@ function buildChroniclerCalUnitPageHtml(spec, unit) {
     <div class="chr-cal-row chr-cal-mainrow">
       <span class="chr-cal-eq" data-no-i18n>1 ${x(chroniclerCalUnitLabel(unit.key))} =</span>
       <input class="cls-lv-inp chr-cal-num" type="number" min="1" value="${count}"
-        onchange="setChroniclerCalCount('${x(unit.key)}',this.value)">
+        onchange="setChroniclerCalCount(${xj(unit.key)},this.value)">
       <span class="chr-cal-unitname" data-no-i18n>${x(childLabel)}</span>
-      ${removable ? `<button class="btn btn-d chr-cal-panel-btn" onclick="removeChroniclerCalUnit('${x(unit.key)}')">${t('calRemoveUnit')}</button>` : ''}
+      ${removable ? `<button class="btn btn-d chr-cal-panel-btn" onclick="removeChroniclerCalUnit(${xj(unit.key)})">${t('calRemoveUnit')}</button>` : ''}
     </div>
     ${extraRows}${addExtra}
     ${extras.length ? `<div class="chr-cal-hint">${t('calSubUnitHint')}</div>` : ''}
     <div class="chr-cal-toggles">
-      ${grandchild ? `<div class="togglerow" onclick="toggleChroniclerCalFlag('${x(unit.key)}','lengths')">
+      ${grandchild ? `<div class="togglerow" onclick="toggleChroniclerCalFlag(${xj(unit.key)},'lengths')">
         <span class="tg${lengths.on ? ' on' : ''}"></span>${t('calToggleCustomLengths')}</div>` : ''}
-      <div class="togglerow" onclick="toggleChroniclerCalFlag('${x(unit.key)}','naming')">
+      <div class="togglerow" onclick="toggleChroniclerCalFlag(${xj(unit.key)},'naming')">
         <span class="tg${naming.on ? ' on' : ''}"></span>${t('calToggleNaming')}</div>
       ${unit.mode === 'cycle' ? `<span class="chr-cal-modechip" data-no-i18n>${x(t('calModeCycle'))}</span>` : ''}
     </div>
@@ -533,21 +533,21 @@ function openChroniclerCalAdvanced() {
           <span data-no-i18n>${x((unit.naming?.names || [])[i] || i + 1)}</span>
           <input class="cls-lv-inp" type="number" min="1" placeholder="${(unit.lengths?.values || [])[i] ?? grandchild.count}"
             value="${(cyc.variants[pos] || {})[i] ?? ''}"
-            onchange="setChroniclerCalVariant('${x(unitKey)}',${pos},${i},this.value)">
+            onchange="setChroniclerCalVariant(${xj(unitKey)},${pos},${i},this.value)">
         </label>`).join('')}
       </div>
     </div>`).join('') : '';
 
   openModal(`${t('calAdvancedSetup')} — ${chroniclerCalUnitLabel(unitKey)}`, `
     <div class="chr-cal-hint">${t('calAdvancedIntro')}</div>
-    <div class="togglerow" onclick="toggleChroniclerCalMode('${x(unitKey)}')">
+    <div class="togglerow" onclick="toggleChroniclerCalMode(${xj(unitKey)})">
       <span class="tg${unit.mode === 'cycle' ? ' on' : ''}"></span>${t('calModeCycleLabel')}</div>
     <div class="chr-cal-hint">${t('calModeHint')}</div>
-    <div class="togglerow" onclick="toggleChroniclerCalCycle('${x(unitKey)}')">
+    <div class="togglerow" onclick="toggleChroniclerCalCycle(${xj(unitKey)})">
       <span class="tg${cyc.on ? ' on' : ''}"></span>${t('calCycleOn')}</div>
     ${cyc.on ? `<div class="fg"><label>${t('calCyclePeriod')}</label>
       <input id="chr-cal-period" type="number" min="1" value="${cyc.period}"
-        onchange="setChroniclerCalPeriod('${x(unitKey)}',this.value)"></div>` : ''}
+        onchange="setChroniclerCalPeriod(${xj(unitKey)},this.value)"></div>` : ''}
     ${variantRows}
     <div class="mfoot"><button class="btn btn-p" onclick="closeModal()">${t('guideDone')}</button></div>`);
 }
