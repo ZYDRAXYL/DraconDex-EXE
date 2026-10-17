@@ -36,6 +36,34 @@ const stackRows = (d, moduleId, itemKey) => d.prepare(`
   SELECT * FROM page_block WHERE module_ref=? AND ${pageWhere(itemKey)} AND ${STACK_TYPES}
   ORDER BY block_order, id`).all(...pageArgs(moduleId, itemKey));
 
+// Rows re-inserted with their parent_id (an undo, a copy) must go parent
+// first: page_block.parent_id is a foreign key, and a columns row made by
+// moveBeside has a higher id — and may have a higher block_order — than the
+// blocks inside it. Keeps the given order otherwise; a row whose parent is
+// not in the list counts as a root.
+function parentFirst(rows) {
+  const list = rows || [];
+  const ids = new Set(list.map((r) => r.id));
+  const kids = new Map();
+  const roots = [];
+  for (const r of list) {
+    if (r.parent_id != null && r.parent_id !== r.id && ids.has(r.parent_id)) {
+      (kids.get(r.parent_id) || kids.set(r.parent_id, []).get(r.parent_id)).push(r);
+    } else roots.push(r);
+  }
+  const out = [];
+  const seen = new Set();
+  const walk = (r) => {
+    if (seen.has(r.id)) return;
+    seen.add(r.id);
+    out.push(r);
+    for (const k of kids.get(r.id) || []) walk(k);
+  };
+  roots.forEach(walk);
+  for (const r of list) walk(r); // only a parent_id cycle is left: keep its rows
+  return out;
+}
+
 // The page (module or element) whose text a block's content indexes under.
 function reindexFor(moduleId, itemKey) {
   try {
@@ -187,7 +215,10 @@ function deleteBlock(id) {
   const d = getDB();
   const prev = d.prepare(`SELECT * FROM page_block WHERE id=?`).get(id);
   if (!prev) return false;
-  const kids = d.prepare(`SELECT * FROM page_block WHERE parent_id=?`).all(id);
+  // the whole subtree — ON DELETE CASCADE removes every level, not just one
+  const kids = d.prepare(`WITH RECURSIVE sub(id) AS (SELECT id FROM page_block WHERE parent_id=?
+      UNION SELECT p.id FROM page_block p JOIN sub ON p.parent_id=sub.id)
+    SELECT * FROM page_block WHERE id IN (SELECT id FROM sub) AND id<>?`).all(id, id);
   d.prepare(`DELETE FROM page_block WHERE id=?`).run(id);
   versions.recordVersion(prev.module_ref, prev.block_type === 'property' ? 'attrDel' : 'blockDel',
     prev.prop_name || prev.component || prev.block_type, { op: 'blockRestore', args: { rows: [prev, ...kids] } });
@@ -201,7 +232,7 @@ function restoreBlocks(rows) {
   const ins = d.prepare(`INSERT OR REPLACE INTO page_block (id, module_ref, item_key, parent_id, block_type, component, source_key, config, content, prop_name, prop_type, block_order, create_at, update_at)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
   d.transaction(() => {
-    for (const r of rows || []) {
+    for (const r of parentFirst(rows)) {
       if (!d.prepare(`SELECT 1 FROM module WHERE id=?`).get(r.module_ref)) continue;
       ins.run(r.id, r.module_ref, r.item_key, r.parent_id, r.block_type, r.component, r.source_key, r.config,
         r.content, r.prop_name, r.prop_type, r.block_order, r.create_at, r.update_at);
@@ -219,7 +250,7 @@ function splitItemPage(moduleId, itemKey) {
   return d.transaction(() => {
     if (stackRows(d, moduleId, itemKey).length) return false;
     const map = new Map();
-    for (const r of stackRows(d, moduleId, '*')) {
+    for (const r of parentFirst(stackRows(d, moduleId, '*'))) {
       const id = d.prepare(`INSERT INTO page_block (module_ref, item_key, parent_id, block_type, component, source_key, config, content, prop_name, prop_type, block_order)
         VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(moduleId, itemKey, r.parent_id == null ? null : (map.get(r.parent_id) ?? null),
         r.block_type, r.component, r.source_key, r.config, r.content, r.prop_name, r.prop_type, r.block_order).lastInsertRowid;
@@ -298,7 +329,7 @@ const addBlocks = (moduleId, itemKey, list = []) => getDB().transaction(() =>
   versions.asOneVersion(moduleId, 'block', `+ ${list.length}`, () => list.map((b) => addBlock(moduleId, itemKey, b))))();
 
 module.exports = {
-  blockLinkUrl, addBlocks,
+  blockLinkUrl, addBlocks, parentFirst,
   listBlocks, listProps, ensurePage, addBlock, getBlock, updateBlock, moveBlock, moveBeside, deleteBlock,
   restoreBlocks, splitItemPage, revertItemPage, clearItemBlocks, setProp, getPageProps,
 };

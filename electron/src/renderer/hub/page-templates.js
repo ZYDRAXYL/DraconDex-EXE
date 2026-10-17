@@ -187,7 +187,8 @@ async function useTemplateNow(moduleId, ref, { fields = true } = {}) {
   await reloadModulePage(moduleId, null);
   if (r.dropped) toast(t('tplBorrowDropped').replace('{n}', r.dropped), 'warn');
   toastAction(t('tplApplied'), t('scUndo'), async () => {
-    await api.template.restore(moduleId, r.old);
+    try { await api.template.restore(moduleId, r.old); }
+    catch (_) { toast(t('driveErrServer'), 'err'); return; }
     await reloadModulePage(moduleId, null);
   });
 }

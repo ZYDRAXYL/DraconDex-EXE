@@ -159,7 +159,7 @@ function restorePageLayout(moduleId, old = {}) {
       d.prepare(`DELETE FROM page_block WHERE module_ref=? AND ${pageWhere(itemKey)} AND block_type<>'property'`).run(...pageArgs(moduleId, itemKey));
       const ins = d.prepare(`INSERT OR REPLACE INTO page_block (id, module_ref, item_key, parent_id, block_type, component, source_key, config, content, prop_name, prop_type, block_order, create_at, update_at)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
-      for (const r of rows || []) ins.run(r.id, r.module_ref, r.item_key, r.parent_id, r.block_type, r.component, r.source_key,
+      for (const r of require('./page-block').parentFirst(rows)) ins.run(r.id, r.module_ref, r.item_key, r.parent_id, r.block_type, r.component, r.source_key,
         r.config, r.content, r.prop_name, r.prop_type, r.block_order, r.create_at, r.update_at);
     }
   })();
