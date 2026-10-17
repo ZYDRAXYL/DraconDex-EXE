@@ -3,6 +3,7 @@ const { getDB } = require('./core');
 const { assertCollectorParent, takeParentNormalizeReport } = require('./module-parents');
 const wiki = require('./wiki');
 const versions = require('./versions');
+const { attachUndoAction } = require('./undo');
 
 const nexusOfModule = (id) => getDB().prepare(`SELECT nexus_ref FROM module WHERE id=?`).get(id)?.nexus_ref ?? null;
 
@@ -81,8 +82,8 @@ function createModule(data, { logHistory = true, anyParent = false } = {}) {
       console.error('chronicler timeline seed error:', e);
     }
   }
-  // logHistory is false only from cloneModuleSubtree (duplicateModule logs
-  // one 'copy' event for the whole subtree itself) — every other caller
+  // logHistory is false from callers that log one event for a whole batch
+  // themselves (bundle.js, importdock.js folder import) — every other caller
   // (the Hub's create menu, Artisan's wizard, module import) is a genuine
   // create and logs here, once, at the one path they all share.
   if (logHistory) versions.recordNexusHistory(nexus_ref, 'create', id, name, null);
@@ -104,46 +105,104 @@ function updateModule(id, data) {
 }
 
 // Duplicate a module and its whole descendant subtree (Plan part2 #1 —
-// context-menu "Duplicate"). The clone is inserted as a sibling (same
-// parent_id as the source), recursing through children/grandchildren/etc.
-// so no data is silently dropped. Reuses createModule for column
-// population rather than a second raw INSERT. pinned is always reset to 0
-// on every cloned row — ponytail: a duplicate shouldn't clutter the pinned
-// rail; clone-pinned-too can be added if a later request asks for it.
-// handle is deliberately not copied either, for a harder reason than pinned:
-// it is unique per vault, so a clone that carried it would throw in
-// createModule and take the whole duplicate transaction down with it.
-function cloneModuleSubtree(srcId, newParentId, isRoot) {
+// context-menu "Duplicate"), as a sibling of the source (same parent_id).
+//
+// The copy goes through the snapshot pair the trash and module export
+// already use — sync.serializeVault scoped to the subtree, then
+// importModuleSnapshot — so it carries every kind's content (classifier
+// fields/objects/values/levels, timelines + events, chapters, dialogues,
+// maps, sketches, diviner tables, Designer/Exhibitor scenes, page blocks
+// parents-first, module_ui, labels…) with every row and key inside the
+// subtree remapped to the copy. A hand-written per-table clone is what this
+// replaced: it copied the module rows only, and every Duplicate came out empty.
+//   - References OUT of the subtree (a block borrowing another module, a pin
+//     on someone else's object, an asset's file_<id>) stay pointed where they
+//     were — sameVault — so an asset is shared, never its bytes copied.
+//   - Relations: a scoped snapshot carries none, so the subtree's own ones
+//     (from one of its keys, in one of its modules, or of one of its relation
+//     fields) are copied here; an end inside the subtree is remapped to the
+//     copy, an end outside is kept. A relation another module holds INTO the
+//     subtree is that module's content and is not duplicated.
+//   - Not copied: version history (never in a snapshot), pinned (a copy
+//     should not clutter the pinned rail) and handle (unique per vault).
+//   - [[wikilinks]] are text and come along verbatim; the importer rebuilds
+//     the link index. The Locate mirror writes the copy's own files on its
+//     next sync (main.js marks every module:* write dirty).
+function copyModuleSubtree(srcId) {
+  const sync = require('./sync');
+  const { keysOwnedBy } = require('./entity-kinds');
   const d = getDB();
-  const src = d.prepare(`SELECT * FROM module WHERE id=?`).get(srcId);
+  const src = d.prepare(`SELECT id, parent_id, nexus_ref, name FROM module WHERE id=?`).get(srcId);
   if (!src) return null;
-  const newId = createModule({
-    nexus_ref: src.nexus_ref,
-    parent_id: newParentId,
-    name: isRoot ? `${src.name} (Copy)` : src.name,
-    kind: src.kind,
-    icon: src.icon,
-    icon_color: src.icon_color,
-    color: src.color,
-    cat_type: src.cat_type,
-  }, { logHistory: false });
-  if (src.description) updateModuleDescription(newId, src.description);
-  const children = d.prepare(`SELECT id FROM module WHERE parent_id=? ORDER BY display_order, id`).all(srcId);
-  for (const c of children) cloneModuleSubtree(c.id, newId, false);
-  return newId;
+  const nx = src.nexus_ref;
+  const ids = sync.collectModuleSubtreeIds(nx, srcId);
+  const payload = sync.serializeVault(nx, ids);
+  if (!payload) return null;
+  const maxOrder = d.prepare(`SELECT COALESCE(MAX(display_order),-1) AS m FROM module WHERE nexus_ref=? AND parent_id IS ?`)
+    .get(nx, src.parent_id).m;
+  for (const m of payload.modules) {
+    m.pinned = 0;
+    m.handle = null;
+    m.createAt = null; // a copy is new — "now", not the source's dates
+    m.updateAt = null;
+    if (m.id === srcId) { m.name = `${src.name} (Copy)`; m.displayOrder = maxOrder + 1; }
+  }
+  const r = sync.importModuleSnapshot(nx, src.parent_id, payload, { withKeyMaps: true, sameVault: true });
+  if (!r?.ok) throw new Error(`duplicate failed: ${r?.code || 'import'}`);
+  const newId = r.keyMaps.module.get(srcId);
+
+  const inMods = new Set(ids);
+  const inside = keysOwnedBy(d, ids);
+  const remap = (k) => {
+    if (!inside.has(k)) return k;
+    const m = /^([a-z]+)_(\d+)$/.exec(k);
+    const to = m && r.keyMaps[m[1]]?.get(Number(m[2]));
+    return to == null ? null : `${m[1]}_${to}`;
+  };
+  const rows = d.prepare(`SELECT * FROM entity_relation WHERE nexus_ref=? ORDER BY id`).all(nx)
+    .filter((x) => inside.has(x.from_key) || inside.has(x.rel_type) || inMods.has(x.module_ref));
+  const ins = d.prepare(`INSERT OR IGNORE INTO entity_relation (nexus_ref, from_key, to_key, label, color, rel_type, directed, module_ref, valid_from, valid_to)
+    VALUES (?,?,?,?,?,?,?,?,?,?)`);
+  const relIds = [];
+  for (const x of rows) {
+    const fk = remap(x.from_key), tk = remap(x.to_key);
+    const rt = x.rel_type == null ? null : remap(x.rel_type);
+    if (!fk || !tk || (x.rel_type != null && rt == null)) continue;
+    const mr = x.module_ref == null ? null : (r.keyMaps.module.get(x.module_ref) ?? x.module_ref);
+    const res = ins.run(nx, fk, tk, x.label, x.color, rt, x.directed, mr, x.valid_from, x.valid_to);
+    if (res.changes) relIds.push(res.lastInsertRowid);
+  }
+  return { newId, relIds, nexusRef: nx, name: `${src.name} (Copy)` };
 }
 
 function duplicateModule(id) {
   const d = getDB();
-  const src = d.prepare(`SELECT parent_id, nexus_ref, name FROM module WHERE id=?`).get(id);
-  if (!src) return null;
-  let newId;
-  const tx = d.transaction(() => { newId = cloneModuleSubtree(id, src.parent_id, true); });
-  tx();
-  // One 'copy' event for the whole subtree, not one per node — cloneModuleSubtree
-  // suppresses createModule's own logging for exactly this reason.
-  if (newId) versions.recordNexusHistory(src.nexus_ref, 'copy', newId, `${src.name} (Copy)`, null);
-  return newId;
+  const step = d.transaction(() => {
+    const c = copyModuleSubtree(id);
+    if (!c) return null;
+    // ONE undo step whose inverse is "delete the copy": the module's FK
+    // cascade takes every content row with it, and the copied relations (no
+    // cascade) are removed by id. Redo copies the source again.
+    attachUndoAction({
+      undo() {
+        const g = getDB();
+        const del = g.prepare(`DELETE FROM entity_relation WHERE id=?`);
+        for (const rid of c.relIds) del.run(rid);
+        g.prepare(`DELETE FROM module WHERE id=?`).run(c.newId);
+        return { ok: true };
+      },
+      redo() {
+        const again = getDB().transaction(() => copyModuleSubtree(id))();
+        if (!again) return { ok: false, reason: 'irreversible' }; // the source is gone
+        Object.assign(c, again);
+        return { ok: true };
+      },
+    });
+    return c;
+  })();
+  if (!step) return null;
+  versions.recordNexusHistory(step.nexusRef, 'copy', step.newId, step.name, null);
+  return step.newId;
 }
 
 // Free text with [[wikilinks]] — reindexed on every save, same as object

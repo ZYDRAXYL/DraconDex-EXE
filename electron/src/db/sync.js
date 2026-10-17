@@ -38,13 +38,13 @@ const V5_KIND_MAP = { viewer: 'exhibitor', connector: 'exhibitor' };
 // (fields / columns). Those ids are renumbered on apply like every other
 // row, so they go through the same map; a field that did not come across
 // drops out of the list instead of pointing at someone else's template.
-function remapExhibitProps(props, tplMap) {
+function remapExhibitProps(props, tplMap, keepUnmapped = false) {
   if (props == null) return null;
   let p;
   try { p = JSON.parse(props); } catch (_) { return props; }
   if (!p || typeof p !== 'object') return props;
   for (const k of ['fields', 'columns']) {
-    if (Array.isArray(p[k])) p[k] = p[k].filter(id => tplMap.has(id)).map(id => tplMap.get(id));
+    if (Array.isArray(p[k])) p[k] = p[k].filter(id => keepUnmapped || tplMap.has(id)).map(id => tplMap.get(id) ?? id);
   }
   return JSON.stringify(p);
 }
@@ -693,13 +693,18 @@ function remapEntityKey(key, maps) {
   return mapped == null ? null : `${m[1]}_${mapped}`;
 }
 
+// sameVault (module.js duplicateModule): a key the snapshot does not contain
+// points OUTSIDE the copied subtree, at a row that still exists in this very
+// vault — so it is kept as it is instead of being cleared.
+const keptKey = (key) => (/^[a-z]+_\d+$/.test(String(key ?? '')) ? String(key) : null);
+
 // A JSON list of {key, …} (story_choice_option.condition / set_ops) with
 // every key remapped; entries whose key cannot be mapped are left out.
-function remapKeyList(json, maps) {
+function remapKeyList(json, maps, keepUnmapped = false) {
   let list;
   try { list = JSON.parse(json); } catch (_) { return null; }
   if (!Array.isArray(list)) return null;
-  const out = list.map((e) => ({ ...e, key: remapEntityKey(e?.key, maps) })).filter((e) => e.key);
+  const out = list.map((e) => ({ ...e, key: remapEntityKey(e?.key, maps) ?? (keepUnmapped ? keptKey(e?.key) : null) })).filter((e) => e.key);
   return out.length ? JSON.stringify(out) : null;
 }
 
@@ -720,6 +725,10 @@ function remapKeyList(json, maps) {
 // insert, relation/note insert, module_ui remap — is identical either way.
 function applySnapshotCore(nexusId, payload, opts = {}) {
   const { wipe = false, updateNexusMeta = false, reparentRootTo = null } = opts; // + withKeyMaps (db/trash.js), withModMap (db/asset-pack.js)
+  // sameVault: the payload was serialized from THIS vault (module.js
+  // duplicateModule) — a reference to something outside the payload is kept
+  // as it is rather than cleared, since its target is still right here.
+  const sameVault = !!opts.sameVault;
   if (!validateSnapshot(payload)) return { ok: false, code: 'bad_snapshot' };
   const db = getVaultDB(nexusId);
   const arr = (a) => (Array.isArray(a) ? a : []);
@@ -910,8 +919,8 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       if (mod(me.moduleId) == null) continue;
       const r = db.prepare(`INSERT INTO map_event (module_ref, event_ref, area_ref, label, x, y) VALUES (?,?,?,?,?,?)`)
         .run(mod(me.moduleId),
-             me.eventId != null && evtMap.has(me.eventId) ? evtMap.get(me.eventId) : null,
-             me.areaId != null && areaMap.has(me.areaId) ? areaMap.get(me.areaId) : null,
+             me.eventId != null && evtMap.has(me.eventId) ? evtMap.get(me.eventId) : (sameVault ? me.eventId ?? null : null),
+             me.areaId != null && areaMap.has(me.areaId) ? areaMap.get(me.areaId) : (sameVault ? me.areaId ?? null : null),
              me.label ?? null, me.x ?? 0, me.y ?? 0);
       if (me.id != null) mevtMap.set(me.id, r.lastInsertRowid);
       if (me.linkerKey) pinLinks.push(['map_event', 'linker_key', r.lastInsertRowid, me.linkerKey]);
@@ -1044,14 +1053,15 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     // every family that declares `sync` gets its map, by name. Registering
     // them by hand here is what dropped tlev_/sdlg_ endpoints on every pull.
     const keyMaps = entityKeyMaps({ modMap, cobjMap, ctplMap, bchpMap, chssMap, evtMap, dlgMap, noteMap, pageMap, divtMap, mevtMap });
+    const rk = (key) => remapEntityKey(key, keyMaps) ?? (sameVault ? keptKey(key) : null);
     // Key columns written before the maps were complete (KEY_COLUMNS in
     // db/entity-kinds.js): a single key that cannot be mapped is cleared; an
     // entry of a JSON list that cannot be mapped is left out.
     for (const [table, col, id, key] of pendingKeys) {
-      db.prepare(`UPDATE ${table} SET ${col}=? WHERE id=?`).run(remapEntityKey(key, keyMaps), id);
+      db.prepare(`UPDATE ${table} SET ${col}=? WHERE id=?`).run(rk(key), id);
     }
     for (const [table, col, id, json] of pendingKeyJson) {
-      db.prepare(`UPDATE ${table} SET ${col}=? WHERE id=?`).run(remapKeyList(json, keyMaps), id);
+      db.prepare(`UPDATE ${table} SET ${col}=? WHERE id=?`).run(remapKeyList(json, keyMaps, sameVault), id);
     }
 
     const dsg = sect(payload.designer);
@@ -1060,7 +1070,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     let droppedPins = 0;
     for (const pn of arr(skt.pins)) {
       if (!pageMap.has(pn.pageId)) continue;
-      const k = remapEntityKey(pn.linkerKey, keyMaps);
+      const k = rk(pn.linkerKey);
       if (!k) { droppedPins++; continue; } // linker_key NOT NULL — drop unmappable pins
       db.prepare(`INSERT INTO sketch_pin (page_ref, linker_key, x, y) VALUES (?,?,?,?)`)
         .run(pageMap.get(pn.pageId), k, pn.x ?? 0, pn.y ?? 0);
@@ -1068,7 +1078,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
 
     for (const n of arr(dsg.nodes)) {
       if (mod(n.moduleId) == null) continue;
-      const k = n.linkerKey ? remapEntityKey(n.linkerKey, keyMaps) : null;
+      const k = n.linkerKey ? rk(n.linkerKey) : null;
       const r = db.prepare(`
         INSERT INTO design_node (module_ref, shape, x, y, node_text, color, linker_key, w, h, read_order)
         VALUES (?,?,?,?,?,?,?,?,?,?)`)
@@ -1085,12 +1095,12 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
 
     let droppedRelations = 0;
     for (const rel of arr(payload.relations)) {
-      const fk = remapEntityKey(rel.fromKey, keyMaps);
-      const tk = remapEntityKey(rel.toKey, keyMaps);
+      const fk = rk(rel.fromKey);
+      const tk = rk(rel.toKey);
       // A Classifier relation FIELD's row names its field in rel_type
       // (ctpl_<id>, §11.3) — the field's id changes too, and a row whose
       // field did not come across has lost its owner, so it is dropped.
-      const rt = /^ctpl_\d+$/.test(rel.relType || '') ? remapEntityKey(rel.relType, keyMaps) : (rel.relType ?? null);
+      const rt = /^ctpl_\d+$/.test(rel.relType || '') ? rk(rel.relType) : (rel.relType ?? null);
       if (!fk || !tk || (rel.relType && rt == null)) { droppedRelations++; continue; }
       db.prepare(`INSERT OR IGNORE INTO entity_relation (nexus_ref, from_key, to_key, label, rel_type, directed, module_ref, valid_from, valid_to)
         VALUES (?,?,?,?,?,?,?,?,?)`)
@@ -1113,12 +1123,12 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       for (const b of pendingBlocks) {
         if (mod(b.moduleId) == null) continue;
         if (b.parentId != null && !blockMap.has(b.parentId)) { next.push(b); continue; }
-        const itemKey = b.itemKey == null || b.itemKey === '*' ? (b.itemKey ?? null) : remapEntityKey(b.itemKey, keyMaps);
+        const itemKey = b.itemKey == null || b.itemKey === '*' ? (b.itemKey ?? null) : rk(b.itemKey);
         if (b.itemKey != null && itemKey == null) continue;
         const r = db.prepare(`INSERT INTO page_block (module_ref, item_key, parent_id, block_type, component, source_key, config, content, prop_name, prop_type, block_order)
           VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
           .run(mod(b.moduleId), itemKey, b.parentId != null ? blockMap.get(b.parentId) : null, b.type || 'component',
-               b.component ?? null, b.sourceKey ? remapEntityKey(b.sourceKey, keyMaps) : null,
+               b.component ?? null, b.sourceKey ? rk(b.sourceKey) : null,
                b.config ?? null, b.content ?? null, b.propName ?? null, b.propType ?? null, b.order ?? 0);
         blockMap.set(b.id, r.lastInsertRowid);
         progressed = true;
@@ -1135,13 +1145,13 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     const enodeParents = [];
     for (const n of arr(exh.nodes)) {
       if (mod(n.moduleId) == null) continue;
-      const k = n.linkerKey ? remapEntityKey(n.linkerKey, keyMaps) : null;
+      const k = n.linkerKey ? rk(n.linkerKey) : null;
       const r = db.prepare(`
         INSERT INTO exhibit_node (module_ref, node_type, linker_key, label, x, y, w, h, z, rotation, scale, locked, hidden, color, props)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
         .run(mod(n.moduleId), n.nodeType ?? 'entity', k, n.label ?? null, n.x ?? 0, n.y ?? 0,
              n.w ?? null, n.h ?? null, n.z ?? 0, n.rotation ?? 0, n.scale ?? 1,
-             n.locked ? 1 : 0, n.hidden ? 1 : 0, n.color ?? null, remapExhibitProps(n.props, ctplMap));
+             n.locked ? 1 : 0, n.hidden ? 1 : 0, n.color ?? null, remapExhibitProps(n.props, ctplMap, sameVault));
       enodeMap.set(n.id, r.lastInsertRowid);
       if (n.parentId != null) enodeParents.push([n.id, n.parentId]);
     }
@@ -1152,7 +1162,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
     }
     for (const v of arr(exh.views)) {
       if (mod(v.moduleId) == null) continue;
-      const bg = v.bgLinkerKey ? remapEntityKey(v.bgLinkerKey, keyMaps) : null;
+      const bg = v.bgLinkerKey ? rk(v.bgLinkerKey) : null;
       db.prepare(`INSERT OR IGNORE INTO exhibit_view (module_ref, scale, tx, ty, bg_linker_key, grid, snap) VALUES (?,?,?,?,?,?,?)`)
         .run(mod(v.moduleId), v.scale ?? 1, v.tx ?? 0, v.ty ?? 0, bg, v.grid === 0 ? 0 : 1, v.snap ? 1 : 0);
     }
@@ -1187,7 +1197,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
         value = u.value === 'edgelist' ? 'edges' : 'scene';
       }
       if (u.key === 'mapModule' || u.key === 'timelineModule') {
-        const target = modMap.get(Number(u.value));
+        const target = modMap.get(Number(u.value)) ?? (sameVault ? Number(u.value) : null);
         if (target == null) continue;
         value = String(target);
       }
@@ -1197,7 +1207,7 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
       // the element is not in this snapshot, so the row is dropped.
       let key = u.key;
       if (String(key).startsWith('pageHead:')) {
-        const k = remapEntityKey(key.slice(9), keyMaps);
+        const k = rk(key.slice(9));
         if (k == null) continue;
         key = `pageHead:${k}`;
       }
