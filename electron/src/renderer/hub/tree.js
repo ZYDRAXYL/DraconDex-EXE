@@ -106,7 +106,7 @@ function buildNestRow(m, depth, parentId) {
     ${showMajorIcon ? `<span class="kicon" style="color:${x(col)}" onclick="event.stopPropagation();openModuleIconPopup(${m.id},this)">${moduleIconHtml(m)}</span>` : ''}
     ${renaming
       ? `<input id="rename-nest-${m.id}" class="rename-input" value="${x(m.name)}" onclick="event.stopPropagation()" onblur="saveModuleRename(${m.id},this.value)" onkeydown="renameInputKey(event,this,${m.id})">`
-      : `<span class="name" ondblclick="event.stopPropagation();cancelRowOpen();startRenameModule(${m.id})">${x(m.name)}</span>`}
+      : `<span class="name" data-no-i18n ondblclick="event.stopPropagation();cancelRowOpen();startRenameModule(${m.id})">${x(m.name)}</span>`}
     ${countBadge}${kindBadge}
     <button class="btn btn-g btn-i nest-row-more" tabindex="-1" onclick="event.stopPropagation();openModuleContextMenu(event,${m.id})" title="${t('moreActions')}" aria-label="${t('moreActions')}">${I.options}</button>
   </div>${childrenWrap}`;
@@ -190,7 +190,7 @@ function buildNestItemRow(item, itemKind, moduleId, depth) {
   return `<div class="li${indentCls} nest-item-row" data-item="${itemKind}:${moduleId}:${item.id}" role="treeitem" tabindex="-1" aria-level="${depth + 1}" onclick="nestRowClick(event,()=>openItemNode('${itemKind}',${moduleId},${item.id}))" onauxclick="nestRowClick(event,()=>openItemNode('${itemKind}',${moduleId},${item.id}))">
     <span class="tree-chev-spacer"></span>
     ${showIcon ? `<span class="kicon" aria-hidden="true" style="color:var(--t3-aa,var(--t2))">${reg.icon()}</span>` : ''}
-    <span class="name">${x(reg.nameOf(item))}</span>
+    <span class="name" data-no-i18n>${x(reg.nameOf(item))}</span>
   </div>`;
 }
 

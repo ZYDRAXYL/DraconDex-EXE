@@ -107,7 +107,7 @@ function clsFieldValueHtml(o, c) {
       return `<span class="pv cls-formula" title="${x(f.error || clsFieldOpts(c).expr || '')}" data-no-i18n>${x(f.text)}</span>`;
     }
     default:
-      return `<span class="pv" contenteditable="true" data-wiki ${data} onblur="saveClassifierAttrCell(this)">${val}</span>`;
+      return `<span class="pv" contenteditable="true" data-no-i18n data-wiki ${data} onblur="saveClassifierAttrCell(this)">${val}</span>`;
   }
 }
 

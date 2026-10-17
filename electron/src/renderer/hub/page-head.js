@@ -46,7 +46,7 @@ function pageHeadHtml(o = {}) {
     ${lay?.cover ? `<div class="ph-cover" data-cover-sha="${x(lay.cover)}" style="background-position:${pbFocusCss(lay.focus)}"></div>` : ''}
     <div class="${cls} page-title${layCls}" style="border-left:4px solid ${x(col)}">
       ${lay?.icon ? `<div class="ph-icon" data-no-i18n>${x(lay.icon)}</div>` : ''}
-      <div class="navbar-row"><h2 class="navbar-h">${icon}${o.title || ''}${o.after || ''}</h2>
+      <div class="navbar-row"><h2 class="navbar-h" data-no-i18n>${icon}${o.title || ''}${o.after || ''}</h2>
         <span class="ph-save" aria-live="polite"></span>${o.acts ? `<span class="navbar-acts">${o.acts}</span>` : ''}</div>
       ${o.sub ? `<div class="drafter-hint navbar-sub">${o.sub}</div>` : ''}
       ${o.tags ? `<div class="mtags">${o.tags}</div>` : ''}

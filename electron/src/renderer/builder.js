@@ -540,7 +540,7 @@ function builderPaneHeadHtml(i, pane, focused) {
     const active = key === pane.active;
     // Draggable target is a plain div, not a native form control — matches
     // the Nest tree row's own element choice for its draggable rows.
-    return `<div class="project-tab module-tab ${active && focused ? 'active' : active ? 'pane-active' : ''}"
+    return `<div data-no-i18n class="project-tab module-tab ${active && focused ? 'active' : active ? 'pane-active' : ''}"
       draggable="true" data-tab-key="${x(key)}" ondragstart="onTabDragStart(event,${i},${xj(key)})"
       ondragover="onTabDragOver(event,this)" ondragleave="onTabDragLeave(event,this)" ondrop="onTabDrop(event,${i},${xj(key)},this)"
       ondragend="onTabDragEnd(event,${i},${xj(key)})"

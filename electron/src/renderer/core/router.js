@@ -110,7 +110,7 @@ function updateStatusBar(patch = {}) {
   const live = (mNode || S.activeItemNode) && _statusState.page === statusPageKey();
   // the open item is the PAGE — not the title of whichever editor block reported last
   const ai = S.activeItemNode?.item, itemName = ai ? (ai.name ?? ai.title) : mNode?.name;
-  if (itemName) parts.push(`<span class="sb-item">${x(itemName)}</span>`);
+  if (itemName) parts.push(`<span class="sb-item" data-no-i18n>${x(itemName)}</span>`);
   if (live && _statusState.saveState && st.saveState !== false) parts.push(`<span class="sb-item sb-save">${x(_statusState.saveState)}</span>`);
   const right = [...pageRight];
   if (live && _statusState.words != null && st.words !== false) right.push(`<span class="sb-item">${_statusState.words} ${t('words')}</span>`);

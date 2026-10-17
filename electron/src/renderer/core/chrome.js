@@ -41,6 +41,20 @@ function translateStaticChrome(){
   translateCommonUiText();
 }
 
+// User content never passes through COMMON_UI_TEXT: a module named "Novel"
+// is not the UI word "Novel". Matching it rewrote names on screen, and a
+// Classifier text cell — which saves what it shows on blur — wrote the
+// translation back to the vault ("Novel" came back as "นิยาย"). Anything
+// editable is the user's by definition; the class names are the containers
+// that render names: Nest rows, page titles, tabs, list rows, field labels,
+// infobox rows, the status bar.
+const I18N_USER_CONTENT = [
+  '[data-no-i18n]', '.viewbar',
+  '.name', '.tab-name', '.navbar-h', '.kli-name', '.sb-item', '.mded-title',
+  '.pk', '.cls-card-name', '.pc-ib-title', '.pc-ib-k', '.pc-ib-v',
+].join(',');
+const I18N_SKIP_TEXT = `${I18N_USER_CONTENT},[contenteditable],input,textarea`;
+
 function translateCommonUiText(root=document){
   const lang = S.settings?.language || 'th';
   // Note: no early return for 'th' — several modules render English source
@@ -67,7 +81,7 @@ function translateCommonUiText(root=document){
   root.querySelectorAll(selectors).forEach(el => {
     // View-pattern names, kind badges and other locale-invariant labels opt
     // out of auto-translation (progress.md A.3 — unique names are fixed).
-    if(el.closest('[data-no-i18n],.viewbar')) return;
+    if(el.closest(I18N_SKIP_TEXT)) return;
     el.childNodes.forEach(node => {
       if(node.nodeType !== Node.TEXT_NODE) return;
       const value = node.nodeValue || '';
@@ -80,6 +94,7 @@ function translateCommonUiText(root=document){
     });
   });
   root.querySelectorAll('[placeholder],[title]').forEach(el => {
+    if(el.closest(I18N_USER_CONTENT)) return;
     ['placeholder','title'].forEach(attr => {
       const value = el.getAttribute(attr);
       if(!value) return;

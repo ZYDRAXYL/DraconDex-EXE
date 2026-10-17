@@ -65,7 +65,7 @@ function kindEmptyStateHtml(m, o = {}) {
   const presets = typeof presetChipsHtml === 'function' ? presetChipsHtml(m) : '';
   return `<div class="empty kind-empty"${o.attrs ? ` ${o.attrs}` : ''}>
     <div class="ei" style="color:${x(col)}">${moduleIconHtml(m)}</div>
-    <h3>${x(m.name)}</h3>
+    <h3 data-no-i18n>${x(m.name)}</h3>
     ${o.note ? `<p class="drafter-hint">${o.note}</p>` : ''}
     <div class="kind-empty-act">${start ? cmdBtn(start, { moduleId: m.id }, { cls: 'btn-p' }) : ''}<p>${t(KIND_DESC_KEY[m.kind])}</p></div>
     ${o.extra || ''}

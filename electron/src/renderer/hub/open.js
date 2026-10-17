@@ -83,7 +83,7 @@ function buildModuleDetailHtml(m) {
   const renamingHead = S.renamingModuleId === m.id;
   const nameHtml = renamingHead
     ? `<input id="rename-head-${m.id}" class="rename-input" style="font-size:1.15em" value="${x(m.name)}" onclick="event.stopPropagation()" onblur="saveModuleRename(${m.id},this.value)" onkeydown="renameInputKey(event,this,${m.id})">`
-    : `<span ondblclick="startRenameModule(${m.id})">${x(m.name)}</span>`;
+    : `<span data-no-i18n ondblclick="startRenameModule(${m.id})">${x(m.name)}</span>`;
   // Procress 16 B12 / 17 U1: handle, kind and assets live in the Properties
   // panel now — the page opens on its data, not on ~300 px of metadata.
   const tabbed = STRUCTURE_KINDS.has(m.kind);

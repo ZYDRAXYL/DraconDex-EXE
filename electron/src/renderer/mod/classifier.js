@@ -166,8 +166,14 @@ function renderClassifierTable(m, d, inst) {
 async function saveClassifierAttrCell(el) {
   const oid = Number(el.dataset.oid), tid = Number(el.dataset.tid);
   const value = el.textContent.trim();
-  await api.classifier.upsertAttr(oid, tid, value);
+  // A blur is not an edit: clicking in and out wrote whatever the cell showed,
+  // so anything that had rewritten it on screen went to the vault as well.
   const obj = clsFindObject(oid);
+  const pt = obj?.privateTemplates?.find((p) => p.id === tid);
+  const stored = pt ? pt.value : obj?.attrMap?.[tid];
+  if (obj && value === String(stored ?? '').trim()) return;
+  await api.classifier.upsertAttr(oid, tid, value);
+  if (pt) pt.value = value; // the guard above reads it
   if (obj) obj.attrMap[tid] = value;
 }
 
@@ -188,7 +194,7 @@ function renderClassifierGrid(m, d, inst) {
         oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})">
       <span class="disp-thumb"><img data-display-key="cobj_${o.id}" alt=""></span>
       <span class="cls-card-icon" style="border-color:${x(col)};color:${x(col)}">${classifierObjectIconHtml(o, m)}</span>
-      <div class="cls-card-name">${x(o.name)}</div>
+      <div class="cls-card-name" data-no-i18n>${x(o.name)}</div>
     </div>`;
   }, clsLazy(inst, 'grid'))}</div>`;
 }
