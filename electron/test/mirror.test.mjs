@@ -65,6 +65,18 @@ test('a renamed collector moves its folder, contents and all', () => {
   assert.ok(existsSync(join(root, 'New', 'Inner', 'Doc.ddata')));
 });
 
+test('a case-only rename ("World" -> "world") renames the folder itself, contents and all', () => {
+  const root = fresh('w2case');
+  writeMirror(root, [mod(1, 'World', 'collector'), mod(2, 'Doc', 'drafter', 1)], snap);
+  writeFileSync(join(root, 'World', 'map.png'), 'px');
+  const r = writeMirror(root, [mod(1, 'world', 'collector'), mod(2, 'Doc', 'drafter', 1)], snap);
+  assert.equal(r.moved.length, 1);
+  const names = readdirSync(root).filter((n) => !n.startsWith('.'));
+  assert.deepEqual(names, ['world'], 'one folder, with the new case — no temp left behind');
+  assert.equal(readFileSync(join(root, 'world', 'map.png'), 'utf8'), 'px');
+  assert.ok(existsSync(join(root, 'world', 'Doc.ddata')));
+});
+
 test('an emptied folder the mirror made is removed; one the user filled is kept', () => {
   const root = fresh('w3');
   writeMirror(root, [mod(1, 'A', 'collector'), mod(2, 'B', 'collector')], snap);

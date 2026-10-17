@@ -235,3 +235,64 @@ test('the per-module cut of one pass equals serializeVault(nexus, [id]) for ever
     assert.deepEqual(JSON.parse(JSON.stringify(cut.get(m))), JSON.parse(JSON.stringify(one)), `module ${m}`);
   }
 });
+
+// A collector whose name the mirror had to make safe ("Act 1: Rise" mirrors as
+// "Act 1_ Rise/"): the folder walk must find it again, not make a second one.
+test('a file dropped on a collector with a sanitised name is filed under THAT collector', () => {
+  const id = make('Sanitised');
+  const cid = mod(id, 'Act 1: Rise', 'collector');
+  sync(id);
+  assert.ok(existsSync(join(dirOf(id), 'Act 1_ Rise')));
+  const src = join(dir, 'drop-pic.png');
+  writeFileSync(src, 'px');
+  const r = inVault(id, () => locate.copyIntoFolder(id, [src], cid));
+  assert.equal(r.copied.length, 1);
+  sync(id); sync(id);
+  assert.deepEqual(v(id).prepare(`SELECT id, name FROM module WHERE nexus_ref=?`).all(id), [{ id: cid, name: 'Act 1: Rise' }], 'no second collector');
+  assert.deepEqual(v(id).prepare(`SELECT file_name, module_ref FROM import_file WHERE nexus_ref=?`).all(id), [{ file_name: 'drop-pic.png', module_ref: cid }]);
+  assert.deepEqual(readdirSync(dirOf(id)).filter((n) => n !== MANIFEST), ['Act 1_ Rise']);
+});
+
+test('a clashing sibling\'s "(id)" folder resolves back to that collector', () => {
+  const id = make('Clash');
+  const a = mod(id, 'A:B', 'collector');
+  const b = mod(id, 'A?B', 'collector');
+  sync(id);
+  const suffixed = join(dirOf(id), `A_B (${b})`);
+  assert.ok(existsSync(suffixed));
+  writeFileSync(join(suffixed, 'inside.png'), 'px');
+  sync(id);
+  assert.equal(v(id).prepare(`SELECT count(*) c FROM module WHERE nexus_ref=?`).get(id).c, 2, 'no third collector');
+  assert.equal(v(id).prepare(`SELECT module_ref FROM import_file WHERE nexus_ref=?`).get(id).module_ref, b);
+  assert.ok(a);
+});
+
+test('a case-only collector rename renames the folder; no phantom collector comes back', () => {
+  const id = make('CaseOnly');
+  const cid = mod(id, 'World', 'collector');
+  sync(id);
+  writeFileSync(join(dirOf(id), 'World', 'map.png'), 'px');
+  sync(id);
+  v(id).prepare(`UPDATE module SET name='world' WHERE id=?`).run(cid);
+  sync(id); sync(id);
+  assert.deepEqual(v(id).prepare(`SELECT id, name FROM module WHERE nexus_ref=?`).all(id), [{ id: cid, name: 'world' }]);
+  assert.deepEqual(readdirSync(dirOf(id)).filter((n) => n !== MANIFEST), ['world']);
+  const a = v(id).prepare(`SELECT module_ref, file_path FROM import_file WHERE nexus_ref=?`).get(id);
+  assert.equal(a.module_ref, cid);
+  assert.ok(existsSync(a.file_path));
+});
+
+test('an edit sync does not swallow a folder change: the next focus still imports it', async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const id = make('EditThenFocus');
+  sync(id, 'open');
+  await sleep(300);
+  writeFileSync(join(dirOf(id), 'dropped.png'), 'px');
+  await sleep(500);
+  assert.ok(locate.isWatching(id));
+  mod(id, 'Typed', 'drafter');
+  assert.equal(sync(id, 'edit').imported, null, 'edit does not walk');
+  const r = sync(id, 'focus');
+  assert.equal(r.imported?.added, 1);
+  assert.equal(v(id).prepare(`SELECT count(*) c FROM import_file WHERE nexus_ref=?`).get(id).c, 1);
+});

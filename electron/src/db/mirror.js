@@ -133,10 +133,24 @@ function writeMirror(root, modules, serialize, opts = {}) {
     const was = prevRel.get(dir.id);
     if (!was || was === dir.rel) continue;
     const from = inside(root, was), to = inside(root, dir.rel);
-    if (!from || !to || !fs.existsSync(from) || fs.existsSync(to)) continue;
+    if (!from || !to || !fs.existsSync(from)) continue;
+    // A case-only rename ("World" -> "world") on a case-insensitive file
+    // system: `to` "exists" because it IS `from`. Rename through a temp name.
+    let caseOnly = false;
+    if (fs.existsSync(to)) {
+      try {
+        const a = fs.statSync(from), b = fs.statSync(to);
+        caseOnly = was.toLowerCase() === dir.rel.toLowerCase() && a.ino === b.ino && a.dev === b.dev;
+      } catch (_) {}
+      if (!caseOnly) continue;
+    }
     try {
       fs.mkdirSync(path.dirname(to), { recursive: true });
-      fs.renameSync(from, to);
+      if (caseOnly) {
+        const tmp = `${from}.ddx-rename-${process.pid}-${Date.now()}`;
+        fs.renameSync(from, tmp);
+        try { fs.renameSync(tmp, to); } catch (e) { fs.renameSync(tmp, from); throw e; }
+      } else fs.renameSync(from, to);
       moved.push({ from, to });
       touched.push(from, to);
       for (const [id, rel] of prevRel) {

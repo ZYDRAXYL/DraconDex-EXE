@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getDB } = require('./core');
-const { collectorNameOfDir } = require('./mirror');
+const { collectorNameOfDir, dirNameOf } = require('./mirror');
 const { PROXY_VAULT_BUDGET, ASSET_CLASS } = require('./asset-media');
 
 // Every column except the proxy BLOB — a folder of images would otherwise
@@ -103,7 +103,21 @@ function importFolderTree(nexusId, parentId, dirs, files) {
   const module_ = require('./module');
   return d.transaction(() => {
     const root = _ownModule(d, nexusId, parentId);
-    const find = d.prepare(`SELECT id FROM module WHERE nexus_ref=? AND parent_id IS ? AND kind='collector' AND name=?`);
+    const siblings = d.prepare(`SELECT id, name FROM module WHERE nexus_ref=? AND parent_id IS ? AND kind='collector' ORDER BY display_order, id`);
+    // A folder resolves to a collector the way db/mirror.js planMirror named
+    // it: the exact name first, else dirNameOf(name) ("Act 1: Rise" mirrors as
+    // "Act 1_ Rise"), else dirNameOf(name) + " (id)" for a clashing sibling —
+    // case-insensitively where the file system is (win32/darwin) — so the
+    // mirror's own folder never comes back as a second collector.
+    const fold = process.platform === 'win32' || process.platform === 'darwin' ? (s) => s.toLowerCase() : (s) => s;
+    const find = (parent, name) => {
+      const kids = siblings.all(nexusId, parent);
+      const exact = kids.find((m) => m.name === name);
+      if (exact) return exact.id;
+      const want = fold(name);
+      return (kids.find((m) => fold(dirNameOf(m.name)) === want)
+        || kids.find((m) => fold(`${dirNameOf(m.name)} (${m.id})`) === want))?.id;
+    };
     const idOf = new Map();
     let collectors = 0;
     const ensure = (segs) => {
@@ -113,7 +127,7 @@ function importFolderTree(nexusId, parentId, dirs, files) {
       // The folder's name IS the collector's name — the same pair db/mirror.js
       // uses the other way round, so import and mirror meet (§8.11.4).
       const name = collectorNameOfDir(segs[segs.length - 1]);
-      let id = find.get(nexusId, parent, name)?.id;
+      let id = find(parent, name);
       if (!id) {
         // Only the top folder is a user-visible "create" in nexus history;
         // its subfolders are part of the same act.

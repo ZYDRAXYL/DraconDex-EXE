@@ -415,10 +415,11 @@ function syncLocate(nx, { reason = 'manual' } = {}) {
   const root = path.resolve(v.locate_dir);
   const full = created || recreated || ['open', 'create', 'manual'].includes(reason);
   watchFolder(nx, root);
-  // read (and reset) even on a full walk, so this walk is not redone on the next focus
-  const changed = folderChanged(nx);
+  // read (and reset) even on a full walk, so this walk is not redone on the next focus —
+  // but never on 'edit', which does not walk: the change must survive to the next focus
+  const walk = reason !== 'edit' && (folderChanged(nx) || full);
   let imported = null;
-  if (reason !== 'edit' && (full || changed)) {
+  if (walk) {
     // walkImportFolder names its first segment after the root; the root IS
     // the Nexus top level here, so that segment is dropped.
     const { dirs, files } = walkImportFolder(root);
