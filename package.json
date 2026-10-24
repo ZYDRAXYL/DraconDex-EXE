@@ -1,12 +1,14 @@
 {
   "name": "@zydraxyl/dracondex",
   "productName": "DraconDex",
-  "version": "5.1.1",
+  "version": "5.2.0",
   "description": "Novel data management app",
   "main": "electron/main.js",
   "license": "MIT",
   "author": "ZYDRAXYL",
-  "contributors": ["LDKTC"],
+  "contributors": [
+    "LDKTC"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/ZYDRAXYL/DraconDex-EXE.git"
