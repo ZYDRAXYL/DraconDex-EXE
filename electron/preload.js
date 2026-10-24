@@ -189,6 +189,8 @@ contextBridge.exposeInMainWorld('api', {
     updateLevelField:  (id,f,v)               => inv('classifier:updateLevelField', id,f,v),
     deleteLevel:       (id)                   => inv('classifier:deleteLevel', id),
     moveLevels:        (oid,tid,ids)          => inv('classifier:moveLevels', oid,tid,ids),
+    moveObjects:       (mref,ids)             => inv('classifier:moveObjects', mref,ids),
+    moveTemplates:     (mref,ids)             => inv('classifier:moveTemplates', mref,ids),
   },
   wanderer: {
     list:   (mref)                  => inv('wanderer:list', mref),

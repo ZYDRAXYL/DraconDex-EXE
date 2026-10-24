@@ -126,3 +126,23 @@ test('undo-delete: an object comes back with its values; a field with its value 
   ud.restoreRows(snapF);
   assert.deepEqual(db.prepare(`SELECT attribute_value v FROM classifier_attribute WHERE template_ref=? ORDER BY object_ref`).all(tpl).map((r) => r.v), ['1', '2']);
 });
+
+// Procress 26 part 3: drag-reorder of objects and shared fields.
+test('moveObjects / moveTemplates write the new order, and only inside the module', () => {
+  freshVault();
+  const m = mkModule('Cast', 'classifier');
+  const other = mkModule('Other', 'classifier');
+  const [a, b, c] = cls.createObjects(m, [{ name: 'A' }, { name: 'B' }, { name: 'C' }]);
+  const [z] = cls.createObjects(other, [{ name: 'Z' }]);
+  cls.moveObjects(m, [c, a, b, z]);
+  assert.deepEqual(cls.getObjects(m).map((o) => o.name), ['C', 'A', 'B']);
+  assert.equal(cls.getObjects(other)[0].display_order, 0, 'an id from another module is not touched');
+  const t1 = cls.createTemplate(m, 'Age', 'text', 0, 0, null);
+  const t2 = cls.createTemplate(m, 'Role', 'text', 0, 0, null);
+  const priv = cls.createTemplate(m, 'Own', 'text', 0, 0, a);
+  const order = (id) => db.prepare('SELECT display_order FROM classifier_template WHERE id=?').get(id).display_order;
+  const privBefore = order(priv);
+  cls.moveTemplates(m, [t2, t1, priv]);
+  assert.deepEqual(cls.getTemplates(m).map((t) => t.description), ['Role', 'Age']);
+  assert.equal(order(priv), privBefore, 'a private field is left alone');
+});

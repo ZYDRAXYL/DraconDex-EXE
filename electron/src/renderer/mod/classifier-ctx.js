@@ -157,3 +157,186 @@ async function moveClassifierObject(objectId, targetModuleId) {
   invalidateNestItems(targetModuleId, 1);
   toast(t('saved'), 'ok');
 }
+
+// ── Procress 26 part 3: add without a form, rename in place ─────────────
+// [+ Add object] makes "Object N" at once and, in the table, puts its name in
+// edit mode (✎ / F2 still open the form for the icon and colour). Esc on a
+// name made a moment ago takes the object back, as a new module does
+// (hub/edit.js cancelNewModule).
+async function createClassifierObjectQuick(moduleId) {
+  const m = findModuleNode(moduleId) || S.activeModuleNode;
+  const base = t(m?.cat_type === 'character' ? 'catTypeCharacter' : 'catTypeObject');
+  const objs = clsData(moduleId).objects;
+  const names = new Set(objs.map((o) => o.name));
+  let n = objs.length + 1;
+  while (names.has(`${base} ${n}`)) n++;
+  const id = await api.classifier.createObject(moduleId, `${base} ${n}`, null, null);
+  S.clsPendingSelect = id;
+  S.clsJustCreated = id;
+  S.clsRenamingObject = id;
+  S.clsRenameDraft = null;
+  if (m) await loadClassifierData(m);
+  invalidateNestItems(moduleId, 1);
+  setTimeout(() => focusClsRename(id), 0); // after the render it queued
+}
+
+function startRenameClsObject(id) {
+  S.clsRenamingObject = id;
+  S.clsRenameDraft = null;
+  renderNexusHome();
+  focusClsRename(id);
+}
+
+// The input lands on the next render; a view with no name cell (grid, the
+// detail list) never shows one, so stop waiting and drop the flag. After a
+// re-render (S.clsRenameDraft) the text and the selection come back as they were.
+function focusClsRename(id, tries = 0) {
+  const el = q(`#rename-cobj-${id}`);
+  if (el) {
+    el.focus();
+    if (S.clsRenameDraft?.id === id) {
+      el.value = S.clsRenameDraft.value;
+      el.setSelectionRange(...S.clsRenameDraft.sel);
+    } else el.select();
+    return;
+  }
+  if (tries < 20) { setTimeout(() => focusClsRename(id, tries + 1), 30); return; }
+  if (S.clsRenamingObject === id) S.clsRenamingObject = null;
+  if (S.clsJustCreated === id) S.clsJustCreated = null;
+}
+
+// Optimistic, like saveModuleRename: the new name shows at once and a failed
+// save puts the old one back. A focused input that a re-render removes blurs
+// too (the Nest reloads its items ~40 ms after an add), and Chromium fires
+// that blur while it is still attached — so look one tick later: gone means a
+// re-render, not the user leaving, and the rename carries on in the new input.
+async function saveClsObjectRename(id, value, el = null) {
+  if (S.clsRenamingObject !== id) return; // Esc already handled it
+  if (el) {
+    const sel = [el.selectionStart, el.selectionEnd];
+    await new Promise((r) => setTimeout(r, 0));
+    if (S.clsRenamingObject !== id) return;
+    if (!el.isConnected) {
+      S.clsRenameDraft = { id, value, sel };
+      focusClsRename(id);
+      return;
+    }
+  }
+  S.clsRenamingObject = null;
+  S.clsJustCreated = null;
+  S.clsRenameDraft = null;
+  const o = clsFindObject(id);
+  const name = value.trim();
+  if (!o || !name || name === o.name) { renderNexusHome(); return; }
+  const old = o.name;
+  o.name = name;
+  renderNexusHome();
+  try {
+    await api.classifier.updateObject(id, name, o.color ?? null, o.icon ?? null);
+  } catch (_) {
+    o.name = old;
+    renderNexusHome();
+    toast(t('srSaveFailed'), 'err');
+    return;
+  }
+  invalidateNestItems(o.module_ref, 0);
+}
+
+function clsRenameKey(ev, el, id) {
+  if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); return; }
+  if (ev.key !== 'Escape') return;
+  ev.preventDefault();
+  if (S.clsJustCreated === id) { discardNewClsObject(id); return; }
+  el.value = clsFindObject(id)?.name ?? el.defaultValue;
+  el.blur();
+}
+
+// Never used, so a real delete — no trash, no Undo toast.
+async function discardNewClsObject(id) {
+  const moduleId = clsModuleOfObject(id);
+  S.clsRenamingObject = null;
+  S.clsJustCreated = null;
+  S.clsRenameDraft = null;
+  await api.classifier.deleteObject(id);
+  if (moduleId != null) {
+    await loadClassifierData(findModuleNode(moduleId));
+    invalidateNestItems(moduleId, -1);
+  }
+  renderNexusHome();
+}
+
+// ── Procress 26 part 3: drag to reorder objects and fields ──────────────
+// Objects in every view (table row grip · detail-list row · grid card) and
+// the shared fields by their column heads. The new order is computed from the
+// cached list, not the DOM — lazyRows (core/lazy-rows.js) may not have
+// rendered the rows a drag passes over. Alt+↑ / Alt+↓ move the object you
+// are in by one.
+function onClsDragStart(ev, kind, moduleId, id) {
+  S.clsDrag = { kind, moduleId, id };
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.dataTransfer.setData('text/plain', '');
+  ev.stopPropagation();
+}
+
+function onClsDragOver(ev, el, kind, horizontal = false) {
+  if (S.clsDrag?.kind !== kind) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  const r = el.getBoundingClientRect();
+  const before = horizontal ? (ev.clientX - r.left) / r.width < 0.5 : (ev.clientY - r.top) / r.height < 0.5;
+  el.classList.remove('drop-before', 'drop-after');
+  el.classList.add(before ? 'drop-before' : 'drop-after');
+}
+
+function onClsDragLeave(el) {
+  el.classList.remove('drop-before', 'drop-after');
+}
+
+async function onClsDrop(ev, el, kind, targetId) {
+  const drag = S.clsDrag;
+  if (drag?.kind !== kind) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  const before = el.classList.contains('drop-before');
+  el.classList.remove('drop-before', 'drop-after');
+  S.clsDrag = null;
+  if (drag.id === targetId) return;
+  await clsReorder(kind, drag.moduleId, drag.id, targetId, before);
+}
+
+// kind 'obj' → d.objects / moveObjects, 'tpl' → d.templates / moveTemplates.
+async function clsReorder(kind, moduleId, id, targetId, before) {
+  const d = clsData(moduleId);
+  const list = kind === 'obj' ? d.objects : d.templates;
+  const ids = list.map((r) => r.id).filter((x) => x !== id);
+  const at = ids.indexOf(targetId);
+  if (at < 0 || !list.some((r) => r.id === id)) return;
+  ids.splice(before ? at : at + 1, 0, id);
+  const pos = new Map(ids.map((x, i) => [x, i]));
+  list.sort((a, b) => pos.get(a.id) - pos.get(b.id));
+  renderNexusHome();
+  if (kind === 'obj') {
+    await api.classifier.moveObjects(moduleId, ids);
+    invalidateNestItems(moduleId, 0); // the Nest lists objects in this order too
+  } else {
+    await api.classifier.moveTemplates(moduleId, ids);
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (!e.altKey || e.ctrlKey || e.metaKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  const holder = document.activeElement?.closest?.('[data-cls-oid]');
+  const id = holder ? Number(holder.dataset.clsOid) : S.classifierSelectedObject;
+  const moduleId = id != null ? clsModuleOfObject(id) : null;
+  if (moduleId == null || (!holder && !document.querySelector(`[data-cls-oid="${id}"]`))) return;
+  const objs = clsData(moduleId).objects;
+  const at = objs.findIndex((o) => o.id === id);
+  const other = objs[at + (e.key === 'ArrowUp' ? -1 : 1)];
+  if (!other) return;
+  e.preventDefault();
+  // Keep the caret's cell: the row re-renders under it.
+  const cell = document.activeElement?.dataset?.tid;
+  clsReorder('obj', moduleId, id, other.id, e.key === 'ArrowUp').then(() => setTimeout(() => {
+    q(cell ? `[data-oid="${id}"][data-tid="${cell}"]` : `[data-cls-oid="${id}"]`)?.focus();
+  }, 0));
+});

@@ -15,8 +15,8 @@
   "hexCss": 41,
   "inlineStyle": 297,
   "zIndexRaw": 0,
-  "iconsSvg": 283,
-  "iconsChar": 91,
+  "iconsSvg": 285,
+  "iconsChar": 90,
   "hexByFile": {
     "electron/src/renderer/core/pickers.js": 1,
     "electron/src/renderer/core/settings.js": 3,

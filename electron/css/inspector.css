@@ -240,6 +240,25 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .cls-lv-sum{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40%}
 .cls-cell-ro{color:var(--t2);cursor:pointer;font-style:italic}
 .cls-cell-ro:hover{background:var(--raised)}
+/* Procress 26 part 3: the table edits in place and reorders by drag.
+   Name cell = grip · dot · name (double click renames); a choice, tick, link
+   or level cell holds its own control; drop markers for rows, columns, cards. */
+.cls-name-cell .nar-grip{display:inline-flex;vertical-align:middle;margin-right:4px}
+.cls-name-cell .rename-input{width:auto;min-width:8em}
+.cls-name{cursor:text}
+.cls-cell-ctl{padding:4px 8px}
+.cls-cell-ctl .pv{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.cls-cell-ctl .pv-input{min-width:7em;padding:2px 6px}
+.cls-lv-cell{display:inline-block;min-width:3em;padding:2px 4px;border-radius:var(--rs)}
+.cls-lv-cell:focus{outline:1px solid var(--accent);background:var(--raised)}
+.cls-lv-all{margin-left:4px}
+.cls-table tr.drop-before td{box-shadow:inset 0 2px 0 0 var(--accent)}
+.cls-table tr.drop-after td{box-shadow:inset 0 -2px 0 0 var(--accent)}
+.cls-table th[draggable]{cursor:grab}
+.cls-table th.drop-before{box-shadow:inset 2px 0 0 0 var(--accent)}
+.cls-table th.drop-after{box-shadow:inset -2px 0 0 0 var(--accent)}
+.cls-tile.drop-before{box-shadow:-3px 0 0 var(--accent)}
+.cls-tile.drop-after{box-shadow:3px 0 0 var(--accent)}
 .cls-addfield{display:flex;align-items:center;gap:6px;padding:6px 14px}
 .cls-addfield-inp{flex:1;min-width:0;padding:5px 7px;background:transparent;border:1px dashed var(--border);
 	border-radius:var(--rs);color:var(--t1);font-size:calc(var(--fs-body) * var(--fsc,1));font-family:inherit;outline:none}

@@ -352,6 +352,20 @@ function moveLevels(objectId, templateId, orderedIds) {
   })();
 }
 
+// Procress 26 part 3: drag-reorder of a category's objects (rows) and its
+// shared fields (columns) — the whole new order in one transaction, like
+// moveLevels. Scoped to the module, so an id from elsewhere moves nothing.
+function moveObjects(moduleRef, orderedIds) {
+  const d = getDB();
+  const st = d.prepare(`UPDATE classifier_object SET display_order=? WHERE id=? AND module_ref=?`);
+  d.transaction(() => { (orderedIds || []).forEach((id, idx) => st.run(idx, id, moduleRef)); })();
+}
+function moveTemplates(moduleRef, orderedIds) {
+  const d = getDB();
+  const st = d.prepare(`UPDATE classifier_template SET display_order=? WHERE id=? AND module_ref=? AND object_ref IS NULL`);
+  d.transaction(() => { (orderedIds || []).forEach((id, idx) => st.run(idx, id, moduleRef)); })();
+}
+
 // Procress 17 B1: many rows in ONE transaction, through the single-row path
 // (same versions / wiki side effects). conn.js measured a statement outside a
 // transaction at ~2.5 ms and inside one at ~6 µs — paste, duplicate, bundle
@@ -374,4 +388,5 @@ module.exports = {
   getTemplates, getObjectTemplates, createTemplate, updateTemplate, deleteTemplate,
   getAttrs, getObjectsFull, upsertAttr,
   getLevels, getLevelsForModule, createLevel, updateLevelField, deleteLevel, moveLevels,
+  moveObjects, moveTemplates,
 };

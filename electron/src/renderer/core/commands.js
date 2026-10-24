@@ -209,7 +209,7 @@ const COMMANDS = {
 
   // ── Classifier ───────────────────────────────────────────────────────
   'classifier.quickStart': { label: 'clsQuickStart', icon: 'plus', scope: 'kind:classifier', when: (c) => !clsData(c?.moduleId).objects.length || c.always, run: (c) => classifierQuickStart(c.moduleId), surfaces: ['empty.state'] },
-  'classifier.addObject': { label: 'addObject', icon: 'plus', scope: 'kind:classifier', run: (c) => openClassifierObjectModal(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
+  'classifier.addObject': { label: 'addObject', icon: 'plus', scope: 'kind:classifier', run: (c) => createClassifierObjectQuick(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
   'classifier.fields': { label: 'clsFieldsOfCategory', icon: 'edit', scope: 'kind:classifier', run: (c) => openClassifierFieldsModal(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
   'classifier.fieldType': { label: 'clsFieldChangeType', icon: 'fields', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFieldsModal(c.moduleId, c.tplId), surfaces: ['classifier.ctx'] },
   'classifier.fieldRename': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFieldsModal(c.moduleId, c.tplId), surfaces: ['classifier.ctx'] },

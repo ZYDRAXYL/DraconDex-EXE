@@ -869,3 +869,43 @@ test('25: a template that fails keeps the Nexus and offers the picker again', as
   assert.ok(r.still, 'the Nexus is still there');
   assert.ok(r.picker, 'retry opens the template picker on that template');
 });
+
+// ── Procress 26 part 3 ───────────────────────────────────────────────────
+test('26 part 3: add without a form, rename in place, edit a choice, reorder', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('Characters').click(); await sleep(600);
+  const mid = await win.evaluate(() => S.activeModuleNode.id);
+  const names = () => win.evaluate((m) => clsData(m).objects.map((o) => o.name), mid);
+  const start = await names();
+  await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'table'), mid);
+  await sleep(500);
+  // [+ Add object]: no modal, the new row's name is already being typed into
+  await win.click('.classifier-toolbar [data-cmd="classifier.addObject"]'); await sleep(600);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, 'no form');
+  assert.match(await win.evaluate(() => document.activeElement?.id || ''), /^rename-cobj-/);
+  await win.keyboard.type('Smoke Rook'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.deepEqual(await names(), [...start, 'Smoke Rook']);
+  // Esc on one made a moment ago takes it back
+  await win.click('.classifier-toolbar [data-cmd="classifier.addObject"]'); await sleep(600);
+  await win.keyboard.press('Escape'); await sleep(500);
+  assert.deepEqual(await names(), [...start, 'Smoke Rook']);
+  // double click renames; Esc keeps the old name
+  await win.dblclick('tr[data-cls-oid] .cls-name >> text=Smoke Rook'); await sleep(300);
+  await win.keyboard.type('zz'); await win.keyboard.press('Escape'); await sleep(300);
+  assert.ok((await names()).includes('Smoke Rook'));
+  // a choice field is set in its cell
+  const rook = await win.evaluate((m) => clsData(m).objects.find((o) => o.name === 'Smoke Rook').id, mid);
+  const sel = win.locator(`tr[data-cls-oid="${rook}"] td.cls-cell-ctl select`).first();
+  const choice = (await sel.locator('option').allInnerTexts()).at(-1);
+  await sel.selectOption({ label: choice }); await sleep(300);
+  const stored = await win.evaluate(([m, id]) => api.classifier.getObjectsFull(m).then((f) => f.objects.find((o) => o.id === id).attrMap), [mid, rook]);
+  assert.ok(Object.values(stored).includes(choice), `saved (${JSON.stringify(stored)})`);
+  // Alt+↑ from a cell moves the row and is saved
+  await win.locator(`tr[data-cls-oid="${rook}"] td.cls-cell[contenteditable]`).first().click();
+  await win.keyboard.press('Alt+ArrowUp'); await sleep(500);
+  const moved = [...start.slice(0, -1), 'Smoke Rook', start.at(-1)];
+  assert.deepEqual(await names(), moved);
+  assert.deepEqual(await win.evaluate((m) => api.classifier.getObjects(m).then((r) => r.map((o) => o.name)), mid), moved);
+  await win.evaluate((id) => api.classifier.deleteObject(id), rook);
+  await win.evaluate(() => refreshClassifier());
+});
