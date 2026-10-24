@@ -942,3 +942,37 @@ test('26 part 4: [[ suggests an object with its module, asks which page, and the
   assert.deepEqual(await win.evaluate(() => [S.activeItemNode?.itemKind, S.activeItemNode?.id]), ['classifier', other.id]);
   await win.evaluate(async ([m, t]) => { await api.classifier.deleteTemplate(t); await openModuleNode(m); }, [mid, tpl]);
 });
+
+// ── Procress 26 part 5: what the part 2 and 3 tests leave to the eye ─────
+test('26: the address row scrolls away instead of sliding over the title', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('Characters').click(); await sleep(600);
+  const r = await win.evaluate(() => {
+    const bar = document.querySelector('.module-page .addr-bar');
+    const title = document.querySelector('.module-page .page-title');
+    bar.closest('.bpane-body').scrollTop = 20;
+    const b = bar.getBoundingClientRect(), tt = title.getBoundingClientRect();
+    return { pos: getComputedStyle(bar).position, overlap: b.bottom > tt.top + 1 && b.top < tt.bottom };
+  });
+  assert.equal(r.pos, 'static');
+  assert.equal(r.overlap, false, 'the bar does not cover the title');
+});
+
+test('26: drag a row by its grip and a column by its head — saved', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('Characters').click(); await sleep(600);
+  const mid = await win.evaluate(() => S.activeModuleNode.id);
+  await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'table'), mid);
+  await sleep(500);
+  const db = (what) => win.evaluate(([m, w]) => (w === 'obj' ? api.classifier.getObjects(m) : api.classifier.getTemplates(m)).then((r) => r.map((x) => x.id)), [mid, what]);
+  const objs = await db('obj');
+  const rows = win.locator('tr[data-cls-oid]');
+  await rows.last().locator('.nar-grip').dragTo(rows.first(), { targetPosition: { x: 40, y: 3 } }); await sleep(600);
+  assert.deepEqual(await db('obj'), [objs.at(-1), ...objs.slice(0, -1)], 'last row first');
+  const tpls = await db('tpl');
+  const ths = win.locator('.cls-table th[draggable]');
+  await ths.last().dragTo(ths.first(), { targetPosition: { x: 3, y: 5 } }); await sleep(600);
+  assert.deepEqual(await db('tpl'), [tpls.at(-1), ...tpls.slice(0, -1)], 'last column first');
+  // put both back for the suites after this one
+  await win.evaluate(async ([m, o, t]) => { await api.classifier.moveObjects(m, o); await api.classifier.moveTemplates(m, t); await refreshClassifier(); }, [mid, objs, tpls]);
+});
