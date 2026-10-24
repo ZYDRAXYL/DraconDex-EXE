@@ -217,10 +217,17 @@ test('18 part 1: Nest head order, Home phase A, Recent, / and [+ New] in context
   assert.equal(await win.locator('[data-key="dock"]').count(), 0, 'no Import Dock section');
   assert.equal(await win.locator('.home-start h2').count(), 1);
   assert.equal(await win.locator('.home-actions .btn-p').count(), 1);
-  // with nothing picked, [+ New] makes a folder at the root
-  assert.match(await win.evaluate(() => nestNewHereLabel()), /folder/i);
+  // Procress 26 part 2: [+ New] opens the Create menu wherever you are —
+  // on a Classifier's page too (it used to add an object there)
   await row('Characters').click(); await sleep(500);
-  assert.equal(await win.evaluate(() => nestNewContext().cmd), 'classifier.addObject');
+  assert.deepEqual(await win.evaluate(() => ({ ...nestNewContext(), folder: nestNewContext().folder?.name })), { folder: 'Guide', sibling: true });
+  await win.click('.nest-create .split-main'); await sleep(300);
+  const pop = await win.evaluate(() => { const p = document.querySelector('.popover-xl'); return p && { fits: p.scrollHeight <= p.clientHeight + 1, rows: p.querySelectorAll('[data-kind-row]').length }; });
+  assert.ok(pop?.rows > 10, 'the kind picker opened');
+  assert.ok(pop.fits, 'every kind shows without scrolling at 1280x800');
+  await win.fill('.popover-xl .kind-search', 'timeline');
+  assert.ok(await win.locator('.popover-xl [data-kind-row]:visible').count() < pop.rows, 'the search narrows the rows');
+  await win.keyboard.press('Escape');
   // Recent lists what was opened
   await win.click('#nav-sidebar [data-cmd="app.recent"]'); await sleep(500);
   assert.match(await win.locator('#left-recent').innerText(), /Characters/);
