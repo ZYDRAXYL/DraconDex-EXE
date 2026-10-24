@@ -34,9 +34,57 @@ async function refreshWikiCache() {
 function resolveWikiNameCached(name) {
   if (!_wikiCache) return null;
   const raw = String(name).trim();
+  const path = wikiPathParse(raw);
+  if (path) return resolveWikiPathCached(path);
   const forced = raw.match(/^\w+:(.+)$/);
   return _wikiCache.get((forced ? forced[1] : raw).trim().toLowerCase()) || null;
 }
+
+// ── Module links (Procress 26 part 4, APP docs/SYSTEMS.md) ──────────────
+// The same rule as db/wiki.js wikiPathObjects, over the cached index and the
+// in-memory module tree: objects of that name in a module of that name whose
+// parents match the folders written before it — exactly one, or nothing.
+const wikiNameEq = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+function wikiModuleFits(node, names) {
+  let n = node;
+  for (const nm of [...names].reverse()) {
+    if (!n || !wikiNameEq(n.name, nm)) return false;
+    n = n.parent_id != null ? findModuleNode(n.parent_id) : null;
+  }
+  return true;
+}
+function resolveWikiPathCached(p) {
+  const hits = _wikiCacheList.filter((e) => e.key.startsWith('cobj_') && wikiNameEq(e.name, p.object)
+    && wikiModuleFits(findModuleNode(e.moduleId), p.modules));
+  return hits.length === 1 ? hits[0].key : null;
+}
+
+// The path a link to this object needs: its module, and the folders above it
+// only while another module answers to the path so far.
+function wikiObjectPath(e, ns) {
+  const m = findModuleNode(e.moduleId);
+  const mods = [m?.name ?? ''];
+  const all = flattenModuleTree(S.moduleTree || [], 0).map((r) => r.m);
+  let up = m;
+  while (m && all.some((o) => o.id !== m.id && wikiModuleFits(o, mods)) && (up = up.parent_id != null ? findModuleNode(up.parent_id) : null)) {
+    mods.unshift(up.name);
+  }
+  return wikiPathFormat(ns, mods, e.name);
+}
+
+// [[ suggestions, shared by this editor and core/wiki-field.js. What was typed
+// after "obj:" / "mod:" and its last "/" filters by name; an object row
+// names its module where the others name their type.
+function wikiAcItems(frag, max) {
+  const q = String(frag).replace(/^(obj|mod):/i, '').split('/').pop().replace(/^"/, '').toLowerCase();
+  return _wikiCacheList.filter((e) => e.name.toLowerCase().includes(q)).slice(0, max)
+    .map((e) => (e.key.startsWith('cobj_') && findModuleNode(e.moduleId) ? { ...e, type: findModuleNode(e.moduleId).name, path: true } : e));
+}
+// Picking an object is a second step in the same list: which page the link opens.
+const wikiAcChoices = (e) => (e.path ? [
+  { name: t('wikiLinkObjectPage'), type: '', color: e.color, insert: wikiObjectPath(e, 'obj') },
+  { name: t('wikiLinkModulePage'), type: '', color: e.color, insert: wikiObjectPath(e, 'mod') },
+] : null);
 
 function createMarkdownEditor(container, opts) {
   const st = {
@@ -176,7 +224,7 @@ function createMarkdownEditor(container, opts) {
         const m = ta.value.slice(0, ta.selectionStart).match(/\[\[([^\[\]\n]*)$/);
         if (!m || !_wikiCacheList.length) { hideAc(); return; }
         const frag = m[1].toLowerCase();
-        acItems = _wikiCacheList.filter(e2 => e2.name.toLowerCase().includes(frag)).slice(0, 8);
+        acItems = wikiAcItems(frag, 8);
         if (!acItems.length) { hideAc(); return; }
         acIdx = 0;
         paintAc();
@@ -188,14 +236,17 @@ function createMarkdownEditor(container, opts) {
       const acceptAc = () => {
         const it = acItems[acIdx];
         if (!it) return;
+        const choices = wikiAcChoices(it);
+        if (choices) { acItems = choices; acIdx = 0; paintAc(); return; }
+        const text = it.insert ?? it.name;
         const pos = ta.selectionStart;
         const m = ta.value.slice(0, pos).match(/\[\[([^\[\]\n]*)$/);
         if (!m) { hideAc(); return; }
         const start = pos - m[1].length;
         const after = ta.value.slice(pos);
         const closing = after.startsWith(']]') ? '' : ']]';
-        ta.value = ta.value.slice(0, start) + it.name + closing + after;
-        ta.selectionStart = ta.selectionEnd = start + it.name.length + 2;
+        ta.value = ta.value.slice(0, start) + text + closing + after;
+        ta.selectionStart = ta.selectionEnd = start + text.length + 2;
         hideAc();
         ta.dispatchEvent(new Event('input'));
         ta.focus();

@@ -75,6 +75,17 @@ function bindWikilinkClicks() {
     // Procress 16 part 5: a name several things answer to → choose; a red link → create it
     const many = key ? wikiCandidates(name) : [];
     if (many.length > 1) { openWikiChooser(a, name, many); return; }
+    // Procress 26 part 4: [[obj:Module/Object]] opens the object's own page,
+    // [[mod:Module/Object]] its module with the object picked
+    const path = key?.startsWith('cobj_') ? wikiPathParse(name) : null;
+    const mid = path ? _wikiCacheList.find((e) => e.key === key)?.moduleId : null;
+    if (mid != null) {
+      const oid = Number(key.slice(5));
+      if (path.ns === 'obj') { await openItemNode('classifier', mid, oid); return; }
+      S.clsPendingSelect = oid;
+      await openModuleNode(mid);
+      return;
+    }
     if (key) { await openEntityByKey(key); return; }
     if (name && S.nexus) pbLinkCreate(name);
   });

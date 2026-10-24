@@ -61,6 +61,9 @@ const deleteObject = (id) => {
   require('./page-block').clearItemBlocks(`cobj_${id}`); // its page goes with it (§12)
   const r = getDB().prepare(`DELETE FROM classifier_object WHERE id=?`).run(id);
   getDB().prepare(`DELETE FROM wiki_link WHERE src_key=?`).run(`cobj_${id}`);
+  // Procress 26 part 4: links TO it are broken now — unresolved, so the page
+  // draws them red and Problems lists them (they kept the dead key before).
+  getDB().prepare(`UPDATE wiki_link SET target_key=NULL, update_at=datetime('now') WHERE target_key=?`).run(`cobj_${id}`);
   if (prev) versions.recordVersion(prev.module_ref, 'objectDel', prev.name,
     { op: 'classifierObjectInsert', args: { moduleRef: prev.module_ref, name: prev.name, colorId: prev.color, icon: prev.icon, note: prev.note } });
   return r;

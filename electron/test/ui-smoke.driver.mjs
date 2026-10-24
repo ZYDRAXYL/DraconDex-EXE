@@ -909,3 +909,36 @@ test('26 part 3: add without a form, rename in place, edit a choice, reorder', a
   await win.evaluate((id) => api.classifier.deleteObject(id), rook);
   await win.evaluate(() => refreshClassifier());
 });
+
+// ── Procress 26 part 4 ───────────────────────────────────────────────────
+test('26 part 4: [[ suggests an object with its module, asks which page, and the link opens it', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('Characters').click(); await sleep(600);
+  const mid = await win.evaluate(() => S.activeModuleNode.id);
+  const tpl = await win.evaluate(async (m) => { const id = await api.classifier.createTemplate(m, 'Smoke notes', 'text', false, false, null); await refreshClassifier(); return id; }, mid);
+  await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'table'), mid);
+  await sleep(500);
+  const [first, other] = await win.evaluate((m) => clsData(m).objects.slice(0, 2).map((o) => ({ id: o.id, name: o.name })), mid);
+  const cell = win.locator(`td.cls-cell[data-oid="${first.id}"][data-tid="${tpl}"]`);
+  await cell.click();
+  await win.keyboard.type(`[[${other.name.slice(0, 3)}`); await sleep(500);
+  const rows = () => win.locator('.wiki-field-ac .mded-ac-item').allInnerTexts();
+  assert.ok((await rows()).some((r) => r.includes(other.name) && r.includes('Characters')), 'the object row names its module');
+  while (!(await win.locator('.wiki-field-ac .mded-ac-item.active').innerText()).includes(other.name)) await win.keyboard.press('ArrowDown');
+  await win.keyboard.press('Enter'); await sleep(150);
+  assert.equal((await rows()).length, 2, 'then: object page or module page');
+  await win.keyboard.press('Enter'); await sleep(150);
+  // a folder in front only while another "Characters" exists (an earlier test makes one)
+  const typed = await cell.innerText();
+  assert.match(typed, new RegExp(`^\\[\\[obj:(?:[^/\\]]+/)*Characters/${other.name}\\]\\]$`));
+  assert.equal(await win.evaluate((t) => resolveWikiNameCached(t.slice(2, -2)), typed), `cobj_${other.id}`, 'and it names exactly that object');
+  await win.keyboard.press('Tab'); await sleep(500);
+  const out = await win.evaluate((id) => api.wiki.outgoing(`cobj_${id}`), first.id);
+  assert.ok(out.some((e) => e.key === `cobj_${other.id}`), 'indexed to the object');
+  // drawn as the object's name; a click opens the object's own page
+  const html = await win.evaluate((t) => { const h = mdRender(t, { resolveLink: resolveWikiNameCached }); const a = document.createElement('div'); a.id = 'smoke-link'; a.innerHTML = h; document.querySelector('#main-inner').prepend(a); return a.textContent; }, typed);
+  assert.equal(html, other.name);
+  await win.click('#smoke-link .wikilink'); await sleep(800);
+  assert.deepEqual(await win.evaluate(() => [S.activeItemNode?.itemKind, S.activeItemNode?.id]), ['classifier', other.id]);
+  await win.evaluate(async ([m, t]) => { await api.classifier.deleteTemplate(t); await openModuleNode(m); }, [mid, tpl]);
+});

@@ -50,6 +50,54 @@ const RESOLVERS = [
       AND (',' || lower(replace(replace(pb.content, ', ', ','), ' ,', ',')) || ',') LIKE '%,' || lower(?) || ',%' LIMIT 1`, nx, n)?.id, 'module_'],
 ];
 
+// ── Module links (Procress 26 part 4, APP docs/SYSTEMS.md "Module links") ──
+// [[obj:Module/Object]] opens the object's page, [[mod:Module/Object]] the
+// module's page with that object picked; both index to the OBJECT (cobj_),
+// so backlinks and rename follow it. The page reads only the object's name.
+// Segments split on "/"; a segment wrapped in "…" may hold "/" itself
+// (obj:Stats/"HP/MP"). Module segments before the last one are folders —
+// written only when two modules share a name — and may start anywhere up
+// the tree. Without a "/" an obj: link is the legacy Director one below.
+// Keep in sync with wikiPathParse in src/renderer/markdown.js.
+function parseWikiPath(text) {
+  const m = String(text || '').trim().match(/^(obj|mod):(.+)$/i);
+  if (!m) return null;
+  const segs = [];
+  let cur = '';
+  let inQ = false;
+  for (const ch of m[2]) {
+    if (ch === '"' && (inQ || !cur.trim())) inQ = !inQ;
+    if (ch === '/' && !inQ) { segs.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  segs.push(cur);
+  const names = segs.map((s) => { const t = s.trim(); return t.length >= 2 && t.startsWith('"') && t.endsWith('"') ? t.slice(1, -1).trim() : t; });
+  if (names.length < 2 || names.some((s) => !s)) return null;
+  return { ns: m[1].toLowerCase(), modules: names.slice(0, -1), object: names[names.length - 1] };
+}
+const wikiPathSeg = (s) => (String(s).includes('/') ? `"${s}"` : String(s));
+const formatWikiPath = (p) => `${p.ns}:${[...p.modules, p.object].map(wikiPathSeg).join('/')}`;
+
+// The objects a path names: modules called like its last module segment whose
+// parents match the folders written before it, each holding an object of that
+// name. One → its key; none, or several (the path is ambiguous) → null.
+function wikiPathObjects(d, nx, p) {
+  const eq = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+  const up = d.prepare(`SELECT name, parent_id FROM module WHERE id=?`);
+  const fits = (parentId) => {
+    let pid = parentId;
+    for (const seg of p.modules.slice(0, -1).reverse()) {
+      const row = pid != null ? up.get(pid) : null;
+      if (!row || !eq(row.name, seg)) return false;
+      pid = row.parent_id;
+    }
+    return true;
+  };
+  const mods = scopedAll(d, `SELECT id, parent_id FROM module WHERE (? IS NULL OR nexus_ref=?) AND name=? COLLATE NOCASE`, nx, p.modules[p.modules.length - 1]);
+  const obj = d.prepare(`SELECT id FROM classifier_object WHERE module_ref=? AND name=? COLLATE NOCASE`);
+  return mods.filter((m) => fits(m.parent_id)).map((m) => obj.get(m.id, p.object)).filter(Boolean).map((o) => `cobj_${o.id}`);
+}
+
 // Optional memo for bulk passes (Plan part2 #2.4). A miss costs all 17
 // resolvers, and a rebuild resolves the same [[Name]] once per source that
 // mentions it — reindexWikiLinks only dedupes within one source. Scope is
@@ -80,6 +128,11 @@ function resolveWikiName(rawName, nexusId) {
 }
 
 function _resolveWikiName(d, nx, name) {
+  const path = parseWikiPath(name);
+  if (path) {
+    const hits = wikiPathObjects(d, nx, path);
+    return hits.length === 1 ? hits[0] : null;
+  }
   const forced = name.match(/^(\w+):(.+)$/);
   if (forced) {
     const r = RESOLVERS.find(([ns]) => ns === forced[1].toLowerCase());
@@ -285,7 +338,8 @@ function _quickIndex(nexusId) {
   const add = (sql, prefix, type, module) => {
     try {
       for (const r of scopedAll(d, sql, nx)) {
-        out.push({ key: `${prefix}${r.id}`, name: r.name, type, module, color: r.color_code || null });
+        // moduleId: an object's module, for the [[obj:Module/Object]] path (Procress 26)
+        out.push({ key: `${prefix}${r.id}`, name: r.name, type, module, color: r.color_code || null, ...(r.mid != null ? { moduleId: r.mid } : {}) });
       }
     } catch (_) {}
   };
@@ -303,7 +357,7 @@ function _quickIndex(nexusId) {
   add(`SELECT m.id, m.name, uc.color_code FROM module m LEFT JOIN use_color uc ON uc.id=m.color WHERE (? IS NULL OR m.nexus_ref=?)`, 'module_', 'module', 'hub');
   add(`SELECT ch.id, ch.name, NULL AS color_code FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'bchp_', 'chapter', 'author');
   add(`SELECT s.id, s.name, NULL AS color_code FROM chat_session s JOIN module m ON s.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'chss_', 'chat', 'scribe');
-  add(`SELECT o.id, o.name, uc.color_code FROM classifier_object o JOIN module m ON o.module_ref=m.id LEFT JOIN use_color uc ON uc.id=o.color WHERE (? IS NULL OR m.nexus_ref=?)`, 'cobj_', 'object', 'classifier');
+  add(`SELECT o.id, o.name, uc.color_code, o.module_ref AS mid FROM classifier_object o JOIN module m ON o.module_ref=m.id LEFT JOIN use_color uc ON uc.id=o.color WHERE (? IS NULL OR m.nexus_ref=?)`, 'cobj_', 'object', 'classifier');
   add(`SELECT t.id, t.name, NULL AS color_code FROM diviner_table t JOIN module m ON t.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'divt_', 'table', 'diviner');
   // aliases last, so a real name keeps precedence in the renderer's cache too
   try {
@@ -492,7 +546,7 @@ function resolveDanglingLinks(name, nexusId) {
   return withResolveMemo(() => d.transaction(() => {
     const rows = d.prepare(`SELECT id, target_text FROM wiki_link WHERE target_key IS NULL AND (? IS NULL OR nexus_ref=?)`)
       .all(nexusId ?? null, nexusId ?? null);
-    const bare = (s) => String(s).replace(/^\w+:/, '').trim().toLowerCase();
+    const bare = (s) => (parseWikiPath(s)?.object ?? String(s).replace(/^\w+:/, '')).trim().toLowerCase();
     const wanted = String(name).trim().toLowerCase();
     let n = 0;
     for (const r of rows) {
@@ -509,9 +563,59 @@ function resolveDanglingLinks(name, nexusId) {
 // rewrites [[Old]] / [[Old|alias]] / [[ns:Old]] inside every source that
 // references targetKey, then reindexes those sources. The sources are the
 // registry in db/wiki-sources.js — one entry per field that can hold links.
+// A path link ([[obj:Module/Object]]) names its module too, so it is rewritten
+// by segment, not by the regex below: renaming an object edits the last
+// segment, renaming a module every segment equal to its old name — and a
+// rewrite is kept only when it resolves to the very target the old text was
+// indexed to, so a same-named module elsewhere in the path is left alone.
+function rewriteWikiPaths(rows, edit) {
+  const d = getDB();
+  const bySrc = new Map();
+  for (const r of rows) {
+    if (!bySrc.has(r.src_key)) bySrc.set(r.src_key, { nexus: r.nexus_ref, keys: new Map() });
+    bySrc.get(r.src_key).keys.set(String(r.target_text).trim().toLowerCase(), r.target_key);
+  }
+  let changed = 0;
+  for (const [srcKey, { nexus, keys }] of bySrc) {
+    const m = String(srcKey).match(/^([a-z]+)_(\d+)$/);
+    const src = m && CONTENT_SOURCES[m[1]];
+    if (!src) continue;
+    let touched = false;
+    const next = src.rewrite(d, Number(m[2]), (c) => String(c || '').replace(WIKILINK_RE, (full, inner, alias) => {
+      const p = parseWikiPath(inner);
+      const key = keys.get(inner.trim().toLowerCase());
+      const np = p && key ? edit(p) : null;
+      if (!np) return full;
+      const text = formatWikiPath(np);
+      if (resolveWikiName(text, nexus) !== key) return full;
+      touched = true;
+      return `[[${text}${alias != null ? `|${alias}` : ''}]]`;
+    }));
+    if (next === null || !touched) continue;
+    reindexWikiLinks(srcKey, next, nexus);
+    changed++;
+  }
+  return changed;
+}
+const PATH_LINK_SQL = `(lower(target_text) LIKE 'obj:%/%' OR lower(target_text) LIKE 'mod:%/%')`;
+const sameName = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+
+// A module was renamed: every path link naming it as a module segment.
+function renameWikiModulePath(nexusId, oldName, newName) {
+  if (!oldName || !newName || sameName(oldName, newName)) return 0;
+  const rows = getDB().prepare(`SELECT src_key, nexus_ref, target_key, target_text FROM wiki_link
+    WHERE target_key IS NOT NULL AND (? IS NULL OR nexus_ref=?) AND ${PATH_LINK_SQL}`).all(nexusId ?? null, nexusId ?? null);
+  return rewriteWikiPaths(rows, (p) => (p.modules.some((s) => sameName(s, oldName))
+    ? { ...p, modules: p.modules.map((s) => (sameName(s, oldName) ? newName : s)) } : null));
+}
+
 function renameWikiTarget(targetKey, oldName, newName) {
   const d = getDB();
   if (!oldName || !newName || oldName === newName) return 0;
+  if (String(targetKey).startsWith('cobj_')) {
+    rewriteWikiPaths(d.prepare(`SELECT src_key, nexus_ref, target_key, target_text FROM wiki_link WHERE target_key=? AND ${PATH_LINK_SQL}`).all(targetKey),
+      (p) => (sameName(p.object, oldName) ? { ...p, object: newName } : null));
+  }
   const esc = String(oldName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = new RegExp(`\\[\\[((?:\\w+:)?)\\s*${esc}\\s*(\\||\\]\\])`, 'gi');
   const rows = d.prepare(`SELECT DISTINCT src_key, nexus_ref FROM wiki_link WHERE target_key=?`).all(targetKey);
@@ -529,7 +633,7 @@ function renameWikiTarget(targetKey, oldName, newName) {
 }
 
 module.exports = {
-  renameWikiTarget, resolveDanglingLinks,
+  renameWikiTarget, renameWikiModulePath, resolveDanglingLinks, parseWikiPath, formatWikiPath,
   resolveWikiName, reindexWikiLinks, reindexSource, rebuildWikiIndex,
   nexusOfNote, nexusOfObject, nexusOfChapter,
   getBacklinks, getOutgoingLinks, resolveEntityKeys,

@@ -100,7 +100,10 @@ function updateModule(id, data) {
   assertHandleFree(handle, cur.nexus_ref, id);
   getDB().prepare(`UPDATE module SET name=?, icon=?, icon_color=?, color=?, pinned=?, handle=?, update_at=datetime('now') WHERE id=?`)
     .run(name, icon, icon_color, color, pinned, handle, id);
-  if (name !== cur.name) wiki.renameWikiTarget(`module_${id}`, cur.name, name);
+  if (name !== cur.name) {
+    wiki.renameWikiTarget(`module_${id}`, cur.name, name);
+    wiki.renameWikiModulePath(cur.nexus_ref, cur.name, name); // [[obj:Module/Object]] (Procress 26 part 4)
+  }
 }
 
 // Duplicate a module and its whole descendant subtree (Plan part2 #1 —

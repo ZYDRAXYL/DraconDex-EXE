@@ -15,6 +15,29 @@ const _mdEsc = (s) => String(s)
 const MD_WIKILINK_RE = /\[\[([^\[\]|]+?)(?:\|([^\[\]]+?))?\]\]/g;
 
 // → [{name, alias, start, end}] for every [[...]] in raw text.
+// Procress 26 part 4: [[obj:Module/Object]] / [[mod:Module/Object]] — a link
+// to a Classifier object through its module (src/db/wiki.js parseWikiPath:
+// keep in sync). Segments split on "/", a segment in "…" may hold "/" itself;
+// without a "/" it is not a path (a legacy [[obj:Name]]). The page shows only
+// the object's name.
+function wikiPathParse(text) {
+  const m = String(text || '').trim().match(/^(obj|mod):(.+)$/i);
+  if (!m) return null;
+  const segs = [];
+  let cur = '';
+  let inQ = false;
+  for (const ch of m[2]) {
+    if (ch === '"' && (inQ || !cur.trim())) inQ = !inQ;
+    if (ch === '/' && !inQ) { segs.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  segs.push(cur);
+  const names = segs.map((s) => { const t = s.trim(); return t.length >= 2 && t.startsWith('"') && t.endsWith('"') ? t.slice(1, -1).trim() : t; });
+  if (names.length < 2 || names.some((s) => !s)) return null;
+  return { ns: m[1].toLowerCase(), modules: names.slice(0, -1), object: names[names.length - 1] };
+}
+const wikiPathFormat = (ns, modules, object) => `${ns}:${[...modules, object].map((s) => (String(s).includes('/') ? `"${s}"` : String(s))).join('/')}`;
+
 function mdExtractWikilinks(text) {
   const out = [];
   if (!text) return out;
@@ -46,7 +69,7 @@ function _mdInline(text, resolveLink, fn = null) {
     // red only once the names are loaded — before that, "not found" means "not looked up yet"
     const known = typeof pbWikiLoaded !== 'function' || pbWikiLoaded();
     const cls = key ? 'wikilink' : known ? 'wikilink wikilink-unresolved' : 'wikilink';
-    return stash(`<a class="${cls}" data-name="${_mdEsc(nm)}" data-key="${_mdEsc(key)}">${_mdEsc(alias?.trim() || nm)}</a>`);
+    return stash(`<a class="${cls}" data-name="${_mdEsc(nm)}" data-key="${_mdEsc(key)}">${_mdEsc(alias?.trim() || wikiPathParse(nm)?.object || nm)}</a>`);
   });
   s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, label, url) =>
     stash(`<a class="md-link" href="${_mdEsc(url)}" title="${_mdEsc(url)}" onclick="return false">${_mdEsc(label)}</a>`));
