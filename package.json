@@ -64,7 +64,6 @@
       "th"
     ],
     "win": {
-      "signAndEditExecutable": false,
       "icon": "src/assets/brand/DraconDex_Icon.ico",
       "target": [
         {
@@ -78,6 +77,9 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "installerIcon": "src/assets/brand/DraconDex_Icon.ico",
+      "uninstallerIcon": "src/assets/brand/DraconDex_Icon.ico",
+      "installerHeaderIcon": "src/assets/brand/DraconDex_Icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "artifactName": "DraconDex-Setup-${version}.${ext}"

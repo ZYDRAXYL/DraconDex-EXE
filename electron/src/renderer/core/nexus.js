@@ -90,7 +90,7 @@ function renderNexusPicker() {
         <button class="btn btn-p btn-sm" onclick="openWelcomeWindow()">+ ${t('nexusNew')}</button>
       </div>`;
     q('#main-inner').innerHTML = `<div class="empty" style="margin-top:80px">
-      <div class="ei"><img src="../src/assets/brand/web/DraconDex_WhiteOut.webp" class="brand-img" alt="DraconDex" style="height:64px;width:64px;opacity:.35"></div>
+      <div class="ei"><img src="../src/assets/brand/web/DraconDex_Color.webp" class="brand-img" alt="DraconDex" style="height:64px;width:64px;opacity:.35"></div>
       <h3>${t('nexusWelcomeTitle')}</h3>
       <p>${t('nexusEmpty')}</p>
       <div style="display:flex;flex-direction:column;gap:8px;align-items:center;margin-top:18px">
@@ -106,7 +106,7 @@ function renderNexusPicker() {
     </div>
     ${listHtml({ list: 'nexuses', aria: t('nexus'), body: S.nexuses.map(n => nexusRowHtml(n, `selectNexus(${n.id})`)).join('') })}`;
   q('#main-inner').innerHTML = `<div class="empty" style="margin-top:80px">
-    <div class="ei"><img src="../src/assets/brand/web/DraconDex_WhiteOut.webp" class="brand-img" alt="DraconDex" style="height:64px;width:64px;opacity:.35"></div>
+    <div class="ei"><img src="../src/assets/brand/web/DraconDex_Color.webp" class="brand-img" alt="DraconDex" style="height:64px;width:64px;opacity:.35"></div>
     <h3>${t('nexusWelcomeTitle')}</h3>
     <p>${t('nexusSelect')}</p>
   </div>`;
