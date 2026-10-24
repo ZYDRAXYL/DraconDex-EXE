@@ -1,5 +1,5 @@
 /* The 4 built-in themes — one body[data-theme="…"] palette block each (the
-   per-theme .brand-img logo swap is in nav-hub.css). Pure data: adding a
+   .brand-img logo is in nav-hub.css). Pure data: adding a
    built-in = one block here + one entry in UI_THEME_OPTIONS_BUILTIN
    (src/renderer/core/state.js).
    Procress 10 part 2: the other 28 families moved to DraconDex-PKG as

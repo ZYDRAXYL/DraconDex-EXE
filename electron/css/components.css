@@ -289,7 +289,7 @@
 	transition:opacity .26s ease;
 }
 #splash.splash-hide{opacity:0;pointer-events:none}
-/* .brand-img carries the per-theme content:url() logo swap (see below), so the
+/* .brand-img carries the content:url() logo (nav-hub.css), so the
    splash only needs to override its 30px size. */
 #splash .splash-logo{height:88px;width:88px}
 #splash-track{

@@ -84,7 +84,7 @@ async function updateWikiAc(el) {
   if (!m) { hideWikiAc(); return; }
   await warmWikiFieldCache();
   const frag = m[1].toLowerCase();
-  const items = _wikiCacheList.filter(e => e.name.toLowerCase().includes(frag)).slice(0, WIKI_AC_MAX);
+  const items = wikiAcItems(frag, WIKI_AC_MAX);
   if (!items.length) { hideWikiAc(); return; }
   if (!_wikiAc || _wikiAc.el !== el) {
     hideWikiAc();
@@ -108,6 +108,9 @@ function acceptWikiAc() {
   const a = _wikiAc;
   const it = a?.items[a.idx];
   if (!it) return;
+  const choices = wikiAcChoices(it); // an object: which page the link opens (mdeditor.js)
+  if (choices) { a.items = choices; a.idx = 0; paintWikiAc(); return; }
+  const text = it.insert ?? it.name;
   const c = wikiFieldCaret(a.el);
   const m = c && c.text.slice(0, c.pos).match(/\[\[([^\[\]\n]*)$/);
   hideWikiAc();
@@ -115,7 +118,7 @@ function acceptWikiAc() {
   const start = c.pos - m[1].length;
   const after = c.text.slice(c.pos);
   const closing = after.startsWith(']]') ? '' : ']]';
-  wikiFieldWrite(a.el, c.text.slice(0, start) + it.name + closing + after, start + it.name.length + 2);
+  wikiFieldWrite(a.el, c.text.slice(0, start) + text + closing + after, start + text.length + 2);
 }
 
 // "Connect link": wrap the selected words in [[ ]].

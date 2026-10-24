@@ -2,7 +2,7 @@
    Nexus vault picker/switcher, Hub accordion sections and the Nest tree rows
    (indent guides, drag-drop feedback).
 
-   Also holds the per-theme .brand-img content:url() logo swap. url() resolves
+   Also holds the .brand-img content:url() logo. url() resolves
    against THIS FILE, not index.html, so every asset path here is
    '../../src/assets/brand/…': up out of electron/css/, up out of electron/, then
    into the shared src/assets/brand/. Any new asset reference anywhere in
@@ -28,14 +28,8 @@
 .nav-logo-btn.is-return{color:var(--accent-text,var(--accent))}
 .nav-logo-btn .brand-img{width:70%;height:70%}
 .nav-logo-btn .icon{width:24px;height:24px}
-.brand-img{height:30px;width:30px;object-fit:contain;display:block;content:url('../../src/assets/brand/web/DraconDex_WhiteOut.webp')}
-body[data-theme="daylight"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_WhiteIn.webp')}
-body[data-theme="moonlight"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_Color.webp')}
-body[data-theme="midnight"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_WhiteOut.webp')}
-body[data-theme="rainbow"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_Color.webp')}
-/* A custom or package theme is only a palette, so applyUiSettings() stamps
-   data-theme-tone from its --bg; the default above already covers dark. */
-body[data-theme="custom"][data-theme-tone="light"] .brand-img{content:url('../../src/assets/brand/web/DraconDex_WhiteIn.webp')}
+/* Procress 26: one logo for every theme — the Color mark reads on light and dark alike. */
+.brand-img{height:30px;width:30px;object-fit:contain;display:block;content:url('../../src/assets/brand/web/DraconDex_Color.webp')}
 .nav-btn{
 	position:relative;
 	width:70%;aspect-ratio:1;height:auto;border:none;

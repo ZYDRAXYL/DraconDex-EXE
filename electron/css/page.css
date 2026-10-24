@@ -109,8 +109,11 @@
   color: var(--t2); font-size: 12px;
 }
 
-/* The address row (page/address.js) — the sticky part of every page head. */
+/* The address row (page/address.js). Procress 26 part 2: in the flow, not
+   sticky — pinned over the scroller it slid across the module title and its
+   buttons as soon as the page scrolled. */
 .addr-bar{padding:4px 0 6px;margin-bottom:8px;border-bottom:1px solid var(--border)}
+.page-navbar.addr-bar{position:static}
 .addr-row{display:flex;align-items:center;gap:6px;min-width:0}
 .addr-nav{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .addr-path{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;flex-wrap:nowrap;overflow:hidden;

@@ -3,8 +3,8 @@
   "self": "EXE",
   "source": {
     "repo": "ZYDRAXYL/DraconDex-SDB",
-    "ref": "main",
-    "version": "2.1.1"
+    "ref": "sdb-v2.1.2",
+    "version": "2.1.2"
   },
   "expect": {
     "vaultSchemaVersion": 7,
@@ -41,7 +41,7 @@
     },
     "src/assets/brand/DraconDex_Icon.ico": {
       "artifact": "assets/brand/DraconDex_Icon.ico",
-      "sha256": "56d6efc2718a38b39209842adc14123db58230cc3b3c0f0a65bacd414611b428"
+      "sha256": "eae502fd84e5389c620f58db12313e91af332f70ae387fd06bce18ac40a3a5f3"
     },
     "src/assets/brand/DraconDex_Shade.png": {
       "artifact": "assets/brand/DraconDex_Shade.png",

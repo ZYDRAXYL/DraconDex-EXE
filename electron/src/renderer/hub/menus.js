@@ -247,9 +247,10 @@ function buildNestOptionsPopupHtml() {
 function openKindPopup(parentId, anchor) {
   closeAllPopups();
   if (!anchor) return;
-  const pop = openPopover(anchor, buildKindListHtml(parentId, false, true), { cls: 'popover-menu', keep: true });
-  // §9.5: 3 headings + 5 sub-headings + 14 rows will scroll in 360px, so
-  // the search box matters more, not less — it takes focus on open.
+  // Procress 26 part 2: the whole list at once, in columns (css/popover.css,
+  // .popover-xl) — one column was ~1,250 px of rows in a 360 px box.
+  const pop = openPopover(anchor, buildKindListHtml(parentId, false, true), { cls: 'popover-menu popover-xl', keep: true });
+  // The search box still takes focus on open: typing is the fastest pick.
   setTimeout(() => pop.querySelector('.kind-search')?.focus(), 0);
 }
 
@@ -291,7 +292,8 @@ function buildKindListHtml(parentId, excludeCollector = false, withSearch = fals
   let html = '';
   if (withSearch) {
     html += `<input class="kind-search" placeholder="${x(t('kindSearch'))}" oninput="filterKindList(this)"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();this.closest('.popover').querySelector('[data-kind-row]:not([hidden])')?.click()}">`;
+      onkeydown="if(event.key==='Enter'){event.preventDefault();this.closest('.popover').querySelector('[data-kind-row]:not([hidden])')?.click()}">
+      <div class="kind-cols">`;
   }
   // v5 Part 7 (§11.7): "start from template" is a genre bundle — a whole
   // project in one click (hub/bundles.js). A bundle is a folder, so it can
@@ -328,7 +330,7 @@ function buildKindListHtml(parentId, excludeCollector = false, withSearch = fals
       <div class="kind-list-item" data-kind-head data-cmd="app.managePresets" onclick="closeAllPopups();runCommand('app.managePresets')">
         <span class="kicon" aria-hidden="true">${I.options}</span><span class="kli-name">${x(t('managePresets'))}</span></div>`;
   }
-  return html;
+  return withSearch ? `${html}</div>` : html;
 }
 
 // Filters rows by kind name (both names), description; headings hide while

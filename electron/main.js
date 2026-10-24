@@ -1121,6 +1121,8 @@ h('classifier:createLevel',       (oid,tid)             => db.createLevel(oid,ti
 h('classifier:updateLevelField',  (id,f,v)              => db.updateLevelField(id,f,v));
 h('classifier:deleteLevel',       (id)                  => db.deleteLevel(id));
 h('classifier:moveLevels',        (oid,tid,ids)         => db.moveLevels(oid,tid,ids));
+h('classifier:moveObjects',       (mref,ids)            => db.moveObjects(mref,ids));
+h('classifier:moveTemplates',     (mref,ids)            => db.moveTemplates(mref,ids));
 
 // TimeMap "Wanderer" (v3 Phase 9) — MapEvent Link pins
 h('wanderer:list',   (mref)                     => db.getMapEvents(mref));

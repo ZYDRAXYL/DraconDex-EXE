@@ -50,7 +50,12 @@ function restoreRows(snap) {
       }
     }
   })();
-  if (snap?.kind === 'object') wiki.reindexSource('cobj', snap.id);
+  if (snap?.kind === 'object') {
+    wiki.reindexSource('cobj', snap.id);
+    // and the links to it, unresolved by deleteObject, find it again
+    const o = d.prepare(`SELECT o.name, m.nexus_ref FROM classifier_object o JOIN module m ON m.id=o.module_ref WHERE o.id=?`).get(snap.id);
+    if (o) wiki.resolveDanglingLinks(o.name, o.nexus_ref);
+  }
   return { ok: true };
 }
 

@@ -29,8 +29,12 @@ const CLASSIFIER_DISPTYPE_KEY = {
 };
 // Which types are prose a [[link]] may sit in (db/wiki-sources.js agrees).
 const CLS_WIKI_TYPES = new Set(['text', 'textarea']);
-// Types whose table cell is typed into directly; the rest open the object.
+// Types whose table cell is typed into directly.
 const CLS_CELL_EDIT_TYPES = new Set(['text', 'number', 'url']);
+// Procress 26 part 3: types whose cell holds the object page's own control
+// (clsFieldValueHtml), so a choice, a tick or a link is set in the table. Only
+// a formula — computed, nothing to set — still opens the object.
+const CLS_CELL_CONTROL_TYPES = new Set(['select', 'multi', 'checkbox', 'relation']);
 // What a relation field may point at, in the viewer index's own kinds.
 const CLS_RELATION_KINDS = ['object', 'event', 'dialogue', 'chapter', 'chat', 'module', 'page', 'file'];
 
@@ -124,12 +128,8 @@ function clsFieldCellHtml(m, o, c) {
   if (type === 'date') {
     return `<td class="cls-cell" contenteditable="true" data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${x(raw)}</td>`;
   }
-  let text;
-  if (type === 'multi') text = clsMultiValue(raw).join(', ');
-  else if (type === 'checkbox') text = raw === '1' ? '✓' : '';
-  else if (type === 'relation') text = clsFieldRels(o.id, c.id).map(r => clsKeyName(r.to_key)).join(', ');
-  else if (type === 'formula') text = clsFormulaText(o, c).text;
-  else text = raw;
+  if (CLS_CELL_CONTROL_TYPES.has(type)) return `<td class="cls-cell cls-cell-ctl">${clsFieldValueHtml(o, c)}</td>`;
+  const text = type === 'formula' ? clsFormulaText(o, c).text : raw;
   return `<td class="cls-cell cls-cell-ro${type === 'formula' ? ' cls-num' : ''}" onclick="openItemNode('classifier',${m.id},${o.id})" data-no-i18n>${x(text || '')}</td>`;
 }
 

@@ -187,31 +187,23 @@ function buildHubHtml() {
   </div>`;
 }
 
-// Procress 18 part 1: [+ New] does what fits where you are — in the folder you
-// picked last, a module; on a content module's page, a new element of it;
-// with nothing picked, a folder at the root.
-const NEW_ITEM_CMD = { classifier: 'classifier.addObject', chronicler: 'chronicler.addEvent', author: 'author.newChapter',
-  scribe: 'scribe.newSession', narrator: 'narrator.addDialogue', diviner: 'diviner.newTable', sketcher: 'sketcher.newPage',
-  designer: 'designer.addShape', wanderer: 'wanderer.place' };
+// Procress 26 part 2: [+ New] always opens the Create menu (the kind picker),
+// pointed at where you are — the folder you picked last, else beside the open
+// module, else the root. It no longer adds an element to the open module:
+// that is the module's own toolbar button.
 function nestNewContext() {
   const picked = S.nestContextId != null ? findModuleNode(S.nestContextId) : null;
   if (picked?.kind === 'collector') return { folder: picked };
   const m = S.activeModuleNode;
-  if (m && NEW_ITEM_CMD[m.kind]) return { module: m, cmd: NEW_ITEM_CMD[m.kind] };
   if (m) return { folder: m.parent_id != null ? findModuleNode(m.parent_id) : null, sibling: true };
   return {};
 }
 function nestNewHere(btn) {
-  const c = nestNewContext();
-  if (c.cmd) return runCommand(c.cmd, { moduleId: c.module.id }, btn);
-  if (c.folder || c.sibling) return openKindPopup(c.folder?.id ?? null, btn);
-  return quickCreateModule('collector', null);
+  return openKindPopup(nestNewContext().folder?.id ?? null, btn);
 }
 function nestNewHereLabel() {
   const c = nestNewContext();
-  if (c.cmd) return t(COMMANDS[c.cmd]?.label || 'nestNew');
-  if (c.folder) return `${t('createMajorModule')} → ${c.folder.name}`;
-  return c.sibling ? t('createMajorModule') : t('createFolder');
+  return c.folder ? `${t('createMajorModule')} → ${c.folder.name}` : t('createMajorModule');
 }
 
 // ═══ SAGE HUT SECTION (Phase 17) ═══════════════════════════════════════

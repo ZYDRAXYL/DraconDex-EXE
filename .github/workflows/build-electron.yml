@@ -150,6 +150,23 @@ jobs:
       - name: Build portable app folder
         run: npm run build:portable
 
+      # Procress 26: with signAndEditExecutable off, electron-builder skipped
+      # rcedit and every build shipped Electron's own icon. Compare the icon
+      # Windows shows for the built exe against the stock electron.exe.
+      - name: Check DraconDex.exe carries the DraconDex icon
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName System.Drawing
+          function IconHash($p) {
+            $ms = New-Object IO.MemoryStream
+            [System.Drawing.Icon]::ExtractAssociatedIcon((Resolve-Path $p)).ToBitmap().Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
+            [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($ms.ToArray()))
+          }
+          $app = IconHash "DraconDexPortable/DraconDex-${{ steps.meta.outputs.version }}/DraconDex.exe"
+          $stock = IconHash 'node_modules/electron/dist/electron.exe'
+          if ($app -eq $stock) { throw 'DraconDex.exe still carries the stock Electron icon' }
+
       - name: Collect release assets
         id: assets
         shell: pwsh

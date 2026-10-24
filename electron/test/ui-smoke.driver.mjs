@@ -217,10 +217,17 @@ test('18 part 1: Nest head order, Home phase A, Recent, / and [+ New] in context
   assert.equal(await win.locator('[data-key="dock"]').count(), 0, 'no Import Dock section');
   assert.equal(await win.locator('.home-start h2').count(), 1);
   assert.equal(await win.locator('.home-actions .btn-p').count(), 1);
-  // with nothing picked, [+ New] makes a folder at the root
-  assert.match(await win.evaluate(() => nestNewHereLabel()), /folder/i);
+  // Procress 26 part 2: [+ New] opens the Create menu wherever you are —
+  // on a Classifier's page too (it used to add an object there)
   await row('Characters').click(); await sleep(500);
-  assert.equal(await win.evaluate(() => nestNewContext().cmd), 'classifier.addObject');
+  assert.deepEqual(await win.evaluate(() => ({ ...nestNewContext(), folder: nestNewContext().folder?.name })), { folder: 'Guide', sibling: true });
+  await win.click('.nest-create .split-main'); await sleep(300);
+  const pop = await win.evaluate(() => { const p = document.querySelector('.popover-xl'); return p && { fits: p.scrollHeight <= p.clientHeight + 1, rows: p.querySelectorAll('[data-kind-row]').length }; });
+  assert.ok(pop?.rows > 10, 'the kind picker opened');
+  assert.ok(pop.fits, 'every kind shows without scrolling at 1280x800');
+  await win.fill('.popover-xl .kind-search', 'timeline');
+  assert.ok(await win.locator('.popover-xl [data-kind-row]:visible').count() < pop.rows, 'the search narrows the rows');
+  await win.keyboard.press('Escape');
   // Recent lists what was opened
   await win.click('#nav-sidebar [data-cmd="app.recent"]'); await sleep(500);
   assert.match(await win.locator('#left-recent').innerText(), /Characters/);
@@ -861,4 +868,111 @@ test('25: a template that fails keeps the Nexus and offers the picker again', as
   assert.ok(r.action && /template/i.test(r.text), `a toast with a retry (${r.text})`);
   assert.ok(r.still, 'the Nexus is still there');
   assert.ok(r.picker, 'retry opens the template picker on that template');
+});
+
+// ── Procress 26 part 3 ───────────────────────────────────────────────────
+test('26 part 3: add without a form, rename in place, edit a choice, reorder', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('Characters').click(); await sleep(600);
+  const mid = await win.evaluate(() => S.activeModuleNode.id);
+  const names = () => win.evaluate((m) => clsData(m).objects.map((o) => o.name), mid);
+  const start = await names();
+  await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'table'), mid);
+  await sleep(500);
+  // [+ Add object]: no modal, the new row's name is already being typed into
+  await win.click('.classifier-toolbar [data-cmd="classifier.addObject"]'); await sleep(600);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, 'no form');
+  assert.match(await win.evaluate(() => document.activeElement?.id || ''), /^rename-cobj-/);
+  await win.keyboard.type('Smoke Rook'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.deepEqual(await names(), [...start, 'Smoke Rook']);
+  // Esc on one made a moment ago takes it back
+  await win.click('.classifier-toolbar [data-cmd="classifier.addObject"]'); await sleep(600);
+  await win.keyboard.press('Escape'); await sleep(500);
+  assert.deepEqual(await names(), [...start, 'Smoke Rook']);
+  // double click renames; Esc keeps the old name
+  await win.dblclick('tr[data-cls-oid] .cls-name >> text=Smoke Rook'); await sleep(300);
+  await win.keyboard.type('zz'); await win.keyboard.press('Escape'); await sleep(300);
+  assert.ok((await names()).includes('Smoke Rook'));
+  // a choice field is set in its cell
+  const rook = await win.evaluate((m) => clsData(m).objects.find((o) => o.name === 'Smoke Rook').id, mid);
+  const sel = win.locator(`tr[data-cls-oid="${rook}"] td.cls-cell-ctl select`).first();
+  const choice = (await sel.locator('option').allInnerTexts()).at(-1);
+  await sel.selectOption({ label: choice }); await sleep(300);
+  const stored = await win.evaluate(([m, id]) => api.classifier.getObjectsFull(m).then((f) => f.objects.find((o) => o.id === id).attrMap), [mid, rook]);
+  assert.ok(Object.values(stored).includes(choice), `saved (${JSON.stringify(stored)})`);
+  // Alt+↑ from a cell moves the row and is saved
+  await win.locator(`tr[data-cls-oid="${rook}"] td.cls-cell[contenteditable]`).first().click();
+  await win.keyboard.press('Alt+ArrowUp'); await sleep(500);
+  const moved = [...start.slice(0, -1), 'Smoke Rook', start.at(-1)];
+  assert.deepEqual(await names(), moved);
+  assert.deepEqual(await win.evaluate((m) => api.classifier.getObjects(m).then((r) => r.map((o) => o.name)), mid), moved);
+  await win.evaluate((id) => api.classifier.deleteObject(id), rook);
+  await win.evaluate(() => refreshClassifier());
+});
+
+// ── Procress 26 part 4 ───────────────────────────────────────────────────
+test('26 part 4: [[ suggests an object with its module, asks which page, and the link opens it', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('Characters').click(); await sleep(600);
+  const mid = await win.evaluate(() => S.activeModuleNode.id);
+  const tpl = await win.evaluate(async (m) => { const id = await api.classifier.createTemplate(m, 'Smoke notes', 'text', false, false, null); await refreshClassifier(); return id; }, mid);
+  await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'table'), mid);
+  await sleep(500);
+  const [first, other] = await win.evaluate((m) => clsData(m).objects.slice(0, 2).map((o) => ({ id: o.id, name: o.name })), mid);
+  const cell = win.locator(`td.cls-cell[data-oid="${first.id}"][data-tid="${tpl}"]`);
+  await cell.click();
+  await win.keyboard.type(`[[${other.name.slice(0, 3)}`); await sleep(500);
+  const rows = () => win.locator('.wiki-field-ac .mded-ac-item').allInnerTexts();
+  assert.ok((await rows()).some((r) => r.includes(other.name) && r.includes('Characters')), 'the object row names its module');
+  while (!(await win.locator('.wiki-field-ac .mded-ac-item.active').innerText()).includes(other.name)) await win.keyboard.press('ArrowDown');
+  await win.keyboard.press('Enter'); await sleep(150);
+  assert.equal((await rows()).length, 2, 'then: object page or module page');
+  await win.keyboard.press('Enter'); await sleep(150);
+  // a folder in front only while another "Characters" exists (an earlier test makes one)
+  const typed = await cell.innerText();
+  assert.match(typed, new RegExp(`^\\[\\[obj:(?:[^/\\]]+/)*Characters/${other.name}\\]\\]$`));
+  assert.equal(await win.evaluate((t) => resolveWikiNameCached(t.slice(2, -2)), typed), `cobj_${other.id}`, 'and it names exactly that object');
+  await win.keyboard.press('Tab'); await sleep(500);
+  const out = await win.evaluate((id) => api.wiki.outgoing(`cobj_${id}`), first.id);
+  assert.ok(out.some((e) => e.key === `cobj_${other.id}`), 'indexed to the object');
+  // drawn as the object's name; a click opens the object's own page
+  const html = await win.evaluate((t) => { const h = mdRender(t, { resolveLink: resolveWikiNameCached }); const a = document.createElement('div'); a.id = 'smoke-link'; a.innerHTML = h; document.querySelector('#main-inner').prepend(a); return a.textContent; }, typed);
+  assert.equal(html, other.name);
+  await win.click('#smoke-link .wikilink'); await sleep(800);
+  assert.deepEqual(await win.evaluate(() => [S.activeItemNode?.itemKind, S.activeItemNode?.id]), ['classifier', other.id]);
+  await win.evaluate(async ([m, t]) => { await api.classifier.deleteTemplate(t); await openModuleNode(m); }, [mid, tpl]);
+});
+
+// ── Procress 26 part 5: what the part 2 and 3 tests leave to the eye ─────
+test('26: the address row scrolls away instead of sliding over the title', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('Characters').click(); await sleep(600);
+  const r = await win.evaluate(() => {
+    const bar = document.querySelector('.module-page .addr-bar');
+    const title = document.querySelector('.module-page .page-title');
+    bar.closest('.bpane-body').scrollTop = 20;
+    const b = bar.getBoundingClientRect(), tt = title.getBoundingClientRect();
+    return { pos: getComputedStyle(bar).position, overlap: b.bottom > tt.top + 1 && b.top < tt.bottom };
+  });
+  assert.equal(r.pos, 'static');
+  assert.equal(r.overlap, false, 'the bar does not cover the title');
+});
+
+test('26: drag a row by its grip and a column by its head — saved', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('Characters').click(); await sleep(600);
+  const mid = await win.evaluate(() => S.activeModuleNode.id);
+  await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'table'), mid);
+  await sleep(500);
+  const db = (what) => win.evaluate(([m, w]) => (w === 'obj' ? api.classifier.getObjects(m) : api.classifier.getTemplates(m)).then((r) => r.map((x) => x.id)), [mid, what]);
+  const objs = await db('obj');
+  const rows = win.locator('tr[data-cls-oid]');
+  await rows.last().locator('.nar-grip').dragTo(rows.first(), { targetPosition: { x: 40, y: 3 } }); await sleep(600);
+  assert.deepEqual(await db('obj'), [objs.at(-1), ...objs.slice(0, -1)], 'last row first');
+  const tpls = await db('tpl');
+  const ths = win.locator('.cls-table th[draggable]');
+  await ths.last().dragTo(ths.first(), { targetPosition: { x: 3, y: 5 } }); await sleep(600);
+  assert.deepEqual(await db('tpl'), [tpls.at(-1), ...tpls.slice(0, -1)], 'last column first');
+  // put both back for the suites after this one
+  await win.evaluate(async ([m, o, t]) => { await api.classifier.moveObjects(m, o); await api.classifier.moveTemplates(m, t); await refreshClassifier(); }, [mid, objs, tpls]);
 });
