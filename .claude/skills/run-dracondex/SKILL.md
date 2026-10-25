@@ -16,8 +16,21 @@ driver at `.claude/skills/run-dracondex/driver.mjs`. All paths below are
 relative to the repo root. Verified on Windows 11, Electron 42, Node via
 Git Bash.
 
-There is also a Flutter port in `flutter/` — that is a separate front-end
-and is NOT covered by this skill.
+The Flutter front-end lives in DraconDex-APK and is NOT covered by this skill.
+
+## Delegate to the `app-driver` subagent
+
+Screenshots are expensive context. For anything beyond one or two quick shots —
+verifying a change end to end, smoke-testing a flow, reproducing a UI bug —
+**spawn the `app-driver` agent** (`.claude/agents/app-driver.md`) instead of
+running the driver inline. It reads this skill, picks `driver.mjs` or
+`web-driver.mjs`, reads every screenshot itself, and hands back a short
+PASS/FAIL report with the screenshot paths that matter.
+
+Give it the specifics: what changed, which flow to walk, what "working" looks
+like. Independent checks on *different* `--data-dir`s can run as parallel
+agents; checks sharing a data dir must stay in one agent (single-instance lock,
+see Gotchas). Drive inline only for a one-off `eval` or a single screenshot.
 
 ## No Electron binary? Use web-driver.mjs
 
