@@ -1286,3 +1286,76 @@ test('28 part 3: the field form\'s Level & Condition is always open, two checkbo
   await win.keyboard.press('Escape');
   await win.evaluate(async ([m, id]) => { await api.classifier.deleteTemplate(id); await refreshClassifier(); }, [mid, tpl.id]);
 });
+
+const openBook = async () => {
+  await win.evaluate(async () => { showLeftDest('nest'); await builderOpenPage(null); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'author'); await openModuleNode(m.id); if (S.authorData?.view !== 'editor') await setAuthorView('editor'); });
+  await sleep(700);
+  return win.evaluate(() => S.authorData.moduleId);
+};
+
+test('28 part 5: the chapter name is typed in place; synopsis and status sit above the text and save', async () => {
+  const mid = await openBook();
+  const ch = await win.evaluate(() => S.authorData.chapters.find((c) => c.id === S.authorData.selectedId));
+  const title = win.locator('#author-editor .au-title');
+  await title.fill('Renamed in place'); await win.keyboard.press('Enter'); await sleep(400);
+  const fresh = () => win.evaluate((m) => api.author.getChapters(m), mid);
+  assert.equal((await fresh()).find((c) => c.id === ch.id).name, 'Renamed in place');
+  assert.match(await win.locator(`.author-chapters [data-chid="${ch.id}"]`).textContent(), /Renamed in place/, 'the column follows');
+  await title.fill('thrown away'); await win.keyboard.press('Escape'); await sleep(200);
+  assert.equal(await title.inputValue(), 'Renamed in place', 'Esc puts it back');
+  await win.locator('#author-editor .au-meta-syn').fill('Smoke synopsis');
+  await win.locator('#author-editor .au-meta-status').selectOption('revised'); await sleep(900); // the synopsis saves as it is typed (debounced)
+  const after = (await fresh()).find((c) => c.id === ch.id);
+  assert.equal(after.synopsis, 'Smoke synopsis');
+  assert.equal(after.status, 'revised');
+  await win.evaluate(async ([c]) => { await api.author.renameChapter(c.id, c.name); await api.author.setChapterMeta(c.id, { synopsis: c.synopsis || '', status: c.status || '' }); }, [ch]);
+});
+
+test('28 part 5: the point of view lists only objects of a Classifier linked to the book', async () => {
+  const mid = await openBook();
+  const cast = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Characters').id);
+  const unlinkAll = () => win.evaluate(async (m) => { for (const e of await api.module.linked(m)) if (e.relationId) await api.viewer.deleteRelation(e.relationId); }, mid);
+  const was = await win.evaluate((m) => api.module.linked(m), mid);
+  const options = async () => {
+    await win.evaluate(() => openAuthorChapterModal(S.authorData.moduleId, S.authorData.selectedId)); await sleep(500);
+    const r = await win.locator('#modal-overlay #ac-pov option').evaluateAll((os) => os.map((o) => o.textContent).filter((s) => s !== '—'));
+    const hint = await win.locator('#modal-overlay .drafter-hint:has(button)').count();
+    await win.keyboard.press('Escape'); await sleep(200);
+    return { r, hint };
+  };
+  const pov = await win.evaluate(() => S.authorData.chapters.find((c) => c.id === S.authorData.selectedId).pov_key);
+  await win.evaluate((id) => api.author.setChapterMeta(id, { povKey: '' }), await win.evaluate(() => S.authorData.selectedId));
+  await unlinkAll();
+  // the sample book [[links]] Tobin, so Characters stays linked that way — check it is the only source
+  const viaWiki = (await win.evaluate((m) => api.module.linked(m), mid)).some((e) => e.id === cast);
+  const one = await options();
+  if (!viaWiki) { assert.deepEqual(one.r, [], 'nothing linked → no one to pick'); assert.equal(one.hint, 1, 'and a way to link'); }
+  await win.evaluate(([m, c]) => api.viewer.createRelation(S.nexus.id, `module_${m}`, `module_${c}`, null, null, {}), [mid, cast]);
+  const two = await options();
+  assert.ok(two.r.length >= 3 && two.r.every((s) => /Characters/.test(s)), `only the linked Classifier's characters: ${two.r}`);
+  await unlinkAll();
+  await win.evaluate(async ([m, list]) => { for (const e of list) if (e.relationId) await api.viewer.createRelation(S.nexus.id, `module_${m}`, `module_${e.id}`, null, null, {}); }, [mid, was]);
+  await win.evaluate(([id, k]) => api.author.setChapterMeta(id, { povKey: k || '' }), [await win.evaluate(() => S.authorData.selectedId), pov]);
+});
+
+test('28 part 5: a Part divider is added, named, dragged between chapters and kept', async () => {
+  const mid = await openBook();
+  const add = win.locator('.author-chapters .ls-add').last();
+  await add.click(); await sleep(300);
+  await win.keyboard.type('Smoke part'); await win.keyboard.press('Enter'); await sleep(400);
+  const order = () => win.locator('.author-chapters [data-chid], .author-chapters .au-part').evaluateAll((els) => els.map((e) => (e.dataset.partId ? `P:${e.textContent.trim()}` : 'C')));
+  const o1 = await order();
+  assert.ok(o1.includes('P:Smoke part'), 'shown with its name');
+  const part = win.locator('.author-chapters .au-part').first();
+  const first = win.locator('.author-chapters [data-chid]').first();
+  const pb = await part.boundingBox(), fb = await first.boundingBox();
+  await win.mouse.move(pb.x + 20, pb.y + pb.height / 2); await win.mouse.down();
+  await win.mouse.move(pb.x + 20, fb.y + 2, { steps: 12 }); await win.mouse.up(); await sleep(600);
+  assert.equal((await order())[0], 'P:Smoke part', 'dragged above the first chapter');
+  const kept = await win.evaluate((m) => api.module.getUi(m).then((u) => JSON.parse(u.authorParts)), mid);
+  assert.deepEqual(kept.map((p) => [p.label, p.at]), [['Smoke part', 0]], 'stored by position');
+  assert.ok(await win.evaluate(() => getComputedStyle(document.querySelector('.au-part'), '::before').borderTopWidth) !== '0px', 'drawn as a rule');
+  await win.locator('.author-chapters .au-part').first().focus();
+  await win.keyboard.press('Delete'); await sleep(400);
+  assert.equal(await win.locator('.author-chapters .au-part').count(), 0, 'Delete removes it');
+});

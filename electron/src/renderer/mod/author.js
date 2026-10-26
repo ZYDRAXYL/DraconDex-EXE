@@ -34,7 +34,7 @@ async function loadAuthorData(m) {
   // POV names for the corkboard (v5 Part 7, §11.6) — one round trip.
   const povKeys = [...new Set(chapters.map(c => c.pov_key).filter(Boolean))];
   const povNames = new Map(povKeys.length ? (await api.wiki.resolveKeys(povKeys)).map(r => [r.key, r.name]) : []);
-  AUT.setModule(m.id, { moduleId: m.id, ui, chapters, selectedId, povNames });
+  AUT.setModule(m.id, { moduleId: m.id, ui, chapters, selectedId, povNames, parts: authorPartsOf(ui) }); // mod/author-parts.js
 }
 
 async function setAuthorView(view) {
@@ -78,13 +78,15 @@ function buildAuthorMainHtml(m, c) {
   // Drag to reorder (core/reorder.js) — chapters don't nest, so no "in" zone.
   // Procress 21: compact rows of the shared list (core/list.js), the drag
   // handle first — where every reorderable list keeps it. F2 = Edit.
-  const rows = d.chapters.map((c, i) => listRowHtml({ density: 'compact', drag: true, state: { selected: c.id === d.selectedId },
+  // Procress 28 part 5: Part dividers sit between the rows (mod/author-parts.js).
+  const rows = authorPartRows(d.chapters, d.parts || []).map(({ ch: c, i, part }) => (part ? authorPartHtml(m.id, part) : listRowHtml({ density: 'compact', drag: true, state: { selected: c.id === d.selectedId },
     title: `${c.chapter_label || String(i + 1)}. ${c.name}`, onclick: `selectAuthorChapter(${c.id})`,
     attrs: `data-chid="${c.id}" onpointerdown="onAuthorChapterDown(event,this,${m.id},${c.id})"`,
-    actions: listActHtml({ icon: I.edit, name: t('edit'), key: 'F2', onclick: `openAuthorChapterModal(${m.id},${c.id})` }) })).join('');
+    actions: listActHtml({ icon: I.edit, name: t('edit'), key: 'F2', onclick: `openAuthorChapterModal(${m.id},${c.id})` }) }))).join('');
   const column = `<div class="author-chapters">
     <div class="au-col-label" data-no-i18n>CHAPTERS · ${x(m.name)}</div>
-    ${listHtml({ list: 'author-chapters', aria: m.name, body: rows + listRowHtml({ density: 'compact', icon: I.plus, title: t('writeChapterNew'), cls: 'ls-add', onclick: `openAuthorChapterModal(${m.id})` }) })}
+    ${listHtml({ list: 'author-chapters', aria: m.name, body: rows + listRowHtml({ density: 'compact', icon: I.plus, title: t('writeChapterNew'), cls: 'ls-add', onclick: `openAuthorChapterModal(${m.id})` })
+      + listRowHtml({ density: 'compact', icon: I.plus, title: t('auPartAdd'), cls: 'ls-add', onclick: `addAuthorPart(${m.id})` }) })}
   </div>`;
   // 'book': its own layout (a jump-to-chapter nav, not the select/switch
   // column every other view shares) since all chapters render concatenated.
@@ -140,10 +142,23 @@ const AUTHOR_ALIGN_ACTIONS = [
 let _authorSaveTimer = null;
 
 function mountAuthorRichEditor(el, ch) {
+  // Procress 28 part 5: the name is typed into where it is shown (Enter /
+  // blur saves, Esc puts it back), and the chapter's synopsis and status
+  // sit between it and the text — the corkboard's facts, where you write.
   el.innerHTML = `
     <div class="mded-head">
-      <span class="mded-title">${x(ch.name)}</span>
+      <input class="mded-title au-title" value="${x(ch.name)}" aria-label="${x(t('name'))}" data-no-i18n
+        onkeydown="authorTitleKey(event,this,${ch.id})" onblur="saveAuthorTitle(this,${ch.id})">
       <span class="mded-save-state" id="au-save-state"></span>
+    </div>
+    <div class="au-meta">
+      <select class="au-meta-status" aria-label="${x(t('auStatus'))}" onchange="saveAuthorChapterMeta(${ch.id},{status:this.value})">
+        <option value="">${t('auStatus')} —</option>
+        ${AUTHOR_STATUSES.map((s) => `<option value="${s}"${ch.status === s ? ' selected' : ''}>${t(AUTHOR_STATUS_KEY[s])}</option>`).join('')}
+      </select>
+      <textarea class="au-meta-syn" rows="1" placeholder="${x(t('auSynopsis'))}" aria-label="${x(t('auSynopsis'))}"
+        oninput="clearTimeout(this._t);this._t=setTimeout(()=>saveAuthorChapterMeta(${ch.id},{synopsis:this.value}),600)"
+        onchange="clearTimeout(this._t);saveAuthorChapterMeta(${ch.id},{synopsis:this.value})">${x(ch.synopsis || '')}</textarea>
     </div>
     <div class="au-rich-toolbar" data-no-i18n>
       ${AUTHOR_FMT_ACTIONS.map(([label, cmd]) => `<button type="button" class="btn btn-s btn-sm" data-cmd="${cmd}">${label}</button>`).join('')}
@@ -187,10 +202,33 @@ function mountAuthorRichEditor(el, ch) {
   body.addEventListener('input', scheduleSave);
 }
 
+function authorTitleKey(ev, inp, id) {
+  if (ev.key === 'Enter') { ev.preventDefault(); inp.blur(); }
+  else if (ev.key === 'Escape') {
+    ev.preventDefault();
+    inp.value = S.authorData?.chapters.find((c) => c.id === id)?.name || inp.value;
+    inp.blur();
+  }
+}
+async function saveAuthorTitle(inp, id) {
+  const ch = S.authorData?.chapters.find((c) => c.id === id);
+  const name = inp.value.trim();
+  if (!ch || !name || name === ch.name) { if (ch) inp.value = ch.name; return; }
+  ch.name = name;
+  await api.author.renameChapter(id, name);
+  invalidateNestItems(S.authorData.moduleId, 0);
+  // the chapter column shows the name too — redraw it, not the editor
+  const row = pbQOr(`.author-chapters [data-chid="${id}"] .ls-title`);
+  if (row) { const i = S.authorData.chapters.indexOf(ch); row.textContent = `${ch.chapter_label || String(i + 1)}. ${name}`; }
+}
+
 // ── Outline view: markdown headings across every chapter ────────────────
 function buildAuthorOutlineHtml(d) {
   let html = '';
+  const partsAt = (i) => (d.parts || []).filter((p) => Math.min(p.at, d.chapters.length) === i)
+    .map((p) => `<div class="au-outline-part" data-no-i18n>${x(p.label || '—')}</div>`).join('');
   for (const [i, c] of d.chapters.entries()) {
+    html += partsAt(i);
     const heads = [...String(c.chapter_content || '').matchAll(/^(#{1,4})\s+(.+)$/gm)]
       .map(mm => ({ depth: mm[1].length, text: mm[2].trim() }));
     html += `<div class="au-outline-sec">
@@ -199,6 +237,7 @@ function buildAuthorOutlineHtml(d) {
         || `<div class="au-outline-h ghost" data-no-i18n>—</div>`}
     </div>`;
   }
+  html += partsAt(d.chapters.length);
   return `<div class="au-outline">${html}</div>`;
 }
 
@@ -265,7 +304,18 @@ async function mountAuthorBook() {
     page.appendChild(node);
   };
 
-  for (const ch of d.chapters) {
+  // Procress 28 part 5: a Part with a name opens its own page in the book
+  const partPages = (i) => {
+    for (const p of (d.parts || []).filter((v) => v.label && Math.min(v.at, d.chapters.length) === i)) {
+      if (page.childNodes.length) startPage();
+      const h = document.createElement('h1');
+      h.className = 'au-book-part';
+      h.textContent = p.label;
+      appendNode(h);
+    }
+  };
+  for (const [i, ch] of d.chapters.entries()) {
+    partPages(i);
     if (page.childNodes.length) startPage(); // forced break at each chapter
     const header = document.createElement('h2');
     header.className = 'au-book-chapter-h';
@@ -277,6 +327,7 @@ async function mountAuthorBook() {
     wrap.innerHTML = authorContentAsHtml(ch.chapter_content);
     for (const node of Array.from(wrap.childNodes)) appendNode(node);
   }
+  partPages(d.chapters.length);
   if (page.childNodes.length) pages.push(page);
   document.body.removeChild(measure);
 
@@ -327,6 +378,8 @@ async function deleteAuthorChapter(id) {
   await api.author.deleteChapter(id);
   closeModal();
   const d = S.authorData;
+  const at = d.chapters.findIndex((c) => c.id === id);
+  if (at >= 0 && d.parts?.length) await saveAuthorParts(d.moduleId, authorPartsAfterDelete(d.parts, at));
   if (d.selectedId === id) d.selectedId = null;
   await reloadSource(d.moduleId);
   invalidateNestItems(d.moduleId, -1);
