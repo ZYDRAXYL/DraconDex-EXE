@@ -43,20 +43,17 @@ function buildNarratorConvHtml(d) {
   </div>`;
 }
 
-// The wrapper is the drop target for both row kinds — dropping anywhere on a
-// choice, options included, moves the whole choice.
-function narratorRowDropAttrs(tk) {
-  return `ondragover="onNarratorRowDragOver(event,this)"
-    ondragleave="this.classList.remove('drop-before','drop-after')"
-    ondrop="onNarratorRowDrop(event,${tk.id})"`;
+// Both row kinds are one reorderable list — a choice moves whole, options
+// included.
+function narratorRowAttrs(tk) {
+  return `data-tkid="${tk.id}"`;
 }
 
 // The drag SOURCE is this grip, not the row: a row is almost entirely <input>,
 // and a drag begun on one selects text instead of moving the row. Author's
-// chapter rows can be draggable whole because they hold no inputs at all.
+// chapter rows can be dragged whole because they hold no inputs at all.
 function narratorRowGripHtml(tk) {
-  return `<span class="nar-grip" draggable="true" title="${t('dragReorder')}"
-    ondragstart="onNarratorRowDragStart(event,${tk.id})">${I.move}</span>`;
+  return reorderGripHtml(`onNarratorRowDown(event,this.closest('[data-tkid]'),${tk.id})`);
 }
 
 function buildNarratorTalkHtml(d, tk) {
@@ -67,7 +64,7 @@ function buildNarratorTalkHtml(d, tk) {
   const linkRow = tk.linker_key ? `
     ${listLinkRowHtml({ name: le ? le.name : tk.linker_key, onclick: `openEntityByKey(${xj(tk.linker_key)})`, meta: narratorEntityModuleLabel(le),
       actions: listActHtml({ icon: I.delete, name: t('delete'), key: 'Delete', onclick: `clearNarratorTalkLink(${tk.id})` }) })}` : '';
-  return `<div class="nar-row" ${narratorRowDropAttrs(tk)}>
+  return `<div class="nar-row" ${narratorRowAttrs(tk)}>
     <div class="nar-talk">
       ${narratorRowGripHtml(tk)}
       <input class="nt-speaker" value="${x(tk.speaker || '')}" placeholder="${t('speaker')}"
@@ -84,7 +81,7 @@ function buildNarratorChoiceHtml(d, tk) {
   const opts = (d.choiceOptions || []).filter(o => o.talk_ref === tk.id);
   const optRows = opts.map(o => buildNarratorChoiceOptionHtml(d, o)).join('')
     || `<div class="cls-lv-empty">${t('levelNoRows')}</div>`;
-  return `<div class="nar-row nar-choice" ${narratorRowDropAttrs(tk)}>
+  return `<div class="nar-row nar-choice" ${narratorRowAttrs(tk)}>
     <div class="nar-choice-head">
       ${narratorRowGripHtml(tk)}
       <span class="kind" data-no-i18n>${t('choice')}</span>
@@ -234,41 +231,20 @@ async function narratorDropJumpEdge(d, o, jumpRef) {
 }
 
 // ── Reorder ─────────────────────────────────────────────────────────────
-// Native HTML5 drag-and-drop with a before/after split, the same shape
-// mod/author.js uses for chapters (rows don't nest, so no third "in" zone).
-// One list, both row kinds — that is the whole point of the shared
-// talk_order sequence.
-function onNarratorRowDragStart(ev, id) {
-  S.dragNarratorRow = id;
-  ev.dataTransfer.effectAllowed = 'move';
-  ev.stopPropagation();
-}
-
-function onNarratorRowDragOver(ev, row) {
-  if (S.dragNarratorRow == null) return;
-  ev.preventDefault();
-  ev.stopPropagation();
-  const r = row.getBoundingClientRect();
-  const before = (ev.clientY - r.top) / r.height < 0.5;
-  row.classList.remove('drop-before', 'drop-after');
-  row.classList.add(before ? 'drop-before' : 'drop-after');
-}
-
-async function onNarratorRowDrop(ev, targetId) {
-  ev.preventDefault();
-  ev.stopPropagation();
-  const row = ev.currentTarget;
-  const before = row.classList.contains('drop-before');
-  row.classList.remove('drop-before', 'drop-after');
-  const dragId = S.dragNarratorRow;
-  S.dragNarratorRow = null;
-  if (dragId == null || dragId === targetId) return;
-  const d = S.narratorData;
-  const ids = d.talks.map(tk => tk.id).filter(id => id !== dragId);
-  const idx = ids.indexOf(targetId);
-  ids.splice(before ? idx : idx + 1, 0, dragId);
-  await api.narrator.moveTalks(d.selectedId, ids);
-  await reloadSource(d.moduleId);
+// core/reorder.js, the same as mod/author.js's chapters (rows don't nest, so
+// no "in" zone). One list, both row kinds — that is the whole point of the
+// shared talk_order sequence.
+function onNarratorRowDown(ev, row, id) {
+  reorderDrag(ev, row, {
+    items: () => [...row.parentElement.children].filter((n) => n.dataset.tkid != null),
+    onDrop: async ({ target, before }) => {
+      const d = S.narratorData;
+      const ids = reorderIds(d.talks.map((tk) => tk.id), id, Number(target.dataset.tkid), before);
+      if (!ids) return;
+      await api.narrator.moveTalks(d.selectedId, ids);
+      await reloadSource(d.moduleId);
+    },
+  });
 }
 
 // ── Element links on a conversation line ────────────────────────────────

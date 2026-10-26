@@ -492,6 +492,15 @@ for (const file of targets) {
   const charBtn = [];
   for (const m of src.matchAll(/<button\b[^>]*>([^<]*(?:<(?!\/button)[^<]*)*)<\/button>/g)) if (CHAR_ICON.test(m[1])) charBtn.push(`L${lineOf(m.index)}`);
   if (charBtn.length) warn(`${charBtn.length} button(s) with a character/emoji icon (${charBtn.slice(0, 5).join(' ')}) — use an SVG from I.* (core/state.js; COMPONENTS.md §1)`);
+  // Procress 27 part 4: an icon-only button says what it does on hover
+  // (core/popover.js shows title= as the guide text). `${…}` inside the tag
+  // is skipped whole so an arrow function's `=>` does not end it early.
+  const mute = [];
+  const part = String.raw`(?:[^>$]|\$(?!\{)|\$\{(?:[^{}]|\{[^{}]*\})*\})*`; // one level of ${…${…}…} nesting
+  for (const m of src.matchAll(new RegExp(String.raw`<button\b${part}\bbtn-i\b${part}>`, 'g'))) {
+    if (!/\b(?:title|aria-label|data-tip)=/.test(m[0])) mute.push(`L${lineOf(m.index)}`);
+  }
+  if (mute.length) warn(`${mute.length} icon-only button(s) with no title / aria-label (${mute.slice(0, 5).join(' ')}) — its guide text and its name (COMPONENTS.md §1, §11)`);
 }
 
 // ═══ Wiring checks for --module <name> ═══

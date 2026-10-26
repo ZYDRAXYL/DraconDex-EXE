@@ -7,7 +7,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const src = readFileSync(new URL('../src/renderer/core/popover.js', import.meta.url), 'utf8');
-const ctx = vm.createContext({ document: { body: {} }, MutationObserver: class { observe() {} }, window: { innerWidth: 1000, innerHeight: 800 }, S: {} });
+const on = { addEventListener() {} };
+const ctx = vm.createContext({ document: { body: {}, ...on }, MutationObserver: class { observe() {} }, window: { innerWidth: 1000, innerHeight: 800, ...on }, S: {} });
 const P = vm.runInContext(`${src}\n;({ floatingRect, anchorRect, pointAnchor })`, ctx);
 const R = (left, top, w = 40, h = 20) => ({ left, top, right: left + w, bottom: top + h });
 

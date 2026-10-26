@@ -183,5 +183,84 @@ function initWikiFields() {
   });
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initWikiFields);
-else initWikiFields();
+// ── Procress 27 part 1: a field shows its links as links ───────────────
+// While a data-wiki field is not being edited it shows each [[link]] the way
+// a markdown page does — the name alone, highlighted, with the hover card
+// (page/links.js): [[Module]] reads "Module", [[obj:Module/Object]] reads
+// "Object". Focus it and the raw [[…]] text is back for editing; what is
+// saved is always the raw text.
+//   contenteditable  wikiViewAttrs(raw) on the element, wikiViewHtml(raw) inside
+//   <textarea>       wikiTextareaHtml(attrs, raw) — a view box beside it
+function wikiViewHtml(raw) {
+  const s = String(raw ?? '');
+  if (!s.includes('[[')) return x(s);
+  if (!_wikiCache) wikiViewsWhenLoaded();
+  let out = '', at = 0;
+  for (const m of s.matchAll(MD_WIKILINK_RE)) {
+    out += x(s.slice(at, m.index)) + mdWikiLinkHtml(m[1], m[2], resolveWikiNameCached);
+    at = m.index + m[0].length;
+  }
+  return out + x(s.slice(at));
+}
+const wikiViewAttrs = (raw) => `data-wiki data-wiki-view data-raw="${x(raw ?? '')}"`;
+function wikiTextareaHtml(attrs, raw) {
+  return `<span class="wiki-view-wrap"><textarea ${attrs} data-wiki>${x(raw ?? '')}</textarea>`
+    + `<div class="pv-textarea wiki-view" data-wiki-box tabindex="0">${wikiViewHtml(raw)}</div></span>`;
+}
+
+// Links drawn before the name list loaded could not be resolved; draw them
+// again once it has.
+let _wikiViewsPending = false;
+function wikiViewsWhenLoaded() {
+  if (_wikiViewsPending || !S.nexus) return;
+  _wikiViewsPending = true;
+  warmWikiFieldCache().then(() => {
+    _wikiViewsPending = false;
+    document.querySelectorAll('[data-wiki-view]:not([data-editing])').forEach((el) => { el.innerHTML = wikiViewHtml(el.dataset.raw); });
+    document.querySelectorAll('.wiki-view-wrap:not(.editing) [data-wiki-box]').forEach((box) => { box.innerHTML = wikiViewHtml(box.previousElementSibling.value); });
+  });
+}
+
+function initWikiViews() {
+  if (window.__wikiViews) return;
+  window.__wikiViews = true;
+  // A click on a link follows it (core/router.js) instead of entering the field.
+  document.addEventListener('mousedown', (e) => {
+    if (e.target.closest?.('[data-wiki-view]:not([data-editing]) .wikilink, [data-wiki-box] .wikilink')) e.preventDefault();
+  }, true);
+  document.addEventListener('focusin', (e) => {
+    const el = e.target;
+    if (el.matches?.('[data-wiki-box]')) {
+      const wrap = el.parentElement, ta = wrap.querySelector('textarea');
+      wrap.classList.add('editing');
+      ta.focus();
+      return;
+    }
+    if (!el.matches?.('[data-wiki-view]') || el.dataset.editing) return;
+    el.dataset.editing = '1';
+    if (el.textContent === el.dataset.raw) return; // nothing drawn as a link — keep the caret where it was put
+    el.textContent = el.dataset.raw;
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    r.collapse(false);
+    getSelection().removeAllRanges();
+    getSelection().addRange(r);
+  });
+  // After the field's own onblur has saved (blur runs before focusout).
+  document.addEventListener('focusout', (e) => {
+    const el = e.target;
+    if (el.matches?.('.wiki-view-wrap textarea')) {
+      const wrap = el.parentElement;
+      wrap.classList.remove('editing');
+      wrap.querySelector('[data-wiki-box]').innerHTML = wikiViewHtml(el.value);
+      return;
+    }
+    if (!el.matches?.('[data-wiki-view]') || !el.dataset.editing) return;
+    delete el.dataset.editing;
+    el.dataset.raw = el.textContent.trim();
+    el.innerHTML = wikiViewHtml(el.dataset.raw);
+  });
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { initWikiFields(); initWikiViews(); });
+else { initWikiFields(); initWikiViews(); }

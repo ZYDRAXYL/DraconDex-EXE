@@ -4,7 +4,7 @@
 // build as a module: every chapter as an index card with the three facts a
 // planner moves around — its synopsis, where it stands (idea → done), and
 // whose point of view it is told from (pov_key: any entity, usually a
-// Classifier character). Cards reorder by drag, with the same handlers as
+// Classifier character). Cards reorder by drag, with the same handler as
 // the chapter column; a card's synopsis edits in place.
 
 const AUTHOR_STATUSES = ['idea', 'draft', 'revised', 'done'];
@@ -14,8 +14,7 @@ function buildAuthorBoardHtml(m, d) {
   const cards = d.chapters.map((c, i) => {
     const pov = c.pov_key ? d.povNames?.get(c.pov_key) : null;
     return `<div class="au-card${c.id === d.selectedId ? ' sel' : ''}" data-status="${x(c.status || '')}"
-      draggable="true" ondragstart="onAuthorChapterDragStart(event,${c.id})" ondragover="onAuthorChapterDragOver(event,this)"
-      ondragleave="this.classList.remove('drop-before','drop-after')" ondrop="onAuthorChapterDrop(event,${m.id},${c.id})">
+      data-chid="${c.id}" onpointerdown="onAuthorChapterDown(event,this,${m.id},${c.id},'xy')">
       <div class="au-card-head">
         <span class="au-card-no" data-no-i18n>${x(c.chapter_label || String(i + 1))}</span>
         <span class="au-card-name" onclick="selectAuthorChapter(${c.id}).then(()=>setAuthorView('editor'))">${x(c.name)}</span>

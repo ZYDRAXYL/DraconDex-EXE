@@ -260,6 +260,14 @@
 @keyframes busy-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.busy-spin{animation-duration:2.4s}}
 
+/* Procress 27 part 5 — core/reorder.js: the picked-up item follows the
+   pointer on one axis; the others slide out of its way. */
+.reorder-slide{transition:transform .15s ease}
+.reorder-drag{position:relative;z-index:var(--z-sticky);background:var(--surface);box-shadow:var(--shadow-pop);opacity:.96}
+tr.reorder-drag td{background:var(--surface)}
+html.reorder-active,html.reorder-active *{cursor:grabbing!important;user-select:none!important}
+@media (prefers-reduced-motion:reduce){.reorder-slide{transition:none}}
+
 /* Process 7 part 1 — shared toggle-open/close animation, driven by
    core/ui.js's animateToggleOpen()/animateToggleCloseThenCommit() on any
    element a toggle shows/hides (Hub accordion .acc-body, Nest tree

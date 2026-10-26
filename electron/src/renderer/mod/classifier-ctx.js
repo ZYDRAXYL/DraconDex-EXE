@@ -271,37 +271,19 @@ async function discardNewClsObject(id) {
 // cached list, not the DOM — lazyRows (core/lazy-rows.js) may not have
 // rendered the rows a drag passes over. Alt+↑ / Alt+↓ move the object you
 // are in by one.
-function onClsDragStart(ev, kind, moduleId, id) {
-  S.clsDrag = { kind, moduleId, id };
-  ev.dataTransfer.effectAllowed = 'move';
-  ev.dataTransfer.setData('text/plain', '');
-  ev.stopPropagation();
-}
-
-function onClsDragOver(ev, el, kind, horizontal = false) {
-  if (S.clsDrag?.kind !== kind) return;
-  ev.preventDefault();
-  ev.stopPropagation();
-  const r = el.getBoundingClientRect();
-  const before = horizontal ? (ev.clientX - r.left) / r.width < 0.5 : (ev.clientY - r.top) / r.height < 0.5;
-  el.classList.remove('drop-before', 'drop-after');
-  el.classList.add(before ? 'drop-before' : 'drop-after');
-}
-
-function onClsDragLeave(el) {
-  el.classList.remove('drop-before', 'drop-after');
-}
-
-async function onClsDrop(ev, el, kind, targetId) {
-  const drag = S.clsDrag;
-  if (drag?.kind !== kind) return;
-  ev.preventDefault();
-  ev.stopPropagation();
-  const before = el.classList.contains('drop-before');
-  el.classList.remove('drop-before', 'drop-after');
-  S.clsDrag = null;
-  if (drag.id === targetId) return;
-  await clsReorder(kind, drag.moduleId, drag.id, targetId, before);
+// Procress 27 part 5: core/reorder.js does the dragging — the row (or
+// column) follows the pointer on one axis and the others slide aside.
+// `el` is the item: a table row / list row / grid card ('obj'), or a
+// column head ('tpl', which carries its column's cells with it).
+function clsDragDown(ev, el, kind, moduleId, id, axis = 'y') {
+  const attr = kind === 'obj' ? 'clsOid' : 'clsTid';
+  const table = el.closest('table');
+  reorderDrag(ev, el, {
+    axis,
+    items: () => [...el.parentElement.children].filter((n) => n.dataset[attr] != null),
+    linked: kind === 'tpl' ? (th) => [...table.querySelectorAll('tr[data-cls-oid]')].map((tr) => tr.cells[th.cellIndex]) : null,
+    onDrop: ({ target, before }) => clsReorder(kind, moduleId, id, Number(target.dataset[attr]), before),
+  });
 }
 
 // kind 'obj' → d.objects / moveObjects, 'tpl' → d.templates / moveTemplates.

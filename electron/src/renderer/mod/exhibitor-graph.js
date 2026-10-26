@@ -18,9 +18,9 @@ function buildExhibitorGraphHtml(d) {
       </div>
       <div class="chint" data-no-i18n>${t('connectorPanHint')}</div>
       <div class="czoom" data-no-i18n>
-        <button class="btn btn-g btn-i" onclick="exhibitorGraphZoomBy(-0.15)">−</button>
+        <button class="btn btn-g btn-i" onclick="exhibitorGraphZoomBy(-0.15)" title="${t('ctxZoomOut')}">−</button>
         <span id="cn-zoom-label">100%</span>
-        <button class="btn btn-g btn-i" onclick="exhibitorGraphZoomBy(0.15)">＋</button>
+        <button class="btn btn-g btn-i" onclick="exhibitorGraphZoomBy(0.15)" title="${t('ctxZoomIn')}">＋</button>
         <span class="cn-count">${d.items.length} · ${edgeCount}</span>
       </div>
     </div>`;

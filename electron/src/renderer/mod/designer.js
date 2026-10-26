@@ -95,9 +95,9 @@ function buildDesignerMainHtml(m, c) {
       </div>
       <div class="chint" data-no-i18n>${t('designerHint')}</div>
       <div class="czoom" data-no-i18n>
-        <button class="btn btn-g btn-i" onclick="designerZoomBy(-0.15)">−</button>
+        <button class="btn btn-g btn-i" onclick="designerZoomBy(-0.15)" title="${t('ctxZoomOut')}">−</button>
         <span id="dg-zoom-label">100%</span>
-        <button class="btn btn-g btn-i" onclick="designerZoomBy(0.15)">＋</button>
+        <button class="btn btn-g btn-i" onclick="designerZoomBy(0.15)" title="${t('ctxZoomIn')}">＋</button>
         <span class="cn-count">${d.nodes.length} nodes · ${d.edges.length} edges</span>
       </div>
     </div>`;

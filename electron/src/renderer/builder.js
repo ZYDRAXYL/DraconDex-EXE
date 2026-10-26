@@ -588,19 +588,42 @@ function openBuilderPaneContextMenu(ev, paneIdx) {
 // (S.dragTab.armed, set by trackDragArm above) does it "detach" and become
 // eligible for cross-pane move, edge-split, or pop-out-to-window — matching
 // Chrome's own tab-strip feel instead of the old swap-on-drop model.
+//
+// Procress 27: no OS ghost. While locked, the tab itself follows the pointer
+// along its bar only (one axis, like every other list — core/reorder.js).
+// Once armed it settles back, faded, in its slot; the drop indicators of the
+// pane or edge under the pointer then show where it will go.
+const TAB_NO_GHOST = new Image();
+TAB_NO_GHOST.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 function onTabDragStart(ev, paneIdx, key) {
-  const bar = ev.currentTarget.closest('.bpane-tabs');
+  const el = ev.currentTarget;
+  const bar = el.closest('.bpane-tabs');
   const tabs = [...bar.querySelectorAll('.project-tab')];
   S.dragTab = {
     key, paneIdx, armed: false, armTimer: null,
-    barEl: bar,
+    barEl: bar, el, x0: ev.clientX,
     rects: tabs.map(el => el.getBoundingClientRect()),
     fromIndex: tabs.findIndex(el => el.dataset.tabKey === key),
     curIndex: -1,
   };
   bar.classList.add('reordering');
+  el.classList.add('tab-dragging');
+  ev.dataTransfer.setDragImage(TAB_NO_GHOST, 0, 0);
   ev.dataTransfer.effectAllowed = 'move';
   ev.stopPropagation();
+}
+// Document dragover (capture, beside trackDragArm): move the tab along its bar.
+function trackTabFollow(ev) {
+  const d = S.dragTab;
+  if (!d?.el || (!ev.clientX && !ev.clientY)) return;
+  if (!d.armed) {
+    const r = d.rects[d.fromIndex], bar = d.barEl.getBoundingClientRect();
+    const dx = Math.max(bar.left - r.left, Math.min(bar.right - r.right, ev.clientX - d.x0));
+    d.el.style.transform = `translateX(${dx}px)`;
+    return;
+  }
+  d.el.style.transform = '';
+  d.el.classList.add('tab-carried');
 }
 function tabDropZone(ev, tabEl) {
   const r = tabEl.getBoundingClientRect();
@@ -628,7 +651,7 @@ function onTabDragOver(ev, tabEl) {
   d.curIndex = newIndex;
   const draggedWidth = d.rects[d.fromIndex].width + 4; // +4px gap, .bpane-tabs{gap:4px}
   d.barEl.querySelectorAll('.project-tab').forEach((el, i) => {
-    if (el.dataset.tabKey === d.key) { el.style.opacity = '0'; return; }
+    if (el.dataset.tabKey === d.key) return; // follows the pointer instead (trackTabFollow)
     let shift = 0;
     if (d.fromIndex < newIndex && i > d.fromIndex && i <= newIndex) shift = -draggedWidth;
     if (d.fromIndex > newIndex && i < d.fromIndex && i >= newIndex) shift = draggedWidth;
@@ -642,7 +665,7 @@ function clearDragReflow() {
   const d = S.dragTab;
   if (!d?.barEl) return;
   d.barEl.classList.remove('reordering');
-  d.barEl.querySelectorAll('.project-tab').forEach(el => { el.style.transform = ''; el.style.opacity = ''; });
+  d.barEl.querySelectorAll('.project-tab').forEach(el => { el.style.transform = ''; el.style.opacity = ''; el.classList.remove('tab-dragging', 'tab-carried'); });
 }
 
 // Plan part1 #3: tabs shrink to fit their pane instead of overflowing into a
@@ -900,6 +923,7 @@ function bindBuilderGridDrop() {
   // events during the bubble phase — silently preventing a drag from ever
   // arming whenever it ends up hovering an existing tab in another pane.
   document.addEventListener('dragover', trackDragArm, true);
+  document.addEventListener('dragover', trackTabFollow, true);
 }
 
 // Best-effort static content for a pane whose DOM was wiped (e.g. after a

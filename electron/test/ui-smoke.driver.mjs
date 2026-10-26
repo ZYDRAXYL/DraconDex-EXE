@@ -970,9 +970,144 @@ test('26: drag a row by its grip and a column by its head — saved', async () =
   await rows.last().locator('.nar-grip').dragTo(rows.first(), { targetPosition: { x: 40, y: 3 } }); await sleep(600);
   assert.deepEqual(await db('obj'), [objs.at(-1), ...objs.slice(0, -1)], 'last row first');
   const tpls = await db('tpl');
-  const ths = win.locator('.cls-table th[draggable]');
+  const ths = win.locator('.cls-table th.cls-col-head');
   await ths.last().dragTo(ths.first(), { targetPosition: { x: 3, y: 5 } }); await sleep(600);
   assert.deepEqual(await db('tpl'), [tpls.at(-1), ...tpls.slice(0, -1)], 'last column first');
   // put both back for the suites after this one
   await win.evaluate(async ([m, o, t]) => { await api.classifier.moveObjects(m, o); await api.classifier.moveTemplates(m, t); await refreshClassifier(); }, [mid, objs, tpls]);
+});
+
+// ── Procress 27 ──────────────────────────────────────────────────────────
+const openCharactersTable = async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('Characters').click(); await sleep(600);
+  const mid = await win.evaluate(() => S.activeModuleNode.id);
+  await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'table'), mid);
+  await sleep(500);
+  return mid;
+};
+
+test('27 part 1: a field shows its [[link]] as the name, raw only while it is edited', async () => {
+  const mid = await openCharactersTable();
+  const tpl = await win.evaluate(async (m) => { const id = await api.classifier.createTemplate(m, 'Smoke links', 'text', false, false, null); await refreshClassifier(); return id; }, mid);
+  await sleep(400);
+  const [first, other] = await win.evaluate((m) => clsData(m).objects.slice(0, 2).map((o) => ({ id: o.id, name: o.name })), mid);
+  const raw = `see [[obj:Characters/${other.name}]] now`;
+  await win.evaluate(async ([o, t, v]) => { await api.classifier.upsertAttr(o, t, v); await refreshWikiCache(); await refreshClassifier(); }, [first.id, tpl, raw]);
+  await sleep(500);
+  const cell = win.locator(`td.cls-cell[data-oid="${first.id}"][data-tid="${tpl}"]`);
+  assert.equal(await cell.innerText(), `see ${other.name} now`, 'the name, not [[obj:…]]');
+  assert.equal(await cell.locator('a.wikilink').innerText(), other.name, 'highlighted as a link');
+  // hovering the link shows its card
+  await hover(cell.locator('a.wikilink')); await sleep(900);
+  assert.equal(await win.locator('#pb-hover.on').count(), 1, 'hover card');
+  await win.mouse.move(2, 400); await sleep(300);
+  // clicking beside the link edits: the raw text is back, and saved unchanged on leaving
+  const box = await cell.boundingBox();
+  await win.mouse.click(box.x + box.width - 4, box.y + box.height / 2); await sleep(200);
+  assert.equal(await cell.innerText(), raw);
+  await win.keyboard.press('Tab'); await sleep(400);
+  assert.equal(await cell.innerText(), `see ${other.name} now`);
+  const stored = await win.evaluate(([m, o]) => api.classifier.getObjectsFull(m).then((f) => f.objects.find((x) => x.id === o).attrMap), [mid, first.id]);
+  assert.equal(stored[tpl], raw);
+  // a click on the link follows it
+  await cell.locator('a.wikilink').click(); await sleep(800);
+  assert.deepEqual(await win.evaluate(() => [S.activeItemNode?.itemKind, S.activeItemNode?.id]), ['classifier', other.id]);
+  await win.evaluate(async ([m, t]) => { await api.classifier.deleteTemplate(t); await openModuleNode(m); }, [mid, tpl]);
+});
+
+test('27 part 2 + 3: "Fields of this category" reorders by its ≡ grip; the table follows', async () => {
+  const mid = await openCharactersTable();
+  const tpls = await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.map((x) => x.id)), mid);
+  assert.ok(tpls.length >= 2, 'needs two fields');
+  await win.evaluate((m) => openClassifierFieldsModal(m), mid); await sleep(400);
+  const grips = win.locator('#modal-overlay [data-cls-tid] .nar-grip');
+  assert.equal(await grips.first().locator('svg line').count(), 3, 'the grip is the three-bar icon');
+  await win.locator('#modal-overlay #ct-name').fill('half-typed');
+  const target = win.locator('#modal-overlay [data-cls-tid]').first();
+  await grips.last().dragTo(target, { targetPosition: { x: 40, y: 2 } }); await sleep(600);
+  const want = [tpls.at(-1), ...tpls.slice(0, -1)];
+  assert.deepEqual(await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.map((x) => x.id)), mid), want, 'saved');
+  assert.deepEqual(await win.locator('#modal-overlay [data-cls-tid]').evaluateAll((els) => els.map((e) => Number(e.dataset.clsTid))), want, 'the modal shows it');
+  assert.equal(await win.locator('#modal-overlay #ct-name').inputValue(), 'half-typed', 'the form was not reset');
+  // Alt+↓ on a focused row moves it back one
+  await win.locator('#modal-overlay [data-cls-tid]').first().focus();
+  await win.keyboard.press('Alt+ArrowDown'); await sleep(500);
+  assert.deepEqual((await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.map((x) => x.id)), mid)).slice(0, 2), [want[1], want[0]]);
+  await win.keyboard.press('Escape'); await sleep(300);
+  assert.deepEqual(await win.locator('.cls-table th[data-cls-tid]').evaluateAll((els) => els.map((e) => Number(e.dataset.clsTid))).then((r) => r.slice(0, 2)), [want[1], want[0]], 'the columns follow');
+  await win.evaluate(async ([m, t]) => { await api.classifier.moveTemplates(m, t); await refreshClassifier(); }, [mid, tpls]);
+});
+
+test('27 part 5: a dragged row moves on one axis only, the others slide, Esc puts it back', async () => {
+  const mid = await openCharactersTable();
+  const objs = await win.evaluate((m) => api.classifier.getObjects(m).then((r) => r.map((x) => x.id)), mid);
+  const rows = win.locator('tr[data-cls-oid]');
+  const g = await rows.first().locator('.nar-grip').boundingBox();
+  const second = await rows.nth(1).boundingBox();
+  await win.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+  await win.mouse.down();
+  await win.mouse.move(g.x + 120, g.y + second.height * 1.6, { steps: 12 }); await sleep(300);
+  const [m0, m1] = await rows.evaluateAll((els) => els.slice(0, 2).map((e) => { const m = new DOMMatrix(getComputedStyle(e).transform); return { m41: m.m41, m42: m.m42 }; }));
+  assert.equal(m0.m41, 0, 'no sideways movement — locked to the column');
+  assert.ok(m0.m42 > 10, 'follows the pointer down');
+  assert.ok(m1.m42 < 0, 'the next row slid up out of its way');
+  await win.keyboard.press('Escape'); await win.mouse.up(); await sleep(400);
+  assert.deepEqual(await win.evaluate((m) => api.classifier.getObjects(m).then((r) => r.map((x) => x.id)), mid), objs, 'Esc: nothing moved');
+  assert.equal(await rows.first().evaluate((e) => e.style.transform), '', 'and nothing is left shifted');
+});
+
+test('27 part 5: the Nest reorders by dragging a row, and nests on a folder\'s middle', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  const ids = await win.evaluate(async () => {
+    const mk = (name, kind) => api.module.create({ nexus_ref: S.nexus.id, parent_id: null, name, kind });
+    const ids = [await mk('Smoke A', 'scribe'), await mk('Smoke B', 'scribe'), await mk('Smoke Box', 'collector')];
+    await reloadModuleTree();
+    return ids;
+  });
+  await sleep(500);
+  const [a, b, f] = ids;
+  const order = () => win.evaluate(() => S.moduleTree.map((m) => m.id));
+  const before = await order();
+  // B onto A's top edge → B before A
+  await row('Smoke Box').scrollIntoViewIfNeeded();
+  const ra = await row('Smoke A').boundingBox(), rb = await row('Smoke B').boundingBox();
+  await win.mouse.move(rb.x + 40, rb.y + rb.height / 2); await win.mouse.down();
+  await win.mouse.move(rb.x + 40, ra.y + 2, { steps: 15 }); await win.mouse.up(); await sleep(800);
+  const after = await order();
+  assert.ok(after.indexOf(b) < after.indexOf(a), `B before A (${before} → ${after})`);
+  // A held over the folder's middle → inside it
+  await row('Smoke Box').scrollIntoViewIfNeeded();
+  const ra2 = await row('Smoke A').boundingBox(), rf = await row('Smoke Box').boundingBox();
+  await win.mouse.move(ra2.x + 40, ra2.y + ra2.height / 2); await win.mouse.down();
+  await win.mouse.move(ra2.x + 40, rf.y + rf.height / 2, { steps: 15 }); await sleep(200);
+  assert.equal(await row('Smoke Box').evaluate((e) => e.classList.contains('drop-in')), true, 'the folder lights up');
+  await win.mouse.up(); await sleep(800);
+  assert.equal(await win.evaluate((id) => findModuleNode(id)?.parent_id, a), f, 'A is inside the folder');
+  await win.evaluate(async (xs) => { for (const id of xs) await api.module.delete(id); await reloadModuleTree(); }, [a, b, f]);
+});
+
+test('27 part 4: hovering a titled control shows the themed guide text', async () => {
+  await openCharactersTable();
+  await win.evaluate(() => { const b = document.createElement('button'); b.id = 'smoke-tip'; b.className = 'btn btn-g btn-i'; b.title = 'Smoke guide'; b.innerHTML = I.plus; document.querySelector('#main-inner').prepend(b); });
+  const btn = win.locator('#smoke-tip');
+  await hover(btn); await sleep(700);
+  assert.equal(await win.locator('#ui-tip.on').innerText(), 'Smoke guide');
+  assert.equal(await btn.getAttribute('title'), null, 'the OS tooltip stays away');
+  assert.equal(await btn.getAttribute('aria-label'), 'Smoke guide', 'an icon-only control keeps its name');
+  await win.mouse.move(2, 400); await sleep(250);
+  assert.equal(await win.locator('#ui-tip.on').count(), 0, 'gone when the pointer leaves');
+  await win.evaluate(() => document.getElementById('smoke-tip')?.remove());
+});
+
+test('27 part 5: the Nexus list keeps the order it was dragged into', async () => {
+  const r = await win.evaluate(() => {
+    const list = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const was = localStorage.getItem(NEXUS_ORDER_KEY);
+    localStorage.setItem(NEXUS_ORDER_KEY, '[3,1]');
+    const out = orderedNexuses(list).map((n) => n.id);
+    if (was == null) localStorage.removeItem(NEXUS_ORDER_KEY); else localStorage.setItem(NEXUS_ORDER_KEY, was);
+    return out;
+  });
+  assert.deepEqual(r, [3, 1, 2], 'dragged order first, the rest after');
 });

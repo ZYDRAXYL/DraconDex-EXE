@@ -170,9 +170,9 @@
    handle wrapper both kinds share; .drop-before/.drop-after come from the
    generic reorder rules the module tree and Author's chapter list use. */
 .nar-row{border-radius:var(--rs)}
-.nar-grip{flex:0 0 auto;display:flex;align-items:center;color:var(--t3-aa,var(--t2));cursor:grab;opacity:.55}
+.nar-grip{flex:0 0 auto;display:flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;color:var(--t3-aa,var(--t2));cursor:grab;opacity:.55;touch-action:none}
 .nar-grip:hover{color:var(--t2);opacity:1}
-.nar-grip .icon{width:13px;height:13px}
+.nar-grip .icon{width:14px;height:14px}
 .nar-row.drop-before{box-shadow:inset 0 2px 0 0 var(--accent)}
 .nar-row.drop-after{box-shadow:inset 0 -2px 0 0 var(--accent)}
 .nar-choice{border:1px dashed var(--border);padding:6px;margin-bottom:6px;background:var(--raised)}

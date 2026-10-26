@@ -136,6 +136,66 @@ function popoverTrapTab(e) {
   items[next].focus();
 }
 
+// ═══ Guide text — the one tooltip (Procress 27 part 4) ══════════════════
+// Hover anything with a `title` (or `data-tip`) for TIP_DELAY ms and its text
+// shows in a small themed card above it — not the OS tooltip, which took a
+// second, ignored the theme and Glass, and looked like nothing else here.
+// Every existing title= gets this with no markup change: on first hover the
+// text moves to data-tip (so the OS one stays away), and an icon-only control
+// keeps it as its aria-label. Off with Settings → Workspace → link preview
+// (S.settings.linkPreview), which then also restores the OS tooltip.
+// position:fixed is set here rather than in css/ — this file is the one home
+// of floating layers (APP docs/COMPONENTS.md).
+const TIP_DELAY = 400;
+let _tip = null; // { el, timer }
+function tipLayer() {
+  let el = document.getElementById('ui-tip');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'ui-tip';
+    el.className = 'ui-tip';
+    el.setAttribute('role', 'tooltip');
+    el.style.position = 'fixed';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function hideTip() {
+  if (!_tip) return;
+  clearTimeout(_tip.timer);
+  _tip.el.removeEventListener('mouseleave', hideTip);
+  _tip = null;
+  document.getElementById('ui-tip')?.classList.remove('on');
+}
+document.addEventListener('mouseover', (e) => {
+  const el = e.target.closest?.('[title], [data-tip]');
+  if (!el || el === _tip?.el || el.closest('#ui-tip')) return;
+  hideTip();
+  if (S.settings?.linkPreview === false) {
+    if (el.dataset.tipTitle != null) { el.title = el.dataset.tip; delete el.dataset.tipTitle; delete el.dataset.tip; }
+    return;
+  }
+  if (el.hasAttribute('title')) {
+    el.dataset.tip = el.getAttribute('title');
+    el.dataset.tipTitle = '';
+    el.removeAttribute('title');
+    if (!el.textContent.trim() && !el.hasAttribute('aria-label')) el.setAttribute('aria-label', el.dataset.tip);
+  }
+  const text = el.dataset.tip;
+  if (!text || document.documentElement.classList.contains('reorder-active')) return;
+  const tip = { el };
+  _tip = tip;
+  el.addEventListener('mouseleave', hideTip);
+  tip.timer = setTimeout(() => {
+    if (_tip !== tip || !el.isConnected) return;
+    const layer = tipLayer();
+    layer.textContent = text;
+    layer.classList.add('on');
+    placeFloating(layer, el, { placement: 'top-center', gap: 6 });
+  }, TIP_DELAY);
+});
+for (const ev of ['pointerdown', 'keydown', 'scroll', 'blur']) window.addEventListener(ev, hideTip, true);
+
 // onClose, whichever way it closed.
 new MutationObserver((muts) => {
   for (const m of muts) for (const n of m.removedNodes) {

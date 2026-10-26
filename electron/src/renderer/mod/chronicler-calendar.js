@@ -209,9 +209,9 @@ function buildChroniclerCalendarHtml(evs, data) {
   return `<div class="chr-calendar">
     <div class="chr-cal-barwrap">
       <div class="classifier-toolbar chr-cal-bar">
-        <button class="btn btn-s btn-i" onclick="navChroniclerCalendar(-1)">‹</button>
+        <button class="btn btn-s btn-i" onclick="navChroniclerCalendar(-1)" title="${t('pbPrev')}">‹</button>
         <span class="vlbl" data-no-i18n>${x(chroniclerCalCursorLabel(spec, zoom, cursor))}</span>
-        <button class="btn btn-s btn-i" onclick="navChroniclerCalendar(1)">›</button>
+        <button class="btn btn-s btn-i" onclick="navChroniclerCalendar(1)" title="${t('pbNext')}">›</button>
         ${viewBar}
         <button class="btn btn-g btn-i" onclick="toggleChroniclerCalPanel()" title="${t('calCustomCalendar')}">${I.edit}</button>
       </div>

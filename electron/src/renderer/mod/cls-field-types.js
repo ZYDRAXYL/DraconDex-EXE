@@ -74,7 +74,7 @@ function clsFieldValueHtml(o, c) {
   const data = `data-oid="${o.id}" data-tid="${c.id}" aria-label="${x(c.description || '')}"`; // named by its field (Procress 18 part 5)
   switch (clsType(c)) {
     case 'textarea':
-      return `<textarea class="pv-textarea" data-wiki ${data} onblur="saveClassifierAttrInput(this)">${val}</textarea>`;
+      return wikiTextareaHtml(`class="pv-textarea" ${data} onblur="saveClassifierAttrInput(this)"`, raw);
     case 'date':
       return clsDateInputsHtml(o, c);
     case 'number':
@@ -111,7 +111,7 @@ function clsFieldValueHtml(o, c) {
       return `<span class="pv cls-formula" title="${x(f.error || clsFieldOpts(c).expr || '')}" data-no-i18n>${x(f.text)}</span>`;
     }
     default:
-      return `<span class="pv" contenteditable="true" data-wiki ${data} onblur="saveClassifierAttrCell(this)">${val}</span>`;
+      return `<span class="pv" contenteditable="true" ${wikiViewAttrs(raw)} ${data} onblur="saveClassifierAttrCell(this)">${wikiViewHtml(raw)}</span>`;
   }
 }
 
@@ -120,10 +120,11 @@ function clsFieldCellHtml(m, o, c) {
   const type = clsType(c);
   const raw = o.attrMap?.[c.id] ?? '';
   if (CLS_CELL_EDIT_TYPES.has(type)) {
-    return `<td class="cls-cell${type === 'number' ? ' cls-num' : ''}" contenteditable="true"${type === 'text' ? ' data-wiki' : ''} data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${x(raw)}</td>`;
+    const wiki = type === 'text';
+    return `<td class="cls-cell${type === 'number' ? ' cls-num' : ''}" contenteditable="true"${wiki ? ` ${wikiViewAttrs(raw)}` : ''} data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${wiki ? wikiViewHtml(raw) : x(raw)}</td>`;
   }
   if (type === 'textarea') {
-    return `<td class="cls-cell" contenteditable="true" data-wiki data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${x(raw)}</td>`;
+    return `<td class="cls-cell" contenteditable="true" ${wikiViewAttrs(raw)} data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${wikiViewHtml(raw)}</td>`;
   }
   if (type === 'date') {
     return `<td class="cls-cell" contenteditable="true" data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${x(raw)}</td>`;

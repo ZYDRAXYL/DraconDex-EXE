@@ -49,6 +49,17 @@ function mdExtractWikilinks(text) {
   return out;
 }
 
+// One rendered [[link]] — shared with plain wiki fields (core/wiki-field.js).
+// It shows the object's name alone for [[obj:Module/Object]], or |alias.
+function mdWikiLinkHtml(name, alias, resolveLink) {
+  const nm = name.trim();
+  const key = resolveLink ? (resolveLink(nm) || '') : '';
+  // red only once the names are loaded — before that, "not found" means "not looked up yet"
+  const known = typeof pbWikiLoaded !== 'function' || pbWikiLoaded();
+  const cls = key ? 'wikilink' : known ? 'wikilink wikilink-unresolved' : 'wikilink';
+  return `<a class="${cls}" data-name="${_mdEsc(nm)}" data-key="${_mdEsc(key)}">${_mdEsc(alias?.trim() || wikiPathParse(nm)?.object || nm)}</a>`;
+}
+
 // Inline pass. Protects code spans / links / wikilinks behind \x00n\x00
 // placeholders, escapes everything else, then applies the marker regexes.
 function _mdInline(text, resolveLink, fn = null) {
@@ -63,14 +74,7 @@ function _mdInline(text, resolveLink, fn = null) {
     const note = fn.notes.get(id);
     return stash(`<sup class="fn-ref${note == null ? ' fn-missing' : ''}" data-fn="${_mdEsc(id)}" data-note="${_mdEsc(note ?? '')}" tabindex="0">${fn.num(id)}</sup>`);
   });
-  s = s.replace(MD_WIKILINK_RE, (_, name, alias) => {
-    const nm = name.trim();
-    const key = resolveLink ? (resolveLink(nm) || '') : '';
-    // red only once the names are loaded — before that, "not found" means "not looked up yet"
-    const known = typeof pbWikiLoaded !== 'function' || pbWikiLoaded();
-    const cls = key ? 'wikilink' : known ? 'wikilink wikilink-unresolved' : 'wikilink';
-    return stash(`<a class="${cls}" data-name="${_mdEsc(nm)}" data-key="${_mdEsc(key)}">${_mdEsc(alias?.trim() || wikiPathParse(nm)?.object || nm)}</a>`);
-  });
+  s = s.replace(MD_WIKILINK_RE, (_, name, alias) => stash(mdWikiLinkHtml(name, alias, resolveLink)));
   s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, label, url) =>
     stash(`<a class="md-link" href="${_mdEsc(url)}" title="${_mdEsc(url)}" onclick="return false">${_mdEsc(label)}</a>`));
 

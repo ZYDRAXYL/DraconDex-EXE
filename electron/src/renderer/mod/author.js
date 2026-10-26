@@ -48,39 +48,19 @@ async function selectAuthorChapter(id) {
   renderNexusHome();
 }
 
-// Plan part5 Author #3: native HTML5 drag-and-drop reorder — chapters don't
-// nest, so this only needs a before/after split (reusing the generic
-// .li.drop-before/.drop-after classes hub.js's module tree already defines
-// in style.css), not hub.js's 3-zone before/after/in version.
-function onAuthorChapterDragStart(ev, id) {
-  S.dragAuthorChapter = id;
-  ev.dataTransfer.effectAllowed = 'move';
-  ev.stopPropagation();
-}
-function onAuthorChapterDragOver(ev, row) {
-  if (S.dragAuthorChapter == null) return;
-  ev.preventDefault();
-  ev.stopPropagation();
-  const r = row.getBoundingClientRect();
-  const before = (ev.clientY - r.top) / r.height < 0.5;
-  row.classList.remove('drop-before', 'drop-after');
-  row.classList.add(before ? 'drop-before' : 'drop-after');
-}
-async function onAuthorChapterDrop(ev, moduleId, targetId) {
-  ev.preventDefault();
-  ev.stopPropagation();
-  const row = ev.currentTarget;
-  const before = row.classList.contains('drop-before');
-  row.classList.remove('drop-before', 'drop-after');
-  const dragId = S.dragAuthorChapter;
-  S.dragAuthorChapter = null;
-  if (dragId == null || dragId === targetId) return;
-  const d = S.authorData;
-  const ids = d.chapters.map(c => c.id).filter(id => id !== dragId);
-  const idx = ids.indexOf(targetId);
-  ids.splice(before ? idx : idx + 1, 0, dragId);
-  await api.author.moveChapter(moduleId, ids);
-  await reloadSource(moduleId);
+// Plan part5 Author #3 · Procress 27: drag to reorder (core/reorder.js) — the
+// chapter column ('y') and the corkboard grid ('xy') share this.
+function onAuthorChapterDown(ev, el, moduleId, id, axis = 'y') {
+  reorderDrag(ev, el, {
+    axis,
+    items: () => [...el.parentElement.children].filter((n) => n.dataset.chid != null),
+    onDrop: async ({ target, before }) => {
+      const ids = reorderIds(S.authorData.chapters.map((c) => c.id), id, Number(target.dataset.chid), before);
+      if (!ids) return;
+      await api.author.moveChapter(moduleId, ids);
+      await reloadSource(moduleId);
+    },
+  });
 }
 
 function buildAuthorMainHtml(m, c) {
@@ -95,14 +75,12 @@ function buildAuthorMainHtml(m, c) {
     return toolbar + kindEmptyStateHtml(m);
   }
   // Chapter column (mockup 12) frames every view; the right side swaps.
-  // Native HTML5 drag-and-drop (Plan part5 Author #3) — a 2-zone
-  // before/after split since chapters don't nest, smaller than hub.js's
-  // 3-zone module-tree version.
+  // Drag to reorder (core/reorder.js) — chapters don't nest, so no "in" zone.
   // Procress 21: compact rows of the shared list (core/list.js), the drag
   // handle first — where every reorderable list keeps it. F2 = Edit.
   const rows = d.chapters.map((c, i) => listRowHtml({ density: 'compact', drag: true, state: { selected: c.id === d.selectedId },
     title: `${c.chapter_label || String(i + 1)}. ${c.name}`, onclick: `selectAuthorChapter(${c.id})`,
-    attrs: `draggable="true" ondragstart="onAuthorChapterDragStart(event,${c.id})" ondragover="onAuthorChapterDragOver(event,this)" ondragleave="this.classList.remove('drop-before','drop-after')" ondrop="onAuthorChapterDrop(event,${m.id},${c.id})"`,
+    attrs: `data-chid="${c.id}" onpointerdown="onAuthorChapterDown(event,this,${m.id},${c.id})"`,
     actions: listActHtml({ icon: I.edit, name: t('edit'), key: 'F2', onclick: `openAuthorChapterModal(${m.id},${c.id})` }) })).join('');
   const column = `<div class="author-chapters">
     <div class="au-col-label" data-no-i18n>CHAPTERS · ${x(m.name)}</div>

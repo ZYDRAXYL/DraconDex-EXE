@@ -26,8 +26,9 @@ function renderWelcomeWindow() {
   const hasVaults = S.nexuses.length > 0;
   // Left panel: every vault, most-recently-opened first so the list matches
   // the order of the cards on the right, then the rest in the alphabetical
-  // order getNexuses() returns.
-  const ordered = [...recentNexuses(S.nexuses.length, null)];
+  // order getNexuses() returns — until the user drags it into an order of
+  // their own (Procress 27), which then wins in every window.
+  const ordered = orderedNexuses([...recentNexuses(S.nexuses.length, null)]);
   q('#left-panel-inner').innerHTML = `
     <div class="ph"><h4>${t('nexus')}</h4>
       <button class="btn btn-p btn-sm" onclick="welcomeCreateNexus()">+ ${t('nexusNew')}</button>

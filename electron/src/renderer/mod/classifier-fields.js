@@ -22,7 +22,8 @@ async function openClassifierFieldsModal(moduleId, editing = null) {
   const advancedOpen = !!(cur && (cur.levelable || cur.has_condition));
   openModal(t('clsFieldsOfCategory'), `
     <div>${templates.map(tpl => `
-      <div class="prop insp-attr${tpl.id === editing ? ' cls-tpl-editing' : ''}">
+      <div class="prop insp-attr${tpl.id === editing ? ' cls-tpl-editing' : ''}" data-cls-tid="${tpl.id}" tabindex="0" onkeydown="clsFieldRowKey(event,this,${moduleId},${tpl.id})">
+        ${reorderGripHtml(`clsFieldRowDown(event,this.closest('[data-cls-tid]'),${moduleId},${tpl.id})`)}
         <span class="pk">${x(tpl.description)}</span>
         <span class="pv ghost">${[t(CLASSIFIER_DISPTYPE_KEY[tpl.attribute_type] || 'dispTypeText'), tpl.levelable ? t('levelable') : '', tpl.has_condition ? t('condition') : ''].filter(Boolean).join(' · ')}</span>
         <span class="acts">
@@ -50,6 +51,33 @@ async function openClassifierFieldsModal(moduleId, editing = null) {
       <button class="btn btn-p" onclick="submitClassifierTemplateForm(${moduleId},${editing ?? 'null'})">${t('save')}</button>
     </div>`);
   setTimeout(() => q('#ct-name')?.focus(), 60);
+}
+
+// Procress 27 part 2: drag a field to move its column — in this modal, so the
+// order can be set where the fields are listed. The modal is not re-rendered
+// (a half-typed field form would be lost); the row moves in place, and the
+// table behind it follows through clsReorder.
+function clsFieldRowDown(ev, row, moduleId, id) {
+  reorderDrag(ev, row, {
+    move: true,
+    items: () => [...row.parentElement.children].filter((n) => n.dataset.clsTid != null),
+    onDrop: ({ target, before }) => clsFieldMove(row, moduleId, id, target, before),
+  });
+}
+// Alt+↑ / Alt+↓ on a focused row, as in the table.
+function clsFieldRowKey(ev, row, moduleId, id) {
+  if (!ev.altKey || (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown')) return;
+  const up = ev.key === 'ArrowUp';
+  const other = up ? row.previousElementSibling : row.nextElementSibling;
+  if (other?.dataset.clsTid == null) return;
+  ev.preventDefault();
+  if (up) other.before(row); else other.after(row);
+  row.focus();
+  clsFieldMove(row, moduleId, id, other, up);
+}
+async function clsFieldMove(row, moduleId, id, target, before) {
+  if (CLS[moduleId]) return clsReorder('tpl', moduleId, id, Number(target.dataset.clsTid), before);
+  await api.classifier.moveTemplates(moduleId, [...row.parentElement.children].map((n) => Number(n.dataset.clsTid)).filter(Boolean));
 }
 
 function toggleTemplateFlag(key) {

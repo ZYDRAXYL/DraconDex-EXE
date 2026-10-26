@@ -21,6 +21,8 @@
    in realistic use once .tabs-compact's icon-only floor kicks in). */
 .bpane-tabs .project-tab{flex:1 1 0;min-width:28px;max-width:200px}
 .bpane-tabs.reordering .project-tab{transition:transform .12s ease,opacity .12s ease}
+.bpane-tabs.reordering .project-tab.tab-dragging{transition:none;position:relative;z-index:calc(var(--z-base) + 1);background:var(--raised);box-shadow:var(--shadow-pop)}
+.bpane-tabs.reordering .project-tab.tab-carried{opacity:.35;box-shadow:none}
 .bpane-tabs .project-tab.pane-active{background:var(--raised)}
 .bpane-tabs .project-tab.tab-drop-before{box-shadow:inset 2px 0 0 0 var(--accent)}
 .bpane-tabs .project-tab.tab-drop-after{box-shadow:inset -2px 0 0 0 var(--accent)}

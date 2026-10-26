@@ -107,7 +107,6 @@ function nestAssetIcon(f) {
 
 function onAssetDragStart(ev, id) {
   S.dragAsset = id;
-  S.dragNest = null;
   ev.dataTransfer.effectAllowed = 'move';
   ev.stopPropagation();
 }

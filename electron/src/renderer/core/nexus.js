@@ -19,6 +19,23 @@ function pushRecentNexus(id) {
   localStorage.setItem(NEXUS_RECENT_KEY, JSON.stringify(next));
 }
 
+// The Nexus list in the user's own order, once they have dragged it.
+function orderedNexuses(list) {
+  let ids = [];
+  try { ids = JSON.parse(localStorage.getItem(NEXUS_ORDER_KEY) || '[]'); } catch (_) {}
+  if (!Array.isArray(ids) || !ids.length) return list;
+  const rank = (n) => { const i = ids.indexOf(n.id); return i < 0 ? ids.length + list.indexOf(n) : i; };
+  return [...list].sort((a, b) => rank(a) - rank(b));
+}
+function nexusRowDown(ev, row) {
+  reorderDrag(ev, row, {
+    move: true,
+    items: () => [...row.parentElement.children].filter((n) => n.dataset.nxid != null),
+    onDrop: () => localStorage.setItem(NEXUS_ORDER_KEY,
+      JSON.stringify([...row.parentElement.children].map((n) => Number(n.dataset.nxid)).filter(Number.isInteger))),
+  });
+}
+
 function dropRecentNexus(id) {
   localStorage.setItem(NEXUS_RECENT_KEY, JSON.stringify(loadRecentNexusIds().filter(v => v !== id)));
 }
@@ -104,7 +121,7 @@ function renderNexusPicker() {
     <div class="ph"><h4>${t('nexus')}</h4>
       <button class="btn btn-p btn-sm" onclick="openCreateNexusWindow()">+ ${t('nexusNew')}</button>
     </div>
-    ${listHtml({ list: 'nexuses', aria: t('nexus'), body: S.nexuses.map(n => nexusRowHtml(n, `selectNexus(${n.id})`)).join('') })}`;
+    ${listHtml({ list: 'nexuses', aria: t('nexus'), body: orderedNexuses(S.nexuses).map(n => nexusRowHtml(n, `selectNexus(${n.id})`)).join('') })}`;
   q('#main-inner').innerHTML = `<div class="empty" style="margin-top:80px">
     <div class="ei"><img src="../src/assets/brand/web/DraconDex_Color.webp" class="brand-img" alt="DraconDex" style="height:64px;width:64px;opacity:.35"></div>
     <h3>${t('nexusWelcomeTitle')}</h3>

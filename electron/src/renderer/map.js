@@ -51,8 +51,8 @@ function renderAreaList(areas, mi){
         <span class="rel-cat">${points} points</span>
       </div>
       <div class="rel-card-actions">
-        <button class="btn btn-s btn-i" onclick="event.stopPropagation();openMapAreaModal(${iid},${area.id})">${I.edit}</button>
-        <button class="btn btn-s btn-i" onclick="event.stopPropagation();delMapArea(${iid},${area.id})" style="color:var(--danger)">${I.delete}</button>
+        <button class="btn btn-s btn-i" onclick="event.stopPropagation();openMapAreaModal(${iid},${area.id})" title="${t('edit')}">${I.edit}</button>
+        <button class="btn btn-s btn-i" onclick="event.stopPropagation();delMapArea(${iid},${area.id})" style="color:var(--danger)" title="${t('delete')}">${I.delete}</button>
       </div>
     </div>`;
   }).join('');
