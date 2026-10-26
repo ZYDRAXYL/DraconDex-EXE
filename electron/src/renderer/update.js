@@ -1,7 +1,8 @@
 'use strict';
-// Read-only: checks this repo's latest GitHub Release via src/db/update.js's
-// api.update.check() and shows a modal with a download link when a newer
-// version exists. Not an auto-updater.
+// Checks this repo's latest GitHub Release via src/db/update.js's
+// api.update.check() and shows a modal when a newer version exists. Install
+// downloads + verifies + runs it in-app (api.update.install); builds that
+// can't self-install (portable folder, dev) open the release page instead.
 // Plan process1 part2 #1: no longer gated behind a Cloud Sync/Drive login
 // (see src/db/update.js) — instead gated behind the app_setting-backed
 // "auto-check" toggle on the new Setting → appdata → Versions page below.
@@ -54,13 +55,31 @@ function showUpdateModal(r) {
     ${r.notes ? `<div class="modal-hint"><span>${x(r.notes)}</span></div>` : ''}
     <div class="mfoot">
       <button class="btn btn-s" onclick="updateRemindLaterClick()">${t('updateRemindLater')}</button>
-      <button class="btn btn-p" onclick="updateDownloadClick()">${t('updateDownload')}</button>
+      <button class="btn btn-p" id="update-install-btn" onclick="updateDownloadClick()">${t(r.canInstall ? 'updateInstallBtn' : 'updateDownload')}</button>
     </div>
+    <div class="modal-hint" id="update-progress" hidden></div>
   `);
 }
 
-function updateDownloadClick() {
-  if (_lastCheckResult?.available) api.update.openDownload(_lastCheckResult.url);
+async function updateDownloadClick() {
+  const r = _lastCheckResult;
+  if (!r?.available) return;
+  if (!r.canInstall) return api.update.openDownload(r.url);
+  const btns = ['#update-install-btn', '#setting-versions-install-btn'];
+  btns.forEach((b) => syncBtnBusy(b, true));
+  const off = api.update.onProgress((p) => {
+    const el = q('#update-progress');
+    if (!el) return;
+    el.hidden = false;
+    el.textContent = p >= 0 ? `${t('updateDownloading')} ${Math.round(p * 100)}%` : t('updateDownloading');
+  });
+  let res;
+  try { res = await api.update.install(); } catch (_) { res = null; } finally { off(); }
+  if (res?.ok) return; // main quits and launches the installer
+  btns.forEach((b) => syncBtnBusy(b, false));
+  const pe = q('#update-progress');
+  if (pe) pe.hidden = true;
+  toast(`${t('updateInstallFailed')}${res?.error ? `: ${res.error}` : ''}`, 'error');
 }
 function updateRemindLaterClick() {
   if (_lastCheckResult?.available) api.update.dismiss(_lastCheckResult.version);
@@ -90,8 +109,9 @@ function settingVersionsBodyHtml() {
     ${statusHtml}
     <div class="mfoot">
       <button class="btn btn-s" id="setting-versions-check-btn" onclick="settingVersionsCheckClick()">${t('updateCheckBtn')}</button>
-      <button class="btn btn-p" id="setting-versions-install-btn" onclick="updateDownloadClick()"${r?.available ? '' : ' style="display:none"'}>${t('updateInstallBtn')}</button>
+      <button class="btn btn-p" id="setting-versions-install-btn" onclick="updateDownloadClick()"${r?.available ? '' : ' style="display:none"'}>${t(r?.canInstall === false ? 'updateDownload' : 'updateInstallBtn')}</button>
     </div>
+    <div class="modal-hint" id="update-progress" hidden></div>
     <label style="margin-top:14px;display:block">
       <input type="checkbox" ${_lastAutoCheck ? 'checked' : ''} onchange="settingVersionsAutoCheckToggle(this.checked)">
       ${t('updateAutoCheck')}

@@ -1,8 +1,10 @@
 'use strict';
-// A read-only version-update notice, not an auto-updater. Reads the latest
-// GitHub Release from the project's PUBLIC release mirror and offers it to the
-// user. Plain fetch() against the GitHub REST API, same style as
-// sync.js/drive.js. See docs/UPDATE.md.
+// Version-update notice + in-app install. Reads the latest GitHub Release from
+// the project's PUBLIC release mirror and offers it to the user; installUpdate()
+// downloads the matching asset, checks it against the release's
+// checksums-sha256.txt, launches it and quits. Nothing installs without the
+// user clicking Install. Plain fetch() against the GitHub REST API, same style
+// as sync.js/drive.js. See docs/UPDATE.md.
 //
 // Plan process1 part2 #1: no longer gated behind either of this app's two
 // independent logins (Cloud Sync's Supabase login, Drive Backup's own login)
@@ -16,7 +18,12 @@
 // `version`/`notes`/`url` to every install. GitHub Releases moves that trust
 // root onto the repo the project already owns, and nothing here trusts the
 // response shape: see parseGithubRelease below.
-const { app, shell } = require('electron');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const { once } = require('events');
+const { spawn } = require('child_process');
+const { app, shell, BrowserWindow } = require('electron');
 const { getAppSetting, setAppSetting } = require('./versions');
 
 // This app's own canonical release feed — every install reads the SAME one,
@@ -87,7 +94,11 @@ function parseGithubRelease(json) {
   if (!TAG_RE.test(version)) return null;
   const htmlUrl = String(json?.html_url || '');
   const url = htmlUrl.startsWith(`${RELEASE_URL_PREFIX}/`) ? htmlUrl : RELEASE_URL_PREFIX;
-  return { version, notes: String(json?.body || '').slice(0, NOTES_MAX), url };
+  // Asset URLs are pinned harder than html_url: these get downloaded and RUN.
+  const assets = (Array.isArray(json?.assets) ? json.assets : [])
+    .map((a) => ({ name: String(a?.name || ''), url: String(a?.browser_download_url || '') }))
+    .filter((a) => a.name && a.url.startsWith(`${RELEASE_URL_PREFIX}/download/`));
+  return { version, notes: String(json?.body || '').slice(0, NOTES_MAX), url, assets };
 }
 
 // Picks the HIGHEST version in this app's own tag namespace — deliberately not
@@ -150,13 +161,102 @@ function isNewerVersion(remote, local) {
   return false;
 }
 
+// The release that installUpdate() acts on — never one the renderer names.
+let _latest = null;
+
 async function checkForUpdate() {
   const current = app.getVersion();
   const latest = await fetchLatest();
-  if (!latest || !isNewerVersion(latest.version, current)) return { ok: true, available: false, current };
+  if (!latest || !isNewerVersion(latest.version, current)) { _latest = null; return { ok: true, available: false, current }; }
+  _latest = latest;
 
   const dismissed = (getAppSetting(SEEN_KEY) || '') === latest.version;
-  return { ok: true, available: true, dismissed, version: latest.version, notes: latest.notes, url: latest.url, current };
+  const canInstall = !!installAsset(latest);
+  return { ok: true, available: true, dismissed, canInstall, version: latest.version, notes: latest.notes, url: latest.url, current };
+}
+
+// Which asset this build can replace itself with, per build flavor (see the
+// data-location comment at the top of main.js):
+// - installed (NSIS): run the new Setup — it upgrades in place.
+// - portable exe: drop the new Portable exe beside this one, so it finds the
+//   same novel-manager-data folder, and start it.
+// - portable folder (portable.flag): no in-place swap of a running folder;
+//   null = the renderer falls back to the release page.
+function installAsset(release) {
+  if (IS_DEV || process.platform !== 'win32') return null;
+  let name, dir;
+  if (process.env.PORTABLE_EXECUTABLE_DIR) {
+    name = `DraconDex-Portable-${release.version}.exe`;
+    dir = process.env.PORTABLE_EXECUTABLE_DIR;
+  } else if (fs.existsSync(path.join(path.dirname(app.getPath('exe')), 'portable.flag'))) {
+    return null;
+  } else {
+    name = `DraconDex-Setup-${release.version}.exe`;
+    dir = app.getPath('temp');
+  }
+  const asset = (release.assets || []).find((a) => a.name === name);
+  const sums = (release.assets || []).find((a) => a.name === 'checksums-sha256.txt');
+  return asset && sums ? { ...asset, sumsUrl: sums.url, dest: path.join(dir, name) } : null;
+}
+
+// `sha256sum`-style output (what build-electron.yml writes): 64 hex, spaces,
+// optional "*", file name. The BOM is Windows PowerShell's Out-File utf8.
+function expectedSha256(text, fileName) {
+  for (const line of String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/)) {
+    const m = line.trim().match(/^([0-9a-fA-F]{64})\s+\*?(.+)$/);
+    if (m && m[2].trim() === fileName) return m[1].toLowerCase();
+  }
+  return null;
+}
+
+function sendProgress(p) {
+  for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('update:progress', p);
+}
+
+// User-initiated (the Install button), so unlike checkForUpdate() failures
+// come back as { ok:false, error } for the renderer to show.
+async function installUpdate() {
+  const asset = _latest && installAsset(_latest);
+  if (!asset) return { ok: false, error: 'no_installer' };
+  const ua = { 'User-Agent': `DraconDex/${app.getVersion()}` };
+  const part = `${asset.dest}.part`;
+  try {
+    // A checksum is required, not best-effort: this file is about to be run.
+    const sumsRes = await fetch(asset.sumsUrl, { signal: AbortSignal.timeout(15000), headers: ua });
+    if (!sumsRes.ok) throw new Error(`checksums HTTP ${sumsRes.status}`);
+    const expected = expectedSha256(await sumsRes.text(), asset.name);
+    if (!expected) throw new Error('no checksum for this file');
+
+    const res = await fetch(asset.url, { signal: AbortSignal.timeout(30 * 60000), headers: ua });
+    if (!res.ok || !res.body) throw new Error(`download HTTP ${res.status}`);
+    const total = Number(res.headers.get('content-length')) || 0;
+    const hash = crypto.createHash('sha256');
+    const out = fs.createWriteStream(part);
+    let got = 0, lastPct = -1;
+    try {
+      for await (const chunk of res.body) {
+        hash.update(chunk);
+        got += chunk.length;
+        if (!out.write(chunk)) await once(out, 'drain');
+        const pct = total ? Math.floor((got / total) * 100) : -1;
+        if (pct !== lastPct) { lastPct = pct; sendProgress(pct / 100); }
+      }
+    } finally {
+      await new Promise((ok) => out.end(ok));
+    }
+    if (total && got !== total) throw new Error('download stopped early');
+    if (hash.digest('hex') !== expected) throw new Error('checksum mismatch');
+    fs.renameSync(part, asset.dest);
+  } catch (e) {
+    try { fs.rmSync(part, { force: true }); } catch (_) {}
+    return { ok: false, error: String(e?.message || e) };
+  }
+  // Start it only once this process is on its way out: the new portable exe
+  // would otherwise lose requestSingleInstanceLock() to us and exit, and the
+  // NSIS installer would find the app still running.
+  app.once('quit', () => { spawn(asset.dest, [], { detached: true, stdio: 'ignore' }).unref(); });
+  setImmediate(() => app.quit());
+  return { ok: true };
 }
 
 function dismissUpdate(version) { setAppSetting(SEEN_KEY, String(version || '')); return { ok: true }; }
@@ -179,4 +279,4 @@ function openUpdateDownload(url) {
   return { ok: true };
 }
 
-module.exports = { checkForUpdate, dismissUpdate, openUpdateDownload, getAutoCheck, setAutoCheck };
+module.exports = { checkForUpdate, dismissUpdate, openUpdateDownload, installUpdate, getAutoCheck, setAutoCheck };

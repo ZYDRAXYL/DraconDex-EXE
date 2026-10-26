@@ -213,3 +213,34 @@ test('pickOwnRelease keeps ranking past a newer foreign release', () => {
   ];
   assert.equal(pickOwnRelease(list).version, '4.12.0');
 });
+
+// In-app install downloads and RUNS these, so the pin is the whole defence.
+test('parseGithubRelease keeps only assets under this repo download path', () => {
+  const { parseGithubRelease } = loadParser();
+  const ok = 'https://github.com/ZYDRAXYL/DraconDex-WEB/releases/download/v4.7.1/DraconDex-Setup-4.7.1.exe';
+  const r = parseGithubRelease({
+    ...REAL_RELEASE,
+    assets: [
+      { name: 'DraconDex-Setup-4.7.1.exe', browser_download_url: ok },
+      { name: 'evil.exe', browser_download_url: 'https://evil.example/DraconDex-Setup-4.7.1.exe' },
+      { name: 'other.exe', browser_download_url: 'https://github.com/ZYDRAXYL/DraconDex-APP/releases/download/v4.7.1/x.exe' },
+      { name: '', browser_download_url: ok },
+    ],
+  });
+  assert.deepEqual(r.assets, [{ name: 'DraconDex-Setup-4.7.1.exe', url: ok }]);
+  assert.deepEqual(parseGithubRelease(REAL_RELEASE).assets, [], 'no assets field = no assets');
+});
+
+test('expectedSha256 reads build-electron.yml checksum output', () => {
+  const src = readSource('../src/db/update.js');
+  const fn = src.match(/function expectedSha256\(text, fileName\) \{[\s\S]*?\n\}/)?.[0];
+  assert.ok(fn, 'expectedSha256 not found');
+  // eslint-disable-next-line no-new-func
+  const expectedSha256 = new Function(`${fn}\nreturn expectedSha256;`)();
+  const a = 'A'.repeat(64), b = 'b'.repeat(64);
+  const text = `﻿${a}  DraconDex-Setup-4.7.1.exe\r\n${b} *DraconDex-Portable-4.7.1.exe\r\n`;
+  assert.equal(expectedSha256(text, 'DraconDex-Setup-4.7.1.exe'), 'a'.repeat(64));
+  assert.equal(expectedSha256(text, 'DraconDex-Portable-4.7.1.exe'), b);
+  assert.equal(expectedSha256(text, 'missing.exe'), null);
+  assert.equal(expectedSha256('', 'x'), null);
+});

@@ -333,6 +333,7 @@
 	padding:8px 11px;margin:0 0 14px;
 	color:var(--t2);font-size:calc(var(--fs-body) * var(--fsc,1));line-height:1.45;
 }
+.modal-hint[hidden]{display:none}
 .modal-hint .icon{width:14px;height:14px;flex-shrink:0;margin-top:1px;color:var(--accent-text,var(--accent))}
 /* Data rows inside a modal aren't row-clickable — only their action button is */
 .modal-data .li{cursor:default;background:var(--bg);border:1px solid var(--border);margin-bottom:4px}
