@@ -113,7 +113,7 @@ function openSettingSearchHit(group, page, label) {
   const el = [...content.querySelectorAll('.settings-label, .settings-label-row span, label, button, span, div')]
     .find((n) => n.children.length === 0 && n.textContent.trim() === label)
     || [...content.querySelectorAll('.settings-label, label, span')].find((n) => n.textContent.includes(label))
-    || [...content.querySelectorAll('[title]')].find((n) => n.getAttribute('title') === label); // a tooltip-only label
+    || [...content.querySelectorAll('[title],[data-tip]')].find((n) => (n.getAttribute('title') ?? n.dataset.tip) === label); // a tooltip-only label
   if (!el) return;
   el.scrollIntoView({ block: 'center' });
   el.classList.add('setting-hit');

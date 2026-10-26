@@ -98,7 +98,7 @@ function listRowHtml({
   return `<div class="${rowCls}" role="option" tabindex="-1"
     aria-selected="${state.selected ? 'true' : 'false'}"${state.disabled ? ' aria-disabled="true"' : ''} aria-label="${_lsAttr(label)}"${tipText ? ` title="${_lsAttr(tipText)}"` : ''}${expanded == null ? '' : ` aria-expanded="${!!expanded}"`}
     ${onclick && !state.disabled ? `onclick="${onclick}"` : ''}${menu ? ` oncontextmenu="${menu}"` : ''} ${attrs}>
-    ${drag ? `<span class="ls-grip" aria-hidden="true">${I.list}</span>` : ''}${lead}${icon == null ? '' : `<span class="ls-icon" aria-hidden="true">${icon}</span>`}
+    ${drag ? `<span class="ls-grip" aria-hidden="true">${I.grip}</span>` : ''}${lead}${icon == null ? '' : `<span class="ls-icon" aria-hidden="true">${icon}</span>`}
     <span class="ls-main"><span class="ls-title">${titleIn}</span>${!compact && metaIn ? `<span class="ls-meta">${metaIn}</span>` : ''}</span>
     ${compact && metaIn ? `<span class="ls-meta ls-side">${metaIn}</span>` : ''}${count != null && count !== '' ? `<span class="ls-count" data-no-i18n>${x(count)}</span>` : ''}${trailing}${expanded == null ? '' : `<span class="ls-chev${expanded ? '' : ' ls-shut'}" aria-hidden="true">${I.chevronDown}</span>`}${actions || more ? `<span class="ls-acts">${actions}${more}</span>` : ''}
   </div>`;

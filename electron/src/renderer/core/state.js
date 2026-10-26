@@ -26,6 +26,8 @@ const I = {
   edit: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
   delete: `<svg class="icon icon-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`,
   move: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>`,
+  // Procress 27 part 3: the drag handle — three bars ("≡"), not the four-way move arrows
+  grip: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="7" x2="19" y2="7"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/></svg>`,
   folder: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
   plus: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
   minus: `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
@@ -105,6 +107,10 @@ const NEXUS_ACTIVE_KEY = 'novel-manager-active-nexus';
 // (same origin). Feeds the Welcome window's "recent" cards and the vault-head
 // switcher's top-3. Helpers: loadRecentNexusIds/pushRecentNexus in nexus.js.
 const NEXUS_RECENT_KEY = 'novel-manager-recent-nexus';
+// Procress 27: the order the user dragged the Nexus list into — ids, kept
+// here beside the MRU for the same reason (no column for it, shared across
+// windows). Vaults missing from it keep their usual place after it.
+const NEXUS_ORDER_KEY = 'novel-manager-nexus-order';
 // Set by the Welcome window right before it hands off to a new app window, so
 // the onboarding tour runs there instead of in the window that's closing.
 const NEXUS_PENDING_GUIDE_KEY = 'novel-manager-pending-guide';
@@ -536,7 +542,6 @@ const S = {
   hubSectionHeights:loadHubSectionHeights(),
   moduleCollapsed:nestFoldState(),
   importFolderCollapsed:new Set(),
-  dragNest:null,
   dragTab:null,   // { key, paneIdx } — tab currently mid-drag in the Builder's split panes
 };
 const timelineGraphState = {};

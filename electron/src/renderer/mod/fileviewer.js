@@ -38,9 +38,9 @@ function buildFileViewerHtml() {
   if (c.kind === 'image') {
     body = `<div class="fv-imgwrap"><img id="fv-img" src="${src}" onerror="queueDisplayImageFallback(this,${f.id})" style="transform:scale(${f.zoom})" alt=""></div>
       <div class="czoom" data-no-i18n>
-        <button class="btn btn-g btn-i" onclick="fileViewerZoom(-0.2)">−</button>
+        <button class="btn btn-g btn-i" onclick="fileViewerZoom(-0.2)" title="${t('ctxZoomOut')}">−</button>
         <span id="fv-zoom-label">${Math.round(f.zoom * 100)}%</span>
-        <button class="btn btn-g btn-i" onclick="fileViewerZoom(0.2)">＋</button>
+        <button class="btn btn-g btn-i" onclick="fileViewerZoom(0.2)" title="${t('ctxZoomIn')}">＋</button>
       </div>`;
   } else if (c.kind === 'audio') {
     // preload=metadata + Range (main.js ddx-file://) — seeking never pulls the

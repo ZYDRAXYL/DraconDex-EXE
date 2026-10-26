@@ -92,15 +92,14 @@ function buildNestRow(m, depth, parentId) {
       : `<span class="kind">${x(kindLabel(m.kind))}</span>`;
   // a content module's element count, when its elements are hidden or folded
   const countBadge = isContentKind && itemCount && (collapsed || !nestShowItems) ? `<span class="nest-count" data-no-i18n>${itemCount}</span>` : '';
-  // draggable is on the whole row, not just a dedicated grip icon (Plan
+  // The drag is on the whole row, not just a dedicated grip icon (Plan
   // part1 #3 removed the old decorative grip span) — a real drag started
   // anywhere on the row (name, icon, background — what a user would
-  // actually grab) works. Off while renaming so dragging can't fight the
-  // rename `<input>` for the mousedown (a draggable ancestor around a text
-  // input makes placing the caret unreliable).
+  // actually grab) works. A drag never starts on the rename `<input>`
+  // (core/reorder.js skips text fields), so it can't fight the caret.
   return `<div class="li${indentCls}" data-mid="${m.id}" role="treeitem" tabindex="-1" aria-level="${depth + 1}"${showChev ? ` aria-expanded="${!collapsed}"` : ''}
-      draggable="${renaming ? 'false' : 'true'}" ondragstart="onNestDragStart(event,${m.id},${parentId ?? 'null'})"
-      ondragover="onNestDragOver(event,this,${m.id})" ondragleave="onNestDragLeave(event,this)" ondrop="onNestDrop(event,${m.id},${parentId ?? 'null'},this)"
+      onpointerdown="onNestRowDown(event,this,${m.id})"
+      ondragover="onNestDragOver(event,this)" ondragleave="onNestDragLeave(event,this)" ondrop="onNestDrop(event,${m.id},this)"
       onclick="${renaming ? '' : `nestRowClick(event,()=>openModuleNode(${m.id}),()=>scheduleRowOpen(${m.id}))`}" onauxclick="nestRowClick(event,()=>openModuleNode(${m.id}))" oncontextmenu="openModuleContextMenu(event,${m.id})">
     ${chev}
     ${showMajorIcon ? `<span class="kicon" style="color:${x(col)}" onclick="event.stopPropagation();openModuleIconPopup(${m.id},this)">${moduleIconHtml(m)}</span>` : ''}
@@ -299,84 +298,48 @@ async function closeStaleItemTabs(moduleId, reload, items) {
 }
 
 // ═══ Drag-reorder / reparent — any depth, any module (Plan part1 #1) ═══
-// Dropping on the top/bottom quarter of a row reorders the dragged module
-// as that row's sibling there (adopting that row's parent, which may be a
-// different parent than the one it came from — an implicit "move to"); the
-// middle half nests it as that row's child instead. Any module can be
-// dragged out of its current parent to top-level, into a different parent,
-// or reordered among new siblings — the only hard rule is the self/
-// descendant guard below (can't drop a module into its own subtree).
-function onNestDragStart(ev, id, parentId) {
-  S.dragNest = { id, parentId };
-  ev.dataTransfer.effectAllowed = 'move';
-  ev.stopPropagation();
+// Procress 27: the row itself is picked up (core/reorder.js) and slides up
+// and down the tree while the rows it passes make room. Where it lands
+// decides its parent: next to a row = that row's sibling (adopting that
+// row's parent — an implicit "move to"); held over the middle of a
+// collector = inside it. An open folder carries its children along, and a
+// module can never be dropped into its own subtree.
+function onNestRowDown(ev, row, id) {
+  const kids = row.nextElementSibling?.matches?.(`.nest-children[data-parent-id="${id}"]`) ? row.nextElementSibling : null;
+  const tree = row.closest('#nest-tree-body') || row.parentElement;
+  const dragNode = findModuleNode(id);
+  reorderDrag(ev, row, {
+    items: () => [...tree.querySelectorAll('.li[data-mid]')].filter((r) => r === row || !kids?.contains(r)),
+    linked: (r) => (r === row && kids ? [kids] : []),
+    // v5 Part 4 (§8.8): only a collector takes a module inside it.
+    into: (r) => {
+      const n = findModuleNode(Number(r.dataset.mid));
+      return n?.kind === 'collector' && !(dragNode && isSelfOrDescendant(dragNode, n.id));
+    },
+    onDrop: ({ target, before, into }) => {
+      const tid = Number(target.dataset.mid);
+      const t = findModuleNode(tid);
+      // Right after an open folder's row is its first child, not its sibling.
+      const open = t?.children?.length && !S.moduleCollapsed.has(tid);
+      return nestMoveTo(id, tid, into ? 'in' : before ? 'before' : open ? 'first' : 'after');
+    },
+  });
 }
-// Plan part1 #8: a row visually sitting directly below an already-EXPANDED
-// parent already reads as "inside" that parent's children, not as its
-// sibling — so the bottom-quarter zone becomes a child-drop ('in') instead
-// of a sibling reorder ('after') for that specific case. A collapsed
-// parent, or one with no children at all, keeps the original behavior.
-function nestDropZone(ev, row, id) {
-  const r = row.getBoundingClientRect();
-  const frac = (ev.clientY - r.top) / r.height;
-  // v5 Part 4 (§8.8): only a collector takes a module inside it; any other
-  // row splits at the middle into before/after, so a drop never offers "in".
-  const target = id != null ? findModuleNode(id) : null;
-  if (S.dragNest && target && target.kind !== 'collector') return frac < 0.5 ? 'before' : 'after';
-  if (frac < 0.25) return 'before';
-  if (frac > 0.75) {
-    const node = id != null ? findModuleNode(id) : null;
-    const hasChildren = node?.children?.length > 0;
-    const expanded = hasChildren && !S.moduleCollapsed.has(id);
-    return expanded ? 'in' : 'after';
-  }
-  return 'in';
-}
-function onNestDragOver(ev, row, id) {
-  if (!S.dragNest && !S.dragAsset && nestHasFiles(ev)) return; // files from the OS: the document listener (B7, end of file)
-  // v5 Asset Nest: an asset row dropped on a module files it there — always
-  // "into", never a reorder, since assets have no sibling order.
-  if (S.dragAsset) {
-    ev.preventDefault();
-    ev.stopPropagation();
-    row.classList.remove('drop-before', 'drop-after');
-    row.classList.add('drop-in');
-    return;
-  }
-  if (!S.dragNest) return;
-  ev.preventDefault();
-  ev.stopPropagation();
-  row.classList.remove('drop-before', 'drop-after', 'drop-in');
-  row.classList.add(`drop-${nestDropZone(ev, row, id)}`);
-}
-function onNestDragLeave(ev, row) {
-  row.classList.remove('drop-before', 'drop-after', 'drop-in');
-}
-async function onNestDrop(ev, targetId, targetParentId, row) {
-  if (!S.dragNest && !S.dragAsset && nestHasFiles(ev)) return; // files from the OS: the document listener (B7, end of file)
-  ev.preventDefault();
-  ev.stopPropagation();
-  row.classList.remove('drop-before', 'drop-after', 'drop-in');
-  if (S.dragAsset) {
-    const assetId = S.dragAsset;
-    S.dragAsset = null;
-    S.moduleCollapsed.delete(targetId);
-    await moveAssetToModule(assetId, targetId);
-    return;
-  }
-  const drag = S.dragNest;
-  S.dragNest = null;
-  if (!drag || drag.id === targetId) return;
-  const dragNode = findModuleNode(drag.id);
-  if (!dragNode || isSelfOrDescendant(dragNode, targetId)) return;
-  const zone = nestDropZone(ev, row, targetId);
-  const newParentId = zone === 'in' ? targetId : targetParentId;
-  if (zone === 'in') S.moduleCollapsed.delete(targetId);
+
+async function nestMoveTo(dragId, targetId, zone) {
+  if (dragId === targetId) return;
+  const dragNode = findModuleNode(dragId);
+  const target = findModuleNode(targetId);
+  const inside = zone === 'in' || zone === 'first';
+  if (!dragNode || !target || isSelfOrDescendant(dragNode, targetId)) return;
+  const newParentId = inside ? targetId : target.parent_id ?? null;
+  if (inside) S.moduleCollapsed.delete(targetId);
   const siblings = (newParentId == null ? S.moduleTree : findModuleNode(newParentId)?.children || [])
-    .map(m => m.id).filter(id => id !== drag.id);
-  if (zone === 'before') siblings.splice(siblings.indexOf(targetId), 0, drag.id);
-  else if (zone === 'after') siblings.splice(siblings.indexOf(targetId) + 1, 0, drag.id);
-  else siblings.push(drag.id);
+    .map(m => m.id).filter(id => id !== dragId);
+  if (zone === 'before') siblings.splice(siblings.indexOf(targetId), 0, dragId);
+  else if (zone === 'after') siblings.splice(siblings.indexOf(targetId) + 1, 0, dragId);
+  else if (zone === 'first') siblings.unshift(dragId);
+  else siblings.push(dragId);
   // Procress 18 part 4: optimistic — the row is in its new place at once;
   // a refused move reloads the tree as it is
   const from = dragNode.parent_id == null ? S.moduleTree : findModuleNode(dragNode.parent_id)?.children;
@@ -388,7 +351,7 @@ async function onNestDrop(ev, targetId, targetParentId, row) {
   to.sort((a, b) => siblings.indexOf(a.id) - siblings.indexOf(b.id));
   renderNexusHome();
   try {
-    await api.module.move(S.nexus.id, drag.id, newParentId, siblings);
+    await api.module.move(S.nexus.id, dragId, newParentId, siblings);
   } catch (_) {
     toast(t('moduleParentMustBeFolder'), 'err');
     await reloadModuleTree();
@@ -396,6 +359,29 @@ async function onNestDrop(ev, targetId, targetParentId, row) {
   }
   announce(t('srMoved').replace('{name}', dragNode.name));
   await reloadModuleTree();
+}
+
+// v5 Asset Nest: an asset row (HTML5 drag, mod/importdock.js) dropped on a
+// module files it there — always "into", never a reorder, since assets have
+// no sibling order.
+function onNestDragOver(ev, row) {
+  if (!S.dragAsset) return; // files from the OS: the document listener (B7, end of file)
+  ev.preventDefault();
+  ev.stopPropagation();
+  row.classList.add('drop-in');
+}
+function onNestDragLeave(ev, row) {
+  row.classList.remove('drop-in');
+}
+async function onNestDrop(ev, targetId, row) {
+  if (!S.dragAsset) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  row.classList.remove('drop-in');
+  const assetId = S.dragAsset;
+  S.dragAsset = null;
+  S.moduleCollapsed.delete(targetId);
+  await moveAssetToModule(assetId, targetId);
 }
 
 

@@ -91,9 +91,9 @@ function buildSketcherMainHtml(m, c) {
       ${cmdBtn('sketcher.exportPng', { moduleId: d.moduleId }, { cls: 'btn-p sk-export' })}
       <div class="chint" data-no-i18n>${t('sketcherHint')}</div>
       <div class="czoom" data-no-i18n>
-        <button class="btn btn-g btn-i" onclick="sketchZoomBy(-0.15)">−</button>
+        <button class="btn btn-g btn-i" onclick="sketchZoomBy(-0.15)" title="${t('ctxZoomOut')}">−</button>
         <span id="sk-zoom-label">100%</span>
-        <button class="btn btn-g btn-i" onclick="sketchZoomBy(0.15)">＋</button>
+        <button class="btn btn-g btn-i" onclick="sketchZoomBy(0.15)" title="${t('ctxZoomIn')}">＋</button>
         <span class="cn-count">${t('pageWord')} ${pageIdx}/${d.pages.length}</span>
       </div>
     </div>`;

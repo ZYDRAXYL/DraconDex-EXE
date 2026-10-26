@@ -93,12 +93,8 @@ function renderClassifierLevelTableHtml(o, c) {
     <col style="width:${w.actPct}%"></colgroup>`;
   const head = cols.map(([, k]) => `<th>${t(k)}</th>`).join('');
   const body = rows.map(r => `<tr data-lid="${r.id}"
-      oncontextmenu="openCtx('classifier.level',event,{objectId:${o.id},templateId:${c.id},levelId:${r.id}})"
-      ondragover="onClassifierLevelRowDragOver(event,this)"
-      ondragleave="this.classList.remove('drop-before','drop-after')"
-      ondrop="onClassifierLevelRowDrop(event,${o.id},${c.id},${r.id})">
-    <td class="cls-lv-grip"><span class="nar-grip" draggable="true" title="${t('dragReorder')}"
-      ondragstart="onClassifierLevelRowDragStart(event,${r.id})">${I.move}</span></td>
+      oncontextmenu="openCtx('classifier.level',event,{objectId:${o.id},templateId:${c.id},levelId:${r.id}})">
+    <td class="cls-lv-grip">${reorderGripHtml(`onClassifierLevelRowDown(event,this.closest('tr'),${o.id},${c.id},${r.id})`)}</td>
     ${cols.map(([field]) => `<td><input class="cls-lv-inp" value="${x(r[field] || '')}"
       data-lid="${r.id}" data-field="${field}" onblur="saveClassifierLevelField(this)"></td>`).join('')}
     <td class="cls-lv-act"><button class="btn btn-g btn-i" onclick="deleteClassifierLevelRow(${r.id})" title="${t('delete')}">${I.delete}</button></td>
@@ -124,47 +120,27 @@ function toggleClassifierLevelOpen(key, open) {
   if (open) S.clsLevelOpen.add(key); else S.clsLevelOpen.delete(key);
 }
 
-// Drag-reorder for level rows, mirroring narrator-dialogue.js's
-// onNarratorRowDragStart/DragOver/Drop. The drag source is the grip, not the
+// Drag-reorder for level rows (core/reorder.js), like narrator-dialogue.js's
+// rows. The drag source is the grip, not the
 // row, since rows are almost entirely <input> and a drag begun on one would
 // just select text. Scoped to one attribute's own row set — each table only
 // ever renders one attribute's rows, so there's no cross-attribute drop
 // target to guard against in the UI, and moveLevels' own WHERE clause
 // (object_ref AND template_ref) is a defense-in-depth guarantee besides.
-function onClassifierLevelRowDragStart(ev, id) {
-  S.dragClassifierLevelRow = id;
-  ev.dataTransfer.effectAllowed = 'move';
-  ev.stopPropagation();
-}
-
-function onClassifierLevelRowDragOver(ev, row) {
-  if (S.dragClassifierLevelRow == null) return;
-  ev.preventDefault();
-  ev.stopPropagation();
-  const r = row.getBoundingClientRect();
-  const before = (ev.clientY - r.top) / r.height < 0.5;
-  row.classList.remove('drop-before', 'drop-after');
-  row.classList.add(before ? 'drop-before' : 'drop-after');
-}
-
-async function onClassifierLevelRowDrop(ev, objectId, templateId, targetId) {
-  ev.preventDefault();
-  ev.stopPropagation();
-  const row = ev.currentTarget;
-  const before = row.classList.contains('drop-before');
-  row.classList.remove('drop-before', 'drop-after');
-  const dragId = S.dragClassifierLevelRow;
-  S.dragClassifierLevelRow = null;
-  if (dragId == null || dragId === targetId) return;
-  // Read the current order straight off the table rather than off the
-  // cache: the element page (item.js's openItemNode path) hydrates its own
-  // levelMap, so the DOM is the one place this row set is reliably found.
-  const ids = Array.from(row.closest('tbody').querySelectorAll('tr[data-lid]'))
-    .map(tr => Number(tr.dataset.lid)).filter(id => id !== dragId);
-  const idx = ids.indexOf(targetId);
-  ids.splice(before ? idx : idx + 1, 0, dragId);
-  await api.classifier.moveLevels(objectId, templateId, ids);
-  await reloadClassifierDetail();
+function onClassifierLevelRowDown(ev, row, objectId, templateId, id) {
+  const rows = () => [...row.closest('tbody').querySelectorAll('tr[data-lid]')];
+  reorderDrag(ev, row, {
+    items: rows,
+    onDrop: async ({ target, before }) => {
+      // Read the current order straight off the table rather than off the
+      // cache: the element page (item.js's openItemNode path) hydrates its own
+      // levelMap, so the DOM is the one place this row set is reliably found.
+      const ids = reorderIds(rows().map((tr) => Number(tr.dataset.lid)), id, Number(target.dataset.lid), before);
+      if (!ids) return;
+      await api.classifier.moveLevels(objectId, templateId, ids);
+      await reloadClassifierDetail();
+    },
+  });
 }
 
 async function addClassifierLevel(oid, tid) {
@@ -177,7 +153,7 @@ async function addClassifierLevel(oid, tid) {
 // Insert above / below / duplicate (§7.4 level-row menu). createLevel always
 // appends; the new id is then moved into place with the same moveLevels the
 // drag handler uses, reading the current order off the table (see
-// onClassifierLevelRowDrop for why the DOM, not a cache).
+// onClassifierLevelRowDown for why the DOM, not a cache).
 async function insertClassifierLevel(oid, tid, refId, where, copyFrom = null) {
   const newId = await api.classifier.createLevel(oid, tid);
   // The row the menu was opened on (hub/ctxmenu.js keeps it) — not the first
@@ -302,7 +278,7 @@ function renderClassifierObjectDetail(m, o, templates = clsData(m.id).templates)
   const priv = o.privateTemplates || [];
   const privRows = priv.map(pt => `<div class="prop">
       <span class="pk">${x(pt.description)}</span>
-      <span class="pv" contenteditable="true" data-wiki data-oid="${o.id}" data-tid="${pt.id}" onblur="saveClassifierAttrCell(this)">${x(pt.value || '')}</span>
+      <span class="pv" contenteditable="true" ${wikiViewAttrs(pt.value)} data-oid="${o.id}" data-tid="${pt.id}" onblur="saveClassifierAttrCell(this)">${wikiViewHtml(pt.value)}</span>
       <button class="btn btn-g btn-i" onclick="deleteClassifierPrivateField(${pt.id})" title="${t('delete')}">${I.delete}</button>
     </div>`).join('');
   html += `<details class="cls-priv"${priv.length ? '' : ' open'}>

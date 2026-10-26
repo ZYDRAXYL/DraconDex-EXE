@@ -82,9 +82,9 @@ function buildExhibitorSceneHtml(d) {
         <button class="btn btn-s btn-sm" onclick="cancelExhibitorLink()">${t('cancel')}</button></div>` : ''}
       <div class="chint" data-no-i18n>${t('exhibitorSceneHint')}</div>
       <div class="czoom" data-no-i18n>
-        <button class="btn btn-g btn-i" onclick="zoomExhibitorScene(0.9)">−</button>
+        <button class="btn btn-g btn-i" onclick="zoomExhibitorScene(0.9)" title="${t('ctxZoomOut')}">−</button>
         <span id="exh-zoom-label">${Math.round((d.camera.scale || 1) * 100)}%</span>
-        <button class="btn btn-g btn-i" onclick="zoomExhibitorScene(1.1)">＋</button>
+        <button class="btn btn-g btn-i" onclick="zoomExhibitorScene(1.1)" title="${t('ctxZoomIn')}">＋</button>
         <button class="btn btn-g btn-sm" onclick="fitExhibitorScene()">${t('exhibitorFit')}</button>
       </div>
     </div>
