@@ -75,7 +75,9 @@ async function updateDownloadClick() {
   });
   let res;
   try { res = await api.update.install(); } catch (_) { res = null; } finally { off(); }
-  if (res?.ok) return; // main quits and launches the installer
+  // main quits in a moment, the Setup installs silently and starts the new
+  // version (Procress 28 part 7) — say so, or the window just vanishes
+  if (res?.ok) { toast(t('updateRestarting'), 'ok'); const pe = q('#update-progress'); if (pe) { pe.hidden = false; pe.textContent = t('updateRestarting'); } return; }
   btns.forEach((b) => syncBtnBusy(b, false));
   const pe = q('#update-progress');
   if (pe) pe.hidden = true;

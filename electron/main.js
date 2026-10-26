@@ -450,6 +450,7 @@ app.whenReady().then(() => {
     { role: 'viewMenu' },
   ]));
   registerDisplayImageProtocol();
+  db.cleanupUpdateLeftovers(); // Procress 28 part 7: the Setup / old portable an update left behind
   // On-disk half of the v4.2.0 extensions -> plugins rename (the DB half is
   // migratePluginV42 in src/db/schema/migrations.js). Idempotent and silent.
   db.migratePluginDir();

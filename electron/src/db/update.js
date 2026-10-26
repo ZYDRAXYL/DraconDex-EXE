@@ -196,7 +196,7 @@ function installAsset(release) {
   }
   const asset = (release.assets || []).find((a) => a.name === name);
   const sums = (release.assets || []).find((a) => a.name === 'checksums-sha256.txt');
-  return asset && sums ? { ...asset, sumsUrl: sums.url, dest: path.join(dir, name) } : null;
+  return asset && sums ? { ...asset, sumsUrl: sums.url, dest: path.join(dir, name), kind: name.includes('-Setup-') ? 'setup' : 'portable' } : null;
 }
 
 // `sha256sum`-style output (what build-electron.yml writes): 64 hex, spaces,
@@ -254,9 +254,51 @@ async function installUpdate() {
   // Start it only once this process is on its way out: the new portable exe
   // would otherwise lose requestSingleInstanceLock() to us and exit, and the
   // NSIS installer would find the app still running.
-  app.once('quit', () => { spawn(asset.dest, [], { detached: true, stdio: 'ignore' }).unref(); });
-  setImmediate(() => app.quit());
+  // Procress 28 part 7: the Setup runs silently (/S — no wizard to click
+  // through, same install folder as before) and starts the new version when
+  // it is done (--force-run). A portable exe just starts.
+  const args = asset.kind === 'setup' ? ['/S', '--force-run'] : [];
+  app.once('quit', () => { spawn(asset.dest, args, { detached: true, stdio: 'ignore' }).unref(); });
+  // a moment for the renderer to say the app will come back by itself
+  setTimeout(() => app.quit(), 1200);
   return { ok: true };
+}
+
+// ── Leftovers of an update (Procress 28 part 7) ─────────────────────────
+// The downloaded Setup used to stay in %TEMP% for good, and an updated
+// portable exe kept the old one beside it. Given a folder's file names,
+// which of them an update left behind: every DraconDex Setup (the version
+// running now is installed — its Setup has done its job) and every
+// half-finished download; for a portable, the exes OLDER than this one,
+// never the one running.
+const LEFTOVER_RE = /^DraconDex-(Setup|Portable)-(\d+\.\d+\.\d+)\.exe(\.part)?$/;
+function updateLeftovers(names, { kind, current, self = '' }) {
+  return names.filter((n) => {
+    const m = LEFTOVER_RE.exec(n);
+    if (!m || n === self) return false;
+    if (m[3]) return true; // .part
+    if (kind === 'setup') return m[1] === 'Setup';
+    return m[1] === 'Portable' && isNewerVersion(current, m[2]);
+  });
+}
+
+// Run once at start-up. The old portable exe may still be closing when the
+// new one starts, so a file that is still locked is tried again a few times.
+function cleanupUpdateLeftovers() {
+  if (IS_DEV || process.platform !== 'win32') return;
+  const portable = process.env.PORTABLE_EXECUTABLE_DIR;
+  const dir = portable || app.getPath('temp');
+  const self = portable ? path.basename(process.env.PORTABLE_EXECUTABLE_FILE || '') : '';
+  let names = [];
+  try { names = fs.readdirSync(dir); } catch (_) { return; }
+  const kind = portable ? 'portable' : 'setup';
+  const drop = (list, triesLeft) => {
+    const busy = list.filter((n) => {
+      try { fs.rmSync(path.join(dir, n), { force: true }); return false; } catch (_) { return true; }
+    });
+    if (busy.length && triesLeft > 0) setTimeout(() => drop(busy, triesLeft - 1), 3000);
+  };
+  drop(updateLeftovers(names, { kind, current: app.getVersion(), self }), 5);
 }
 
 function dismissUpdate(version) { setAppSetting(SEEN_KEY, String(version || '')); return { ok: true }; }
@@ -279,4 +321,4 @@ function openUpdateDownload(url) {
   return { ok: true };
 }
 
-module.exports = { checkForUpdate, dismissUpdate, openUpdateDownload, installUpdate, getAutoCheck, setAutoCheck };
+module.exports = { checkForUpdate, dismissUpdate, openUpdateDownload, installUpdate, getAutoCheck, setAutoCheck, cleanupUpdateLeftovers };
