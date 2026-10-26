@@ -1767,8 +1767,9 @@ h('cloud:connect',         (id)      => db.cloudConnect(id));
 h('cloud:disconnect',      (id)      => db.cloudDisconnect(id));
 h('cloud:status',          (id)      => db.cloudStatus(id));
 
-// GitHub Releases — app-update notice (read-only, no auto-updater)
+// GitHub Releases — app-update notice + user-initiated in-app install
 h('update:check',        ()    => db.checkForUpdate());
+h('update:install',      ()    => db.installUpdate());
 h('update:dismiss',      (v)   => db.dismissUpdate(v));
 h('update:openDownload', (url) => db.openUpdateDownload(url));
 h('update:getAutoCheck', ()    => db.getAutoCheck());

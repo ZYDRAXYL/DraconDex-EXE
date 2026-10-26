@@ -365,6 +365,8 @@ contextBridge.exposeInMainWorld('api', {
     check:        ()    => inv('update:check'),
     dismiss:      (v)   => inv('update:dismiss', v),
     openDownload: (url) => inv('update:openDownload', url),
+    install:      ()    => inv('update:install'),
+    onProgress:   (cb)  => { const f = (_, p) => cb(p); ipcRenderer.on('update:progress', f); return () => ipcRenderer.removeListener('update:progress', f); },
     getAutoCheck: ()    => inv('update:getAutoCheck'),
     setAutoCheck: (v)   => inv('update:setAutoCheck', v),
   },
