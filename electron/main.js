@@ -1065,6 +1065,7 @@ h('module:getTags',     (id)          => db.getModuleTags(id));
 h('module:setTags',     (id,tags)     => db.setModuleTags(id,tags));
 h('module:tagIndex', (nx) => db.moduleTagIndex(nx));
 h('module:getLinks',    (id)          => db.getModuleLinks(id));
+h('module:linked',      (id)          => db.linkedModules(id));
 h('module:getProps',    (id,item)     => db.getPageProps(id,item));
 
 // v5 Part 8 (§12) — pages made of blocks (db/page-block.js).

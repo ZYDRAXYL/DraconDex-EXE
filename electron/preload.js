@@ -132,6 +132,7 @@ contextBridge.exposeInMainWorld('api', {
     setTags: (id,tags)     => inv('module:setTags', id,tags),
     tagIndex: (nx)         => inv('module:tagIndex', nx),
     getLinks: (id)         => inv('module:getLinks', id),
+    linked:  (id)          => inv('module:linked', id),
     getProps: (id,item)    => inv('module:getProps', id,item),
   },
   block: {

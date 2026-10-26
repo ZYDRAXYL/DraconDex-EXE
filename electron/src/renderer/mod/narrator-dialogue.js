@@ -266,19 +266,12 @@ async function narratorLinkFilterTypes(moduleId) {
   } catch (_) { return null; }
 }
 
-// Which modules is this Narrator linked to? An entity_relation row whose two
-// keys are both `module_<id>` is that link (drawn in Connector, or from a
-// module's own link section); either direction counts. Only elements owned by
-// one of those modules may be attached to a conversation line.
+// Which modules is this Narrator linked to? Only elements owned by one of
+// them may be attached to a conversation line. Procress 28 part 6: one
+// answer for the whole app — api.module.linked (db/viewer.js linkedModules):
+// a module ↔ module relation, or a [[link]] either way.
 function narratorLinkedModuleIds(d) {
-  const self = `module_${d.moduleId}`;
-  const ids = new Set();
-  for (const r of (d.relations || [])) {
-    const from = String(r.from_key || ''), to = String(r.to_key || '');
-    if (from === self && to.startsWith('module_')) ids.add(Number(to.slice(7)));
-    else if (to === self && from.startsWith('module_')) ids.add(Number(from.slice(7)));
-  }
-  return ids;
+  return new Set((d.linked || []).map((e) => e.id));
 }
 
 // The minor elements those modules own, honouring the module's saved kind

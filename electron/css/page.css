@@ -109,11 +109,15 @@
   color: var(--t2); font-size: 12px;
 }
 
-/* The address row (page/address.js). Procress 26 part 2: in the flow, not
-   sticky — pinned over the scroller it slid across the module title and its
-   buttons as soon as the page scrolled. */
+/* The address row (page/address.js) — the sticky part of every page head.
+   Procress 28 part 2 (the user, on 26's un-sticking): keep it pinned, but
+   give a title with no icon above it room under the row, so a short scroll
+   does not slide the name straight under it. */
 .addr-bar{padding:4px 0 6px;margin-bottom:8px;border-bottom:1px solid var(--border)}
-.page-navbar.addr-bar{position:static}
+/* pinned to the pane's top edge, not its padding's — no band of page
+   showing through above the row */
+.bpane-body .page-navbar.addr-bar{top:calc(-1 * var(--bpane-pad))}
+.addr-bar + .page-title:not(.has-icon){padding-top:20px}
 .addr-row{display:flex;align-items:center;gap:6px;min-width:0}
 .addr-nav{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .addr-path{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;flex-wrap:nowrap;overflow:hidden;

@@ -526,17 +526,25 @@ select.fp-input[multiple]{padding:2px}
 .page-title.ph--center .navbar-row,.page-title.ph--center .navbar-h,.page-title.ph--center .mtags{justify-content:center}
 .page-title.ph--right .navbar-row,.page-title.ph--right .navbar-h,.page-title.ph--right .mtags{justify-content:flex-end}
 .page-title.ph--center .navbar-h,.page-title.ph--right .navbar-h{flex:0 1 auto}
-.ph-icon{font-size:calc(40px * var(--fsc,1));line-height:1.1;margin:4px 0 6px}
+.ph-icon{font-size:calc(40px * var(--fsc,1));line-height:1;margin:4px 0 6px}
+.ph-icon{color:var(--ph-col,var(--accent))}
+.ph-icon[onclick]{cursor:pointer}
+.ph-icon-cb{margin:2px 0 8px}
+.ph-icon .icon,.ph-icon .kicon-img-icon{width:calc(40px * var(--fsc,1));height:calc(40px * var(--fsc,1))}
 .ph-cover{height:150px;margin:0 0 10px;border-radius:var(--rl);background:var(--raised) center/cover no-repeat}
 .ph-cover[data-ph="gone"]{display:none}
 .ph-pop{width:300px;padding:10px 12px}
+/* Procress 28 part 2: the page head's 🔗 — linked modules and a search to link one */
+.ph-links-open{display:inline-flex;align-items:center;gap:4px}
+.ph-link-n:empty{display:none}
+.ph-links-pop .ls-list{max-height:320px;overflow-y:auto}
+.ph-links-pop .ph-link-q{width:100%}
 .ph-pop-h{font-weight:600;margin-bottom:6px}
 .ph-pop-label{font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));margin:10px 0 4px}
 .ph-pop-hint{font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));margin-top:8px}
 .ph-acts{display:flex;gap:4px}
 .ph-acts .btn{flex:1;justify-content:center}
 .ph-pop .fg{margin:0}
-.ph-icon-inp{font-size:calc(16px * var(--fsc,1))}
 .ph-covers{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:180px;overflow-y:auto}
 .ph-cover-opt{aspect-ratio:16/10;border:2px solid transparent;border-radius:var(--rs);background:var(--raised) center/cover no-repeat;cursor:pointer;color:var(--t2)}
 .ph-cover-opt.active{border-color:var(--accent)}

@@ -31,12 +31,13 @@ const narratorPan = {}; // moduleId -> {x,y} (Plan part5 #1 — pan is a transla
 // code that cannot await) — same reasoning as Classifier's
 // setClassifierLinkData cache (mod/classifier-detail.js).
 async function loadNarratorData(m) {
-  const [dialogues, edges, ui, relations, entityIndex] = await Promise.all([
+  const [dialogues, edges, ui, relations, entityIndex, linked] = await Promise.all([
     api.narrator.getDialogues(m.id),
     api.narrator.getEdges(m.id),
     api.module.getUi(m.id),
     api.viewer.getRelations(S.nexus.id),
     api.viewer.index(S.nexus.id),
+    api.module.linked(m.id),
   ]);
   const prev = NAR.M[m.id] || null;
   // A [[sdlg_…]] link (or a Narrator link row elsewhere) lands here — same
@@ -47,7 +48,7 @@ async function loadNarratorData(m) {
   const [talks, choiceOptions] = selectedId
     ? await Promise.all([api.narrator.getTalks(selectedId), api.narrator.getChoiceOptions(selectedId)])
     : [[], []];
-  NAR.setModule(m.id, { moduleId: m.id, ui, dialogues, edges, talks, selectedId, edgeFrom: prev?.edgeFrom || null, relations, entityIndex, choiceOptions });
+  NAR.setModule(m.id, { moduleId: m.id, ui, dialogues, edges, talks, selectedId, edgeFrom: prev?.edgeFrom || null, relations, entityIndex, linked, choiceOptions });
 }
 
 async function setNarratorView(view) {

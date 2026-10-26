@@ -944,18 +944,21 @@ test('26 part 4: [[ suggests an object with its module, asks which page, and the
 });
 
 // ── Procress 26 part 5: what the part 2 and 3 tests leave to the eye ─────
-test('26: the address row scrolls away instead of sliding over the title', async () => {
+test('26 → 28 part 2: the address row stays pinned; a title with no icon has room under it', async () => {
   await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
   await row('Characters').click(); await sleep(600);
   const r = await win.evaluate(() => {
     const bar = document.querySelector('.module-page .addr-bar');
-    const title = document.querySelector('.module-page .page-title');
-    bar.closest('.bpane-body').scrollTop = 20;
-    const b = bar.getBoundingClientRect(), tt = title.getBoundingClientRect();
-    return { pos: getComputedStyle(bar).position, overlap: b.bottom > tt.top + 1 && b.top < tt.bottom };
+    const h = document.querySelector('.module-page .page-title .navbar-h');
+    const sc = bar.closest('.bpane-body');
+    const at = (top) => { sc.scrollTop = top; const b = bar.getBoundingClientRect(), tt = h.getBoundingClientRect(); return b.bottom > tt.top + 1 && b.top < tt.bottom; };
+    const out = { pos: getComputedStyle(bar).position, rest: at(0), small: at(30) };
+    sc.scrollTop = 0;
+    return out;
   });
-  assert.equal(r.pos, 'static');
-  assert.equal(r.overlap, false, 'the bar does not cover the title');
+  assert.equal(r.pos, 'sticky', 'pinned, as the user asked (28 part 2)');
+  assert.equal(r.rest, false, 'nothing covers the title at rest');
+  assert.equal(r.small, false, 'a short scroll does not slide the name under the bar');
 });
 
 test('26: drag a row by its grip and a column by its head — saved', async () => {
@@ -1190,4 +1193,33 @@ test('28 part 1: holding a tab at a pane edge makes room before it splits', asyn
   assert.equal(r.on, true, 'after the hold');
   assert.ok(r.ratio > 0.4 && r.ratio < 0.6, `the body gave up half (${r.ratio})`);
   assert.equal(r.off, true, 'leaving the edge puts it back');
+});
+
+test('28 part 2: "icon above the title" shows the module\'s own icon; the 🔗 links and unlinks a module', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('History').click(); await sleep(600);
+  const mid = await win.evaluate(() => S.activeModuleNode.id);
+  await win.evaluate((m) => setPageHeadLayout(m, null, { icon: true }), mid); await sleep(400);
+  const icon = await win.evaluate(() => ({ big: !!document.querySelector('.module-page .page-title .ph-icon svg'),
+    small: !!document.querySelector('.module-page .page-title .navbar-h .kicon'), text: document.querySelector('.module-page .ph-icon')?.textContent.trim() }));
+  assert.deepEqual(icon, { big: true, small: false, text: '' }, 'the module icon, large, once — no emoji');
+  // an older emoji value still reads as on
+  await win.evaluate((m) => api.module.setUi(m, 'pageHead', JSON.stringify({ align: 'left', icon: '🐉' })).then(() => { pageOf(m).props.ui.pageHead = JSON.stringify({ align: 'left', icon: '🐉' }); }), mid);
+  assert.equal(await win.evaluate((m) => pageHeadLayout(m).icon, mid), true);
+  await win.evaluate((m) => setPageHeadLayout(m, null, { icon: false }), mid); await sleep(300);
+  assert.equal(await win.locator('.module-page .ph-icon').count(), 0);
+
+  const linked = () => win.evaluate((m) => api.module.linked(m).then((ls) => ls.map((e) => e.id)), mid);
+  const before = await linked();
+  await win.locator('.module-page .ph-links-open').click();
+  await win.waitForSelector('.ph-links-pop .ph-link-q');
+  await win.keyboard.type('Rumo'); await sleep(400);
+  await win.locator('.ph-links-pop [data-link-mid]:has-text("Rumors")').click(); await sleep(500);
+  const rumors = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Rumors').id);
+  assert.deepEqual((await linked()).sort(), [...before, rumors].sort(), 'linked');
+  assert.equal(await win.locator('.module-page .ph-link-n').textContent(), String(before.length + 1), 'the count follows');
+  assert.equal(await win.locator('.ph-links-pop .ph-link-q').inputValue(), 'Rumo', 'what was typed stays');
+  await win.locator(`.ph-links-pop [data-link-mid="${rumors}"] .ls-act`).click(); await sleep(500);
+  assert.deepEqual((await linked()).sort(), before.sort(), 'unlinked');
+  await win.keyboard.press('Escape');
 });
