@@ -1223,3 +1223,66 @@ test('28 part 2: "icon above the title" shows the module\'s own icon; the 🔗 l
   assert.deepEqual((await linked()).sort(), before.sort(), 'unlinked');
   await win.keyboard.press('Escape');
 });
+
+const openCharactersView = async (view) => {
+  const mid = await openCharactersTable();
+  await win.evaluate(([m, v]) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, v), [mid, view]);
+  await sleep(900);
+  return mid;
+};
+
+test('28 part 3: the relation view shows every object — its icon or a dot — and hovering one shows its card', async () => {
+  const mid = await openCharactersTable();
+  const ids = await win.evaluate(async (m) => {
+    const objs = await api.classifier.getObjects(m);
+    await api.classifier.updateObject(objs[0].id, objs[0].name, null, 'svg:star');
+    const lone = await api.classifier.createObject(m, 'Smoke loner');
+    await refreshClassifier();
+    return { star: objs[0].id, lone, all: (await api.classifier.getObjects(m)).length };
+  }, mid);
+  await openCharactersView('relationCat');
+  const g = await win.evaluate(() => ({
+    nodes: [...document.querySelectorAll('.cls-rel-graph g[data-id^="cobj_"]')].map((e) => e.dataset.id),
+    icons: [...document.querySelectorAll('.cls-rel-graph .graph-node-icon')].map((e) => e.closest('g').dataset.id),
+  }));
+  assert.equal(g.nodes.length, ids.all, 'every object, linked or not');
+  assert.ok(g.nodes.includes(`cobj_${ids.lone}`), 'an object with no relation is there');
+  assert.deepEqual(g.icons, [`cobj_${ids.star}`], 'the one with an icon draws it; the rest are dots');
+  await sleep(3500); // the force layout settles (~220 frames) — a moving node slips from under the pointer
+  await hover(win.locator(`.cls-rel-graph g[data-id="cobj_${ids.star}"]`));
+  await win.waitForSelector('#pb-hover.on', { timeout: 3000 });
+  assert.match(await win.locator('#pb-hover').textContent(), /Mira|Tobin|Sela/);
+  await win.mouse.move(5, 5);
+  await win.evaluate(async ([m, o, l]) => { const objs = await api.classifier.getObjects(m); await api.classifier.updateObject(o, objs.find((x) => x.id === o).name, null, null); await api.classifier.deleteObject(l); await refreshClassifier(); }, [mid, ids.star, ids.lone]);
+});
+
+test('28 part 3: a linked module\'s elements join the relation view by its checkbox, and the choice is kept', async () => {
+  const mid = await openCharactersTable();
+  const hist = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'History').id);
+  await win.evaluate(([m, h]) => api.viewer.createRelation(S.nexus.id, `module_${m}`, `module_${h}`, null, null, {}), [mid, hist]);
+  await openCharactersView('relationCat');
+  const cb = win.locator(`.cls-rel-graph .sage-graph-mod-cb[data-mod="m${hist}"]`);
+  assert.equal(await cb.isChecked(), false, 'off until asked');
+  const visibleEvents = () => win.evaluate(() => [...document.querySelectorAll('.cls-rel-graph g[data-id^="tlev_"]')].filter((e) => e.style.display !== 'none').length);
+  assert.equal(await visibleEvents(), 0);
+  await cb.check(); await sleep(400);
+  assert.ok(await visibleEvents() >= 1, 'History\'s events are drawn');
+  await openCharactersView('relationCat');
+  assert.equal(await win.locator(`.cls-rel-graph .sage-graph-mod-cb[data-mod="m${hist}"]`).isChecked(), true, 'remembered');
+  await win.evaluate(async ([m, h]) => { const r = (await api.module.linked(m)).find((e) => e.id === h); if (r?.relationId) await api.viewer.deleteRelation(r.relationId); await api.module.setUi(m, 'clsRelInclude', '[]'); }, [mid, hist]);
+});
+
+test('28 part 3: the field form\'s Level & Condition is always open, two checkboxes that save', async () => {
+  const mid = await openCharactersTable();
+  await win.evaluate((m) => openClassifierFieldsModal(m), mid); await sleep(400);
+  assert.equal(await win.locator('#modal-overlay details.cls-adv').count(), 0, 'not folded away');
+  assert.equal(await win.locator('#modal-overlay .cls-flags input[type="checkbox"]').count(), 2);
+  assert.equal(await win.locator('#modal-overlay .cls-flags .cls-flag-hint').count(), 2, 'each says what it does');
+  await win.locator('#modal-overlay #ct-name').fill('Smoke levels');
+  await win.locator('#modal-overlay #ct-lv').check();
+  await win.locator('#modal-overlay .mfoot .btn-p').click(); await sleep(500);
+  const tpl = await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.find((x) => x.description === 'Smoke levels')), mid);
+  assert.ok(tpl && tpl.levelable && !tpl.has_condition, 'levelable saved, condition not');
+  await win.keyboard.press('Escape');
+  await win.evaluate(async ([m, id]) => { await api.classifier.deleteTemplate(id); await refreshClassifier(); }, [mid, tpl.id]);
+});

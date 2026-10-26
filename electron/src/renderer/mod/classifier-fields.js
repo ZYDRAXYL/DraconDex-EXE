@@ -19,7 +19,6 @@
 async function openClassifierFieldsModal(moduleId, editing = null) {
   const templates = CLS[moduleId] ? CLS[moduleId].templates : await api.classifier.getTemplates(moduleId);
   const cur = editing ? templates.find(tp => tp.id === editing) : null;
-  const advancedOpen = !!(cur && (cur.levelable || cur.has_condition));
   openModal(t('clsFieldsOfCategory'), `
     <div>${templates.map(tpl => `
       <div class="prop insp-attr${tpl.id === editing ? ' cls-tpl-editing' : ''}" data-cls-tid="${tpl.id}" tabindex="0" onkeydown="clsFieldRowKey(event,this,${moduleId},${tpl.id})">
@@ -39,13 +38,14 @@ async function openClassifierFieldsModal(moduleId, editing = null) {
       </select>
     </div>
     ${clsFieldOptionsHtml(cur)}
-    <details class="cls-adv"${advancedOpen ? ' open' : ''}>
-      <summary>${t('clsLevelAndCondition')}</summary>
+    <fieldset class="cls-adv cls-flags">
+      <legend>${t('clsLevelAndCondition')}</legend>
       <p class="drafter-hint">${t('clsLevelAndConditionHint')}</p>
-      <div class="togglerow" onclick="toggleTemplateFlag('lv')"><span class="tg${cur?.levelable ? ' on' : ''}" id="ct-lv-tg"></span>${t('levelable')}</div>
-      <div class="togglerow" onclick="toggleTemplateFlag('cond')"><span class="tg${cur?.has_condition ? ' on' : ''}" id="ct-cond-tg"></span>${t('condition')}</div>
-    </details>
-    <input type="hidden" id="ct-lv" value="${cur?.levelable ? 1 : 0}"><input type="hidden" id="ct-cond" value="${cur?.has_condition ? 1 : 0}">
+      <label class="fv-useimg"><input type="checkbox" id="ct-lv"${cur?.levelable ? ' checked' : ''}> ${t('levelable')}</label>
+      <p class="drafter-hint cls-flag-hint">${t('clsLevelableHint')}</p>
+      <label class="fv-useimg"><input type="checkbox" id="ct-cond"${cur?.has_condition ? ' checked' : ''}> ${t('condition')}</label>
+      <p class="drafter-hint cls-flag-hint">${t('clsConditionHint')}</p>
+    </fieldset>
     <div class="mfoot">
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
       <button class="btn btn-p" onclick="submitClassifierTemplateForm(${moduleId},${editing ?? 'null'})">${t('save')}</button>
@@ -80,19 +80,12 @@ async function clsFieldMove(row, moduleId, id, target, before) {
   await api.classifier.moveTemplates(moduleId, [...row.parentElement.children].map((n) => Number(n.dataset.clsTid)).filter(Boolean));
 }
 
-function toggleTemplateFlag(key) {
-  const hidden = q(`#ct-${key}`);
-  const on = hidden.value === '1';
-  hidden.value = on ? '0' : '1';
-  q(`#ct-${key}-tg`)?.classList.toggle('on', !on);
-}
-
 async function submitClassifierTemplateForm(moduleId, editing = null) {
   const name = q('#ct-name').value.trim();
   if (!name) { toast(t('nameRequired'), 'err'); q('#ct-name')?.focus(); return; }
   const dispType = q('#ct-disptype')?.value || 'text';
-  const levelable = q('#ct-lv')?.value === '1';
-  const hasCondition = q('#ct-cond')?.value === '1';
+  const levelable = !!q('#ct-lv')?.checked;
+  const hasCondition = !!q('#ct-cond')?.checked;
   let options = readClsFieldOptions(dispType);
   // Two settings are not in the form — a field's role (a story variable's
   // type / default, §11.6) and a bundle's target category (§11.7). Keep

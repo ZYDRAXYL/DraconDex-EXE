@@ -93,6 +93,10 @@
 
 /* Classifier relation graph — its slot in the instance (mod/classifier.js) */
 .cls-rel-graph{position:relative;overflow:hidden;min-height:340px;border:1px solid var(--border);border-radius:var(--r)}
+/* Procress 28 part 3: an element's own icon on its graph node (sage.js) */
+.graph-node-icon{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.graph-node-icon .icon,.graph-node-icon .kicon-img-icon{width:100%;height:100%}
+.graph-node-icon .kicon-glyph{font-size:12px;line-height:1}
 
 /* Canvas frame (page/canvas-frame.js) */
 .cf-grip{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:row-resize;z-index:calc(var(--z-base) + 4)}
