@@ -33,7 +33,7 @@ i18nAdd('ko', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'프로젝트 열기', closeTab:'탭 닫기', minimize:'최소화', maximize:'최대화', close:'닫기',
+  openProject:'프로젝트 열기', closeTab:'탭 닫기', closeOtherTabs:'다른 탭 닫기', closeTabsRight:'오른쪽 탭 닫기', minimize:'최소화', maximize:'최대화', close:'닫기',
   collapsePanel:'패널 접기', openPanel:'패널 열기',
   projects:'프로젝트', timeline:'타임라인', relation:'관계', map:'매핑', hashtag:'태그', colors:'색상',
   importDb:'DB 가져오기', exportDb:'DB 내보내기', search:'검색...',

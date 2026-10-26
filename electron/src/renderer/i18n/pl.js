@@ -33,7 +33,7 @@ i18nAdd('pl', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'Otwórz projekt', closeTab:'Zamknij kartę', minimize:'Minimalizuj', maximize:'Maksymalizuj', close:'Zamknij',
+  openProject:'Otwórz projekt', closeTab:'Zamknij kartę', closeOtherTabs:'Zamknij pozostałe karty', closeTabsRight:'Zamknij karty po prawej', minimize:'Minimalizuj', maximize:'Maksymalizuj', close:'Zamknij',
   collapsePanel:'Zwiń panel', openPanel:'Otwórz panel',
   projects:'Projekty', timeline:'Oś czasu', relation:'Relacje', map:'Mapowanie', hashtag:'Tagi', colors:'Kolory',
   importDb:'Importuj DB', exportDb:'Eksportuj DB', search:'Szukaj...',

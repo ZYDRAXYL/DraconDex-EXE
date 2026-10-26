@@ -55,7 +55,7 @@ function pbArrangeBarHtml(c) {
       ${opts.map((o) => `<option value="${o.v}"${o.v === cur ? ' selected' : ''}>${x(o.label)}</option>`).join('')}</select>`;
   }
   return `<div class="pb-bar" draggable="false">
-    <span class="pb-grip" title="${t('pbDrag')}">⠿</span>
+    <span class="pb-grip" title="${t('pbDrag')}">${I.grip}</span>
     <button class="btn btn-g btn-i pb-gear${_pbPop?.iid === c.iid ? ' active' : ''}" onclick="openPbStyle(${xj(c.iid)})" title="${t('pbBlockSettings')}" aria-label="${t('pbBlockSettings')}">${I.settings}</button>
     <span class="pb-name">${x(name)}${src}</span>
     ${preset}${cols}

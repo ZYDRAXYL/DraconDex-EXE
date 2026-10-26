@@ -33,7 +33,7 @@ i18nAdd('id', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'Buka proyek', closeTab:'Tutup tab', minimize:'Perkecil', maximize:'Perbesar', close:'Tutup',
+  openProject:'Buka proyek', closeTab:'Tutup tab', closeOtherTabs:'Tutup tab lain', closeTabsRight:'Tutup tab di sebelah kanan', minimize:'Perkecil', maximize:'Perbesar', close:'Tutup',
   collapsePanel:'Ciutkan panel', openPanel:'Buka panel',
   projects:'Proyek', timeline:'Linimasa', relation:'Relasi', map:'Pemetaan', hashtag:'Tag', colors:'Warna',
   importDb:'Impor DB', exportDb:'Ekspor DB', search:'Cari...',

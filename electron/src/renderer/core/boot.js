@@ -165,7 +165,8 @@ async function init() {
   // a vault switch since the two windows' S.nexus are independently mutable.
   api.window.onTabInbound(async (nexusId, tabKey) => {
     if (S.nexus?.id !== nexusId) { toast(t('tabMoveWrongVault'), 'error'); return; }
-    await builderFocusPane(builderState().focused, builderParseKey(tabKey));
+    // Procress 28 part 1: beside the active tab, never in its place.
+    await builderInNewTab(() => builderFocusPane(builderState().focused, builderParseKey(tabKey)));
   });
   // A window opened via a dragged-out Builder tab (builderPopOutTab) boots
   // straight into that one tab, with the nav-sidebar/left-panel/hub chrome

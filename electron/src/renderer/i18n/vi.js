@@ -33,7 +33,7 @@ i18nAdd('vi', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'Mở dự án', closeTab:'Đóng tab', minimize:'Thu nhỏ', maximize:'Phóng to', close:'Đóng',
+  openProject:'Mở dự án', closeTab:'Đóng tab', closeOtherTabs:'Đóng các tab khác', closeTabsRight:'Đóng các tab bên phải', minimize:'Thu nhỏ', maximize:'Phóng to', close:'Đóng',
   collapsePanel:'Thu gọn bảng', openPanel:'Mở bảng',
   projects:'Dự án', timeline:'Dòng thời gian', relation:'Quan hệ', map:'Bản đồ', hashtag:'Thẻ', colors:'Màu sắc',
   importDb:'Nhập DB', exportDb:'Xuất DB', search:'Tìm kiếm...',

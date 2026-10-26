@@ -33,7 +33,7 @@ i18nAdd('ja', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'プロジェクトを開く', closeTab:'タブを閉じる', minimize:'最小化', maximize:'最大化', close:'閉じる',
+  openProject:'プロジェクトを開く', closeTab:'タブを閉じる', closeOtherTabs:'他のタブを閉じる', closeTabsRight:'右側のタブを閉じる', minimize:'最小化', maximize:'最大化', close:'閉じる',
   collapsePanel:'パネルを折りたたむ', openPanel:'パネルを開く',
   projects:'プロジェクト', timeline:'タイムライン', relation:'関係', map:'マッピング', hashtag:'タグ', colors:'色',
   importDb:'DBをインポート', exportDb:'DBをエクスポート', search:'検索...',

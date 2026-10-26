@@ -116,9 +116,7 @@ async function builderNewTab() {
 // ⧉: the active tab's page, side by side in a new pane to the right.
 async function builderSplitActive(paneIdx) {
   const pane = builderState().panes[paneIdx];
-  const ref = pane?.active ? builderParseKey(pane.active) : null;
-  const newIdx = builderSplitPane(paneIdx, 'h');
-  if (newIdx != null && ref) await builderFocusPane(newIdx, ref);
+  if (pane?.active) await builderSplitTab(paneIdx, pane.active);
 }
 // The tab list — the way to a tab once the strip has shrunk to icons.
 function openBuilderTabList(ev, paneIdx) {
@@ -402,9 +400,11 @@ function ensureNodeElement(node) {
       // above, since .bpane-head's own element survives every re-render.
       head.oncontextmenu = (ev) => openBuilderPaneContextMenu(ev, Number(el.dataset.pane));
       const body = el.querySelector('.bpane-body');
-      body.ondragover = (ev) => onBodyDragOver(ev, body);
-      body.ondragleave = (ev) => onBodyDragLeave(ev, body);
-      body.ondrop = (ev) => onBodyDrop(ev, Number(el.dataset.pane), body);
+      // On the pane, not the body: a split preview (Procress 28) slides the
+      // body aside and the slot it leaves is pane.
+      el.ondragover = (ev) => onBodyDragOver(ev, body);
+      el.ondragleave = (ev) => onBodyDragLeave(ev, body);
+      el.ondrop = (ev) => { if (!ev.target.closest?.('.bpane-head')) onBodyDrop(ev, Number(el.dataset.pane), body); };
     }
     return el;
   }
@@ -528,6 +528,7 @@ function builderTabKey(ev, i, key) {
   if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); builderSwitchTab(i, key); return; }
   if (ev.key === 'Delete') { ev.preventDefault(); builderCloseTab(i, key); return; }
   if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+  if (ev.ctrlKey && ev.shiftKey) { ev.preventDefault(); builderMoveTabBy(i, key, ev.key === 'ArrowRight' ? 1 : -1); return; }
   ev.preventDefault();
   const next = ev.key === 'ArrowRight' ? el.nextElementSibling : el.previousElementSibling;
   if (next?.getAttribute('role') === 'tab') { el.tabIndex = -1; next.tabIndex = 0; next.focus(); }
@@ -544,7 +545,7 @@ function builderPaneHeadHtml(i, pane, focused) {
       draggable="true" data-tab-key="${x(key)}" ondragstart="onTabDragStart(event,${i},${xj(key)})"
       ondragover="onTabDragOver(event,this)" ondragleave="onTabDragLeave(event,this)" ondrop="onTabDrop(event,${i},${xj(key)},this)"
       ondragend="onTabDragEnd(event,${i},${xj(key)})"
-      onclick="builderSwitchTab(${i},${xj(key)})" title="${x(meta.name)}"
+      onclick="builderSwitchTab(${i},${xj(key)})" oncontextmenu="openBuilderTabContextMenu(event,${i},${xj(key)})" title="${x(meta.name)}"
       role="tab" aria-selected="${active}" tabindex="${active ? 0 : -1}" onkeydown="builderTabKey(event,${i},${xj(key)})">
       <span class="tab-kicon" style="color:${x(meta.color)}">${meta.icon || ''}</span>
       <span class="tab-name">${x(meta.name)}</span>
@@ -569,6 +570,46 @@ function builderPaneHeadHtml(i, pane, focused) {
     ${pane.active ? `<button class="btn btn-g btn-i" onclick="builderSplitActive(${i})" title="${t('splitPane')}" aria-label="${t('splitPane')}" data-no-i18n>⧉</button>` : ''}
   </div>`;
   return `<div class="bpane-tabs" role="tablist" aria-label="${x(t('tabList'))}" ondragover="onTabStripDragOver(event,${i})" ondrop="onTabStripDrop(event,${i})">${tabs}</div>${acts}`;
+}
+
+// ═══ Tab right-click (Procress 28 part 1) ══════════════════════════════
+// Close / close others / close to the right / split / own window — the
+// provider is CTX_PROVIDERS['builder.tab'] in hub/menus.js, like the pane's.
+function openBuilderTabContextMenu(ev, paneIdx, key) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  openCtx('builder.tab', ev, { paneIdx, tabKey: key });
+}
+// The tab a tab command acts on: the right-clicked one, else the focused
+// pane's active tab (the palette passes no ctx).
+function builderTabTarget(c = {}) {
+  const b = builderState();
+  const paneIdx = c.paneIdx ?? b.focused;
+  const key = c.tabKey ?? b.panes[paneIdx]?.active;
+  return key && b.panes[paneIdx]?.tabs.includes(key) ? { paneIdx, key } : null;
+}
+async function builderCloseOtherTabs(paneIdx, key, rightOnly = false) {
+  const pane = builderState().panes[paneIdx];
+  const at = pane.tabs.indexOf(key);
+  const drop = pane.tabs.filter((k, i) => k !== key && (!rightOnly || i > at));
+  if (!drop.length) return;
+  pane.tabs = pane.tabs.filter((k) => !drop.includes(k));
+  if (drop.includes(pane.active)) { builderState().focused = paneIdx; pane.active = key; await builderOpenPage(builderParseKey(key)); return; }
+  renderNexusHome();
+}
+// Ctrl+Shift+←/→ (on a tab) and Ctrl+Shift+PgUp/PgDn: move a tab one slot.
+function builderMoveTabBy(paneIdx, key, delta) {
+  const pane = builderState().panes[paneIdx];
+  const from = pane.tabs.indexOf(key), to = from + delta;
+  if (from < 0 || to < 0 || to >= pane.tabs.length) return;
+  pane.tabs.splice(from, 1);
+  pane.tabs.splice(to, 0, key);
+  renderNexusHome();
+  requestAnimationFrame(() => q(`#main-inner [data-pane="${paneIdx}"] .project-tab[data-tab-key="${CSS.escape(key)}"]`)?.focus());
+}
+async function builderSplitTab(paneIdx, key) {
+  const newIdx = builderSplitPane(paneIdx, 'h');
+  if (newIdx != null) await builderFocusPane(newIdx, builderParseKey(key));
 }
 
 // ═══ Pane right-click context menu (Plan procress1 part2 #2) ══════════
@@ -663,6 +704,7 @@ function onTabDragLeave(ev, tabEl) {
 }
 function clearDragReflow() {
   const d = S.dragTab;
+  clearSplitPreview(d);
   if (!d?.barEl) return;
   d.barEl.classList.remove('reordering');
   d.barEl.querySelectorAll('.project-tab').forEach(el => { el.style.transform = ''; el.style.opacity = ''; el.classList.remove('tab-dragging', 'tab-carried'); });
@@ -797,7 +839,9 @@ function builderMoveTabToIndex(drag, paneIdx, index) {
 // (today's tab-strip-drop behavior, now also reachable from the body).
 const BODY_EDGE_FRAC = 0.25;
 function bodyDropZone(ev, bodyEl) {
-  const r = bodyEl.getBoundingClientRect();
+  // Procress 28: while a split preview is showing, zones stay measured on
+  // the body as it was — the preview itself moves the body.
+  const r = S.dragTab?.pv?.body === bodyEl ? S.dragTab.pv.rect : bodyEl.getBoundingClientRect();
   const x = (ev.clientX - r.left) / r.width, y = (ev.clientY - r.top) / r.height;
   if (x < BODY_EDGE_FRAC) return 'left';
   if (x > 1 - BODY_EDGE_FRAC) return 'right';
@@ -805,15 +849,48 @@ function bodyDropZone(ev, bodyEl) {
   if (y > 1 - BODY_EDGE_FRAC) return 'bottom';
   return 'center';
 }
+// Procress 28 part 1: hold a tab at an edge for SPLIT_PREVIEW_MS and the
+// pane makes room for it, like iPad split view — the body slides over and
+// the half the new pane would take shows as a slot (.split-preview, CSS).
+// The handlers sit on the whole .bpane (wired in ensureNodeElement): once
+// the body has moved, the slot is pane, not body.
+const SPLIT_PREVIEW_MS = 300;
+const SPLIT_ZONES = ['left', 'right', 'top', 'bottom'];
+function clearSplitPreview(d = S.dragTab) {
+  const pv = d?.pv;
+  if (!pv) return;
+  clearTimeout(pv.timer);
+  pv.pane.classList.remove('split-preview', ...SPLIT_ZONES.map((z) => `split-preview-${z}`));
+  d.pv = null;
+}
 function onBodyDragOver(ev, bodyEl) {
-  if (!S.dragTab || !S.dragTab.armed) return; // still locked to its origin tab bar (Plan part1 #3)
+  const d = S.dragTab;
+  if (!d || !d.armed) return; // still locked to its origin tab bar (Plan part1 #3)
+  if (ev.target.closest?.('.bpane-head')) return; // the tab strip has its own targets
   ev.preventDefault();
   ev.stopPropagation();
+  const pane = bodyEl.closest('.bpane');
+  if (d.pv && d.pv.body !== bodyEl) clearSplitPreview(d);
+  const zone = bodyDropZone(ev, bodyEl);
   bodyEl.classList.remove('drop-left', 'drop-right', 'drop-top', 'drop-bottom', 'drop-center');
-  bodyEl.classList.add(`drop-${bodyDropZone(ev, bodyEl)}`);
+  bodyEl.classList.add(`drop-${zone}`);
+  if (S.settings.workspaceStyle !== 'drake' || zone === 'center') { clearSplitPreview(d); return; }
+  if (d.pv?.zone === zone) return;
+  clearSplitPreview(d);
+  const rect = bodyEl.getBoundingClientRect();
+  d.pv = { pane, body: bodyEl, zone, rect, timer: setTimeout(() => {
+    // on-screen px → CSS px of the zoomed body (as titlebar-tabs.js does)
+    const z = parseFloat(getComputedStyle(document.body).zoom) || 1;
+    const half = (zone === 'left' || zone === 'right' ? rect.width : rect.height) / 2;
+    pane.style.setProperty('--split-px', `${half / z}px`);
+    pane.style.setProperty('--split-top', `${bodyEl.offsetTop}px`);
+    pane.classList.add('split-preview', `split-preview-${zone}`);
+  }, SPLIT_PREVIEW_MS) };
 }
 function onBodyDragLeave(ev, bodyEl) {
+  if (ev.relatedTarget && bodyEl.closest('.bpane')?.contains(ev.relatedTarget)) return; // moved onto a child, or into the slot
   bodyEl.classList.remove('drop-left', 'drop-right', 'drop-top', 'drop-bottom', 'drop-center');
+  if (S.dragTab?.pv?.body === bodyEl) clearSplitPreview();
 }
 async function onBodyDrop(ev, targetPaneIdx, bodyEl) {
   const drag = S.dragTab;
@@ -821,13 +898,13 @@ async function onBodyDrop(ev, targetPaneIdx, bodyEl) {
   ev.preventDefault();
   ev.stopPropagation();
   bodyEl.classList.remove('drop-left', 'drop-right', 'drop-top', 'drop-bottom', 'drop-center');
+  const zone = bodyDropZone(ev, bodyEl); // before clearDragReflow drops the preview's frozen rect
   clearDragReflow();
   S.dragTab = null;
   // Wyvern/Dragon (Plan part2 #New Workspace) never split — disarm the
   // whole drag-to-edge auto-split gesture rather than letting it silently
   // create a pane their chrome has no controls to close/navigate.
   if (S.settings.workspaceStyle !== 'drake') return;
-  const zone = bodyDropZone(ev, bodyEl);
   if (zone === 'center') { await builderMoveTabTo(drag, targetPaneIdx, null, null); return; }
   const dir = (zone === 'left' || zone === 'right') ? 'h' : 'v';
   const newIdx = builderSplitPane(targetPaneIdx, dir, zone === 'left' || zone === 'top');

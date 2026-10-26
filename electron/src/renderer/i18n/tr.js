@@ -33,7 +33,7 @@ i18nAdd('tr', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'Projeyi aç', closeTab:'Sekmeyi kapat', minimize:'Simge durumuna küçült', maximize:'Büyüt', close:'Kapat',
+  openProject:'Projeyi aç', closeTab:'Sekmeyi kapat', closeOtherTabs:'Diğer sekmeleri kapat', closeTabsRight:'Sağdaki sekmeleri kapat', minimize:'Simge durumuna küçült', maximize:'Büyüt', close:'Kapat',
   collapsePanel:'Paneli daralt', openPanel:'Paneli aç',
   projects:'Projeler', timeline:'Zaman çizelgesi', relation:'İlişkiler', map:'Haritalama', hashtag:'Etiketler', colors:'Renkler',
   importDb:'DB içe aktar', exportDb:'DB dışa aktar', search:'Ara...',

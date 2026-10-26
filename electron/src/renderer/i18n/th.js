@@ -33,7 +33,7 @@ i18nAdd('th', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'เปิดโปรเจกต์', closeTab:'ปิดแท็บ', minimize:'ย่อหน้าต่าง', maximize:'ขยายหน้าต่าง', close:'ปิด',
+  openProject:'เปิดโปรเจกต์', closeTab:'ปิดแท็บ', closeOtherTabs:'ปิดแท็บอื่น', closeTabsRight:'ปิดแท็บทางขวา', minimize:'ย่อหน้าต่าง', maximize:'ขยายหน้าต่าง', close:'ปิด',
   collapsePanel:'พับ Panel', openPanel:'เปิด Panel',
   projects:'โปรเจกต์', timeline:'ไทม์ไลน์', relation:'ความสัมพันธ์', map:'แผนที่', hashtag:'ป้ายกำกับ', colors:'สี',
   importDb:'นำเข้าฐานข้อมูล', exportDb:'ส่งออกฐานข้อมูล', search:'ค้นหา...',

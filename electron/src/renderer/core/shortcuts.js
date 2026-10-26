@@ -42,6 +42,12 @@ function bindGlobalShortcuts() {
       if (!S.activeModule && S.view === 'nexus' && typeof builderNewTab === 'function') await builderNewTab();
       return;
     }
+    if ((key === 'pageup' || key === 'pagedown') && e.shiftKey && S.settings.workspaceStyle === 'drake') { // move the active tab (Procress 28 part 1)
+      e.preventDefault();
+      const tt = S.view === 'nexus' && typeof builderTabTarget === 'function' ? builderTabTarget() : null;
+      if (tt) builderMoveTabBy(tt.paneIdx, tt.key, key === 'pagedown' ? 1 : -1);
+      return;
+    }
     if (key === 'tab') { // cycle the focused pane's tabs
       e.preventDefault();
       if (!S.activeModule && S.view === 'nexus' && typeof builderCycleTab === 'function') await builderCycleTab(e.shiftKey ? -1 : 1);

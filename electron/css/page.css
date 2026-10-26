@@ -67,7 +67,7 @@
 .page-blocks.arranging .pblock.drop-left{box-shadow:-3px 0 0 0 var(--accent)}
 .page-blocks.arranging .pblock.drop-right{box-shadow:3px 0 0 0 var(--accent)}
 .pb-bar{display:flex;align-items:center;gap:6px;padding:2px 4px 6px;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2)}
-.pb-grip{cursor:grab;color:var(--t3-aa,var(--t2));font-size:calc(14px * var(--fsc,1));user-select:none}
+.pb-grip{cursor:grab;color:var(--t3-aa,var(--t2));display:inline-flex;user-select:none}
 .pb-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .pb-src{color:var(--t3-aa,var(--t2));font-weight:400}
 .pb-preset{font-size:calc(var(--fs-meta) * var(--fsc,1));background:var(--raised);color:var(--t1);border:1px solid var(--border);border-radius:var(--r)}

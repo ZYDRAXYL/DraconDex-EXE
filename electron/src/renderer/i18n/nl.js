@@ -33,7 +33,7 @@ i18nAdd('nl', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'Project openen', closeTab:'Tabblad sluiten', minimize:'Minimaliseren', maximize:'Maximaliseren', close:'Sluiten',
+  openProject:'Project openen', closeTab:'Tabblad sluiten', closeOtherTabs:'Andere tabbladen sluiten', closeTabsRight:'Tabbladen rechts sluiten', minimize:'Minimaliseren', maximize:'Maximaliseren', close:'Sluiten',
   collapsePanel:'Paneel inklappen', openPanel:'Paneel openen',
   projects:'Projecten', timeline:'Tijdlijn', relation:'Relaties', map:'Kaarten', hashtag:'Tags', colors:'Kleuren',
   importDb:'DB importeren', exportDb:'DB exporteren', search:'Zoeken...',

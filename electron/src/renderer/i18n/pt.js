@@ -33,7 +33,7 @@ i18nAdd('pt', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'Abrir projeto', closeTab:'Fechar aba', minimize:'Minimizar', maximize:'Maximizar', close:'Fechar',
+  openProject:'Abrir projeto', closeTab:'Fechar aba', closeOtherTabs:'Fechar outras abas', closeTabsRight:'Fechar abas à direita', minimize:'Minimizar', maximize:'Maximizar', close:'Fechar',
   collapsePanel:'Recolher painel', openPanel:'Abrir painel',
   projects:'Projetos', timeline:'Linha do tempo', relation:'Relações', map:'Mapeamento', hashtag:'Tags', colors:'Cores',
   importDb:'Importar BD', exportDb:'Exportar BD', search:'Buscar...',

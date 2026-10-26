@@ -33,7 +33,7 @@ i18nAdd('zh', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'打开项目', closeTab:'关闭标签', minimize:'最小化', maximize:'最大化', close:'关闭',
+  openProject:'打开项目', closeTab:'关闭标签', closeOtherTabs:'关闭其他标签', closeTabsRight:'关闭右侧标签', minimize:'最小化', maximize:'最大化', close:'关闭',
   collapsePanel:'收起面板', openPanel:'打开面板',
   projects:'项目', timeline:'时间线', relation:'关系', map:'映射', hashtag:'标签', colors:'颜色',
   importDb:'导入 DB', exportDb:'导出 DB', search:'搜索...',

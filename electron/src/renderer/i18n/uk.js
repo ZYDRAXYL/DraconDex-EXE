@@ -33,7 +33,7 @@ i18nAdd('uk', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'Відкрити проєкт', closeTab:'Закрити вкладку', minimize:'Згорнути', maximize:'Розгорнути', close:'Закрити',
+  openProject:'Відкрити проєкт', closeTab:'Закрити вкладку', closeOtherTabs:'Закрити інші вкладки', closeTabsRight:'Закрити вкладки праворуч', minimize:'Згорнути', maximize:'Розгорнути', close:'Закрити',
   collapsePanel:'Згорнути панель', openPanel:'Відкрити панель',
   projects:'Проєкти', timeline:'Хронологія', relation:'Зв’язки', map:'Карти', hashtag:'Теги', colors:'Кольори',
   importDb:'Імпорт DB', exportDb:'Експорт DB', search:'Пошук...',

@@ -33,7 +33,7 @@ i18nAdd('qd', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'Vaskorra Vorqu', closeTab:'Klemuur Tabyx', minimize:'Krynshu', maximize:'Draznorr', close:'Klemuur',
+  openProject:'Vaskorra Vorqu', closeTab:'Klemuur Tabyx', closeOtherTabs:'Klemuur othere Tabyx', closeTabsRight:'Klemuur Tabyx to the Ryth', minimize:'Krynshu', maximize:'Draznorr', close:'Klemuur',
   collapsePanel:'Foldra Panylx', openPanel:'Vaskorra Panylx',
   projects:'Vorquenn', timeline:'Khronofang', relation:'Kynshall', map:'Territhramapp', hashtag:'Markiss', colors:'Chroniss',
   importDb:'Ingurath DB', exportDb:'Outhgurath DB', search:'Zharra...',

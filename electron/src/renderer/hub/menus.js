@@ -80,6 +80,13 @@ CTX_PROVIDERS['builder.pane'] = (c) => [
   cmdItem('pane.close', c),
 ];
 
+// A tab's right-click (builder.js openBuilderTabContextMenu), Procress 28 part 1.
+CTX_PROVIDERS['builder.tab'] = (c) => [
+  cmdItem('tab.split', c), cmdItem('tab.popOut', c), cmdItem('tab.toMain', c),
+  { sep: true },
+  cmdItem('tab.close', c), cmdItem('tab.closeOthers', c), cmdItem('tab.closeRight', c),
+];
+
 // A Manager row is a module row, plus "unpick" when it was hand-picked.
 CTX_PROVIDERS['manager.row'] = (c) => {
   const rest = CTX_PROVIDERS['nest.module'](c);

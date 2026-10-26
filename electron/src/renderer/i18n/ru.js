@@ -33,7 +33,7 @@ i18nAdd('ru', {
   afterSunset:'AfterSunset', atSunrise:'AtSunrise', atNight:'AtNight', atNoon:'AtNoon', clearDusk:'ClearDusk',
   atMidnight:'AtMidnight', clearMoon:'ClearMoon', clearGalaxy:'ClearGalaxy', clearNebula:'ClearNebula', afterStorm:'AfterStorm',
   afterSnow:'AfterSnow', atMorning:'AtMorning', clearSun:'ClearSun', atEvening:'AtEvening', clearMeteor:'ClearMeteor',
-  openProject:'Открыть проект', closeTab:'Закрыть вкладку', minimize:'Свернуть', maximize:'Развернуть', close:'Закрыть',
+  openProject:'Открыть проект', closeTab:'Закрыть вкладку', closeOtherTabs:'Закрыть другие вкладки', closeTabsRight:'Закрыть вкладки справа', minimize:'Свернуть', maximize:'Развернуть', close:'Закрыть',
   collapsePanel:'Свернуть панель', openPanel:'Открыть панель',
   projects:'Проекты', timeline:'Хронология', relation:'Отношения', map:'Картография', hashtag:'Теги', colors:'Цвета',
   importDb:'Импорт БД', exportDb:'Экспорт БД', search:'Поиск...',

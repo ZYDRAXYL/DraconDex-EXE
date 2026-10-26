@@ -1016,13 +1016,13 @@ test('27 part 1: a field shows its [[link]] as the name, raw only while it is ed
   await win.evaluate(async ([m, t]) => { await api.classifier.deleteTemplate(t); await openModuleNode(m); }, [mid, tpl]);
 });
 
-test('27 part 2 + 3: "Fields of this category" reorders by its ≡ grip; the table follows', async () => {
+test('27 part 2 + 3: "Fields of this category" reorders by its = grip; the table follows', async () => {
   const mid = await openCharactersTable();
   const tpls = await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.map((x) => x.id)), mid);
   assert.ok(tpls.length >= 2, 'needs two fields');
   await win.evaluate((m) => openClassifierFieldsModal(m), mid); await sleep(400);
   const grips = win.locator('#modal-overlay [data-cls-tid] .nar-grip');
-  assert.equal(await grips.first().locator('svg line').count(), 3, 'the grip is the three-bar icon');
+  assert.equal(await grips.first().locator('svg line').count(), 2, 'the grip is the two-bar icon (28 part 4)');
   await win.locator('#modal-overlay #ct-name').fill('half-typed');
   const target = win.locator('#modal-overlay [data-cls-tid]').first();
   await grips.last().dragTo(target, { targetPosition: { x: 40, y: 2 } }); await sleep(600);
@@ -1110,4 +1110,84 @@ test('27 part 5: the Nexus list keeps the order it was dragged into', async () =
     return out;
   });
   assert.deepEqual(r, [3, 1, 2], 'dragged order first, the rest after');
+});
+
+// ── Procress 28 ──────────────────────────────────────────────────────────
+const openTwoTabs = () => win.evaluate(async () => {
+  showLeftDest('nest');
+  const ms = flattenModulesByKind(S.moduleTree, []);
+  const b = builderState();
+  b.panes[b.focused].tabs = [];
+  await openModuleNode(ms.find((m) => m.name === 'History').id);
+  await builderInNewTab(() => openModuleNode(ms.find((m) => m.name === 'Characters').id));
+  await builderInNewTab(() => openModuleNode(ms.find((m) => m.name === 'Rumors').id));
+});
+
+test('28 part 1: the buttons on the title-bar tab group are not window-drag area', async () => {
+  await openTwoTabs(); await sleep(400);
+  const r = await win.evaluate(() => [...document.querySelectorAll('.bpane-head.tb-tabgroup button, .bpane-head.tb-tabgroup .tab-close')]
+    .map((b) => {
+      // app-region is not inherited: the nearest element that sets one decides
+      let el = b, region = 'none';
+      for (; el && region === 'none'; el = el.parentElement) region = getComputedStyle(el).getPropertyValue('-webkit-app-region') || 'none';
+      return { name: b.getAttribute('aria-label') || b.title, region };
+    }));
+  assert.ok(r.length >= 2, 'the tab group sits on the title bar with its buttons');
+  assert.deepEqual(r.filter((b) => b.region !== 'no-drag'), [], 'every button there takes clicks');
+});
+
+test('28 part 1: a tab\'s right-click — close others, close to the right; Ctrl+Shift+→ moves it', async () => {
+  await openTwoTabs(); await sleep(400);
+  const strip = '#main-inner .bpane-tabs[role="tablist"]';
+  const names = () => win.locator(`${strip} [role="tab"]`).evaluateAll((els) => els.map((e) => e.title));
+  assert.deepEqual(await names(), ['History', 'Characters', 'Rumors']);
+  await win.locator(`${strip} [role="tab"][title="History"]`).focus();
+  await win.keyboard.press('Control+Shift+ArrowRight'); await sleep(300);
+  assert.deepEqual(await names(), ['Characters', 'History', 'Rumors'], 'moved one slot right');
+  await win.locator(`${strip} [role="tab"][title="History"]`).click({ button: 'right' });
+  await win.locator('.context-menu-popup .kind-list-item:has-text("Close tabs to the right")').click(); await sleep(400);
+  assert.deepEqual(await names(), ['Characters', 'History']);
+  await win.locator(`${strip} [role="tab"][title="Characters"]`).click({ button: 'right' });
+  assert.equal(await win.locator('.context-menu-popup .kind-list-item:has-text("Close tabs to the right")').count(), 1);
+  await win.locator('.context-menu-popup .kind-list-item:has-text("Close other tabs")').click(); await sleep(400);
+  assert.deepEqual(await names(), ['Characters']);
+  assert.equal(await win.evaluate(() => S.activeModuleNode?.name), 'Characters', 'the kept tab is the open page');
+});
+
+test('28 part 1: a tab sent back from a pop-out opens beside the open tab, not over it', async () => {
+  await openTwoTabs(); await sleep(400);
+  const key = await win.evaluate(() => `module:${flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Harbor map').id}`);
+  const nx = await win.evaluate(() => S.nexus.id);
+  await ui.app.evaluate(({ BrowserWindow }, [n, k]) => { for (const w of BrowserWindow.getAllWindows()) w.webContents.send('builder:tabInbound', n, k); }, [nx, key]);
+  await sleep(800);
+  const t = await tabs();
+  assert.equal(t.tabs.length, 4, 'one tab more, none replaced');
+  assert.equal(t.active, key);
+  assert.equal(t.tabs.indexOf(key), 3, 'beside the active one (Rumors, last)');
+});
+
+test('28 part 1: holding a tab at a pane edge makes room before it splits', async () => {
+  await openTwoTabs(); await sleep(400);
+  const r = await win.evaluate(async () => {
+    const pane = document.querySelector('#main-inner .bpane[data-pane]');
+    const body = pane.querySelector('.bpane-body');
+    const rect = body.getBoundingClientRect();
+    S.dragTab = { key: pane.querySelector('.project-tab').dataset.tabKey, paneIdx: Number(pane.dataset.pane), armed: true };
+    const over = (x) => { const ev = new DragEvent('dragover', { bubbles: true, cancelable: true, clientX: x, clientY: rect.top + rect.height / 2 }); body.dispatchEvent(ev); };
+    over(rect.right - 10);
+    const early = pane.classList.contains('split-preview');
+    await new Promise((res) => setTimeout(res, 450));
+    over(rect.right - 10);
+    const on = pane.classList.contains('split-preview-right');
+    await new Promise((res) => setTimeout(res, 300));
+    const shrunk = body.getBoundingClientRect().width;
+    over(rect.left + rect.width / 2 - 40); // back to the middle (zones measured on the body as it was)
+    const off = !pane.classList.contains('split-preview');
+    clearDragReflow(); S.dragTab = null;
+    return { early, on, ratio: shrunk / rect.width, off };
+  });
+  assert.equal(r.early, false, 'not at once');
+  assert.equal(r.on, true, 'after the hold');
+  assert.ok(r.ratio > 0.4 && r.ratio < 0.6, `the body gave up half (${r.ratio})`);
+  assert.equal(r.off, true, 'leaving the edge puts it back');
 });

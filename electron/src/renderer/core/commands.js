@@ -191,6 +191,13 @@ const COMMANDS = {
     sub: (c) => [['h', '◫'], ['v', '⬓']].map(([dir, glyph]) => ({ label: `${glyph} ${t('splitPane')}`, onClick: () => builderSplitPane(c.paneIdx ?? builderState().focused, dir) })),
     surfaces: ['pane.ctx'],
   },
+  // ── A builder tab (Procress 28 part 1) — right-click a tab, or the palette on the active one
+  'tab.close': { label: 'closeTab', icon: 'close', scope: 'app', hint: 'Ctrl+W', when: (c) => !!builderTabTarget(c), run: (c) => { const tt = builderTabTarget(c); return builderCloseTab(tt.paneIdx, tt.key); }, surfaces: ['tab.ctx'] },
+  'tab.closeOthers': { label: 'closeOtherTabs', icon: 'close', scope: 'app', when: (c) => { const tt = builderTabTarget(c); return !!tt && builderState().panes[tt.paneIdx].tabs.length > 1; }, run: (c) => { const tt = builderTabTarget(c); return builderCloseOtherTabs(tt.paneIdx, tt.key); }, surfaces: ['tab.ctx'] },
+  'tab.closeRight': { label: 'closeTabsRight', icon: 'close', scope: 'app', when: (c) => { const tt = builderTabTarget(c); if (!tt) return false; const tabs = builderState().panes[tt.paneIdx].tabs; return tabs.indexOf(tt.key) < tabs.length - 1; }, run: (c) => { const tt = builderTabTarget(c); return builderCloseOtherTabs(tt.paneIdx, tt.key, true); }, surfaces: ['tab.ctx'] },
+  'tab.split': { label: 'splitPane', icon: 'panelRight', scope: 'app', when: (c) => S.settings.workspaceStyle === 'drake' && !S.isPopup && !!builderTabTarget(c), run: (c) => { const tt = builderTabTarget(c); return builderSplitTab(tt.paneIdx, tt.key); }, surfaces: ['tab.ctx'] },
+  'tab.popOut': { label: 'openInNewWindow', icon: 'panelRight', scope: 'app', when: (c) => !S.isPopup && !!builderTabTarget(c), run: (c) => { const tt = builderTabTarget(c); return builderPopOutTab(tt.paneIdx, tt.key); }, surfaces: ['tab.ctx'] },
+  'tab.toMain': { label: 'moveToMainWindow', icon: 'return', scope: 'app', when: (c) => !!S.isPopup && !!builderTabTarget(c), run: (c) => { const tt = builderTabTarget(c); return builderMoveTabToMain(tt.paneIdx, tt.key); }, surfaces: ['tab.ctx'] },
   'pane.close': { label: 'closePane', icon: 'close', scope: 'app', when: () => S.settings.workspaceStyle === 'drake' && !!S.nexus && builderState().layoutTree.type === 'split', run: (c) => builderClosePane(c.paneIdx ?? builderState().focused), surfaces: ['pane.ctx'] },
 
   // ── A text field that takes [[links]] (core/wiki-field.js) ───────────
