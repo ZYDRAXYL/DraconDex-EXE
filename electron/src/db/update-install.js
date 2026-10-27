@@ -35,7 +35,7 @@ const CHECK_EVERY_MS = 4 * 60 * 60 * 1000;
 // The public half of the release signing key (SPKI PEM, base64 body only).
 // Empty = releases are not signed yet: the SHA-256 check still runs, and the
 // quiet install-on-quit mode falls back to asking first.
-const UPDATE_PUBLIC_KEY = '';
+const UPDATE_PUBLIC_KEY = 'MC4CAQAwBQYDK2VwBCIEID67g2LBzwV4FxK2wp4nPYExvf4awKnC7QzkL+ZzuFrM';
 
 function getUpdateMode() {
   const m = getAppSetting(MODE_KEY);
