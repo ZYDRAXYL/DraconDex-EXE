@@ -4,6 +4,12 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('ja', {
+  // Procress 29 part 9: updating by itself
+  updateReadyTitle:'アップデートの準備ができました', updateReadyHint:'バージョン {v} をダウンロードして確認しました — 今インストールすると DraconDex は自動で再起動します。', updateInstallRestart:'インストールして再起動', updateLater:'後で', updateMode:'新しいバージョンが出たら', updateModeAsk:'ダウンロードしてから確認', updateModeQuit:'終了時にインストール', updateModeNotify:'通知のみ', updateModeOff:'確認しない', updateModeQuitUnsigned:'リリースはまだ署名されていないため、インストール前に確認します。', updateDone:'{v} に更新しました', updateWhatsNew:'新機能',
+  // Procress 29 part 5: icon sets, a custom icon, a colour of your own
+  iconSet:'アイコンセット', iconCustomText:'文字・絵文字', iconCustomTextPh:'1〜2文字を入力', iconUploadedHere:'このNexusでアップロード済み', colorCustom:'カスタムカラー', colorWheel:'ホイール', colorRgb:'RGB', colorGrid:'グリッド', colorBrightness:'明るさ',
+  // Procress 29 part 2: a folder's page — File Explorer views
+  folderOpenPage:'ページとして開く', folderView:'表示', folderViewLarge:'大アイコン', folderViewSmall:'小アイコン', folderViewList:'一覧', folderViewDetails:'詳細', folderColKind:'種類', folderColItems:'項目',
   // Procress 24: customisation within 2–3 clicks
   nexusSettingsThis:'この Nexus の設定…', publishSite:'ウェブサイトとして公開…', pageChooseLayout:'レイアウトを選ぶ…', settingPageThisNexus:'この Nexus', nestOptMoreLayout:'その他のレイアウト設定…', clsFieldMenu:'フィールド：種類・名前・削除', clsFieldChangeType:'種類を変更…', tagColor:'色',
   // Procress 23: package minAppVersion
@@ -234,7 +240,7 @@ i18nAdd('ja', {
   moduleInspector:'モジュールインスペクター', moduleIdentitySection:'識別情報', moduleDetailSpec:'モジュール詳細仕様', moduleAttribute:'モジュール属性', toggleInspector:'モジュールインスペクターの表示切替', resizePanel:'ドラッグしてリサイズ', resizePageView:'ドラッグしてページ表示をリサイズ', splitPane:'ペインを分割', newTab:'新しいタブ', tabList:'すべてのタブ', nestMoreItems:'ほか {n} 件 ›', nestUnsorted:'未整理', probMissing:'見つからないファイル', leftRecent:'最近', recentEmpty:'まだ何も開いていません — 開いたものがここに並びます。', homeAsk:'何に取り組みますか?', homeCreate:'モジュールを作成', homeOpenRecent:'最近のものを開く', homeContinue:'続きから', homePinned:'ピン留め', homePinHint:'まだピン留めはありません — モジュールを右クリックして「ピン留め」を選びます。', homeOrganise:'Nest を整理', homeOrganiseHint:'行をドラッグで移動、右クリックでその他の操作。', addrSiblings:'同じ階層のページ', nestFilesAdded:'{n} 件のファイルを Nexus にコピーしました', nestTwoColumn:'フォルダーをグリッドで開く(2列)', folderTileSize:'タイルのサイズ', revealInExplorer:'エクスプローラーで表示', folderEmpty:'このフォルダーは空です — ファイルをドロップするか、中に作成してください。', moreActions:'その他の操作', propsWhere:'場所', propsUpdated:'更新', propsLinksOut:'リンク先', propsNoLinks:'まだリンクはありません — ページで [[ と入力するとリンクできます。', kcPage:'ページ', kindDescPage:'独立したページ — 見出し・本文・リンク・検索ボックス・他モジュールのビューを行と列に並べます。データ自体は持ちません。', skColorPink:'ピンク', skColorYellow:'黄', skColorBlue:'青', skColorWhite:'白', skLineWidth:'線 {n} px', pbPickSource:'ソースを選ぶ', menuOrganise:'整理', menuImport:'インポート', skipToContent:'コンテンツへ移動', viewScene:'シーン', viewGraph:'グラフ', viewTable:'表', viewCards:'カード', viewBoard:'ボード', viewEdges:'関係線', viewOneline:'横一列', viewDownline:'縦タイムライン', viewCompare:'比較', viewCalendar:'カレンダー', closePane:'ペインを閉じる', moveToMainWindow:'メインウィンドウに移動', tabMoveWrongVault:'タブは別のVaultのものです', majorModules:'メジャーモジュール', minorElements:'マイナーエレメント',
   moduleUiSpec:'モジュールUI仕様', moduleLink:'モジュールリンク', tagLink:'タグリンク', addAttribute:'属性を追加',
   addDetail:'詳細を追加…', inspectorDescEditElsewhere:'メイン画面で編集してください', versionHistory:'バージョン履歴', versionHistoryComingSoon:'バージョン履歴は今後のアップデートで追加予定です。',
-  iconCollection:'アイコンコレクション', useThisIcon:'このアイコンを使う', iconTabIcons:'アイコン', iconTabSymbols:'シンボル', iconTabUploaded:'アップロード', iconUploadPrompt:'クリックして画像をアップロード',
+  iconCollection:'アイコンコレクション', useThisIcon:'このアイコンを使う', iconTabIcons:'アイコン', iconTabSymbols:'シンボル', iconTabUploaded:'カスタムアイコン', iconUploadPrompt:'クリックして画像をアップロード',
   classifierNew:'Classifierを作成', catTypeLabel:'データ種別（Categoryごとに1つ選択）',
   catTypeObject:'オブジェクト', catTypeElement:'エレメント', catTypeCharacter:'キャラクター',
   catTypeObjectDesc:'デフォルト — テンプレートから属性を作成', catTypeElementDesc:'Objectと同様、Levelable/Conditionの切替が追加',

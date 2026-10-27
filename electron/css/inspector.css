@@ -27,7 +27,9 @@
 /* Icon Collection picker (progress.md Phase 5) */
 .ipk-tabs{margin-bottom:10px}
 .ipk-symbol{font-size:calc(17px * var(--fsc,1))}
-.ipk-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:10px}
+/* Procress 29 part 5: as many 36px cells as fit, never wider than the picker
+   (eight fixed columns ran past a 280px popup and scrolled it sideways). */
+.ipk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));justify-items:center;gap:6px;margin-bottom:10px}
 .ipk-cell{width:36px;height:36px;border:1px solid var(--border);border-radius:var(--rs);background:var(--raised);
 	color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:calc(16px * var(--fsc,1))}
 .ipk-cell:hover{background:var(--hover);color:var(--t1)}
@@ -40,14 +42,14 @@
 .kicon-glyph{font-size:calc(14px * var(--fsc,1));line-height:1}
 
 /* Uploaded tab (Icon Collection picker) — native upload + canvas circular crop */
-.ipk-grid#ipk-upload-pane{display:flex;flex-direction:column;align-items:center;gap:10px}
+.ipk-upload-pane{display:flex;flex-direction:column;align-items:center;gap:10px}
 .icrop-empty{width:100%;padding:28px 14px;border:1px dashed var(--border);border-radius:var(--r);
 	display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--t3-aa,var(--t2));cursor:pointer;text-align:center}
 .icrop-empty:hover{background:var(--hover);color:var(--t2)}
 .icrop-empty .icon{width:24px;height:24px}
 .icrop-stage{position:relative;width:220px;height:220px}
-#icrop-canvas{display:block;width:220px;height:220px;cursor:grab}
-#icrop-canvas:active{cursor:grabbing}
+.icrop-canvas{display:block;width:220px;height:220px;cursor:grab}
+.icrop-canvas:active{cursor:grabbing}
 .icrop-mask{position:absolute;top:0;left:0;width:220px;height:220px;border-radius:50%;
 	box-shadow:0 0 0 9999px rgba(0,0,0,.55);pointer-events:none}
 .icrop-zoom{width:100%;accent-color:var(--accent)}
@@ -85,22 +87,58 @@
 .kli-text{display:flex;flex-direction:column;gap:1px;min-width:0}
 .kli-name{font-size:calc(var(--fs-body) * var(--fsc,1));color:var(--t1)}
 .kli-desc{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));line-height:1.35}
-/* Plan part1 #4 (this round) reverses a prior round's "whole popup scrolls
-   as one block" decision: only the icon/symbol swatch grid gets its own
-   fixed-height, independently scrolling box (mouse-wheel over the grid
-   only) — preview/tabs/color rows stay fixed in place. .icon-edit-popup
-   itself keeps only a generous last-resort cap (positionPopupNear already
-   viewport-clamps it; this should essentially never engage in normal use,
-   it's just a safety net against an unusually large custom color palette). */
-.icon-edit-popup{padding:12px;width:280px;max-height:calc(100vh - 40px);overflow-y:auto}
+/* Procress 29 part 5: one size for every tab — the popup no longer grows and
+   shrinks as Icons / Emoji / Symbols / Uploaded swap in. The preview, the
+   tabs, the search and the colour row stay put; only the grid of the open tab
+   scrolls, and only up and down. Inside a modal the picker gets a fixed grid
+   height instead (the modal body scrolls as a whole). */
+.icon-edit-popup{padding:12px;width:320px;height:min(500px,calc(100vh - 16px));display:flex;flex-direction:column;overflow:hidden}
+.ipk-wrap{display:flex;flex-direction:column;min-height:0;flex:1}
+.ipk-pane{display:flex;flex-direction:column;min-height:0;flex:1}
+.ipk-pane[hidden]{display:none}
+.ipk-search{margin-bottom:8px}
+.ipk-scroll{overflow-y:auto;overflow-x:hidden;min-height:0;flex:1;overscroll-behavior:contain}
+.ipk-color-row{flex-shrink:0;margin:10px 0 0}
+#modal .ipk-pane{flex:none;height:240px}
+.ipk-sets{margin-bottom:8px;overflow-x:auto;flex-shrink:0}
+.ipk-sets .seg{width:100%}
+.ipk-grid .lazy-more{grid-column:1/-1;height:1px}
+.set-icon-pending{display:inline-block;width:1em;height:1em}
+.ipk-custom{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.ipk-custom .pk{flex-shrink:0;color:var(--t3-aa,var(--t2));font-size:calc(var(--fs-meta) * var(--fsc,1))}
+.ipk-custom-text{flex:1;min-width:0;font-size:calc(16px * var(--fsc,1))}
+.ipk-upload img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.ipk-color-custom{width:20px;height:20px;padding:0;border-radius:var(--rs);border:1px dashed var(--t3-aa,var(--t2));background:transparent;
+	color:var(--t1);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.ipk-color-custom .icon{width:12px;height:12px}
+.ipk-color-custom[aria-expanded="true"]{outline:1px solid var(--accent)}
+.ipk-color-panel{flex:1;min-height:0;overflow-y:auto;margin-top:8px;border-top:1px solid var(--border);padding-top:8px}
+.ipk-color-open .ipk-pane{display:none}
+/* Procress 29 part 5: core/color-panel.js */
+.cpanel{display:flex;flex-direction:column;gap:8px}
+.cpanel-body{display:flex;flex-direction:column;align-items:center;gap:8px}
+.cpanel-body[hidden]{display:none}
+.cpanel-wheel{width:168px;height:168px;border-radius:50%;cursor:crosshair;touch-action:none}
+.cpanel-v{width:168px;accent-color:var(--accent)}
+.cpanel-rgb{display:flex;align-items:center;gap:8px;width:100%}
+.cpanel-rgb span{width:30px;flex-shrink:0;color:var(--t3-aa,var(--t2));font-size:calc(var(--fs-meta) * var(--fsc,1))}
+.cpanel-rgb input[type=range]{flex:1;accent-color:var(--accent)}
+.cpanel-rgb output{width:28px;text-align:right;font-variant-numeric:tabular-nums}
+.cpanel-hex{flex:1;font-family:var(--font-mono,monospace)}
+.cpanel-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;align-items:stretch}
+.cpanel-cell{aspect-ratio:1;border:0;border-radius:3px;padding:0;cursor:pointer;min-height:0}
+.cpanel-cell:focus-visible{outline:var(--focus-ring) solid var(--accentH,var(--accent));outline-offset:1px}
+.cpanel-foot{display:flex;align-items:center;gap:8px}
+.cpanel-swatch{width:22px;height:22px;border-radius:50%;border:1px solid var(--border)}
+.cpanel-code{flex:1;font-variant-numeric:tabular-nums}
+.cpanel-ok{flex-shrink:0}
+.ipk-custom-use{flex-shrink:0}
+.ipk-uploads{margin-top:4px}
+
 /* Tag-link popup (Plan part6 #3) — wraps hashtagSelector()'s own .fg/
    .tag-add-box markup unchanged, just needs the floating-panel sizing. */
 .tag-link-popup{padding:12px;width:320px;max-height:calc(100vh - 40px);overflow-y:auto}
-/* 4 rows of .ipk-cell (36px) + 3 row-gaps (6px, .ipk-grid's own gap) = 162px.
-   #ipk-upload-pane deliberately excluded — it shares .ipk-grid's id-selector
-   override for a flex-column crop UI, not a swatch grid, and its 220x220px
-   crop canvas would clip badly inside a 162px box. */
-#ipk-icon-grid,#ipk-symbol-grid{max-height:162px;overflow-y:auto}
+
 /* Right-click context menu (hub.js) — reuses .popover base + .kind-list-item
    rows; Major-module variant appends action rows below the full create-list,
    so it gets the same docked scrollable max-height as .icon-edit-popup above. */
@@ -250,8 +288,20 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
    Name cell = grip · dot · name (double click renames); a choice, tick, link
    or level cell holds its own control; drop markers for rows, columns, cards. */
 .cls-name-cell .nar-grip{display:inline-flex;vertical-align:middle;margin-right:4px}
-.cls-name-cell .rename-input{width:auto;min-width:8em}
-.cls-name{cursor:text}
+/* Procress 29 part 6: the name is a cell like the fields — one click and the
+   box is in place, the same size and the same focus ring as .cls-cell:focus;
+   the dot (or the object's icon) before it opens the icon & colour popup. */
+.cls-name-cell{white-space:nowrap}
+.cls-name-cell .rename-input,.cls-detail-name .rename-input{width:calc(100% - 52px);min-width:8em;border:0;border-radius:0;padding:0 2px;margin:0;
+	font:inherit;color:inherit;background:var(--raised);outline:1px solid var(--accent);outline-offset:1px}
+.cls-name{cursor:text;border-radius:var(--rs)}
+.cls-name:hover{background:var(--raised)}
+.cls-name:focus-visible{outline:var(--focus-ring) solid var(--accentH,var(--accent));outline-offset:2px}
+.cls-obj-icon{min-height:0;width:20px;height:20px;padding:0;margin-right:6px;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;border-radius:50%}
+.cls-obj-icon .dot{width:10px;height:10px;margin:0}
+.cls-obj-icon .cls-obj-ico,.cls-obj-icon .cls-obj-ico .icon{width:16px;height:16px;display:inline-flex}
+.cls-obj-icon-wrap{cursor:pointer;display:inline-flex}
+.cls-detail-name{display:flex;align-items:center}
 .cls-cell-ctl{padding:4px 8px}
 .cls-cell-ctl .pv{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .cls-cell-ctl .pv-input{min-width:7em;padding:2px 6px}

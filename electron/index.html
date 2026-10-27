@@ -181,7 +181,7 @@
        finds a newer release; clicking it opens the Setting → appdata →
        Versions page instead of duplicating the download/dismiss actions
        already on that page and in the update modal. -->
-  <button class="title-update-btn hidden" id="titlebar-update-btn" title="Update available" onclick="openSettingWindow('appdata','versions')">
+  <button class="title-update-btn hidden" id="titlebar-update-btn" title="Update available" onclick="titlebarUpdateClick()">
     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
       <polyline points="7 10 12 15 17 10"/>
@@ -294,6 +294,8 @@
   <script src="src/renderer/core/nav.js"></script>
   <script src="src/renderer/core/pickers.js"></script>
   <script src="src/renderer/core/icon-catalog.js"></script>
+  <script src="src/renderer/core/icon-sets.js"></script>
+  <script src="src/renderer/core/color-panel.js"></script>
   <script src="src/renderer/core/views.js"></script>
   <script src="src/renderer/core/nexus.js"></script>
   <script src="src/renderer/core/nexus-locate.js"></script>

@@ -201,6 +201,19 @@ function moveModule(nexusRef, moduleId, newParentId, orderedSiblingIds) {
 
 const countModules = (nexusRef) => getDB().prepare(`SELECT COUNT(*) AS c FROM module WHERE nexus_ref=?`).get(nexusRef).c;
 
+// Procress 29 part 5: the images uploaded as icons in this Nexus, newest use
+// first, so one can be picked again for something else. An uploaded icon is
+// stored in the row that uses it (img:<data URI> in module / classifier_object
+// / timeline_event .icon) — so it already travels with the vault, a snapshot
+// and a .dxpack; this only gathers them. Nothing to clean up: an image no row
+// uses any more is simply not listed.
+const uploadedIcons = (nexusRef) => getDB().prepare(`
+  SELECT icon FROM (
+    SELECT icon, update_at AS at FROM module WHERE nexus_ref=? AND icon LIKE 'img:%'
+    UNION ALL SELECT o.icon, o.update_at FROM classifier_object o JOIN module m ON m.id=o.module_ref WHERE m.nexus_ref=? AND o.icon LIKE 'img:%'
+    UNION ALL SELECT e.icon, e.update_at FROM timeline_event e JOIN timeline tl ON tl.id=e.timeline_id JOIN module m ON m.id=tl.module_ref WHERE m.nexus_ref=? AND e.icon LIKE 'img:%'
+  ) GROUP BY icon ORDER BY MAX(at) DESC LIMIT 120`).all(nexusRef, nexusRef, nexusRef).map((r) => r.icon);
+
 // ═══ Nest content-item rows (Plan part2 #2.5) ═════════════════════════
 // The Nest tree used to lazily fetch each expanded content module's items
 // through that kind's own list-getter — 1 IPC per module, and chronicler
@@ -343,7 +356,7 @@ const createModules = (list = []) => getDB().transaction(() => list.map((data) =
 
 module.exports = {
   getTree, getModule, createModule, createModules, updateModule, updateModuleDescription, deleteModule,
-  duplicateModule, moveModule, countModules, nexusOfModule, getNestItems,
+  duplicateModule, moveModule, countModules, uploadedIcons, nexusOfModule, getNestItems,
   getModuleUi, setModuleUi,
   getModuleTags, setModuleTags, moduleTagIndex,
   getModuleLinks,

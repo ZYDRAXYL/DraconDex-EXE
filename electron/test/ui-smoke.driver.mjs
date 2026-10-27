@@ -889,8 +889,8 @@ test('26 part 3: add without a form, rename in place, edit a choice, reorder', a
   await win.click('.classifier-toolbar [data-cmd="classifier.addObject"]'); await sleep(600);
   await win.keyboard.press('Escape'); await sleep(500);
   assert.deepEqual(await names(), [...start, 'Smoke Rook']);
-  // double click renames; Esc keeps the old name
-  await win.dblclick('tr[data-cls-oid] .cls-name >> text=Smoke Rook'); await sleep(300);
+  // one click renames (Procress 29 part 6 — it was a double click); Esc keeps the old name
+  await win.click('tr[data-cls-oid] .cls-name >> text=Smoke Rook'); await sleep(300);
   await win.keyboard.type('zz'); await win.keyboard.press('Escape'); await sleep(300);
   assert.ok((await names()).includes('Smoke Rook'));
   // a choice field is set in its cell
@@ -1358,4 +1358,176 @@ test('28 part 5: a Part divider is added, named, dragged between chapters and ke
   await win.locator('.author-chapters .au-part').first().focus();
   await win.keyboard.press('Delete'); await sleep(400);
   assert.equal(await win.locator('.author-chapters .au-part').count(), 0, 'Delete removes it');
+});
+
+// ── Procress 29 ────────────────────────────────────────────────────────
+const firstModuleId = (kind) => win.evaluate((k) => flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === k)?.id, kind);
+
+test('29 part 5: a colour pick keeps the icon, an icon pick keeps the colour, two pickers never mix', async () => {
+  const mid = await win.evaluate(async () => { const id = await api.module.create({ nexus_ref: S.nexus.id, name: 'Smoke icon', kind: 'scribe' }); await api.module.update(id, { icon: 'svg:sword' }); await reloadModuleTree(); renderNexusHome(); return id; });
+  // a second picker is in the DOM first (a modal) — the popup must not read or write it
+  await win.evaluate(async () => openModal('x', await iconPicker('svg:star', null, 'other')));
+  await win.evaluate((id) => openModuleIconPopup(id, document.querySelector(`[data-mid="${id}"] .kicon`) || document.body), mid);
+  await win.waitForSelector('.icon-edit-popup .cswatch');
+  await win.locator('.icon-edit-popup .cswatch').nth(3).click(); await sleep(400);
+  let m = await win.evaluate((id) => api.module.get(id), mid);
+  assert.equal(m.icon, 'svg:sword', 'colour pick left the icon alone');
+  assert.ok(m.color, 'colour saved');
+  const color = m.color;
+  await win.locator('.icon-edit-popup [data-ipktab="emoji"]').click();
+  await win.locator('.icon-edit-popup .ipk-pane[data-pane="emoji"] .ipk-cell').first().click(); await sleep(400);
+  m = await win.evaluate((id) => api.module.get(id), mid);
+  assert.match(m.icon, /^sym:/, 'icon pick saved');
+  assert.equal(m.color, color, 'icon pick left the colour alone');
+  assert.equal(await win.evaluate(() => getIconPickerValue(q('#modal'))), 'svg:star', 'the modal picker untouched');
+  // one size for every tab, only the grid scrolls, never sideways
+  const sizes = await win.evaluate(() => { const p = q('.icon-edit-popup'); return ['icons', 'emoji', 'symbols', 'uploaded'].map((t) => { p.querySelector(`[data-ipktab=${t}]`).click(); const sc = p.querySelector('.ipk-pane:not([hidden]) .ipk-scroll') || p.querySelector('.ipk-pane.ipk-scroll:not([hidden])'); return [p.offsetWidth, p.offsetHeight, sc.scrollWidth <= sc.clientWidth]; }); });
+  assert.ok(sizes.every((s) => s[0] === sizes[0][0] && s[1] === sizes[0][1] && s[2]), `fixed size, no x-scroll: ${JSON.stringify(sizes)}`);
+  await win.evaluate(() => { closeAllPopups(); closeModal(); });
+});
+
+test('29 part 1: a popup that grows after it opens stays 8 px inside the window', async () => {
+  await win.setViewportSize({ width: 900, height: 520 });
+  const mid = await win.evaluate(async () => { const nx = S.nexus.id; await api.module.createMany(Array.from({ length: 30 }, (_, i) => ({ nexus_ref: nx, name: 'Edge ' + i, kind: 'scribe' }))); await reloadModuleTree(); return flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Edge 0').id; });
+  await win.evaluate((id) => openModuleNode(id), mid); await sleep(500);
+  await win.locator('.module-page .ph-links-open').first().click();
+  await win.locator('.ph-links-pop .ph-link-q').fill('Edge'); await sleep(700);
+  const r = await win.evaluate(() => { const b = q('.ph-links-pop').getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: innerWidth, h: innerHeight }; });
+  assert.ok(r.l >= 8 && r.t >= 8 && r.r <= r.w - 8 && r.b <= r.h - 8, `inside the window: ${JSON.stringify(r)}`);
+  await win.keyboard.press('Escape');
+  await win.setViewportSize({ width: 1280, height: 800 });
+});
+
+test('29 part 4: rename in the Nest while the module is open; one click renames on the page; the handle after the title', async () => {
+  const mid = await win.evaluate(async () => { const id = await api.module.create({ nexus_ref: S.nexus.id, name: 'Rename me', kind: 'scribe' }); await reloadModuleTree(); await openModuleNode(id); return id; });
+  await sleep(400);
+  await win.locator(`[data-mid="${mid}"] .name`).dblclick(); await sleep(300);
+  assert.equal(await win.locator(`#rename-head-${mid}`).count(), 0, 'one box only — in the Nest');
+  const box = win.locator(`#rename-nest-${mid}`);
+  await box.click({ position: { x: 4, y: 6 } }); await sleep(200);
+  assert.equal(await win.evaluate(() => document.activeElement.id), `rename-nest-${mid}`, 'a click places the caret, the box stays');
+  await win.keyboard.press('End'); await win.keyboard.type('d'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.equal((await win.evaluate((id) => api.module.get(id), mid)).name, 'Rename med');
+  await win.locator('.module-page .ph-name').click(); await sleep(200);
+  assert.equal(await win.evaluate(() => document.activeElement.id), `rename-head-${mid}`, 'one click on the title renames');
+  await win.keyboard.press('Escape'); await sleep(300);
+  await win.locator('.module-page .navbar-h .module-handle-add').click(); await sleep(200);
+  await win.keyboard.type('renamemed'); await win.keyboard.press('Enter'); await sleep(500);
+  assert.equal((await win.evaluate((id) => api.module.get(id), mid)).handle, 'renamemed');
+  assert.match(await win.locator('.module-page .navbar-h .module-handle').innerText(), /@renamemed/, 'shown after the title');
+});
+
+test('29 part 6: Classifier — the dot opens the icon popup, the name renames on one click, no object form left', async () => {
+  const mid = await win.evaluate(async () => { const id = await api.module.create({ nexus_ref: S.nexus.id, name: 'Smoke cls', kind: 'classifier' }); await api.classifier.createObject(id, 'Rook', null, null); await api.module.setUi(id, 'activeView', 'table'); await reloadModuleTree(); await openModuleNode(id); return id; });
+  await sleep(700);
+  assert.equal(await win.locator('.module-page .cls-rowacts').count(), 0, 'no ✎ / 🗑 at the row end');
+  assert.equal(await win.evaluate(() => typeof openClassifierObjectModal), 'undefined', 'the object form is gone');
+  await win.locator('tr[data-cls-oid] .cls-name >> text=Rook').click(); await sleep(250);
+  await win.keyboard.type('s'); await win.keyboard.press('Enter'); await sleep(400);
+  const o = () => win.evaluate((m) => api.classifier.getObjects(m).then((l) => l[0]), mid);
+  assert.equal((await o()).name, 'Rooks', 'one click, caret at the end');
+  await win.locator('tr[data-cls-oid] .cls-obj-icon').first().click(); await sleep(400);
+  await win.locator('.icon-edit-popup .ipk-icon-grid .ipk-cell[data-name="sword"]').click(); await sleep(500);
+  assert.equal((await o()).icon, 'svg:sword');
+  assert.equal(await win.locator('tr[data-cls-oid] .cls-obj-icon .cls-obj-ico').count(), 1, 'the icon replaces the dot');
+  await win.keyboard.press('Escape');
+  // the detail view's name renames on a click too
+  await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'listDetail'), mid); await sleep(500);
+  await win.locator('.cls-listdetail .ls-row').first().click(); await sleep(400);
+  await win.locator('.cls-detail-name .cls-name').click(); await sleep(250);
+  await win.keyboard.type('!'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.equal((await o()).name, 'Rooks!');
+});
+
+test('29 part 3: delete and Undo on a long page keep the page where it was, with no frame at the top', async () => {
+  const mid = await win.evaluate(async () => { const id = await api.module.create({ nexus_ref: S.nexus.id, name: 'Smoke long', kind: 'classifier' }); await api.classifier.createObjects(id, Array.from({ length: 150 }, (_, i) => ({ name: 'Row ' + i }))); await api.module.setUi(id, 'activeView', 'table'); await reloadModuleTree(); await openModuleNode(id); return id; });
+  await sleep(900);
+  const body = '.bpane-body';
+  await win.evaluate((b) => { q(b).scrollTop = 1500; }, body); await sleep(300);
+  await win.evaluate(() => { window._p29 = []; const b = q('.bpane-body'); (function f() { window._p29.push(b.scrollTop); if (window._p29.length < 300) requestAnimationFrame(f); })(); });
+  await win.locator('tr[data-cls-oid] >> nth=40').click({ button: 'right' });
+  await win.locator('.context-menu-popup [data-cmd="classifier.deleteObject"], .context-menu-popup .kind-list-item:has-text("Delete"), .context-menu-popup .kind-list-item:has-text("ลบ")').first().click(); await sleep(700);
+  assert.ok(Math.abs(await win.evaluate((b) => q(b).scrollTop, body) - 1500) <= 1, 'still there after the delete');
+  await win.locator('#toast .toast-act').click(); await sleep(800);
+  assert.equal(await win.evaluate((m) => clsData(m).objects.length, mid), 150, 'undone');
+  assert.ok(Math.abs(await win.evaluate((b) => q(b).scrollTop, body) - 1500) <= 1, 'still there after Undo');
+  assert.ok(!(await win.evaluate(() => window._p29)).some((v) => v < 1400), 'never drawn at the top in between');
+});
+
+test('29 part 2: a folder found in the Nest opens as its page; four views, remembered per folder; a pinned folder opens its page', async () => {
+  const fid = await win.evaluate(async () => { const nx = S.nexus.id; const f = await api.module.create({ nexus_ref: nx, name: 'Smoke shelf', kind: 'collector' });
+    for (const [n, k] of [['Inner', 'collector'], ['Note A', 'scribe'], ['Table B', 'classifier']]) await api.module.create({ nexus_ref: nx, parent_id: f, name: n, kind: k });
+    await reloadModuleTree(); renderNexusHome(); return f; });
+  await win.fill('#nest-filter-q', 'Smoke shelf'); await sleep(400);
+  // the panel may be floating over the page after the earlier tests' layouts — a click on the row itself is what counts here
+  await win.locator('.nest-filter-hit:has-text("Smoke shelf")').first().dispatchEvent('click'); await sleep(500);
+  assert.equal(await win.evaluate(() => S.folderPage), fid, 'the search hit opened the folder page');
+  for (const v of ['large', 'small', 'list', 'details']) {
+    await win.locator(`.folder-page`).first().waitFor();
+    await win.locator(`.page-title .seg [data-value="${v}"]`).click(); await sleep(250);
+    assert.equal(await win.evaluate(() => q('.folder-page').dataset.view), v);
+    const names = await win.locator('.folder-page [data-no-i18n]').allInnerTexts();
+    assert.ok(['Inner', 'Note A', 'Table B'].every((n) => names.some((s) => s.includes(n))), `${v} lists what is inside: ${names}`);
+  }
+  await sleep(300);
+  assert.equal((await win.evaluate((id) => api.module.getUi(id), fid)).folderView, 'details', 'remembered on the folder');
+  await win.locator('.folder-details tbody tr:has-text("Note A")').click(); await sleep(500);
+  assert.equal(await win.evaluate(() => S.activeModuleNode?.name), 'Note A', 'a row opens');
+  await win.fill('#nest-filter-q', ''); await sleep(300);
+  // pinned on the rail → its page
+  await win.evaluate(async (id) => { await api.module.update(id, { pinned: 1 }); await reloadModuleTree(); renderModuleRail(); }, fid);
+  await win.evaluate((id) => openPinnedRailModule(id), fid); await sleep(500);
+  assert.equal(await win.evaluate(() => S.folderPage), fid);
+  await win.evaluate(async (id) => { await api.module.update(id, { pinned: 0 }); await reloadModuleTree(); renderModuleRail(); }, fid);
+});
+
+test('29 part 5: icon sets, a typed glyph, uploads reused across the Nexus, a colour of your own', async () => {
+  const png = 'img:data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const a = await win.evaluate(async (img) => { const nx = S.nexus.id;
+    const a = await api.module.create({ nexus_ref: nx, name: 'Smoke sets', kind: 'scribe' });
+    await api.module.create({ nexus_ref: nx, name: 'Smoke upload', kind: 'scribe', icon: img });
+    await reloadModuleTree(); renderNexusHome(); await openModuleNode(a); return a; }, png);
+  await sleep(400);
+  await win.evaluate((id) => openModuleIconPopup(id, document.querySelector(`[data-mid="${id}"] .kicon`) || q('.page-title')), a);
+  await win.waitForSelector('.icon-edit-popup .ipk-sets');
+  await win.locator('.icon-edit-popup .ipk-sets [data-value="tabler"]').click(); await sleep(800);
+  assert.ok(await win.locator('.icon-edit-popup .ipk-icon-grid .ipk-cell[data-name^="tabler/"]').count() > 20, 'a set fills the grid');
+  await win.locator('.icon-edit-popup .ipk-search').fill('castle'); await sleep(1500);
+  const found = await win.locator('.icon-edit-popup .ipk-icon-grid .ipk-cell').evaluateAll((els) => els.map((e) => e.dataset.name));
+  assert.ok(['lucide/', 'phosphor/', 'tabler/'].every((p) => found.some((n) => n.startsWith(p))), `search runs through every set: ${found}`);
+  await win.locator('.icon-edit-popup .ipk-icon-grid .ipk-cell[data-name="lucide/castle"]').click(); await sleep(500);
+  assert.equal((await win.evaluate((id) => api.module.get(id), a)).icon, 'svg:lucide/castle');
+  assert.match(await win.locator(`[data-mid="${a}"] .kicon`).innerHTML(), /<svg[^>]*viewBox="0 0 24 24"/, 'drawn in the Nest');
+  await win.locator('.icon-edit-popup [data-ipktab="uploaded"]').click();
+  assert.equal(await win.locator('.icon-edit-popup .ipk-uploads .ipk-upload').count(), 1, "the other module's upload is offered here");
+  await win.locator('.icon-edit-popup .ipk-custom-text').fill('龍'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.equal((await win.evaluate((id) => api.module.get(id), a)).icon, 'sym:龍');
+  await win.locator('.icon-edit-popup .ipk-uploads .ipk-upload').click(); await sleep(400);
+  assert.equal((await win.evaluate((id) => api.module.get(id), a)).icon, png, 'an upload reused');
+  await win.locator('.icon-edit-popup .ipk-color-custom').click(); await sleep(300);
+  await win.locator('.icon-edit-popup .cpanel [data-value="rgb"]').click();
+  await win.locator('.icon-edit-popup .cpanel-hex').fill('#123456'); await sleep(100);
+  await win.locator('.icon-edit-popup .cpanel-ok').click(); await sleep(800);
+  const m = await win.evaluate((id) => api.module.get(id), a);
+  assert.equal((await win.evaluate((cid) => S.colors.find((c) => c.id === cid)?.color_code, m.color)).toLowerCase(), '#123456', 'the new colour is saved');
+  assert.equal(m.icon, png, 'and the icon stayed');
+  await win.keyboard.press('Escape');
+});
+
+test('29 part 9: update mode is stored; a ready update asks once, from the title bar too', async () => {
+  assert.equal(await win.evaluate(() => api.update.getMode()), 'ask', 'download, then ask — the default');
+  assert.deepEqual(await win.evaluate(() => api.update.setMode('quit')), { ok: true });
+  assert.equal(await win.evaluate(() => api.update.getMode()), 'quit');
+  assert.equal(await win.evaluate(() => api.update.getAutoCheck()), true, 'the old switch follows');
+  await win.evaluate(() => api.update.setMode('ask'));
+  const st = { mode: 'ask', current: '0.0.1', available: true, version: '99.0.0', notes: 'n', url: null, ready: true, downloading: false, canInstall: true, signed: false };
+  await win.evaluate((s) => onUpdateState(s), st); await sleep(300);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden) #update-install-btn').count(), 1, 'asks: Install and restart');
+  assert.ok(await win.evaluate(() => q('#titlebar-update-btn').classList.contains('update-ready')), 'the title-bar arrow says ready');
+  await win.evaluate(() => closeModal());
+  await win.evaluate((s) => onUpdateState(s), st); await sleep(200);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, '"Later" = not again this session');
+  await win.evaluate(() => titlebarUpdateClick()); await sleep(200);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden) #update-install-btn').count(), 1, 'the arrow asks again on purpose');
+  await win.evaluate(() => { closeModal(); onUpdateState({ mode: 'ask', current: '0.0.1', available: false, ready: false }); });
 });

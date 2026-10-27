@@ -466,6 +466,25 @@ html.reorder-active,html.reorder-active *{cursor:grabbing!important;user-select:
 .folder-tile-icon .icon,.folder-tile-icon img{width:100%;height:100%;object-fit:cover;border-radius:var(--r)}
 .folder-tile-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:calc(var(--fs-body) * var(--fsc,1))}
 .folder-tile-kind{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2))}
+.folder-tile:focus-visible,.folder-details tr:focus-visible{outline:var(--focus-ring) solid var(--accentH,var(--accent));outline-offset:-2px}
+/* Procress 29 part 2: File Explorer views — small icons (a row of icon + name),
+   a list, details (a sortable table). Large = the tile grid above. */
+.folder-page{min-width:0}
+.folder-small{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:2px}
+.folder-small .folder-tile{flex-direction:row;padding:5px 8px;gap:8px;text-align:left}
+.folder-small .folder-tile-icon{width:20px;height:20px;font-size:16px;flex-shrink:0}
+.folder-list,.folder-details-wrap{margin-top:12px}
+.folder-list-icon{width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.folder-list-icon .icon,.folder-list-icon img{width:16px;height:16px;object-fit:cover;border-radius:var(--rs)}
+.folder-details-wrap{overflow-x:auto}
+.folder-details{width:100%;border-collapse:collapse;font-size:calc(var(--fs-body) * var(--fsc,1))}
+.folder-details th{text-align:left;font-weight:600;color:var(--t3-aa,var(--t2));border-bottom:1px solid var(--border);padding:2px 6px}
+.folder-details th .btn{color:inherit;font:inherit;padding:0 4px}
+.folder-details td{padding:6px;border-bottom:1px solid var(--border);color:var(--t2);white-space:nowrap}
+.folder-details td.folder-d-name{color:var(--t1);white-space:normal;width:50%}
+.folder-d-cell{display:flex;align-items:center;gap:8px}
+.folder-details tbody tr{cursor:pointer}
+.folder-details tbody tr:hover{background:var(--hover)}
 .folder-size{display:flex;align-items:center;gap:6px}
 .folder-size input{width:96px}
 /* Procress 18 part 2: the Properties panel (page/props-panel.js) in #side-panel */

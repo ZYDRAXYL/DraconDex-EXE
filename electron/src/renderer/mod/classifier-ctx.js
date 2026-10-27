@@ -79,36 +79,28 @@ async function clsSeedFirstObject(moduleId) {
 }
 
 // ── Object CRUD ─────────────────────────────────────────────────────────
-async function openClassifierObjectModal(moduleId, objectId) {
+// Procress 29 part 6: no object form any more — the name is edited in place
+// (below) and the icon & colour in a live-saving popup from the dot before
+// it, the same popup a module has (hub/edit.js openModuleIconPopup).
+async function openClsObjectIconPopup(moduleId, objectId, anchor) {
+  closeAllPopups();
   const m = findModuleNode(moduleId) || S.activeModuleNode;
-  const o = objectId ? clsFindObject(objectId) : null;
-  openModal(o ? t('moduleEdit') : t('addObject'), `
-    <div class="fg"><label>${t('name')} *</label><input id="co-name" value="${x(o?.name || '')}"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();submitClassifierObjectForm(${moduleId},${o ? o.id : 'null'})}"></div>
-    <div class="fg"><label>${t('iconCollection')}</label>${await iconPicker(o?.icon || null, o?.color || null, o?.name || '', m?.cat_type === 'character' ? t('catTypeCharacter') : t('catTypeObject'))}</div>
-    <div class="mfoot">
-      ${o ? `<button class="btn btn-d" onclick="deleteClassifierObjectRow(${o.id})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitClassifierObjectForm(${moduleId},${o ? o.id : 'null'})">${o ? t('save') : t('create')}</button>
-    </div>`);
-  setTimeout(() => q('#co-name').focus(), 60);
+  const o = clsFindObject(objectId);
+  if (!o || !anchor) return;
+  openPopover(anchor, await iconPicker(o.icon || null, o.color || null, o.name, m?.cat_type === 'character' ? t('catTypeCharacter') : t('catTypeObject')), { cls: 'icon-edit-popup', keep: true, focus: false,
+    onClick: (e, pop) => { const what = iconPickerChange(e); if (what) saveClsObjectIconLive(moduleId, objectId, pop, what); } });
 }
 
-async function submitClassifierObjectForm(moduleId, objectId) {
-  const name = q('#co-name').value.trim();
-  // §7.5 bug #8: an empty name used to do nothing at all.
-  if (!name) { toast(t('nameRequired'), 'err'); q('#co-name')?.focus(); return; }
-  const colorId = q('#sel-color').value || null;
-  const icon = typeof getIconPickerValue === 'function' ? getIconPickerValue() : null;
-  if (objectId) await api.classifier.updateObject(objectId, name, colorId, icon);
-  else S.clsPendingSelect = await api.classifier.createObject(moduleId, name, colorId, icon);
-  closeModal();
+async function saveClsObjectIconLive(moduleId, objectId, root, what) {
+  const o = clsFindObject(objectId);
+  if (!o) return;
+  // only the half that was picked changes (Procress 29 part 5)
+  const color = what === 'color' ? (getIconPickerColor(root) || null) : (o.color ?? null);
+  const icon = what === 'icon' ? (getIconPickerValue(root) || null) : (o.icon ?? null);
+  await api.classifier.updateObject(objectId, o.name, color, icon);
   const mod = findModuleNode(moduleId);
   if (mod && CLS[moduleId]) await loadClassifierData(mod);
-  // No renderNexusHome() here — invalidateNestItems schedules a coalesced
-  // one (Plan part2 #2.5), so this path repaints once instead of twice.
-  invalidateNestItems(moduleId, objectId ? 0 : 1);
-  toast(objectId ? t('saved') : t('created'), 'ok');
+  invalidateNestItems(moduleId, 0);
 }
 
 async function deleteClassifierObjectRow(objectId) {
@@ -117,7 +109,6 @@ async function deleteClassifierObjectRow(objectId) {
   const moduleId = clsModuleOfObject(objectId) ?? S.activeItemNode?.moduleId ?? S.activeModuleNode?.id;
   const snap = await api.undoDelete.capture('object', objectId);
   await api.classifier.deleteObject(objectId);
-  closeModal();
   if (S.classifierSelectedObject === objectId) S.classifierSelectedObject = null;
   if (S.activeItemNode?.itemKind === 'classifier' && S.activeItemNode.id === objectId && moduleId != null) {
     await openModuleNode(moduleId);
@@ -160,7 +151,7 @@ async function moveClassifierObject(objectId, targetModuleId) {
 
 // ── Procress 26 part 3: add without a form, rename in place ─────────────
 // [+ Add object] makes "Object N" at once and, in the table, puts its name in
-// edit mode (✎ / F2 still open the form for the icon and colour). Esc on a
+// edit mode (the dot before it is the icon and colour). Esc on a
 // name made a moment ago takes the object back, as a new module does
 // (hub/edit.js cancelNewModule).
 async function createClassifierObjectQuick(moduleId) {
@@ -180,27 +171,30 @@ async function createClassifierObjectQuick(moduleId) {
   setTimeout(() => focusClsRename(id), 0); // after the render it queued
 }
 
-function startRenameClsObject(id) {
+// caret 'end' = a click on the name (type on from where it is); otherwise the
+// whole name is selected (F2, a new object).
+function startRenameClsObject(id, caret) {
   S.clsRenamingObject = id;
   S.clsRenameDraft = null;
   renderNexusHome();
-  focusClsRename(id);
+  focusClsRename(id, 0, caret);
 }
 
 // The input lands on the next render; a view with no name cell (grid, the
 // detail list) never shows one, so stop waiting and drop the flag. After a
 // re-render (S.clsRenameDraft) the text and the selection come back as they were.
-function focusClsRename(id, tries = 0) {
+function focusClsRename(id, tries = 0, caret) {
   const el = q(`#rename-cobj-${id}`);
   if (el) {
     el.focus();
     if (S.clsRenameDraft?.id === id) {
       el.value = S.clsRenameDraft.value;
       el.setSelectionRange(...S.clsRenameDraft.sel);
-    } else el.select();
+    } else if (caret === 'end') el.setSelectionRange(el.value.length, el.value.length);
+    else el.select();
     return;
   }
-  if (tries < 20) { setTimeout(() => focusClsRename(id, tries + 1), 30); return; }
+  if (tries < 20) { setTimeout(() => focusClsRename(id, tries + 1, caret), 30); return; }
   if (S.clsRenamingObject === id) S.clsRenamingObject = null;
   if (S.clsJustCreated === id) S.clsJustCreated = null;
 }

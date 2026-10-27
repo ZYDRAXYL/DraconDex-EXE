@@ -66,11 +66,11 @@ async function openPinnedRailModule(id) {
   S.hubOpen.nest = true;
   localStorage.setItem(HUB_OPEN_KEY, JSON.stringify(S.hubOpen));
   focusModuleInNest(id);
-  // A collector (module-collection) has no builder of its own — this is
-  // just the focus/expand above, not a toggle (openModuleNode's own
-  // collector branch DOES toggle, which would immediately re-collapse the
-  // branch focusModuleInNest just opened).
-  if (m.kind === 'collector') { renderNexusHome(); renderModuleRail(); return; }
+  // A collector's rail button never toggles (openModuleNode's collector
+  // branch does, which would re-collapse the branch focusModuleInNest just
+  // opened) — Procress 29 part 2: it opens the folder's page (D1: a folder
+  // pinned to the rail opens as a page; a click in the tree still folds it).
+  if (m.kind === 'collector') { openFolderPage(id); renderModuleRail(); return; }
   await openModuleNode(id);
 }
 
@@ -80,10 +80,11 @@ async function openPinnedRailModule(id) {
 // (§12.8) — they were in the head AND in the dock before.
 function buildModuleDetailHtml(m) {
   const col = m.icon_color_code || m.color_code || 'var(--accent)';
-  const renamingHead = S.renamingModuleId === m.id;
+  const renamingHead = S.renamingModuleId === m.id && S.renamingWhere === 'head';
+  // Procress 29 part 4: one click on the name renames it, like the handle after it.
   const nameHtml = renamingHead
     ? `<input id="rename-head-${m.id}" class="rename-input" style="font-size:1.15em" value="${x(m.name)}" onclick="event.stopPropagation()" onblur="saveModuleRename(${m.id},this.value)" onkeydown="renameInputKey(event,this,${m.id})">`
-    : `<span ondblclick="startRenameModule(${m.id})">${x(m.name)}</span>`;
+    : `<span class="ph-name" role="button" tabindex="0" title="${x(t('rename'))}" onclick="startRenameModule(${m.id},'head')" onkeydown="if(event.key==='Enter'||event.key==='F2'){event.preventDefault();startRenameModule(${m.id},'head')}">${x(m.name)}</span>`;
   // Procress 16 B12 / 17 U1: handle, kind and assets live in the Properties
   // panel now — the page opens on its data, not on ~300 px of metadata.
   const tabbed = STRUCTURE_KINDS.has(m.kind);
@@ -91,7 +92,7 @@ function buildModuleDetailHtml(m) {
   return `<div class="module-page${pageReadableOn(m.id) ? ' page-readable' : ''}" data-module="${m.id}">
     ${pageHeadHtml({
       color: col, icon: moduleIconHtml(m), iconOnclick: `openModuleIconPopup(${m.id},this)`,
-      title: nameHtml, titleText: m.name, addr: { moduleId: m.id },
+      title: nameHtml, titleText: m.name, addr: { moduleId: m.id }, after: moduleHandleHtml(m, 'head'),
       acts: pageHeadActsHtml(m.id, null),
       layout: pageHeadLayout(m.id, null),
     })}

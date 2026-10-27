@@ -166,15 +166,26 @@ async function addClsLevelFromCell(oid, tid) {
 // Procress 17 P1: rows render in chunks as they scroll in (core/ui.js lazyRows).
 const clsLazy = (c, view) => ((c.state.lazy ||= {})[view] ||= {});
 
-// Procress 26 part 3: the name cell renames on a double click (an input in
-// place, hub/edit.js's pattern); the grip before it drags the row.
+// Procress 26 part 3: the name renames in place (an input, hub/edit.js's
+// pattern); the grip before it drags the row. Procress 29 part 6: ONE click
+// renames — the name is a cell like the field cells after it — and the dot
+// before it is a button that opens the icon & colour popup; an object with an
+// icon shows it there instead of the dot.
+function clsObjectIconBtnHtml(m, o) {
+  const col = o.color_code || 'var(--accent)';
+  const inner = o.icon ? `<span class="cls-obj-ico" style="color:${x(col)}">${classifierObjectIconHtml(o, m)}</span>` : `<span class="dot" style="background:${x(col)}"></span>`;
+  return `<button type="button" class="btn btn-g cls-obj-icon" title="${x(t('clsColorIcon'))}" aria-label="${x(t('clsColorIcon'))}"
+    onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();openClsObjectIconPopup(${m.id},${o.id},this)">${inner}</button>`;
+}
+function clsObjectNameHtml(o, tag = 'span') {
+  return S.clsRenamingObject === o.id
+    ? `<input id="rename-cobj-${o.id}" class="rename-input" value="${x(S.clsRenameDraft?.id === o.id ? S.clsRenameDraft.value : o.name)}" onblur="saveClsObjectRename(${o.id},this.value,this)" onkeydown="clsRenameKey(event,this,${o.id})" onclick="event.stopPropagation()" data-no-i18n>`
+    : `<${tag} class="cls-name" role="button" tabindex="0" title="${x(t('rename'))}" onclick="event.stopPropagation();startRenameClsObject(${o.id},'end')"
+        onkeydown="if(event.key==='Enter'||event.key==='F2'){event.preventDefault();startRenameClsObject(${o.id})}" data-no-i18n>${x(o.name)}</${tag}>`;
+}
 function classifierNameCellHtml(m, o) {
   const grip = reorderGripHtml(`clsDragDown(event,this.closest('tr'),'obj',${m.id},${o.id})`);
-  const dot = `<span class="dot" style="background:${x(o.color_code || 'var(--accent)')}"></span>`;
-  const name = S.clsRenamingObject === o.id
-    ? `<input id="rename-cobj-${o.id}" class="rename-input" value="${x(S.clsRenameDraft?.id === o.id ? S.clsRenameDraft.value : o.name)}" onblur="saveClsObjectRename(${o.id},this.value,this)" onkeydown="clsRenameKey(event,this,${o.id})" data-no-i18n>`
-    : `<span class="cls-name" title="${x(t('rename'))}" ondblclick="startRenameClsObject(${o.id})" data-no-i18n>${x(o.name)}</span>`;
-  return `<td class="cls-name-cell">${grip}${dot}${name}</td>`;
+  return `<td class="cls-name-cell">${grip}${clsObjectIconBtnHtml(m, o)}${clsObjectNameHtml(o)}</td>`;
 }
 
 // Procress 27 part 4: a column head's guide text says what kind of field it is.
@@ -185,17 +196,15 @@ function renderClassifierTable(m, d, inst) {
   // Procress 24: a column's head is its field — click it for the field menu
   // (type · rename · delete), two clicks from the module page. Procress 26:
   // drag the head to move the column.
-  let html = `<div class="cls-table-wrap"><table class="cls-table"><tr><th>${t('name')}</th>${d.templates.map(c => `<th class="cls-col-head" data-cls-tid="${c.id}" onpointerdown="clsDragDown(event,this,'tpl',${m.id},${c.id},'x')"><button type="button" class="btn btn-g btn-sm" aria-haspopup="menu" title="${x(clsColumnTip(c))}" onclick="event.stopPropagation();openClsFieldMenu(this,${m.id},${c.id})" data-no-i18n>${x(c.description)}</button></th>`).join('')}<th></th></tr>`;
+  let html = `<div class="cls-table-wrap" data-scroll-key="cls-table-${m.id}"><table class="cls-table"><tr><th>${t('name')}</th>${d.templates.map(c => `<th class="cls-col-head" data-cls-tid="${c.id}" onpointerdown="clsDragDown(event,this,'tpl',${m.id},${c.id},'x')"><button type="button" class="btn btn-g btn-sm" aria-haspopup="menu" title="${x(clsColumnTip(c))}" onclick="event.stopPropagation();openClsFieldMenu(this,${m.id},${c.id})" data-no-i18n>${x(c.description)}</button></th>`).join('')}</tr>`;
   const keep = S.clsRenamingObject != null ? d.objects.findIndex((o) => o.id === S.clsRenamingObject) : -1;
   html += lazyRows(d.objects, (o) => {
     let html = `<tr data-cls-oid="${o.id}" oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})">${classifierNameCellHtml(m, o)}`;
     for (const c of d.templates) html += classifierTableCellHtml(m, o, c);
-    html += `<td class="cls-rowacts">
-      <button class="btn btn-g btn-i" onclick="openClassifierObjectModal(${m.id},${o.id})" title="${t('edit')}">${I.edit}</button>
-      <button class="btn btn-g btn-i" onclick="deleteClassifierObjectRow(${o.id})" title="${t('delete')}">${I.delete}</button>
-    </td></tr>`;
-    return html;
-  }, clsLazy(inst, 'table'), { keep, more: (id) => `<tr class="lazy-more" data-lazy="${id}"><td colspan="${d.templates.length + 2}"></td></tr>` });
+    // Procress 29 part 6: no ✎ / 🗑 at the row's end — the name and the icon
+    // are edited where they are, and delete is in the row's menu (and the Delete key).
+    return html + '</tr>';
+  }, clsLazy(inst, 'table'), { keep, more: (id) => `<tr class="lazy-more" data-lazy="${id}"><td colspan="${d.templates.length + 1}"></td></tr>` });
   html += `</table></div>`;
   return html;
 }
@@ -225,7 +234,7 @@ function renderClassifierGrid(m, d, inst) {
         oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})" onpointerdown="clsDragDown(event,this,'obj',${m.id},${o.id},'xy')">
       <span class="disp-thumb"><img data-display-key="cobj_${o.id}" alt=""></span>
       <span class="cls-card-icon" style="border-color:${x(col)};color:${x(col)}">${classifierObjectIconHtml(o, m)}</span>
-      <div class="cls-card-name">${x(o.name)}</div>
+      <div class="cls-card-name">${S.clsRenamingObject === o.id ? clsObjectNameHtml(o) : x(o.name)}</div>
     </div>`;
   }, clsLazy(inst, 'grid'))}</div>`;
 }
@@ -237,14 +246,14 @@ function renderClassifierListDetail(m, d, c) {
   // right click are the object menu; F2 renames, Delete deletes (with Undo).
   const list = lazyRows(d.objects, o => listRowHtml({
     density: 'compact', drag: true, state: { selected: !!(sel && o.id === sel.id) }, onclick: `selectClassifierObject(${xj(c.iid)},${o.id})`,
-    icon: `<span style="color:${x(o.color_code || 'var(--accent)')}">${classifierObjectIconHtml(o, m)}</span>`, title: o.name,
+    icon: `<span class="cls-obj-icon-wrap" style="color:${x(o.color_code || 'var(--accent)')}" role="button" tabindex="-1" title="${x(t('clsColorIcon'))}" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();openClsObjectIconPopup(${m.id},${o.id},this)">${classifierObjectIconHtml(o, m)}</span>`, title: o.name,
     menu: `openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})`,
     attrs: `data-no-i18n data-cls-oid="${o.id}" onpointerdown="clsDragDown(event,this,'obj',${m.id},${o.id})"`,
-    actions: listActHtml({ hidden: true, key: 'F2', name: t('rename'), onclick: `openClassifierObjectModal(${m.id},${o.id})` })
+    actions: listActHtml({ hidden: true, key: 'F2', name: t('rename'), onclick: `selectClassifierObject(${xj(c.iid)},${o.id});startRenameClsObject(${o.id})` })
       + listActHtml({ hidden: true, key: 'Delete', name: t('delete'), onclick: `deleteClassifierObjectRow(${o.id})` }),
   }), clsLazy(c, 'list'), { keep: sel ? d.objects.indexOf(sel) : -1 });
   const detail = sel ? renderClassifierObjectDetail(m, sel, d.templates) : '';
-  return `<div class="cls-listdetail"><div class="cls-list ls-list" role="listbox" aria-label="${x(m.name)}" oncontextmenu="if(event.target===this)openCtx('classifier.category',event,{moduleId:${m.id}})">${list}</div><div class="cls-detail">${detail}</div></div>`;
+  return `<div class="cls-listdetail"><div class="cls-list ls-list" data-scroll-key="cls-list-${m.id}" role="listbox" aria-label="${x(m.name)}" oncontextmenu="if(event.target===this)openCtx('classifier.category',event,{moduleId:${m.id}})">${list}</div><div class="cls-detail">${detail}</div></div>`;
 }
 
 function selectClassifierObject(iid, id) {

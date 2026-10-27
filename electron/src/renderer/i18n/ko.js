@@ -4,6 +4,12 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('ko', {
+  // Procress 29 part 9: updating by itself
+  updateReadyTitle:'업데이트 준비됨', updateReadyHint:'버전 {v}을(를) 다운로드하고 확인했습니다 — 지금 설치하면 DraconDex가 저절로 다시 열립니다.', updateInstallRestart:'설치하고 다시 시작', updateLater:'나중에', updateMode:'새 버전이 나오면', updateModeAsk:'다운로드 후 확인', updateModeQuit:'종료 시 설치', updateModeNotify:'알림만', updateModeOff:'확인 안 함', updateModeQuitUnsigned:'릴리스가 아직 서명되지 않아 설치 전에 계속 묻습니다.', updateDone:'{v}(으)로 업데이트됨', updateWhatsNew:'새로운 기능',
+  // Procress 29 part 5: icon sets, a custom icon, a colour of your own
+  iconSet:'아이콘 세트', iconCustomText:'글자 또는 이모지', iconCustomTextPh:'1–2자 입력', iconUploadedHere:'이 Nexus에 업로드됨', colorCustom:'사용자 지정 색', colorWheel:'색상환', colorRgb:'RGB', colorGrid:'격자', colorBrightness:'밝기',
+  // Procress 29 part 2: a folder's page — File Explorer views
+  folderOpenPage:'페이지로 열기', folderView:'보기', folderViewLarge:'큰 아이콘', folderViewSmall:'작은 아이콘', folderViewList:'목록', folderViewDetails:'자세히', folderColKind:'종류', folderColItems:'항목',
   // Procress 24: customisation within 2–3 clicks
   nexusSettingsThis:'이 Nexus 설정…', publishSite:'웹사이트로 게시…', pageChooseLayout:'레이아웃 선택…', settingPageThisNexus:'이 Nexus', nestOptMoreLayout:'레이아웃 설정 더 보기…', clsFieldMenu:'필드: 유형, 이름, 삭제', clsFieldChangeType:'유형 변경…', tagColor:'색',
   // Procress 23: package minAppVersion
@@ -234,7 +240,7 @@ i18nAdd('ko', {
   moduleInspector:'모듈 인스펙터', moduleIdentitySection:'식별 정보', moduleDetailSpec:'모듈 상세 사양', moduleAttribute:'모듈 속성', toggleInspector:'모듈 인스펙터 전환', resizePanel:'드래그하여 크기 조절', resizePageView:'드래그하여 페이지 보기 크기 조절', splitPane:'창 분할', newTab:'새 탭', tabList:'모든 탭', nestMoreItems:'{n}개 더 ›', nestUnsorted:'미분류', probMissing:'찾을 수 없는 파일', leftRecent:'최근', recentEmpty:'아직 연 항목이 없습니다 — 연 항목이 여기에 표시됩니다.', homeAsk:'무엇을 작업할까요?', homeCreate:'모듈 만들기', homeOpenRecent:'최근 항목 열기', homeContinue:'이어서 하기', homePinned:'고정됨', homePinHint:'아직 고정한 항목이 없습니다 — 모듈을 우클릭해 고정을 선택하세요.', homeOrganise:'Nest 정리', homeOrganiseHint:'행을 끌어 옮기고, 우클릭으로 다른 작업을 합니다.', addrSiblings:'같은 위치의 페이지', nestFilesAdded:'파일 {n}개를 Nexus에 복사했습니다', nestTwoColumn:'폴더를 격자로 열기(2열)', folderTileSize:'타일 크기', revealInExplorer:'탐색기에서 보기', folderEmpty:'이 폴더는 비어 있습니다 — 파일을 끌어 놓거나 안에 만드세요.', moreActions:'추가 작업', propsWhere:'위치', propsUpdated:'수정됨', propsLinksOut:'링크 대상', propsNoLinks:'아직 링크가 없습니다 — 페이지에서 [[를 입력해 연결하세요.', kcPage:'페이지', kindDescPage:'독립된 페이지 — 제목, 글, 링크, 검색 상자, 다른 모듈의 보기를 행과 열로 배치합니다. 데이터는 직접 갖지 않습니다.', skColorPink:'분홍', skColorYellow:'노랑', skColorBlue:'파랑', skColorWhite:'흰색', skLineWidth:'선 {n} px', pbPickSource:'소스 선택', menuOrganise:'정리', menuImport:'가져오기', skipToContent:'본문으로 건너뛰기', viewScene:'장면', viewGraph:'그래프', viewTable:'표', viewCards:'카드', viewBoard:'보드', viewEdges:'연결선', viewOneline:'한 줄', viewDownline:'세로 타임라인', viewCompare:'비교', viewCalendar:'달력', closePane:'창 닫기', moveToMainWindow:'메인 창으로 이동', tabMoveWrongVault:'탭이 다른 볼트에 속해 있습니다', majorModules:'메이저 모듈', minorElements:'마이너 엘리먼트',
   moduleUiSpec:'모듈 UI 사양', moduleLink:'모듈 링크', tagLink:'태그 링크', addAttribute:'속성 추가',
   addDetail:'세부 정보 추가…', inspectorDescEditElsewhere:'메인 화면에서 편집하세요', versionHistory:'버전 기록', versionHistoryComingSoon:'버전 기록은 추후 업데이트에서 제공됩니다.',
-  iconCollection:'아이콘 컬렉션', useThisIcon:'이 아이콘 사용', iconTabIcons:'아이콘', iconTabSymbols:'심볼', iconTabUploaded:'업로드', iconUploadPrompt:'클릭하여 이미지 업로드',
+  iconCollection:'아이콘 컬렉션', useThisIcon:'이 아이콘 사용', iconTabIcons:'아이콘', iconTabSymbols:'심볼', iconTabUploaded:'사용자 지정 아이콘', iconUploadPrompt:'클릭하여 이미지 업로드',
   classifierNew:'Classifier 만들기', catTypeLabel:'데이터 유형 (Category당 1개 선택)',
   catTypeObject:'오브젝트', catTypeElement:'엘리먼트', catTypeCharacter:'캐릭터',
   catTypeObjectDesc:'기본값 — 템플릿에서 속성 생성', catTypeElementDesc:'Object와 동일 + Levelable/Condition 전환 가능',

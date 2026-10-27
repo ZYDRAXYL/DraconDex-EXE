@@ -55,7 +55,7 @@ function buildNestRow(m, depth, parentId) {
     // rows at the same depth that DO show a chevron.
     : '<span class="tree-chev-spacer"></span>';
   const openable = m.kind !== 'collector';
-  const renaming = S.renamingModuleId === m.id;
+  const renaming = S.renamingModuleId === m.id && S.renamingWhere !== 'head';
   // IDE-style depth indentation (Plan part1 #4/#4-2) — capped visually past
   // a few levels so very deep nesting doesn't run the row text off-panel;
   // the tree itself still nests as deep as the drop rules allow.
@@ -105,7 +105,7 @@ function buildNestRow(m, depth, parentId) {
     ${showMajorIcon ? `<span class="kicon" style="color:${x(col)}" onclick="event.stopPropagation();openModuleIconPopup(${m.id},this)">${moduleIconHtml(m)}</span>` : ''}
     ${renaming
       ? `<input id="rename-nest-${m.id}" class="rename-input" value="${x(m.name)}" onclick="event.stopPropagation()" onblur="saveModuleRename(${m.id},this.value)" onkeydown="renameInputKey(event,this,${m.id})">`
-      : `<span class="name" ondblclick="event.stopPropagation();cancelRowOpen();startRenameModule(${m.id})">${x(m.name)}</span>`}
+      : `<span class="name" ondblclick="event.stopPropagation();cancelRowOpen();startRenameModule(${m.id},'nest')">${x(m.name)}</span>`}
     ${countBadge}${kindBadge}
     <button class="btn btn-g btn-i nest-row-more" tabindex="-1" onclick="event.stopPropagation();openModuleContextMenu(event,${m.id})" title="${t('moreActions')}" aria-label="${t('moreActions')}">${I.options}</button>
   </div>${childrenWrap}`;
@@ -175,7 +175,7 @@ document.addEventListener('keydown', (e) => {
   }
   listKeyNav(e, row, rows, {
     open: (r) => { S.nestRefocus = sel(r); r.click(); },
-    rename: mid != null ? () => startRenameModule(mid) : null,
+    rename: mid != null ? () => startRenameModule(mid, 'nest') : null,
     remove: mid != null ? () => deleteModuleNode(mid) : null,
   });
 });

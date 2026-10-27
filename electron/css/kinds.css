@@ -23,7 +23,7 @@
 .chr-downline-graph.is-panning{cursor:grabbing}
 
 .module-head .module-handle{
-	display:inline-block;font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:500;color:var(--accentH);
+	display:inline-block;min-height:0;line-height:1.4;font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:500;color:var(--accentH);
 	border:1px solid var(--accent);border-radius:var(--rl);padding:1px 9px;vertical-align:2px;
 }
 .module-head .mtags{display:flex;gap:6px;margin-top:7px;align-items:center;flex-wrap:wrap}
@@ -571,7 +571,12 @@ select.fp-input[multiple]{padding:2px}
 .ph-cover-none{display:grid;place-items:center}
 .module-handle-inp{width:160px;font-size:calc(12px * var(--fsc,1))}
 .module-handle-add{padding:1px 7px;opacity:.55;font-size:calc(var(--fs-meta) * var(--fsc,1))}
-.module-handle-add:hover{opacity:1}
+.module-handle-add:hover,.module-handle-add:focus-visible{opacity:1}
+/* Procress 29 part 4: the name renames on one click; the handle sits after it */
+.navbar-h .ph-name{cursor:text;border-radius:var(--rs)}
+.navbar-h .ph-name:hover{background:var(--hover)}
+.navbar-h .ph-name:focus-visible{outline:var(--focus-ring) solid var(--accentH,var(--accent));outline-offset:2px}
+.navbar-h .module-handle,.navbar-h .module-handle-add,.navbar-h .module-handle-inp{margin-left:8px;vertical-align:middle}
 
 /* ── Diviner (v5 Part 7, V5.md §11.5) ── */
 .div-dice{display:inline-flex;align-items:center;gap:4px;margin-left:auto}

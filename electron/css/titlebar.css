@@ -77,6 +77,7 @@
 .title-update-btn.hidden{display:none}
 .title-update-btn .icon{width:17px;height:17px}
 .title-update-btn:hover{background:var(--hover)}
+.title-update-btn.update-ready{color:var(--accentH,var(--accent))} /* Procress 29: downloaded and verified */
 /* UX-LAYOUT §6.1 (E8): with a rail, Settings is its last button
    (#nav-settings-btn, index.html) — the title-bar gear is only for the
    layouts that have no rail: Wyvern and the welcome page. */

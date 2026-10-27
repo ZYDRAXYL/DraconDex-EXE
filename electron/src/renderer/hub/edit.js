@@ -2,8 +2,13 @@
 // icon/color popup and delete. There is no module form modal any more (v5
 // Part 4, §8.3) — every field it had is edited in place.
 // ═══ Inline rename — Nest row + module detail header share one flag ════
-function startRenameModule(id) {
+// Procress 29 part 4: ONE rename box, where the rename was started — the
+// Nest row or the page head (`where`). Both used to open together and the
+// head one took the focus; a click in the Nest box then blurred the head
+// box, which saved and ended the rename before the caret could land.
+function startRenameModule(id, where) {
   S.renamingModuleId = id;
+  S.renamingWhere = where || (S.activeModuleNode?.id === id ? 'head' : 'nest');
   renderNexusHome();
   focusRenameInput(id);
 }
@@ -14,7 +19,7 @@ function startRenameModule(id) {
 // module paths.
 function focusRenameInput(id) {
   setTimeout(() => {
-    const el = q(S.activeModuleNode?.id === id ? `#rename-head-${id}` : `#rename-nest-${id}`);
+    const el = q(S.renamingWhere === 'head' ? `#rename-head-${id}` : `#rename-nest-${id}`);
     el?.focus(); el?.select();
   }, 30);
 }
@@ -25,6 +30,7 @@ async function saveModuleRename(id, value) {
   const name = value.trim();
   const m = findModuleNode(id);
   S.renamingModuleId = null;
+  S.renamingWhere = null;
   if (S.justCreatedId === id) S.justCreatedId = null; // named (or kept) — it stays
   if (!name || !m || name === m.name) { renderNexusHome(); return; }
   const old = m.name;
@@ -81,13 +87,19 @@ async function openModuleIconPopup(id, anchor) {
   const m = findModuleNode(id);
   if (!m || !anchor) return;
   openPopover(anchor, await iconPicker(m.icon || null, m.color || null, m.name, kindLabel(m.kind)), { cls: 'icon-edit-popup', keep: true, focus: false,
-    onClick: (e) => { if (e.target.closest('.ipk-cell') || e.target.closest('.cswatch')) saveModuleIconLive(id); } });
+    onClick: (e, pop) => { const what = iconPickerChange(e); if (what) saveModuleIconLive(id, pop, what); } });
 }
 
-async function saveModuleIconLive(id) {
-  const icon = getIconPickerValue() || null;
-  const color = q('#sel-color')?.value || null;
-  await api.module.update(id, { icon, color, icon_color: color });
+// Procress 29 part 5: a colour pick writes only the colour and an icon pick
+// only the icon — writing both from the picker could put back an icon (or a
+// colour) the user never picked here.
+async function saveModuleIconLive(id, root, what) {
+  if (what === 'color') {
+    const color = getIconPickerColor(root) || null;
+    await api.module.update(id, { color, icon_color: color });
+  } else {
+    await api.module.update(id, { icon: getIconPickerValue(root) || null });
+  }
   await reloadModuleTree();
 }
 
@@ -95,24 +107,31 @@ async function saveModuleIconLive(id) {
 // The module form modal used to be the one place in the app a handle could
 // be edited; with the modal gone it lives on the page's navbar, next to the
 // name, with the same inline-edit idiom as rename (one flag, one input).
-function moduleHandleHtml(m) {
-  if (S.editingHandleId === m.id) {
+// Procress 29 part 4: shown after the page title too (`where` = 'head'), as
+// well as in Properties ('props') — one click edits it, in the place it was
+// clicked; only that one becomes a box (two boxes fought over the focus,
+// the same bug the name rename had).
+function moduleHandleHtml(m, where = 'props') {
+  if (S.editingHandleId === m.id && (S.editingHandleWhere || 'props') === where) {
     const cur = S.handleDraft ?? m.handle ?? '';
-    return `<input id="handle-head-${m.id}" class="rename-input module-handle-inp" value="${x(cur)}" placeholder="${x(t('moduleHandleHint'))}"
+    return `<input id="handle-${where}-${m.id}" class="rename-input module-handle-inp" value="${x(cur)}" placeholder="${x(t('moduleHandleHint'))}"
       data-no-i18n onclick="event.stopPropagation()" onblur="saveModuleHandle(${m.id},this.value)"
       onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){cancelModuleHandleEdit()}">`;
   }
   return m.handle
-    ? `<span class="module-handle" data-no-i18n title="${x(t('moduleHandle'))}" ondblclick="startEditModuleHandle(${m.id})">@${x(m.handle)}</span>`
-    : `<button class="btn btn-g btn-sm module-handle-add" onclick="startEditModuleHandle(${m.id})" title="${x(t('moduleHandle'))}" data-no-i18n>@</button>`;
+    ? `<button type="button" class="btn btn-g btn-sm module-handle" data-no-i18n title="${x(t('moduleHandle'))}" onclick="event.stopPropagation();startEditModuleHandle(${m.id},'${where}')">@${x(m.handle)}</button>`
+    : `<button type="button" class="btn btn-g btn-sm module-handle-add" onclick="event.stopPropagation();startEditModuleHandle(${m.id},'${where}')" title="${x(t('moduleHandle'))}" aria-label="${x(t('moduleHandle'))}" data-no-i18n>@</button>`;
 }
 
-async function startEditModuleHandle(id) {
+const focusHandleInput = (id) => setTimeout(() => { const el = q(`#handle-${S.editingHandleWhere || 'props'}-${id}`); el?.focus(); el?.select(); }, 30);
+
+async function startEditModuleHandle(id, where = 'props') {
   if (S.activeModuleNode?.id !== id) await openModuleNode(id);
   S.editingHandleId = id;
+  S.editingHandleWhere = where;
   S.handleDraft = null;
   renderNexusHome();
-  setTimeout(() => { const el = q(`#handle-head-${id}`); el?.focus(); el?.select(); }, 30);
+  focusHandleInput(id);
 }
 
 function cancelModuleHandleEdit() {
@@ -136,7 +155,7 @@ async function saveModuleHandle(id, value) {
     toast(t(/invalid/.test(e.message) ? 'handleInvalid' : 'handleTaken'), 'err');
     S.handleDraft = next;
     renderNexusHome();
-    setTimeout(() => { const el = q(`#handle-head-${id}`); el?.focus(); el?.select(); }, 30);
+    focusHandleInput(id);
     return;
   }
   S.editingHandleId = null;

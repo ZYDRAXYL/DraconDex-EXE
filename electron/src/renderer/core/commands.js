@@ -151,6 +151,8 @@ const COMMANDS = {
   'asset.reveal': { label: 'revealInExplorer', icon: 'folder', scope: 'asset', when: (c) => !!cmdAsset(c) && cmdAsset(c).source_kind !== 'url' && !cmdAsset(c).missing, run: (c) => revealInExplorer({ fileId: c.fileId }), surfaces: ['asset.ctx'] },
   'module.importFolder': { label: 'importFolderHere', icon: 'folder', scope: 'module', when: isFolderCtx, run: (c) => importDockPickFolder(c.moduleId), surfaces: ['nest.ctx', 'assets.strip'] },
   'module.addLink': { label: 'addAssetLink', icon: 'plus', scope: 'module', run: (c) => openAddAssetUrlModal(c.moduleId), surfaces: ['nest.ctx', 'assets.strip'] },
+  // Procress 29 part 2: a folder's own page (File Explorer views) from its menu — a click in the tree still folds it
+  'module.openFolderPage': { label: 'folderOpenPage', icon: 'folder', scope: 'module', when: (c) => isFolderCtx(c) && c.moduleId != null, run: (c) => openFolderPage(c.moduleId), surfaces: ['nest.ctx'] },
   'module.openTab': { label: 'openInNewTab', icon: 'plus', scope: 'module', when: (c) => cmdModule(c) && !isFolderCtx(c), run: (c) => openModuleInNewTab(c.moduleId), surfaces: ['nest.ctx'] },
   'module.openWindow': { label: 'openInNewWindow', icon: 'export', scope: 'module', when: (c) => cmdModule(c) && !isFolderCtx(c), run: (c) => openModuleInNewWindow(c.moduleId), surfaces: ['nest.ctx'] },
   'module.openPane': {
@@ -160,8 +162,8 @@ const COMMANDS = {
       .map(([dir, key]) => ({ label: t(key), onClick: () => openModuleInNewPane(c.moduleId, dir) })),
     surfaces: ['nest.ctx'],
   },
-  'module.rename': { label: 'rename', icon: 'edit', scope: 'module', run: (c) => startRenameModule(c.moduleId), surfaces: ['nest.ctx'] },
-  'module.handle': { label: 'moduleHandle', icon: 'hashtag', scope: 'module', run: (c) => startEditModuleHandle(c.moduleId), surfaces: ['nest.ctx'] },
+  'module.rename': { label: 'rename', icon: 'edit', scope: 'module', run: (c) => startRenameModule(c.moduleId, 'nest'), surfaces: ['nest.ctx'] },
+  'module.handle': { label: 'moduleHandle', icon: 'hashtag', scope: 'module', run: (c) => startEditModuleHandle(c.moduleId, 'head'), surfaces: ['nest.ctx'] },
   'module.icon': { label: 'clsColorIcon', icon: 'colors', scope: 'module', run: (c, el) => openModuleIconPopup(c.moduleId, el || ctxAnchor()), surfaces: ['nest.ctx', 'classifier.ctx'] },
   'module.duplicate': { label: 'duplicate', icon: 'copy', scope: 'module', run: (c) => duplicateModuleNode(c.moduleId), surfaces: ['nest.ctx'] },
   'module.moveTo': {
@@ -222,8 +224,8 @@ const COMMANDS = {
   'classifier.fieldRename': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFieldsModal(c.moduleId, c.tplId), surfaces: ['classifier.ctx'] },
   'classifier.fieldDelete': { label: 'delete', icon: 'delete', danger: true, scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => deleteClassifierFieldUndoable(c.tplId), surfaces: ['classifier.ctx'] },
   'classifier.openObject': { label: 'open', icon: 'eye', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openItemNode('classifier', c.moduleId, c.objectId), surfaces: ['classifier.ctx'] },
-  'classifier.renameObject': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openClassifierObjectModal(c.moduleId, c.objectId), surfaces: ['classifier.ctx'] },
-  'classifier.objectIcon': { label: 'clsColorIcon', icon: 'colors', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openClassifierObjectModal(c.moduleId, c.objectId), surfaces: ['classifier.ctx'] },
+  'classifier.renameObject': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => startRenameClsObject(c.objectId), surfaces: ['classifier.ctx'] },
+  'classifier.objectIcon': { label: 'clsColorIcon', icon: 'colors', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c, el) => openClsObjectIconPopup(c.moduleId, c.objectId, q(`[data-cls-oid="${c.objectId}"] .cls-obj-icon`) || el || ctxAnchor()), surfaces: ['classifier.ctx'] },
   'classifier.duplicateObject': { label: 'duplicate', icon: 'copy', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => duplicateClassifierObject(c.objectId), surfaces: ['classifier.ctx'] },
   'classifier.objectExhibitor': { label: 'openInExhibitor', icon: 'relation', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openExhibitorFor(c.moduleId, `cobj_${c.objectId}`), surfaces: ['classifier.ctx'] },
   'classifier.moveObject': {

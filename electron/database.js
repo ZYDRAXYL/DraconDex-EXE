@@ -49,6 +49,7 @@ const sync      = require('./src/db/sync');
 const supabaseSetup = require('./src/db/supabase-setup');
 const drive     = require('./src/db/drive');
 const update    = require('./src/db/update');
+const updateInstall = require('./src/db/update-install');
 const plugin    = require('./src/db/plugin');
 const extension = require('./src/db/extension');
 const pkg       = require('./src/db/pkg');
@@ -113,6 +114,7 @@ module.exports = {
   ...supabaseSetup,
   ...drive,
   ...update,
+  ...updateInstall,
   ...plugin,
   ...extension,
   ...pkg,

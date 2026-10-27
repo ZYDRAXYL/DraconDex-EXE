@@ -26,7 +26,7 @@ CTX_PROVIDERS['nest.module'] = (c) => {
     [head('menuOrganise'), cmdItem('module.rename', c), cmdItem('module.icon', c), cmdItem('module.moveTo', c),
       cmdItem('module.duplicate', c), cmdItem('module.pin', c), cmdItem('module.handle', c)],
     [head('pageMenuShare'), cmdItem('module.exportMenu', c), cmdItem('module.reveal', c)],
-    [head('pageMenuMore'), cmdItem('module.openTab', c), cmdItem('module.openWindow', c), cmdItem('module.openPane', c)],
+    [head('pageMenuMore'), cmdItem('module.openFolderPage', c), cmdItem('module.openTab', c), cmdItem('module.openWindow', c), cmdItem('module.openPane', c)],
   ].filter((g) => g.slice(1).some(Boolean));
   return [...groups.flatMap((g, i) => (i ? [{ sep: true }, ...g] : g)), { sep: true }, cmdItem('module.delete', c)];
 };
@@ -383,7 +383,9 @@ async function quickCreateModule(kind, parentId, presetRef = null, tplId = null,
   // only for a plain create; a preset/template start was a deliberate choice.
   S.justCreatedId = presetRef || tplId ? null : moduleId;
   const created = findModuleNode(moduleId);
-  if (created && created.kind !== 'collector') await openModuleNode(moduleId);
+  const opens = created && created.kind !== 'collector';
+  S.renamingWhere = opens ? 'head' : 'nest'; // named where it shows: its page, or (a folder) its Nest row
+  if (opens) await openModuleNode(moduleId);
   else renderNexusHome();
   focusRenameInput(moduleId);
   if (shaped) toast(shaped, 'ok');

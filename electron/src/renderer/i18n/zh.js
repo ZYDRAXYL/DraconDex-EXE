@@ -4,6 +4,12 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('zh', {
+  // Procress 29 part 9: updating by itself
+  updateReadyTitle:'更新已就绪', updateReadyHint:'版本 {v} 已下载并校验——现在安装，DraconDex 会自动重新打开。', updateInstallRestart:'安装并重启', updateLater:'稍后', updateMode:'有新版本时', updateModeAsk:'下载后询问', updateModeQuit:'关闭时安装', updateModeNotify:'仅通知', updateModeOff:'不检查', updateModeQuitUnsigned:'发行版尚未签名，因此安装前仍会询问。', updateDone:'已更新到 {v}', updateWhatsNew:'新功能',
+  // Procress 29 part 5: icon sets, a custom icon, a colour of your own
+  iconSet:'图标集', iconCustomText:'文字或表情', iconCustomTextPh:'输入 1–2 个字符', iconUploadedHere:'此 Nexus 中已上传', colorCustom:'自定义颜色', colorWheel:'色轮', colorRgb:'RGB', colorGrid:'色板', colorBrightness:'亮度',
+  // Procress 29 part 2: a folder's page — File Explorer views
+  folderOpenPage:'作为页面打开', folderView:'视图', folderViewLarge:'大图标', folderViewSmall:'小图标', folderViewList:'列表', folderViewDetails:'详细信息', folderColKind:'类型', folderColItems:'项目数',
   // Procress 24: customisation within 2–3 clicks
   nexusSettingsThis:'此 Nexus 的设置…', publishSite:'发布为网站…', pageChooseLayout:'选择布局…', settingPageThisNexus:'此 Nexus', nestOptMoreLayout:'更多布局设置…', clsFieldMenu:'字段：类型、名称、删除', clsFieldChangeType:'更改类型…', tagColor:'颜色',
   // Procress 23: package minAppVersion
@@ -234,7 +240,7 @@ i18nAdd('zh', {
   moduleInspector:'模块检查器', moduleIdentitySection:'基本信息', moduleDetailSpec:'模块详情规格', moduleAttribute:'模块属性', toggleInspector:'切换模块检查器', resizePanel:'拖动以调整大小', resizePageView:'拖动以调整页面视图大小', splitPane:'拆分窗格', newTab:'新标签页', tabList:'所有标签页', nestMoreItems:'还有 {n} 项 ›', nestUnsorted:'未整理', probMissing:'缺失的文件', leftRecent:'最近', recentEmpty:'还没有打开过内容 — 打开的内容会显示在这里。', homeAsk:'你想处理什么?', homeCreate:'创建模块', homeOpenRecent:'打开最近', homeContinue:'继续', homePinned:'已固定', homePinHint:'还没有固定的内容 — 右键模块并选择“固定”。', homeOrganise:'整理 Nest', homeOrganiseHint:'拖动行来移动;右键行查看其他操作。', addrSiblings:'同级页面', nestFilesAdded:'已将 {n} 个文件复制到 Nexus', nestTwoColumn:'文件夹以网格打开(双栏)', folderTileSize:'磁贴大小', revealInExplorer:'在资源管理器中显示', folderEmpty:'此文件夹为空 — 拖入文件,或在其中新建内容。', moreActions:'更多操作', propsWhere:'位置', propsUpdated:'更新于', propsLinksOut:'链接到', propsNoLinks:'还没有链接 — 在页面中输入 [[ 即可链接到任何内容。', kcPage:'页面', kindDescPage:'独立的页面 — 用行和列排布标题、文字、链接、搜索框和其他模块的视图。本身不存数据。', skColorPink:'粉色', skColorYellow:'黄色', skColorBlue:'蓝色', skColorWhite:'白色', skLineWidth:'线宽 {n} px', pbPickSource:'选择来源', menuOrganise:'整理', menuImport:'导入', skipToContent:'跳到内容', viewScene:'场景', viewGraph:'图谱', viewTable:'表格', viewCards:'卡片', viewBoard:'看板', viewEdges:'连线', viewOneline:'单线', viewDownline:'纵向', viewCompare:'对比', viewCalendar:'日历', closePane:'关闭窗格', moveToMainWindow:'移到主窗口', tabMoveWrongVault:'标签属于不同的库', majorModules:'主模块', minorElements:'次要元素',
   moduleUiSpec:'模块 UI 规格', moduleLink:'模块链接', tagLink:'标签链接', addAttribute:'添加属性',
   addDetail:'添加详情…', inspectorDescEditElsewhere:'请在主视图中编辑', versionHistory:'版本历史', versionHistoryComingSoon:'版本历史将在后续更新中推出。',
-  iconCollection:'图标集合', useThisIcon:'使用此图标', iconTabIcons:'图标', iconTabSymbols:'符号', iconTabUploaded:'已上传', iconUploadPrompt:'点击上传图片',
+  iconCollection:'图标集合', useThisIcon:'使用此图标', iconTabIcons:'图标', iconTabSymbols:'符号', iconTabUploaded:'自定义图标', iconUploadPrompt:'点击上传图片',
   classifierNew:'创建 Classifier', catTypeLabel:'数据类型（每个 Category 选 1 个）',
   catTypeObject:'Object', catTypeElement:'Element', catTypeCharacter:'角色',
   catTypeObjectDesc:'默认 — 从模板创建属性', catTypeElementDesc:'与 Object 相同，另可切换 Levelable / Condition',

@@ -170,6 +170,8 @@ jobs:
       - name: Collect release assets
         id: assets
         shell: pwsh
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
         run: |
           $ErrorActionPreference = 'Stop'
           $version = '${{ steps.meta.outputs.version }}'
@@ -194,6 +196,16 @@ jobs:
             if (-not (Test-Path $src)) { throw "Expected build output not found: $src" }
             Copy-Item $src -Destination $dist
           }
+          # Procress 29 part 9: what electron-updater reads — latest.yml names the
+          # Setup and its sha512, the .blockmap lets the next update download only
+          # the blocks that changed. Both come from the NSIS build ("publish" in
+          # package.json makes electron-builder write them even with --publish never).
+          foreach ($name in @('latest.yml', "DraconDex-Setup-$version.exe.blockmap")) {
+            $src = Join-Path $out $name
+            # not fatal: without them the app downloads the whole Setup instead
+            if (-not (Test-Path $src)) { Write-Warning "Update file not found: $src"; continue }
+            Copy-Item $src -Destination $dist
+          }
 
           # Hash everything before opening the output file. Streaming
           # Get-ChildItem straight into Out-File makes PowerShell create
@@ -208,6 +220,12 @@ jobs:
             "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
           })
           $lines | Out-File -FilePath $checksums -Encoding utf8
+
+          # Procress 29 part 9: sign the checksums (checksums-sha256.txt.sig) — the
+          # app checks it before it installs anything. No secret = not signed, and
+          # the script says so; the app then keeps asking before an install.
+          node .github/scripts/sign-checksums.mjs $checksums
+          if ($LASTEXITCODE -ne 0) { throw "signing the checksums failed" }
 
           Get-ChildItem $dist -File | ForEach-Object {
             "{0,-44} {1,8:N1} MB" -f $_.Name, ($_.Length / 1MB)
