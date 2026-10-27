@@ -1513,3 +1513,21 @@ test('29 part 5: icon sets, a typed glyph, uploads reused across the Nexus, a co
   assert.equal(m.icon, png, 'and the icon stayed');
   await win.keyboard.press('Escape');
 });
+
+test('29 part 9: update mode is stored; a ready update asks once, from the title bar too', async () => {
+  assert.equal(await win.evaluate(() => api.update.getMode()), 'ask', 'download, then ask — the default');
+  assert.deepEqual(await win.evaluate(() => api.update.setMode('quit')), { ok: true });
+  assert.equal(await win.evaluate(() => api.update.getMode()), 'quit');
+  assert.equal(await win.evaluate(() => api.update.getAutoCheck()), true, 'the old switch follows');
+  await win.evaluate(() => api.update.setMode('ask'));
+  const st = { mode: 'ask', current: '0.0.1', available: true, version: '99.0.0', notes: 'n', url: null, ready: true, downloading: false, canInstall: true, signed: false };
+  await win.evaluate((s) => onUpdateState(s), st); await sleep(300);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden) #update-install-btn').count(), 1, 'asks: Install and restart');
+  assert.ok(await win.evaluate(() => q('#titlebar-update-btn').classList.contains('update-ready')), 'the title-bar arrow says ready');
+  await win.evaluate(() => closeModal());
+  await win.evaluate((s) => onUpdateState(s), st); await sleep(200);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, '"Later" = not again this session');
+  await win.evaluate(() => titlebarUpdateClick()); await sleep(200);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden) #update-install-btn').count(), 1, 'the arrow asks again on purpose');
+  await win.evaluate(() => { closeModal(); onUpdateState({ mode: 'ask', current: '0.0.1', available: false, ready: false }); });
+});

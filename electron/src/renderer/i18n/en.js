@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('en', {
+  // Procress 29 part 9: updating by itself
+  updateReadyTitle:'Update ready', updateReadyHint:'Version {v} is downloaded and checked — install it now and DraconDex reopens by itself.', updateInstallRestart:'Install and restart', updateLater:'Later', updateMode:'When a new version is out', updateModeAsk:'Download, then ask', updateModeQuit:'Install on close', updateModeNotify:'Only tell me', updateModeOff:'Don\'t check', updateModeQuitUnsigned:'Releases are not signed yet, so an update still asks before it installs.', updateDone:'Updated to {v}', updateWhatsNew:'What\'s new',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
   iconSet:'Icon set', iconCustomText:'Letter or emoji', iconCustomTextPh:'Type 1–2 characters', iconUploadedHere:'Uploaded in this Nexus', colorCustom:'A colour of your own', colorWheel:'Wheel', colorRgb:'RGB', colorGrid:'Grid', colorBrightness:'Brightness',
   // Procress 29 part 2: a folder's page — File Explorer views

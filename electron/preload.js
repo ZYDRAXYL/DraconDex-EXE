@@ -371,6 +371,12 @@ contextBridge.exposeInMainWorld('api', {
     onProgress:   (cb)  => { const f = (_, p) => cb(p); ipcRenderer.on('update:progress', f); return () => ipcRenderer.removeListener('update:progress', f); },
     getAutoCheck: ()    => inv('update:getAutoCheck'),
     setAutoCheck: (v)   => inv('update:setAutoCheck', v),
+    state:        ()    => inv('update:state'),
+    download:     ()    => inv('update:download'),
+    getMode:      ()    => inv('update:getMode'),
+    setMode:      (m)   => inv('update:setMode', m),
+    justUpdated:  ()    => inv('update:justUpdated'),
+    onState:      (cb)  => { const f = (_, s) => cb(s); ipcRenderer.on('update:state', f); return () => ipcRenderer.removeListener('update:state', f); },
   },
   plugin: {
     list:      ()    => inv('plugin:list'),

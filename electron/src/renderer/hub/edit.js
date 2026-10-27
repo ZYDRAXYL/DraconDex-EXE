@@ -29,7 +29,6 @@ function focusRenameInput(id) {
 async function saveModuleRename(id, value) {
   const name = value.trim();
   const m = findModuleNode(id);
-  if (S.renamingModuleId !== id) return; // the box was already closed (Esc → blur)
   S.renamingModuleId = null;
   S.renamingWhere = null;
   if (S.justCreatedId === id) S.justCreatedId = null; // named (or kept) — it stays

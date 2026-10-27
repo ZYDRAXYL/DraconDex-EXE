@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('qd', {
+  // Procress 29 part 9: updating by itself
+  updateReadyTitle:'Thyn amendement is redy', updateReadyHint:'Versioun {v} is fet and proved — sette it in now and DraconDex openeth agayn by itself.', updateInstallRestart:'Sette in and begynne agayn', updateLater:'Later', updateMode:'Whan a newe versioun cometh', updateModeAsk:'Fecche, then aske', updateModeQuit:'Sette in at closynge', updateModeNotify:'Onely telle me', updateModeOff:'Seke not', updateModeQuitUnsigned:'The releses ben not yet sealed, so it asketh ere it setteth in.', updateDone:'Amended to {v}', updateWhatsNew:'What is newe',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
   iconSet:'Sette of ymages', iconCustomText:'Lettre or emoji', iconCustomTextPh:'Wryte one or two lettres', iconUploadedHere:'Brought into this Nexus', colorCustom:'A hewe of thyne owne', colorWheel:'Wheel', colorRgb:'RGB', colorGrid:'Grille', colorBrightness:'Brightnesse',
   // Procress 29 part 2: a folder's page — File Explorer views

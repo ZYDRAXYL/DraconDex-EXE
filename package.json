@@ -37,6 +37,7 @@
     "build:installer": "electron-builder --win nsis --publish never"
   },
   "dependencies": {
+    "electron-updater": "^6.8.11",
     "node-sqlite3-wasm": "^0.8.59"
   },
   "devDependencies": {
@@ -88,6 +89,12 @@
     },
     "portable": {
       "artifactName": "DraconDex-Portable-${version}.${ext}"
-    }
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/ZYDRAXYL/DraconDex-WEB/releases/download/v${version}"
+      }
+    ]
   }
 }

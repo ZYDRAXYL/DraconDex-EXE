@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('ko', {
+  // Procress 29 part 9: updating by itself
+  updateReadyTitle:'업데이트 준비됨', updateReadyHint:'버전 {v}을(를) 다운로드하고 확인했습니다 — 지금 설치하면 DraconDex가 저절로 다시 열립니다.', updateInstallRestart:'설치하고 다시 시작', updateLater:'나중에', updateMode:'새 버전이 나오면', updateModeAsk:'다운로드 후 확인', updateModeQuit:'종료 시 설치', updateModeNotify:'알림만', updateModeOff:'확인 안 함', updateModeQuitUnsigned:'릴리스가 아직 서명되지 않아 설치 전에 계속 묻습니다.', updateDone:'{v}(으)로 업데이트됨', updateWhatsNew:'새로운 기능',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
   iconSet:'아이콘 세트', iconCustomText:'글자 또는 이모지', iconCustomTextPh:'1–2자 입력', iconUploadedHere:'이 Nexus에 업로드됨', colorCustom:'사용자 지정 색', colorWheel:'색상환', colorRgb:'RGB', colorGrid:'격자', colorBrightness:'밝기',
   // Procress 29 part 2: a folder's page — File Explorer views

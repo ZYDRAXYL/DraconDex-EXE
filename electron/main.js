@@ -451,6 +451,7 @@ app.whenReady().then(() => {
   ]));
   registerDisplayImageProtocol();
   db.cleanupUpdateLeftovers(); // Procress 28 part 7: the Setup / old portable an update left behind
+  db.scheduleUpdateChecks();   // Procress 29 part 9: check, download and get ready in the background
   // On-disk half of the v4.2.0 extensions -> plugins rename (the DB half is
   // migratePluginV42 in src/db/schema/migrations.js). Idempotent and silent.
   db.migratePluginDir();
@@ -1777,6 +1778,12 @@ h('update:dismiss',      (v)   => db.dismissUpdate(v));
 h('update:openDownload', (url) => db.openUpdateDownload(url));
 h('update:getAutoCheck', ()    => db.getAutoCheck());
 h('update:setAutoCheck', (v)   => db.setAutoCheck(v));
+// Procress 29 part 9: updating by itself — the state, the mode, a download now
+h('update:state',        ()    => db.updateState());
+h('update:download',     ()    => db.downloadUpdate());
+h('update:getMode',      ()    => db.getUpdateMode());
+h('update:setMode',      (m)   => db.setUpdateMode(m));
+h('update:justUpdated',  ()    => db.justUpdated());
 
 // Plugins — main-app-facing surface (preview/install/list/manage). The
 // pluginapi:table:* bridge plugin windows actually use is a SEPARATE surface

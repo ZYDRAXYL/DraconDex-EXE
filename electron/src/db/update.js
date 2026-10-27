@@ -1,10 +1,10 @@
 'use strict';
-// Version-update notice + in-app install. Reads the latest GitHub Release from
-// the project's PUBLIC release mirror and offers it to the user; installUpdate()
-// downloads the matching asset, checks it against the release's
-// checksums-sha256.txt, launches it and quits. Nothing installs without the
-// user clicking Install. Plain fetch() against the GitHub REST API, same style
-// as sync.js/drive.js. See docs/UPDATE.md.
+// Version check: reads the latest GitHub Release from the project's PUBLIC
+// release mirror, and says which of its files this build would install
+// (installAsset) and what each must hash to (expectedSha256). Downloading,
+// verifying and installing it — by itself, in the background — is
+// update-install.js (Procress 29 part 9). Plain fetch() against the GitHub
+// REST API, same style as sync.js/drive.js. See docs/UPDATE.md.
 //
 // Plan process1 part2 #1: no longer gated behind either of this app's two
 // independent logins (Cloud Sync's Supabase login, Drive Backup's own login)
@@ -20,9 +20,6 @@
 // response shape: see parseGithubRelease below.
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
-const { once } = require('events');
-const { spawn } = require('child_process');
 const { app, shell, BrowserWindow } = require('electron');
 const { getAppSetting, setAppSetting } = require('./versions');
 
@@ -188,6 +185,12 @@ function installAsset(release) {
   if (process.env.PORTABLE_EXECUTABLE_DIR) {
     name = `DraconDex-Portable-${release.version}.exe`;
     dir = process.env.PORTABLE_EXECUTABLE_DIR;
+    // Procress 29 part 9 (D7): downloaded beside this exe as <its own name>.new,
+    // then moved over it once it has exited — same name, so a shortcut keeps working
+    const self = process.env.PORTABLE_EXECUTABLE_FILE;
+    const asset = (release.assets || []).find((a) => a.name === name);
+    const sums = (release.assets || []).find((a) => a.name === 'checksums-sha256.txt');
+    if (self && asset && sums) return { ...asset, sumsUrl: sums.url, dest: `${self}.new`, kind: 'portable' };
   } else if (fs.existsSync(path.join(path.dirname(app.getPath('exe')), 'portable.flag'))) {
     return null;
   } else {
@@ -213,57 +216,6 @@ function sendProgress(p) {
   for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('update:progress', p);
 }
 
-// User-initiated (the Install button), so unlike checkForUpdate() failures
-// come back as { ok:false, error } for the renderer to show.
-async function installUpdate() {
-  const asset = _latest && installAsset(_latest);
-  if (!asset) return { ok: false, error: 'no_installer' };
-  const ua = { 'User-Agent': `DraconDex/${app.getVersion()}` };
-  const part = `${asset.dest}.part`;
-  try {
-    // A checksum is required, not best-effort: this file is about to be run.
-    const sumsRes = await fetch(asset.sumsUrl, { signal: AbortSignal.timeout(15000), headers: ua });
-    if (!sumsRes.ok) throw new Error(`checksums HTTP ${sumsRes.status}`);
-    const expected = expectedSha256(await sumsRes.text(), asset.name);
-    if (!expected) throw new Error('no checksum for this file');
-
-    const res = await fetch(asset.url, { signal: AbortSignal.timeout(30 * 60000), headers: ua });
-    if (!res.ok || !res.body) throw new Error(`download HTTP ${res.status}`);
-    const total = Number(res.headers.get('content-length')) || 0;
-    const hash = crypto.createHash('sha256');
-    const out = fs.createWriteStream(part);
-    let got = 0, lastPct = -1;
-    try {
-      for await (const chunk of res.body) {
-        hash.update(chunk);
-        got += chunk.length;
-        if (!out.write(chunk)) await once(out, 'drain');
-        const pct = total ? Math.floor((got / total) * 100) : -1;
-        if (pct !== lastPct) { lastPct = pct; sendProgress(pct / 100); }
-      }
-    } finally {
-      await new Promise((ok) => out.end(ok));
-    }
-    if (total && got !== total) throw new Error('download stopped early');
-    if (hash.digest('hex') !== expected) throw new Error('checksum mismatch');
-    fs.renameSync(part, asset.dest);
-  } catch (e) {
-    try { fs.rmSync(part, { force: true }); } catch (_) {}
-    return { ok: false, error: String(e?.message || e) };
-  }
-  // Start it only once this process is on its way out: the new portable exe
-  // would otherwise lose requestSingleInstanceLock() to us and exit, and the
-  // NSIS installer would find the app still running.
-  // Procress 28 part 7: the Setup runs silently (/S — no wizard to click
-  // through, same install folder as before) and starts the new version when
-  // it is done (--force-run). A portable exe just starts.
-  const args = asset.kind === 'setup' ? ['/S', '--force-run'] : [];
-  app.once('quit', () => { spawn(asset.dest, args, { detached: true, stdio: 'ignore' }).unref(); });
-  // a moment for the renderer to say the app will come back by itself
-  setTimeout(() => app.quit(), 1200);
-  return { ok: true };
-}
-
 // ── Leftovers of an update (Procress 28 part 7) ─────────────────────────
 // The downloaded Setup used to stay in %TEMP% for good, and an updated
 // portable exe kept the old one beside it. Given a folder's file names,
@@ -274,6 +226,8 @@ async function installUpdate() {
 const LEFTOVER_RE = /^DraconDex-(Setup|Portable)-(\d+\.\d+\.\d+)\.exe(\.part)?$/;
 function updateLeftovers(names, { kind, current, self = '' }) {
   return names.filter((n) => {
+    // Procress 29 part 9: a swap that never happened (<self>.new, .new.part)
+    if (self && (n === `${self}.new` || n === `${self}.new.part`)) return true;
     const m = LEFTOVER_RE.exec(n);
     if (!m || n === self) return false;
     if (m[3]) return true; // .part
@@ -303,13 +257,6 @@ function cleanupUpdateLeftovers() {
 
 function dismissUpdate(version) { setAppSetting(SEEN_KEY, String(version || '')); return { ok: true }; }
 
-// Plan process1 part2 #1.2: on by default (unset/anything but the literal
-// '0' reads as enabled) — same getAppSetting boolean-as-string convention as
-// drive.js's own `drive:autoBackup` flag, checked once per app open by
-// initVersionCheck() (renderer/update.js) rather than on an interval.
-function getAutoCheck() { return getAppSetting(AUTO_CHECK_KEY) !== '0'; }
-function setAutoCheck(enabled) { setAppSetting(AUTO_CHECK_KEY, enabled ? '1' : '0'); return { ok: true }; }
-
 // The renderer passes the URL back in, so this re-checks it rather than
 // assuming it is the one checkForUpdate() handed out. A bare `^https?://`
 // test would let any renderer-side compromise pop the browser at an arbitrary
@@ -321,4 +268,7 @@ function openUpdateDownload(url) {
   return { ok: true };
 }
 
-module.exports = { checkForUpdate, dismissUpdate, openUpdateDownload, installUpdate, getAutoCheck, setAutoCheck, cleanupUpdateLeftovers };
+module.exports = { checkForUpdate, dismissUpdate, openUpdateDownload, cleanupUpdateLeftovers };
+// for update-install.js (Procress 29 part 9) — not IPC, so kept off the database.js surface
+Object.defineProperty(module.exports, 'internals', { enumerable: false,
+  value: { latest: () => _latest, installAsset, expectedSha256, sendProgress, isNewerVersion, RELEASE_URL_PREFIX, IS_DEV, AUTO_CHECK_KEY } });

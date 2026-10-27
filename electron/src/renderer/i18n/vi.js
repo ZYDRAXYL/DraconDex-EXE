@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('vi', {
+  // Procress 29 part 9: updating by itself
+  updateReadyTitle:'Bản cập nhật đã sẵn sàng', updateReadyHint:'Phiên bản {v} đã được tải và kiểm tra — cài ngay, DraconDex sẽ tự mở lại.', updateInstallRestart:'Cài đặt và khởi động lại', updateLater:'Để sau', updateMode:'Khi có phiên bản mới', updateModeAsk:'Tải về rồi hỏi', updateModeQuit:'Cài khi đóng', updateModeNotify:'Chỉ thông báo', updateModeOff:'Không kiểm tra', updateModeQuitUnsigned:'Bản phát hành chưa được ký nên vẫn hỏi trước khi cài.', updateDone:'Đã cập nhật lên {v}', updateWhatsNew:'Có gì mới',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
   iconSet:'Bộ biểu tượng', iconCustomText:'Chữ hoặc emoji', iconCustomTextPh:'Nhập 1–2 ký tự', iconUploadedHere:'Đã tải lên trong Nexus này', colorCustom:'Màu tùy chỉnh', colorWheel:'Bánh xe', colorRgb:'RGB', colorGrid:'Lưới', colorBrightness:'Độ sáng',
   // Procress 29 part 2: a folder's page — File Explorer views

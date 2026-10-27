@@ -274,3 +274,35 @@ test('update leftovers: a portable drops only older portables, never the one run
   assert.deepEqual(left(dir, { kind: 'portable', current: '5.4.0', self: 'DraconDex-Portable-5.4.0.exe' }), ['DraconDex-Portable-5.3.1.exe'],
     'not itself, not a newer one, not a Setup the user keeps there');
 });
+
+test('update leftovers (Procress 29): a swap that never happened — <self>.new and its .part — goes too', () => {
+  const left = loadLeftovers();
+  const dir = ['DraconDex.exe', 'DraconDex.exe.new', 'DraconDex.exe.new.part', 'notes.txt'];
+  assert.deepEqual(left(dir, { kind: 'portable', current: '5.5.0', self: 'DraconDex.exe' }), ['DraconDex.exe.new', 'DraconDex.exe.new.part']);
+});
+
+// Procress 29 part 9: the release's checksums file is trusted only when the
+// signing key signed exactly it (lifted out like the pieces above).
+async function loadSigned() {
+  const src = readSource('../src/db/update-install.js');
+  const fn = src.match(/function checksumsSigned\([\s\S]*?\n\}/)?.[0];
+  assert.ok(fn, 'checksumsSigned not found');
+  const crypto = await import('node:crypto');
+  // eslint-disable-next-line no-new-func
+  return { checksumsSigned: new Function('crypto', `${fn}\nreturn checksumsSigned;`)(crypto), crypto };
+}
+
+test('checksums signature: the key that signed it says yes; a changed byte, another key or no signature says no', async () => {
+  const { checksumsSigned, crypto } = await loadSigned();
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
+  const pub = publicKey.export({ format: 'der', type: 'spki' }).toString('base64');
+  const text = 'abc123  DraconDex-Setup-5.5.0.exe\n';
+  const sig = crypto.sign(null, Buffer.from(text), privateKey).toString('base64');
+  assert.equal(checksumsSigned(text, sig, pub), true);
+  assert.equal(checksumsSigned(text.replace('abc', 'abd'), sig, pub), false, 'a changed checksum');
+  const other = crypto.generateKeyPairSync('ed25519').publicKey.export({ format: 'der', type: 'spki' }).toString('base64');
+  assert.equal(checksumsSigned(text, sig, other), false, 'another key');
+  assert.equal(checksumsSigned(text, '', pub), false, 'no signature');
+  assert.equal(checksumsSigned(text, 'not base64 !!', pub), false, 'garbage');
+  assert.equal(checksumsSigned(text, '', ''), true, 'no key configured = not checked (the SHA-256 still is)');
+});
