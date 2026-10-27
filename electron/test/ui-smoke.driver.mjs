@@ -1453,3 +1453,30 @@ test('29 part 3: delete and Undo on a long page keep the page where it was, with
   assert.ok(Math.abs(await win.evaluate((b) => q(b).scrollTop, body) - 1500) <= 1, 'still there after Undo');
   assert.ok(!(await win.evaluate(() => window._p29)).some((v) => v < 1400), 'never drawn at the top in between');
 });
+
+test('29 part 2: a folder found in the Nest opens as its page; four views, remembered per folder; a pinned folder opens its page', async () => {
+  const fid = await win.evaluate(async () => { const nx = S.nexus.id; const f = await api.module.create({ nexus_ref: nx, name: 'Smoke shelf', kind: 'collector' });
+    for (const [n, k] of [['Inner', 'collector'], ['Note A', 'scribe'], ['Table B', 'classifier']]) await api.module.create({ nexus_ref: nx, parent_id: f, name: n, kind: k });
+    await reloadModuleTree(); renderNexusHome(); return f; });
+  await win.fill('#nest-filter-q', 'Smoke shelf'); await sleep(400);
+  // the panel may be floating over the page after the earlier tests' layouts — a click on the row itself is what counts here
+  await win.locator('.nest-filter-hit:has-text("Smoke shelf")').first().dispatchEvent('click'); await sleep(500);
+  assert.equal(await win.evaluate(() => S.folderPage), fid, 'the search hit opened the folder page');
+  for (const v of ['large', 'small', 'list', 'details']) {
+    await win.locator(`.folder-page`).first().waitFor();
+    await win.locator(`.page-title .seg [data-value="${v}"]`).click(); await sleep(250);
+    assert.equal(await win.evaluate(() => q('.folder-page').dataset.view), v);
+    const names = await win.locator('.folder-page [data-no-i18n]').allInnerTexts();
+    assert.ok(['Inner', 'Note A', 'Table B'].every((n) => names.some((s) => s.includes(n))), `${v} lists what is inside: ${names}`);
+  }
+  await sleep(300);
+  assert.equal((await win.evaluate((id) => api.module.getUi(id), fid)).folderView, 'details', 'remembered on the folder');
+  await win.locator('.folder-details tbody tr:has-text("Note A")').click(); await sleep(500);
+  assert.equal(await win.evaluate(() => S.activeModuleNode?.name), 'Note A', 'a row opens');
+  await win.fill('#nest-filter-q', ''); await sleep(300);
+  // pinned on the rail → its page
+  await win.evaluate(async (id) => { await api.module.update(id, { pinned: 1 }); await reloadModuleTree(); renderModuleRail(); }, fid);
+  await win.evaluate((id) => openPinnedRailModule(id), fid); await sleep(500);
+  assert.equal(await win.evaluate(() => S.folderPage), fid);
+  await win.evaluate(async (id) => { await api.module.update(id, { pinned: 0 }); await reloadModuleTree(); renderModuleRail(); }, fid);
+});

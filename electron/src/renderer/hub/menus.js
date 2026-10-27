@@ -26,7 +26,7 @@ CTX_PROVIDERS['nest.module'] = (c) => {
     [head('menuOrganise'), cmdItem('module.rename', c), cmdItem('module.icon', c), cmdItem('module.moveTo', c),
       cmdItem('module.duplicate', c), cmdItem('module.pin', c), cmdItem('module.handle', c)],
     [head('pageMenuShare'), cmdItem('module.exportMenu', c), cmdItem('module.reveal', c)],
-    [head('pageMenuMore'), cmdItem('module.openTab', c), cmdItem('module.openWindow', c), cmdItem('module.openPane', c)],
+    [head('pageMenuMore'), cmdItem('module.openFolderPage', c), cmdItem('module.openTab', c), cmdItem('module.openWindow', c), cmdItem('module.openPane', c)],
   ].filter((g) => g.slice(1).some(Boolean));
   return [...groups.flatMap((g, i) => (i ? [{ sep: true }, ...g] : g)), { sep: true }, cmdItem('module.delete', c)];
 };

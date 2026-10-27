@@ -117,7 +117,9 @@ function nestTreeBodyHtml() {
   const files = qy.k.length || qy.l.length || (!qy.t.length && !qy.text.length) ? [] : (S.importFiles || [])
     .filter((f) => words(f.file_name) && anyOf(qy.t, (tp) => assetClass(f) === tp || String(f.file_type || '').toLowerCase() === tp));
   if (!hits.length && !files.length) return `<div class="empty" style="padding:16px 10px">${x(t('nestFilterNone'))}</div>`;
-  return hits.map(({ m, path }) => `<div class="li nest-filter-hit" onclick="openModuleNode(${m.id})" oncontextmenu="openModuleContextMenu(event,${m.id})">
+  // Procress 29 part 2: a folder found here opens as its page — folding it
+  // in a list of search results showed nothing at all.
+  return hits.map(({ m, path }) => `<div class="li nest-filter-hit" onclick="${m.kind === 'collector' ? 'openFolderPage' : 'openModuleNode'}(${m.id})" oncontextmenu="openModuleContextMenu(event,${m.id})">
       <span class="kicon" aria-hidden="true">${I[KIND_ICON[m.kind]] || I.layer}</span>
       <span class="name">${x(m.name)}</span>
       <span class="nest-filter-path" data-no-i18n>${x(path.join(' › '))}</span>

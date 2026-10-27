@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('fr', {
+  // Procress 29 part 2: a folder's page — File Explorer views
+  folderOpenPage:'Ouvrir comme page', folderView:'Affichage', folderViewLarge:'Grandes icônes', folderViewSmall:'Petites icônes', folderViewList:'Liste', folderViewDetails:'Détails', folderColKind:'Type', folderColItems:'Éléments',
   // Procress 24: customisation within 2–3 clicks
   nexusSettingsThis:'Paramètres de ce Nexus…', publishSite:'Publier en site web…', pageChooseLayout:'Choisir la disposition…', settingPageThisNexus:'Ce Nexus', nestOptMoreLayout:'Plus de réglages de disposition…', clsFieldMenu:'Champ : type, nom, supprimer', clsFieldChangeType:'Changer le type…', tagColor:'Couleur',
   // Procress 23: package minAppVersion

@@ -66,11 +66,11 @@ async function openPinnedRailModule(id) {
   S.hubOpen.nest = true;
   localStorage.setItem(HUB_OPEN_KEY, JSON.stringify(S.hubOpen));
   focusModuleInNest(id);
-  // A collector (module-collection) has no builder of its own — this is
-  // just the focus/expand above, not a toggle (openModuleNode's own
-  // collector branch DOES toggle, which would immediately re-collapse the
-  // branch focusModuleInNest just opened).
-  if (m.kind === 'collector') { renderNexusHome(); renderModuleRail(); return; }
+  // A collector's rail button never toggles (openModuleNode's collector
+  // branch does, which would re-collapse the branch focusModuleInNest just
+  // opened) — Procress 29 part 2: it opens the folder's page (D1: a folder
+  // pinned to the rail opens as a page; a click in the tree still folds it).
+  if (m.kind === 'collector') { openFolderPage(id); renderModuleRail(); return; }
   await openModuleNode(id);
 }
 
