@@ -450,6 +450,7 @@ app.whenReady().then(() => {
     { role: 'viewMenu' },
   ]));
   registerDisplayImageProtocol();
+  db.cleanupUpdateLeftovers(); // Procress 28 part 7: the Setup / old portable an update left behind
   // On-disk half of the v4.2.0 extensions -> plugins rename (the DB half is
   // migratePluginV42 in src/db/schema/migrations.js). Idempotent and silent.
   db.migratePluginDir();
@@ -1065,6 +1066,7 @@ h('module:getTags',     (id)          => db.getModuleTags(id));
 h('module:setTags',     (id,tags)     => db.setModuleTags(id,tags));
 h('module:tagIndex', (nx) => db.moduleTagIndex(nx));
 h('module:getLinks',    (id)          => db.getModuleLinks(id));
+h('module:linked',      (id)          => db.linkedModules(id));
 h('module:getProps',    (id,item)     => db.getPageProps(id,item));
 
 // v5 Part 8 (§12) — pages made of blocks (db/page-block.js).

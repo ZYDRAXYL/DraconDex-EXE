@@ -244,3 +244,33 @@ test('expectedSha256 reads build-electron.yml checksum output', () => {
   assert.equal(expectedSha256(text, 'missing.exe'), null);
   assert.equal(expectedSha256('', 'x'), null);
 });
+
+// Procress 28 part 7: which files an update left behind (lifted out the same
+// way as the parser above — update.js itself needs electron).
+function loadLeftovers() {
+  const src = readSource('../src/db/update.js');
+  const pick = (re) => src.match(re)?.[0];
+  const pieces = [
+    pick(/const stripPrerelease = [^\n]+;/) || pick(/function stripPrerelease\([\s\S]*?\n\}/),
+    pick(/const parts = [^\n]+;/),
+    pick(/function isNewerVersion\([\s\S]*?\n\}/),
+    pick(/const LEFTOVER_RE = [^\n]+;/),
+    pick(/function updateLeftovers\([\s\S]*?\n\}/),
+  ];
+  assert.ok(pieces.every(Boolean), 'update.js leftover pieces not found');
+  // eslint-disable-next-line no-new-func
+  return new Function(`${pieces.join('\n')}\nreturn updateLeftovers;`)();
+}
+
+test('update leftovers: every Setup and half download in %TEMP%, nothing else', () => {
+  const left = loadLeftovers();
+  const temp = ['DraconDex-Setup-5.3.1.exe', 'DraconDex-Setup-5.4.0.exe', 'DraconDex-Setup-5.4.0.exe.part', 'other.exe', 'DraconDex-Setup-x.exe', 'notes.txt'];
+  assert.deepEqual(left(temp, { kind: 'setup', current: '5.4.0' }), ['DraconDex-Setup-5.3.1.exe', 'DraconDex-Setup-5.4.0.exe', 'DraconDex-Setup-5.4.0.exe.part']);
+});
+
+test('update leftovers: a portable drops only older portables, never the one running', () => {
+  const left = loadLeftovers();
+  const dir = ['DraconDex-Portable-5.3.1.exe', 'DraconDex-Portable-5.4.0.exe', 'DraconDex-Portable-5.10.0.exe', 'DraconDex-Setup-5.3.1.exe', 'novel-manager-data'];
+  assert.deepEqual(left(dir, { kind: 'portable', current: '5.4.0', self: 'DraconDex-Portable-5.4.0.exe' }), ['DraconDex-Portable-5.3.1.exe'],
+    'not itself, not a newer one, not a Setup the user keeps there');
+});

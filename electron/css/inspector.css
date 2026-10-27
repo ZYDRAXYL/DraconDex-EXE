@@ -271,6 +271,9 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .cls-priv>summary{cursor:pointer}
 .cls-adv{margin:8px 0;padding:6px 8px;border:1px solid var(--border);border-radius:var(--rs)}
 .cls-adv>summary{cursor:pointer;font-size:calc(12px * var(--fsc,1));color:var(--t2)}
+/* Procress 28 part 3: the field form's Level & Condition — always open, two checkboxes */
+.cls-flags>legend{padding:0 4px;font-size:calc(12px * var(--fsc,1));color:var(--t2)}
+.cls-flags .cls-flag-hint{margin:0 0 6px 24px}
 
 /* Manager view (progress.md Phase 6) */
 .card.mgr-tile{display:flex;flex-direction:column;align-items:center;gap:4px}

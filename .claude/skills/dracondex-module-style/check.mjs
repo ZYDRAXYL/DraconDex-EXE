@@ -239,7 +239,7 @@ console.log('=== command registry (core/commands.js) ===');
 {
   const R = 'src/renderer/';
   const SURFACE_FILES = {
-    'nest.ctx': ['hub/menus.js'], 'nest.head': ['hub/sections.js'], 'pane.ctx': ['hub/menus.js'],
+    'nest.ctx': ['hub/menus.js'], 'nest.head': ['hub/sections.js'], 'pane.ctx': ['hub/menus.js'], 'tab.ctx': ['hub/menus.js'],
     'rail': ['hub/kinds.js'], 'settings.menu': ['core/settings.js'], 'shortcut': ['core/shortcuts.js'],
     'problems': ['hub/problems.js'], 'assets.strip': ['mod/importdock.js'], 'asset.ctx': ['mod/importdock.js'],
     'asset.viewer': ['mod/fileviewer.js'], 'text.ctx': ['core/wiki-field.js'],

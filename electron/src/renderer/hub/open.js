@@ -163,7 +163,9 @@ function pageHeadActsHtml(moduleId, itemKey) {
   const primary = structured
     ? `<button class="btn btn-p btn-sm" onclick="pageAddAttribute(${moduleId})">${I.plus} ${t('addAttribute')}</button>${arrange}`
     : arrange;
-  return `${arranging ? pbFrameSwitchHtml() : ''}${primary}${propsToggleHtml()}<button class="btn btn-g btn-i bnav" aria-haspopup="menu" title="${x(t('pageMenu'))}" onclick="event.stopPropagation();openPageMenu(this)">${I.options}</button>`;
+  // Procress 28 part 2: every module page links to other modules from its head
+  const link = itemKey == null ? pageLinkBtnHtml(moduleId) : '';
+  return `${arranging ? pbFrameSwitchHtml() : ''}${primary}${link}${propsToggleHtml()}<button class="btn btn-g btn-i bnav" aria-haspopup="menu" title="${x(t('pageMenu'))}" onclick="event.stopPropagation();openPageMenu(this)">${I.options}</button>`;
 }
 
 // The ⋯ of the page head: the menu engine's own items (hub/ctxmenu.js), with

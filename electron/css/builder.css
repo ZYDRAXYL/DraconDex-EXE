@@ -39,13 +39,13 @@
 .bpane-tabs.tabs-compact .project-tab .tab-close{display:none}
 .bpane-tabs.tabs-compact .project-tab:hover .tab-kicon{display:none}
 .bpane-tabs.tabs-compact .project-tab:hover .tab-close{display:flex}
-.bpane-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:24px;min-width:0;position:relative}
+.bpane-body{--bpane-pad:24px;flex:1;overflow-y:auto;overflow-x:hidden;padding:var(--bpane-pad);min-width:0;position:relative}
 .bpane-body.drop-left{box-shadow:inset 4px 0 0 0 var(--accent)}
 .bpane-body.drop-right{box-shadow:inset -4px 0 0 0 var(--accent)}
 .bpane-body.drop-top{box-shadow:inset 0 4px 0 0 var(--accent)}
 .bpane-body.drop-bottom{box-shadow:inset 0 -4px 0 0 var(--accent)}
 .bpane-body.drop-center{outline:2px dashed var(--accent);outline-offset:-4px}
-#main-inner.builder-split .bpane-body{padding:14px}
+#main-inner.builder-split .bpane-body{--bpane-pad:14px}
 
 .builder-resize-handle{background:transparent}
 .builder-resize-handle:hover,.builder-resize-handle.is-resizing{background:var(--accent)}
@@ -213,6 +213,9 @@
 .bpane-head.tb-tabgroup{position:fixed;z-index:calc(var(--z-sticky) + 50);background:transparent;border-bottom:none;padding:0 4px;
 	align-items:flex-end;-webkit-app-region:drag}
 .bpane-head.tb-tabgroup .bpane-tabs{flex:0 1 auto;min-height:0;height:100%;align-items:flex-end;padding-top:5px;-webkit-app-region:no-drag}
+/* Procress 28 part 1: the buttons after the strip too — inside the drag head
+   they were window-drag area, so on Windows a click moved the window. */
+.bpane-head.tb-tabgroup .bpane-acts{-webkit-app-region:no-drag}
 /* Procress 16 B2: + (new tab) · ⧉ (split) · tab list, after the strip. The
    list only shows once the strip has shrunk to icons; an inactive tab's ×
    shows on hover, like a browser. */
@@ -220,3 +223,20 @@
 .bpane-head:not(:has(.tabs-compact)) .bpane-tablist{display:none}
 .bpane-tabs .project-tab:not(.active):not(.pane-active):not(:hover) .tab-close{visibility:hidden}
 .qs-item .qs-pin .icon{width:12px;height:12px}
+/* Procress 28 part 1: a tab held at a pane's edge — the body slides over by
+   half and the half the new pane would take shows as a slot (builder.js
+   onBodyDragOver sets --split-px / --split-top). */
+.bpane{position:relative}
+.bpane > .bpane-body{transition:margin .18s ease}
+.bpane.split-preview-left > .bpane-body{margin-left:var(--split-px)}
+.bpane.split-preview-right > .bpane-body{margin-right:var(--split-px)}
+.bpane.split-preview-top > .bpane-body{margin-top:var(--split-px)}
+.bpane.split-preview-bottom > .bpane-body{margin-bottom:var(--split-px)}
+.bpane.split-preview::after{content:'';position:absolute;pointer-events:none;border:2px dashed var(--accent);border-radius:var(--rl);
+	background:color-mix(in srgb,var(--accent) 12%,transparent);box-sizing:border-box}
+.bpane.split-preview-left::after{left:6px;top:calc(var(--split-top) + 6px);bottom:6px;width:calc(var(--split-px) - 12px)}
+.bpane.split-preview-right::after{right:6px;top:calc(var(--split-top) + 6px);bottom:6px;width:calc(var(--split-px) - 12px)}
+.bpane.split-preview-top::after{left:6px;right:6px;top:calc(var(--split-top) + 6px);height:calc(var(--split-px) - 12px)}
+.bpane.split-preview-bottom::after{left:6px;right:6px;bottom:6px;height:calc(var(--split-px) - 12px)}
+.bpane.split-preview > .bpane-body{box-shadow:none}
+@media (prefers-reduced-motion:reduce){.bpane > .bpane-body{transition:none}}

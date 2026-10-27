@@ -1191,6 +1191,13 @@ function applySnapshotCore(nexusId, payload, opts = {}) {
         if (target == null) continue;
         value = String(target);
       }
+      // The Classifier relation view's linked modules (Procress 28 part 3): a
+      // JSON list of module ids — each through modMap, the unknown dropped.
+      if (u.key === 'clsRelInclude') {
+        let ids = [];
+        try { ids = JSON.parse(u.value || '[]'); } catch (_) {}
+        value = JSON.stringify((Array.isArray(ids) ? ids : []).map((id) => modMap.get(Number(id))).filter((v) => v != null));
+      }
       // An element page's title layout is keyed by the element
       // ("pageHead:cobj_12", APP docs/REDESIGN.md C6) — the key itself goes
       // through the entity maps, the same as page_block.item. Unmappable =

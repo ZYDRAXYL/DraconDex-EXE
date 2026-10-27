@@ -128,7 +128,42 @@ const getRelationTypes = (nexusId) => getDB().prepare(`
   SELECT DISTINCT rel_type FROM entity_relation WHERE nexus_ref=? AND rel_type IS NOT NULL ORDER BY rel_type COLLATE NOCASE
 `).all(nexusId).map((r) => r.rel_type);
 
+// ── Linked modules (Procress 28 part 6) ─────────────────────────────────
+// The modules a module is linked to, and how: a module ↔ module relation
+// (the page head's link button, or an Exhibitor) and/or a [[link]] either
+// way between anything of the two — the module itself or one of its
+// elements. The [[link]] side is read, never written (D2): delete the
+// [[…]] and that link is gone, with no relation row left to keep in step.
+// [{ id, relationId|null, wiki: bool }]
+function linkedModules(moduleId) {
+  return getDB().readTx(() => {
+    const d = getDB();
+    const self = `module_${moduleId}`;
+    const nx = d.prepare(`SELECT nexus_ref FROM module WHERE id=?`).get(moduleId)?.nexus_ref ?? null;
+    const out = new Map();
+    const at = (id) => {
+      if (!id || id === moduleId) return null;
+      if (!out.has(id)) out.set(id, { id, relationId: null, wiki: false });
+      return out.get(id);
+    };
+    for (const r of d.prepare(`SELECT id, from_key f, to_key t FROM entity_relation WHERE from_key=? OR to_key=?`).all(self, self)) {
+      const m = /^module_(\d+)$/.exec(r.f === self ? r.t : r.f);
+      const e = m && at(Number(m[1]));
+      if (e && e.relationId == null) e.relationId = r.id;
+    }
+    // key → the module it belongs to (a module row: itself, not its folder)
+    const ownerOf = new Map();
+    for (const e of _viewerIndex(nx)) ownerOf.set(e.key, e.kind === 'module' ? Number(e.key.slice(7)) : e.moduleId);
+    for (const r of d.prepare(`SELECT src_key s, target_key t FROM wiki_link WHERE target_key IS NOT NULL AND (? IS NULL OR nexus_ref=?)`).all(nx, nx)) {
+      const a = ownerOf.get(r.s), b = ownerOf.get(r.t);
+      const e = a === moduleId ? at(b) : b === moduleId ? at(a) : null;
+      if (e) e.wiki = true;
+    }
+    return [...out.values()];
+  })();
+}
+
 module.exports = {
-  viewerIndex,
+  viewerIndex, linkedModules,
   getEntityRelations, createEntityRelation, getRelationTypes, updateEntityRelation, deleteEntityRelation,
 };

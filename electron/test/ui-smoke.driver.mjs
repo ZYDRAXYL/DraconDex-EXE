@@ -944,18 +944,21 @@ test('26 part 4: [[ suggests an object with its module, asks which page, and the
 });
 
 // ── Procress 26 part 5: what the part 2 and 3 tests leave to the eye ─────
-test('26: the address row scrolls away instead of sliding over the title', async () => {
+test('26 → 28 part 2: the address row stays pinned; a title with no icon has room under it', async () => {
   await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
   await row('Characters').click(); await sleep(600);
   const r = await win.evaluate(() => {
     const bar = document.querySelector('.module-page .addr-bar');
-    const title = document.querySelector('.module-page .page-title');
-    bar.closest('.bpane-body').scrollTop = 20;
-    const b = bar.getBoundingClientRect(), tt = title.getBoundingClientRect();
-    return { pos: getComputedStyle(bar).position, overlap: b.bottom > tt.top + 1 && b.top < tt.bottom };
+    const h = document.querySelector('.module-page .page-title .navbar-h');
+    const sc = bar.closest('.bpane-body');
+    const at = (top) => { sc.scrollTop = top; const b = bar.getBoundingClientRect(), tt = h.getBoundingClientRect(); return b.bottom > tt.top + 1 && b.top < tt.bottom; };
+    const out = { pos: getComputedStyle(bar).position, rest: at(0), small: at(30) };
+    sc.scrollTop = 0;
+    return out;
   });
-  assert.equal(r.pos, 'static');
-  assert.equal(r.overlap, false, 'the bar does not cover the title');
+  assert.equal(r.pos, 'sticky', 'pinned, as the user asked (28 part 2)');
+  assert.equal(r.rest, false, 'nothing covers the title at rest');
+  assert.equal(r.small, false, 'a short scroll does not slide the name under the bar');
 });
 
 test('26: drag a row by its grip and a column by its head — saved', async () => {
@@ -1016,13 +1019,13 @@ test('27 part 1: a field shows its [[link]] as the name, raw only while it is ed
   await win.evaluate(async ([m, t]) => { await api.classifier.deleteTemplate(t); await openModuleNode(m); }, [mid, tpl]);
 });
 
-test('27 part 2 + 3: "Fields of this category" reorders by its ≡ grip; the table follows', async () => {
+test('27 part 2 + 3: "Fields of this category" reorders by its = grip; the table follows', async () => {
   const mid = await openCharactersTable();
   const tpls = await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.map((x) => x.id)), mid);
   assert.ok(tpls.length >= 2, 'needs two fields');
   await win.evaluate((m) => openClassifierFieldsModal(m), mid); await sleep(400);
   const grips = win.locator('#modal-overlay [data-cls-tid] .nar-grip');
-  assert.equal(await grips.first().locator('svg line').count(), 3, 'the grip is the three-bar icon');
+  assert.equal(await grips.first().locator('svg line').count(), 2, 'the grip is the two-bar icon (28 part 4)');
   await win.locator('#modal-overlay #ct-name').fill('half-typed');
   const target = win.locator('#modal-overlay [data-cls-tid]').first();
   await grips.last().dragTo(target, { targetPosition: { x: 40, y: 2 } }); await sleep(600);
@@ -1110,4 +1113,249 @@ test('27 part 5: the Nexus list keeps the order it was dragged into', async () =
     return out;
   });
   assert.deepEqual(r, [3, 1, 2], 'dragged order first, the rest after');
+});
+
+// ── Procress 28 ──────────────────────────────────────────────────────────
+const openTwoTabs = () => win.evaluate(async () => {
+  showLeftDest('nest');
+  const ms = flattenModulesByKind(S.moduleTree, []);
+  const b = builderState();
+  b.panes[b.focused].tabs = [];
+  await openModuleNode(ms.find((m) => m.name === 'History').id);
+  await builderInNewTab(() => openModuleNode(ms.find((m) => m.name === 'Characters').id));
+  await builderInNewTab(() => openModuleNode(ms.find((m) => m.name === 'Rumors').id));
+});
+
+test('28 part 1: the buttons on the title-bar tab group are not window-drag area', async () => {
+  await openTwoTabs(); await sleep(400);
+  const r = await win.evaluate(() => [...document.querySelectorAll('.bpane-head.tb-tabgroup button, .bpane-head.tb-tabgroup .tab-close')]
+    .map((b) => {
+      // app-region is not inherited: the nearest element that sets one decides
+      let el = b, region = 'none';
+      for (; el && region === 'none'; el = el.parentElement) region = getComputedStyle(el).getPropertyValue('-webkit-app-region') || 'none';
+      return { name: b.getAttribute('aria-label') || b.title, region };
+    }));
+  assert.ok(r.length >= 2, 'the tab group sits on the title bar with its buttons');
+  assert.deepEqual(r.filter((b) => b.region !== 'no-drag'), [], 'every button there takes clicks');
+});
+
+test('28 part 1: a tab\'s right-click — close others, close to the right; Ctrl+Shift+→ moves it', async () => {
+  await openTwoTabs(); await sleep(400);
+  const strip = '#main-inner .bpane-tabs[role="tablist"]';
+  const names = () => win.locator(`${strip} [role="tab"]`).evaluateAll((els) => els.map((e) => e.title));
+  assert.deepEqual(await names(), ['History', 'Characters', 'Rumors']);
+  await win.locator(`${strip} [role="tab"][title="History"]`).focus();
+  await win.keyboard.press('Control+Shift+ArrowRight'); await sleep(300);
+  assert.deepEqual(await names(), ['Characters', 'History', 'Rumors'], 'moved one slot right');
+  await win.locator(`${strip} [role="tab"][title="History"]`).click({ button: 'right' });
+  await win.locator('.context-menu-popup .kind-list-item:has-text("Close tabs to the right")').click(); await sleep(400);
+  assert.deepEqual(await names(), ['Characters', 'History']);
+  await win.locator(`${strip} [role="tab"][title="Characters"]`).click({ button: 'right' });
+  assert.equal(await win.locator('.context-menu-popup .kind-list-item:has-text("Close tabs to the right")').count(), 1);
+  await win.locator('.context-menu-popup .kind-list-item:has-text("Close other tabs")').click(); await sleep(400);
+  assert.deepEqual(await names(), ['Characters']);
+  assert.equal(await win.evaluate(() => S.activeModuleNode?.name), 'Characters', 'the kept tab is the open page');
+});
+
+test('28 part 1: a tab sent back from a pop-out opens beside the open tab, not over it', async () => {
+  await openTwoTabs(); await sleep(400);
+  const key = await win.evaluate(() => `module:${flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Harbor map').id}`);
+  const nx = await win.evaluate(() => S.nexus.id);
+  await ui.app.evaluate(({ BrowserWindow }, [n, k]) => { for (const w of BrowserWindow.getAllWindows()) w.webContents.send('builder:tabInbound', n, k); }, [nx, key]);
+  await sleep(800);
+  const t = await tabs();
+  assert.equal(t.tabs.length, 4, 'one tab more, none replaced');
+  assert.equal(t.active, key);
+  assert.equal(t.tabs.indexOf(key), 3, 'beside the active one (Rumors, last)');
+});
+
+test('28 part 1: holding a tab at a pane edge makes room before it splits', async () => {
+  await openTwoTabs(); await sleep(400);
+  const r = await win.evaluate(async () => {
+    const pane = document.querySelector('#main-inner .bpane[data-pane]');
+    const body = pane.querySelector('.bpane-body');
+    const rect = body.getBoundingClientRect();
+    S.dragTab = { key: pane.querySelector('.project-tab').dataset.tabKey, paneIdx: Number(pane.dataset.pane), armed: true };
+    const over = (x) => { const ev = new DragEvent('dragover', { bubbles: true, cancelable: true, clientX: x, clientY: rect.top + rect.height / 2 }); body.dispatchEvent(ev); };
+    over(rect.right - 10);
+    const early = pane.classList.contains('split-preview');
+    await new Promise((res) => setTimeout(res, 450));
+    over(rect.right - 10);
+    const on = pane.classList.contains('split-preview-right');
+    await new Promise((res) => setTimeout(res, 300));
+    const shrunk = body.getBoundingClientRect().width;
+    over(rect.left + rect.width / 2 - 40); // back to the middle (zones measured on the body as it was)
+    const off = !pane.classList.contains('split-preview');
+    clearDragReflow(); S.dragTab = null;
+    return { early, on, ratio: shrunk / rect.width, off };
+  });
+  assert.equal(r.early, false, 'not at once');
+  assert.equal(r.on, true, 'after the hold');
+  assert.ok(r.ratio > 0.4 && r.ratio < 0.6, `the body gave up half (${r.ratio})`);
+  assert.equal(r.off, true, 'leaving the edge puts it back');
+});
+
+test('28 part 2: "icon above the title" shows the module\'s own icon; the 🔗 links and unlinks a module', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('History').click(); await sleep(600);
+  const mid = await win.evaluate(() => S.activeModuleNode.id);
+  await win.evaluate((m) => setPageHeadLayout(m, null, { icon: true }), mid); await sleep(400);
+  const icon = await win.evaluate(() => ({ big: !!document.querySelector('.module-page .page-title .ph-icon svg'),
+    small: !!document.querySelector('.module-page .page-title .navbar-h .kicon'), text: document.querySelector('.module-page .ph-icon')?.textContent.trim() }));
+  assert.deepEqual(icon, { big: true, small: false, text: '' }, 'the module icon, large, once — no emoji');
+  // an older emoji value still reads as on
+  await win.evaluate((m) => api.module.setUi(m, 'pageHead', JSON.stringify({ align: 'left', icon: '🐉' })).then(() => { pageOf(m).props.ui.pageHead = JSON.stringify({ align: 'left', icon: '🐉' }); }), mid);
+  assert.equal(await win.evaluate((m) => pageHeadLayout(m).icon, mid), true);
+  await win.evaluate((m) => setPageHeadLayout(m, null, { icon: false }), mid); await sleep(300);
+  assert.equal(await win.locator('.module-page .ph-icon').count(), 0);
+
+  const linked = () => win.evaluate((m) => api.module.linked(m).then((ls) => ls.map((e) => e.id)), mid);
+  const before = await linked();
+  await win.locator('.module-page .ph-links-open').click();
+  await win.waitForSelector('.ph-links-pop .ph-link-q');
+  await win.keyboard.type('Rumo'); await sleep(400);
+  await win.locator('.ph-links-pop [data-link-mid]:has-text("Rumors")').click(); await sleep(500);
+  const rumors = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Rumors').id);
+  assert.deepEqual((await linked()).sort(), [...before, rumors].sort(), 'linked');
+  assert.equal(await win.locator('.module-page .ph-link-n').textContent(), String(before.length + 1), 'the count follows');
+  assert.equal(await win.locator('.ph-links-pop .ph-link-q').inputValue(), 'Rumo', 'what was typed stays');
+  await win.locator(`.ph-links-pop [data-link-mid="${rumors}"] .ls-act`).click(); await sleep(500);
+  assert.deepEqual((await linked()).sort(), before.sort(), 'unlinked');
+  await win.keyboard.press('Escape');
+});
+
+const openCharactersView = async (view) => {
+  const mid = await openCharactersTable();
+  await win.evaluate(([m, v]) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, v), [mid, view]);
+  await sleep(900);
+  return mid;
+};
+
+test('28 part 3: the relation view shows every object — its icon or a dot — and hovering one shows its card', async () => {
+  const mid = await openCharactersTable();
+  const ids = await win.evaluate(async (m) => {
+    const objs = await api.classifier.getObjects(m);
+    await api.classifier.updateObject(objs[0].id, objs[0].name, null, 'svg:star');
+    const lone = await api.classifier.createObject(m, 'Smoke loner');
+    await refreshClassifier();
+    return { star: objs[0].id, lone, all: (await api.classifier.getObjects(m)).length };
+  }, mid);
+  await openCharactersView('relationCat');
+  const g = await win.evaluate(() => ({
+    nodes: [...document.querySelectorAll('.cls-rel-graph g[data-id^="cobj_"]')].map((e) => e.dataset.id),
+    icons: [...document.querySelectorAll('.cls-rel-graph .graph-node-icon')].map((e) => e.closest('g').dataset.id),
+  }));
+  assert.equal(g.nodes.length, ids.all, 'every object, linked or not');
+  assert.ok(g.nodes.includes(`cobj_${ids.lone}`), 'an object with no relation is there');
+  assert.deepEqual(g.icons, [`cobj_${ids.star}`], 'the one with an icon draws it; the rest are dots');
+  await sleep(3500); // the force layout settles (~220 frames) — a moving node slips from under the pointer
+  await hover(win.locator(`.cls-rel-graph g[data-id="cobj_${ids.star}"]`));
+  await win.waitForSelector('#pb-hover.on', { timeout: 3000 });
+  assert.match(await win.locator('#pb-hover').textContent(), /Mira|Tobin|Sela/);
+  await win.mouse.move(5, 5);
+  await win.evaluate(async ([m, o, l]) => { const objs = await api.classifier.getObjects(m); await api.classifier.updateObject(o, objs.find((x) => x.id === o).name, null, null); await api.classifier.deleteObject(l); await refreshClassifier(); }, [mid, ids.star, ids.lone]);
+});
+
+test('28 part 3: a linked module\'s elements join the relation view by its checkbox, and the choice is kept', async () => {
+  const mid = await openCharactersTable();
+  const hist = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'History').id);
+  await win.evaluate(([m, h]) => api.viewer.createRelation(S.nexus.id, `module_${m}`, `module_${h}`, null, null, {}), [mid, hist]);
+  await openCharactersView('relationCat');
+  const cb = win.locator(`.cls-rel-graph .sage-graph-mod-cb[data-mod="m${hist}"]`);
+  assert.equal(await cb.isChecked(), false, 'off until asked');
+  const visibleEvents = () => win.evaluate(() => [...document.querySelectorAll('.cls-rel-graph g[data-id^="tlev_"]')].filter((e) => e.style.display !== 'none').length);
+  assert.equal(await visibleEvents(), 0);
+  await cb.check(); await sleep(400);
+  assert.ok(await visibleEvents() >= 1, 'History\'s events are drawn');
+  await openCharactersView('relationCat');
+  assert.equal(await win.locator(`.cls-rel-graph .sage-graph-mod-cb[data-mod="m${hist}"]`).isChecked(), true, 'remembered');
+  await win.evaluate(async ([m, h]) => { const r = (await api.module.linked(m)).find((e) => e.id === h); if (r?.relationId) await api.viewer.deleteRelation(r.relationId); await api.module.setUi(m, 'clsRelInclude', '[]'); }, [mid, hist]);
+});
+
+test('28 part 3: the field form\'s Level & Condition is always open, two checkboxes that save', async () => {
+  const mid = await openCharactersTable();
+  await win.evaluate((m) => openClassifierFieldsModal(m), mid); await sleep(400);
+  assert.equal(await win.locator('#modal-overlay details.cls-adv').count(), 0, 'not folded away');
+  assert.equal(await win.locator('#modal-overlay .cls-flags input[type="checkbox"]').count(), 2);
+  assert.equal(await win.locator('#modal-overlay .cls-flags .cls-flag-hint').count(), 2, 'each says what it does');
+  await win.locator('#modal-overlay #ct-name').fill('Smoke levels');
+  await win.locator('#modal-overlay #ct-lv').check();
+  await win.locator('#modal-overlay .mfoot .btn-p').click(); await sleep(500);
+  const tpl = await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.find((x) => x.description === 'Smoke levels')), mid);
+  assert.ok(tpl && tpl.levelable && !tpl.has_condition, 'levelable saved, condition not');
+  await win.keyboard.press('Escape');
+  await win.evaluate(async ([m, id]) => { await api.classifier.deleteTemplate(id); await refreshClassifier(); }, [mid, tpl.id]);
+});
+
+const openBook = async () => {
+  await win.evaluate(async () => { showLeftDest('nest'); await builderOpenPage(null); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'author'); await openModuleNode(m.id); if (S.authorData?.view !== 'editor') await setAuthorView('editor'); });
+  await sleep(700);
+  return win.evaluate(() => S.authorData.moduleId);
+};
+
+test('28 part 5: the chapter name is typed in place; synopsis and status sit above the text and save', async () => {
+  const mid = await openBook();
+  const ch = await win.evaluate(() => S.authorData.chapters.find((c) => c.id === S.authorData.selectedId));
+  const title = win.locator('#author-editor .au-title');
+  await title.fill('Renamed in place'); await win.keyboard.press('Enter'); await sleep(400);
+  const fresh = () => win.evaluate((m) => api.author.getChapters(m), mid);
+  assert.equal((await fresh()).find((c) => c.id === ch.id).name, 'Renamed in place');
+  assert.match(await win.locator(`.author-chapters [data-chid="${ch.id}"]`).textContent(), /Renamed in place/, 'the column follows');
+  await title.fill('thrown away'); await win.keyboard.press('Escape'); await sleep(200);
+  assert.equal(await title.inputValue(), 'Renamed in place', 'Esc puts it back');
+  await win.locator('#author-editor .au-meta-syn').fill('Smoke synopsis');
+  await win.locator('#author-editor .au-meta-status').selectOption('revised'); await sleep(900); // the synopsis saves as it is typed (debounced)
+  const after = (await fresh()).find((c) => c.id === ch.id);
+  assert.equal(after.synopsis, 'Smoke synopsis');
+  assert.equal(after.status, 'revised');
+  await win.evaluate(async ([c]) => { await api.author.renameChapter(c.id, c.name); await api.author.setChapterMeta(c.id, { synopsis: c.synopsis || '', status: c.status || '' }); }, [ch]);
+});
+
+test('28 part 5: the point of view lists only objects of a Classifier linked to the book', async () => {
+  const mid = await openBook();
+  const cast = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Characters').id);
+  const unlinkAll = () => win.evaluate(async (m) => { for (const e of await api.module.linked(m)) if (e.relationId) await api.viewer.deleteRelation(e.relationId); }, mid);
+  const was = await win.evaluate((m) => api.module.linked(m), mid);
+  const options = async () => {
+    await win.evaluate(() => openAuthorChapterModal(S.authorData.moduleId, S.authorData.selectedId)); await sleep(500);
+    const r = await win.locator('#modal-overlay #ac-pov option').evaluateAll((os) => os.map((o) => o.textContent).filter((s) => s !== '—'));
+    const hint = await win.locator('#modal-overlay .drafter-hint:has(button)').count();
+    await win.keyboard.press('Escape'); await sleep(200);
+    return { r, hint };
+  };
+  const pov = await win.evaluate(() => S.authorData.chapters.find((c) => c.id === S.authorData.selectedId).pov_key);
+  await win.evaluate((id) => api.author.setChapterMeta(id, { povKey: '' }), await win.evaluate(() => S.authorData.selectedId));
+  await unlinkAll();
+  // the sample book [[links]] Tobin, so Characters stays linked that way — check it is the only source
+  const viaWiki = (await win.evaluate((m) => api.module.linked(m), mid)).some((e) => e.id === cast);
+  const one = await options();
+  if (!viaWiki) { assert.deepEqual(one.r, [], 'nothing linked → no one to pick'); assert.equal(one.hint, 1, 'and a way to link'); }
+  await win.evaluate(([m, c]) => api.viewer.createRelation(S.nexus.id, `module_${m}`, `module_${c}`, null, null, {}), [mid, cast]);
+  const two = await options();
+  assert.ok(two.r.length >= 3 && two.r.every((s) => /Characters/.test(s)), `only the linked Classifier's characters: ${two.r}`);
+  await unlinkAll();
+  await win.evaluate(async ([m, list]) => { for (const e of list) if (e.relationId) await api.viewer.createRelation(S.nexus.id, `module_${m}`, `module_${e.id}`, null, null, {}); }, [mid, was]);
+  await win.evaluate(([id, k]) => api.author.setChapterMeta(id, { povKey: k || '' }), [await win.evaluate(() => S.authorData.selectedId), pov]);
+});
+
+test('28 part 5: a Part divider is added, named, dragged between chapters and kept', async () => {
+  const mid = await openBook();
+  const add = win.locator('.author-chapters .ls-add').last();
+  await add.click(); await sleep(300);
+  await win.keyboard.type('Smoke part'); await win.keyboard.press('Enter'); await sleep(400);
+  const order = () => win.locator('.author-chapters [data-chid], .author-chapters .au-part').evaluateAll((els) => els.map((e) => (e.dataset.partId ? `P:${e.textContent.trim()}` : 'C')));
+  const o1 = await order();
+  assert.ok(o1.includes('P:Smoke part'), 'shown with its name');
+  const part = win.locator('.author-chapters .au-part').first();
+  const first = win.locator('.author-chapters [data-chid]').first();
+  const pb = await part.boundingBox(), fb = await first.boundingBox();
+  await win.mouse.move(pb.x + 20, pb.y + pb.height / 2); await win.mouse.down();
+  await win.mouse.move(pb.x + 20, fb.y + 2, { steps: 12 }); await win.mouse.up(); await sleep(600);
+  assert.equal((await order())[0], 'P:Smoke part', 'dragged above the first chapter');
+  const kept = await win.evaluate((m) => api.module.getUi(m).then((u) => JSON.parse(u.authorParts)), mid);
+  assert.deepEqual(kept.map((p) => [p.label, p.at]), [['Smoke part', 0]], 'stored by position');
+  assert.ok(await win.evaluate(() => getComputedStyle(document.querySelector('.au-part'), '::before').borderTopWidth) !== '0px', 'drawn as a rule');
+  await win.locator('.author-chapters .au-part').first().focus();
+  await win.keyboard.press('Delete'); await sleep(400);
+  assert.equal(await win.locator('.author-chapters .au-part').count(), 0, 'Delete removes it');
 });

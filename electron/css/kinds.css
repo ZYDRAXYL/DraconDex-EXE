@@ -208,6 +208,15 @@
 .au-col-label{padding:0 14px 8px;font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:700;letter-spacing:.05em;color:var(--t2)}
 .author-main{flex:1;min-width:0;padding:14px 18px;overflow-y:auto;background:var(--bg)}
 .au-editor{height:calc(100vh - 300px);min-height:420px;display:flex;flex-direction:column}
+/* Procress 28 part 5: the chapter name typed in place, and its synopsis + status
+   between the name and the text */
+.mded-title.au-title{flex:1;min-width:0;border:1px solid transparent;border-radius:var(--rs);background:transparent;color:var(--t1);padding:2px 6px;margin-left:-6px;font-family:inherit}
+.mded-title.au-title:hover{border-color:var(--border)}
+.mded-title.au-title:focus{border-color:var(--accent);outline:none;background:var(--surface)}
+.au-meta{display:flex;gap:8px;align-items:flex-start;margin:0 0 8px}
+.au-meta-status{flex:0 0 auto;width:auto}
+.au-meta-syn{flex:1;min-height:0;field-sizing:content;max-height:9lh;resize:none;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);background:transparent;border:1px dashed var(--border)}
+.au-meta-syn:focus{color:var(--t1);border-style:solid}
 /* Author rich-text (contenteditable) editor (Plan part5 Author #1/#2) */
 .au-rich-toolbar{display:flex;gap:4px;padding:6px 0;flex-wrap:wrap;align-items:center}
 .au-rich-toolbar .btn{min-width:30px;font-size:calc(12px * var(--fsc,1));font-weight:700;color:var(--t2)}
@@ -231,6 +240,17 @@
 .au-outline-sec{margin-bottom:14px}
 .au-outline-ch{font-size:calc(var(--fs-body) * var(--fsc,1));font-weight:650;color:var(--t1);cursor:pointer;padding:4px 0}
 .au-outline-ch:hover{color:var(--accentH)}
+/* Procress 28 part 5: a Part divider (mod/author-parts.js) — a rule across the
+   chapter column; a name sits in its middle and the rule gives way to it */
+.au-part{position:relative;display:flex;align-items:center;min-height:28px;padding:4px 6px;color:var(--t3-aa,var(--t2));cursor:grab;user-select:none;border-radius:var(--rs)}
+.au-part::before,.au-part::after{content:"";flex:1;border-top:1px solid var(--t3-aa,var(--border))}
+.au-part:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.au-part-t,.au-part .rename-input{flex:0 1 auto;padding:0 10px;font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:650;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80%}
+.au-part .rename-input{text-transform:none;font-weight:500;width:60%}
+.au-part-x{position:absolute;right:0;top:50%;transform:translateY(-50%);visibility:hidden;background:var(--surface)}
+.au-part:hover .au-part-x,.au-part:focus-within .au-part-x{visibility:visible}
+.au-outline-part{margin:10px 0 2px;font-size:calc(var(--fs-meta) * var(--fsc,1));font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--t3-aa,var(--t2));border-bottom:1px solid var(--border)}
+.au-book-part{font-size:calc(22px * var(--fsc,1));text-align:center;margin:40% 0 0;color:var(--t1)}
 .au-outline-h{font-size:calc(12px * var(--fsc,1));color:var(--t2);padding:2px 0}
 .au-outline-h.ghost{color:var(--t3-aa,var(--t2))}
 .au-reading{max-width:680px;font-size:calc(var(--fs-body) * var(--fsc,1));line-height:2;color:var(--t2)}
@@ -526,17 +546,25 @@ select.fp-input[multiple]{padding:2px}
 .page-title.ph--center .navbar-row,.page-title.ph--center .navbar-h,.page-title.ph--center .mtags{justify-content:center}
 .page-title.ph--right .navbar-row,.page-title.ph--right .navbar-h,.page-title.ph--right .mtags{justify-content:flex-end}
 .page-title.ph--center .navbar-h,.page-title.ph--right .navbar-h{flex:0 1 auto}
-.ph-icon{font-size:calc(40px * var(--fsc,1));line-height:1.1;margin:4px 0 6px}
+.ph-icon{font-size:calc(40px * var(--fsc,1));line-height:1;margin:4px 0 6px}
+.ph-icon{color:var(--ph-col,var(--accent))}
+.ph-icon[onclick]{cursor:pointer}
+.ph-icon-cb{margin:2px 0 8px}
+.ph-icon .icon,.ph-icon .kicon-img-icon{width:calc(40px * var(--fsc,1));height:calc(40px * var(--fsc,1))}
 .ph-cover{height:150px;margin:0 0 10px;border-radius:var(--rl);background:var(--raised) center/cover no-repeat}
 .ph-cover[data-ph="gone"]{display:none}
 .ph-pop{width:300px;padding:10px 12px}
+/* Procress 28 part 2: the page head's 🔗 — linked modules and a search to link one */
+.ph-links-open{display:inline-flex;align-items:center;gap:4px}
+.ph-link-n:empty{display:none}
+.ph-links-pop .ls-list{max-height:320px;overflow-y:auto}
+.ph-links-pop .ph-link-q{width:100%}
 .ph-pop-h{font-weight:600;margin-bottom:6px}
 .ph-pop-label{font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));margin:10px 0 4px}
 .ph-pop-hint{font-size:var(--fs-xs);color:var(--t3-aa,var(--t2));margin-top:8px}
 .ph-acts{display:flex;gap:4px}
 .ph-acts .btn{flex:1;justify-content:center}
 .ph-pop .fg{margin:0}
-.ph-icon-inp{font-size:calc(16px * var(--fsc,1))}
 .ph-covers{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:180px;overflow-y:auto}
 .ph-cover-opt{aspect-ratio:16/10;border:2px solid transparent;border-radius:var(--rs);background:var(--raised) center/cover no-repeat;cursor:pointer;color:var(--t2)}
 .ph-cover-opt.active{border-color:var(--accent)}

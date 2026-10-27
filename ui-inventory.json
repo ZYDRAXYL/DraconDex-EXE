@@ -3,7 +3,7 @@
   "variants": {
     "modal": 2,
     "popup": 10,
-    "input": 15,
+    "input": 14,
     "segmented": 12,
     "card": 11,
     "button": 20,
@@ -16,7 +16,7 @@
   "inlineStyle": 297,
   "zIndexRaw": 0,
   "iconsSvg": 285,
-  "iconsChar": 90,
+  "iconsChar": 89,
   "hexByFile": {
     "electron/src/renderer/core/pickers.js": 1,
     "electron/src/renderer/core/settings.js": 3,

@@ -25,17 +25,22 @@
 //                those workspaces have no panes, so no address row)
 //   o.layout     {align, cover, icon} from pageHeadLayout() — the title's
 //                own layout, set per page (Procress 13 part 4, below)
+//   o.bigIcon    the icon shown above the title when layout.icon is on
+//                (default o.icon) — an element page passes its own
 
 function pageHeadHtml(o = {}) {
   const col = o.color || 'var(--accent)';
-  const icon = o.icon ? `<span class="kicon" style="color:${x(col)}${o.iconOnclick ? ';cursor:pointer' : ''}"${o.iconOnclick ? ` onclick="event.stopPropagation();${o.iconOnclick}"` : ''} data-no-i18n>${o.icon}</span>` : '';
+  const lay = o.layout || null;
+  // Procress 28 part 2: "icon above the title" is the page's own icon, large —
+  // the small one beside the name then goes (one icon, not two).
+  const big = lay?.icon ? (o.bigIcon || o.icon) : '';
+  const icon = o.icon && !big ? `<span class="kicon" style="color:${x(col)}${o.iconOnclick ? ';cursor:pointer' : ''}"${o.iconOnclick ? ` onclick="event.stopPropagation();${o.iconOnclick}"` : ''} data-no-i18n>${o.icon}</span>` : '';
   const cls = ['detail-head', 'module-head', o.cls || ''].filter(Boolean).join(' ');
   if (o.bare) {
     return `<div class="${cls} page-navbar" style="border-left:4px solid ${x(col)}">
       <div class="navbar-row"><div class="navbar-grow">${o.sub || ''}</div></div>
     </div>`;
   }
-  const lay = o.layout || null;
   const layCls = lay ? ` ph--${lay.align}${lay.cover ? ' has-cover' : ''}${lay.icon ? ' has-icon' : ''}` : '';
   if (lay?.cover) watchPageCovers();
   // Procress 18 part 1: the address row is ◀ ▶ + where the page lives; the
@@ -44,8 +49,8 @@ function pageHeadHtml(o = {}) {
   const addr = o.addr ? { ...o.addr, short: true } : { label: o.titleText };
   return `<div class="page-navbar addr-bar">${addressRowHtml(addr, '')}</div>
     ${lay?.cover ? `<div class="ph-cover" data-cover-sha="${x(lay.cover)}" style="background-position:${pbFocusCss(lay.focus)}"></div>` : ''}
-    <div class="${cls} page-title${layCls}" style="border-left:4px solid ${x(col)}">
-      ${lay?.icon ? `<div class="ph-icon" data-no-i18n>${x(lay.icon)}</div>` : ''}
+    <div class="${cls} page-title${layCls}" style="border-left:4px solid ${x(col)};--ph-col:${x(col)}">
+      ${big ? `<div class="ph-icon"${o.iconOnclick ? ` onclick="event.stopPropagation();${o.iconOnclick}"` : ''} aria-hidden="true">${big}</div>` : ''}
       <div class="navbar-row"><h2 class="navbar-h">${icon}${o.title || ''}${o.after || ''}</h2>
         <span class="ph-save" aria-live="polite"></span>${o.acts ? `<span class="navbar-acts">${o.acts}</span>` : ''}</div>
       ${o.sub ? `<div class="drafter-hint navbar-sub">${o.sub}</div>` : ''}
@@ -56,7 +61,10 @@ function pageHeadHtml(o = {}) {
 // ═══ Title layout per page (Procress 13 part 4, APP docs/REDESIGN.md C6) ══
 // Stored in module_ui like the readable flag (page/focus.js): "pageHead" for
 // a module page, "pageHead:<itemKey>" for an element page, value
-// {align, cover, icon}. No row = today's look (left, no cover, no icon);
+// {align, cover, showIcon}. Procress 28 part 2: showIcon puts the page's own
+// icon above the title; the older {icon:"<emoji>"} reads as on (the emoji
+// is not shown any more), and an app that predates showIcon simply shows no
+// icon instead of printing a marker. No row = today's look (left, no cover, no icon);
 // setting everything back to that stores '' — the same "off" the readable
 // flag uses — which reads back as the default.
 // The cover is an Asset Nest image named by its sha256, not its id — ids
@@ -74,16 +82,16 @@ function pageHeadLayout(moduleId, itemKey = null) {
     // (EXPORT-DECOR D3) — a hash is what survives a sync to another device
     cover: typeof v?.cover === 'string' && /^([a-f0-9]{64}|file_\d+)$/.test(v.cover) ? v.cover : null,
     focus: v?.focus && typeof v.focus === 'object' ? pbFocusOf(v.focus) : null,
-    // A few graphemes at most — an emoji, not a paragraph.
-    icon: typeof v?.icon === 'string' && v.icon.trim() ? [...v.icon.trim()].slice(0, 4).join('') : null,
+    icon: v?.showIcon === true || (typeof v?.icon === 'string' && !!v.icon.trim()),
   };
 }
 
 async function setPageHeadLayout(moduleId, itemKey, patch) {
-  const next = { ...pageHeadLayout(moduleId, itemKey), ...patch };
+  const { icon, ...next } = { ...pageHeadLayout(moduleId, itemKey), ...patch };
   if (!next.cover) next.focus = null;
   if (!next.focus) delete next.focus;
-  const val = next.align === 'left' && !next.cover && !next.icon ? '' : JSON.stringify(next);
+  if (icon) next.showIcon = true;
+  const val = next.align === 'left' && !next.cover && !icon ? '' : JSON.stringify(next);
   const key = pageHeadUiKey(itemKey);
   await api.module.setUi(moduleId, key, val);
   for (const p of Object.values(S.pages || {})) if (p.moduleId === moduleId && p.props?.ui) p.props.ui[key] = val;
@@ -148,8 +156,7 @@ async function openPageLayoutPopup(anchor) {
   const pop = openPopover(anchor || document.querySelector('.page-title') || pointAnchor(200, 80), `<div class="ph-pop-h">${t('pageLayout')}</div>
     <div class="ph-pop-label">${t('titleAlign')}</div>
     <div class="seg seg-sm seg-fill" role="group" aria-label="${t('titleAlign')}">${seg}</div>
-    <div class="ph-pop-label">${t('pageIcon')}</div>
-    <div class="fg"><input class="ph-icon-inp" maxlength="16" value="${x(lay.icon || '')}" placeholder="✦" data-no-i18n></div>
+    <label class="fv-useimg ph-icon-cb"><input type="checkbox"${lay.icon ? ' checked' : ''}> ${t('pageIcon')}</label>
     <div class="ph-pop-label">${t('pageCover')}</div>
     ${images.length
       ? `<div class="ph-covers"><div role="button" tabindex="0" class="ph-cover-opt ph-cover-none${lay.cover ? '' : ' active'}" data-cover="" title="${t('pageCoverNone')}">${I.close}</div>${covers}</div>`
@@ -167,9 +174,8 @@ async function openPageLayoutPopup(anchor) {
     else return;
     openPageLayoutPopup(anchor); // redraw with the new state, same anchor
   });
-  const inp = pop.querySelector('.ph-icon-inp');
-  inp.addEventListener('change', () => setPageHeadLayout(tgt.moduleId, tgt.itemKey, { icon: inp.value.trim() || null }));
-  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+  const cb = pop.querySelector('.ph-icon-cb input');
+  cb.addEventListener('change', async () => { await setPageHeadLayout(tgt.moduleId, tgt.itemKey, { icon: cb.checked }); openPageLayoutPopup(anchor); });
 }
 
 // Any picture in the Nexus as the cover, through the picture picker (D4):
@@ -194,4 +200,68 @@ async function pageCoverFocus(tgt) {
     await setPageHeadLayout(tgt.moduleId, tgt.itemKey, { focus });
     renderNexusHome();
   });
+}
+
+// ═══ Linked modules, from the page head (Procress 28 part 2) ═══════════
+// The 🔗 on every module page: which modules this one is linked to, and a
+// search to link another. A link made here is a module ↔ module relation
+// (entity_relation, the row an Exhibitor draws too); one that comes from a
+// [[link]] (part 6, db/viewer.js linkedModules) is listed but not removable
+// here — it goes when the [[…]] does. Narrator, Author's point of view and
+// the Classifier relation view all read the same list.
+function pageLinkBtnHtml(moduleId) {
+  // the count arrives after the page is drawn (the head is built as a string)
+  requestAnimationFrame(() => api.module.linked(moduleId).then((ls) => {
+    const n = document.querySelector(`.module-page[data-module="${moduleId}"] .ph-link-n`);
+    if (n) n.textContent = ls.length ? String(ls.length) : '';
+  }).catch(() => {}));
+  return `<button class="btn btn-g btn-sm ph-links-open" aria-haspopup="dialog" title="${x(t('pageLinksTitle'))}" aria-label="${x(t('pageLinksTitle'))}"
+    onclick="event.stopPropagation();openPageLinksPopup(${moduleId},this)">${I.relation}<span class="ph-link-n" data-no-i18n></span></button>`;
+}
+
+async function openPageLinksPopup(moduleId, anchor, query = '') {
+  const linked = await api.module.linked(moduleId);
+  const byId = new Map(linked.map((e) => [e.id, e]));
+  const all = flattenModulesByKind(S.moduleTree, []).filter((m) => m.id !== moduleId && m.kind !== 'collector');
+  const q0 = query.trim().toLowerCase();
+  const row = (m) => {
+    const e = byId.get(m.id);
+    const meta = e ? [e.relationId ? t('pageLinkDirect') : '', e.wiki ? t('pageLinkViaWiki') : ''].filter(Boolean).join(' · ') : '';
+    return listRowHtml({ density: 'compact', icon: moduleIconHtml(m),
+      title: m.name, meta, state: { selected: !!e }, attrs: `data-link-mid="${m.id}" data-no-i18n`,
+      actions: e?.relationId ? listActHtml({ icon: I.close, name: t('pageLinkRemove'), onclick: `pageLinkRemove(${moduleId},${e.relationId})` }) : '',
+      onclick: e ? `openModuleNode(${m.id})` : `pageLinkAdd(${moduleId},${m.id})` });
+  };
+  const mine = all.filter((m) => byId.has(m.id));
+  const others = q0 ? all.filter((m) => !byId.has(m.id) && m.name.toLowerCase().includes(q0)).slice(0, 30) : [];
+  const body = (mine.length ? listGroupHtml({ list: 'page-links', id: 'mine', title: t('pageLinksTitle'), count: mine.length, rows: mine.map(row).join(''), collapsible: false })
+    : emptyStateHtml({ icon: I.relation, text: t('pageLinksNone') }))
+    + (others.length ? listGroupHtml({ list: 'page-links', id: 'add', title: t('pageLinkAddGroup'), rows: others.map(row).join(''), collapsible: false }) : '');
+  const html = `<div class="ph-pop-h">${t('pageLinksTitle')}</div>
+    <div class="fg"><input class="ph-link-q" value="${x(query)}" placeholder="${x(t('pageLinkSearch'))}" aria-label="${x(t('pageLinkSearch'))}"></div>
+    ${listHtml({ list: 'page-links', aria: t('pageLinksTitle'), body })}`;
+  let pop = document.querySelector('.ph-links-pop');
+  if (pop) { pop.innerHTML = html; } else {
+    pop = openPopover(anchor, html, { cls: 'ph-pop ph-links-pop', keep: false, focus: false, aria: t('pageLinksTitle') });
+  }
+  pop._linkAnchor = anchor;
+  const inp = pop.querySelector('.ph-link-q');
+  inp.focus();
+  inp.setSelectionRange(inp.value.length, inp.value.length);
+  inp.addEventListener('input', () => { clearTimeout(pop._qT); pop._qT = setTimeout(() => openPageLinksPopup(moduleId, anchor, inp.value), 120); });
+}
+async function pageLinkAdd(moduleId, otherId) {
+  await api.viewer.createRelation(S.nexus.id, `module_${moduleId}`, `module_${otherId}`, null, null, {});
+  await pageLinksChanged(moduleId);
+}
+async function pageLinkRemove(moduleId, relationId) {
+  await api.viewer.deleteRelation(relationId);
+  await pageLinksChanged(moduleId);
+}
+// Redraw the popup (keeping what was typed) and the count on the page.
+async function pageLinksChanged(moduleId) {
+  const pop = document.querySelector('.ph-links-pop');
+  if (pop) await openPageLinksPopup(moduleId, pop._linkAnchor, pop.querySelector('.ph-link-q')?.value || '');
+  const ls = await api.module.linked(moduleId);
+  document.querySelectorAll(`.module-page[data-module="${moduleId}"] .ph-link-n`).forEach((n) => { n.textContent = ls.length ? String(ls.length) : ''; });
 }

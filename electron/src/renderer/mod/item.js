@@ -246,6 +246,8 @@ function buildItemPageHtml(node) {
   const paged = node.itemKey && pageOf(node.moduleId, node.itemKey);
   return `${pageHeadHtml({
       color: col, title: `<span data-no-i18n>${x(name)}</span>`, titleText: name,
+      // the element's own icon when it has one, else its module's
+      bigIcon: iconRefHtml(node.item?.icon, node.m ? moduleIconHtml(node.m) : reg.icon()),
       after: `<span class="chip" data-no-i18n>${x(t(reg.badgeKey))}</span>`,
       sub: `<span data-no-i18n>${x(node.m?.name || '')}</span>`,
       acts: paged ? pageHeadActsHtml(node.moduleId, node.itemKey) : '',

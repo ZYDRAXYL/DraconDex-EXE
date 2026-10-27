@@ -67,7 +67,7 @@
 .page-blocks.arranging .pblock.drop-left{box-shadow:-3px 0 0 0 var(--accent)}
 .page-blocks.arranging .pblock.drop-right{box-shadow:3px 0 0 0 var(--accent)}
 .pb-bar{display:flex;align-items:center;gap:6px;padding:2px 4px 6px;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2)}
-.pb-grip{cursor:grab;color:var(--t3-aa,var(--t2));font-size:calc(14px * var(--fsc,1));user-select:none}
+.pb-grip{cursor:grab;color:var(--t3-aa,var(--t2));display:inline-flex;user-select:none}
 .pb-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .pb-src{color:var(--t3-aa,var(--t2));font-weight:400}
 .pb-preset{font-size:calc(var(--fs-meta) * var(--fsc,1));background:var(--raised);color:var(--t1);border:1px solid var(--border);border-radius:var(--r)}
@@ -93,6 +93,10 @@
 
 /* Classifier relation graph — its slot in the instance (mod/classifier.js) */
 .cls-rel-graph{position:relative;overflow:hidden;min-height:340px;border:1px solid var(--border);border-radius:var(--r)}
+/* Procress 28 part 3: an element's own icon on its graph node (sage.js) */
+.graph-node-icon{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.graph-node-icon .icon,.graph-node-icon .kicon-img-icon{width:100%;height:100%}
+.graph-node-icon .kicon-glyph{font-size:12px;line-height:1}
 
 /* Canvas frame (page/canvas-frame.js) */
 .cf-grip{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:row-resize;z-index:calc(var(--z-base) + 4)}
@@ -109,11 +113,15 @@
   color: var(--t2); font-size: 12px;
 }
 
-/* The address row (page/address.js). Procress 26 part 2: in the flow, not
-   sticky — pinned over the scroller it slid across the module title and its
-   buttons as soon as the page scrolled. */
+/* The address row (page/address.js) — the sticky part of every page head.
+   Procress 28 part 2 (the user, on 26's un-sticking): keep it pinned, but
+   give a title with no icon above it room under the row, so a short scroll
+   does not slide the name straight under it. */
 .addr-bar{padding:4px 0 6px;margin-bottom:8px;border-bottom:1px solid var(--border)}
-.page-navbar.addr-bar{position:static}
+/* pinned to the pane's top edge, not its padding's — no band of page
+   showing through above the row */
+.bpane-body .page-navbar.addr-bar{top:calc(-1 * var(--bpane-pad))}
+.addr-bar + .page-title:not(.has-icon){padding-top:20px}
 .addr-row{display:flex;align-items:center;gap:6px;min-width:0}
 .addr-nav{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .addr-path{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;flex-wrap:nowrap;overflow:hidden;

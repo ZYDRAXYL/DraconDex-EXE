@@ -49,9 +49,17 @@ async function saveAuthorChapterMeta(id, meta, repaint = false) {
 }
 
 // The chapter modal's part: synopsis, status, point of view.
+// Procress 28 part 5: the point of view is an object of a Classifier this
+// Author is linked to (api.module.linked — the page head's 🔗, or a
+// [[link]]), not any object in the Nexus. One already set elsewhere stays
+// listed, so saving the form never drops it silently.
 async function authorChapterMetaFieldsHtml(ch) {
-  const idx = S.nexus ? await api.viewer.index(S.nexus.id) : [];
-  const people = idx.filter(e => e.kind === 'object');
+  const mid = S.authorData?.moduleId;
+  const [idx, linked] = await Promise.all([S.nexus ? api.viewer.index(S.nexus.id) : [], mid ? api.module.linked(mid) : []]);
+  const from = new Set(linked.map((e) => e.id).filter((id) => findModuleNode(id)?.kind === 'classifier'));
+  const people = idx.filter(e => e.kind === 'object' && (from.has(e.moduleId) || e.key === ch.pov_key));
+  const none = !from.size
+    ? `<p class="drafter-hint">${t('auPovNoLink')} <button type="button" class="btn btn-s btn-sm" onclick="closeModal();openPageLinksPopup(${mid},document.querySelector('.ph-links-open'))">${I.relation} ${t('pageLinksTitle')}</button></p>` : '';
   return `<div class="fg"><label>${t('auSynopsis')}</label><textarea id="ac-syn" rows="3">${x(ch.synopsis || '')}</textarea></div>
     <div class="fg"><label>${t('auStatus')}</label>
       <select id="ac-status"><option value="">—</option>
@@ -60,7 +68,7 @@ async function authorChapterMetaFieldsHtml(ch) {
     <div class="fg"><label>${t('auPov')}</label>
       <select id="ac-pov"><option value="">—</option>
         ${people.map(e => `<option value="${x(e.key)}"${e.key === ch.pov_key ? ' selected' : ''}>${x(e.name)}${e.moduleName ? ` — ${x(e.moduleName)}` : ''}</option>`).join('')}
-      </select></div>`;
+      </select>${none}</div>`;
 }
 
 async function submitAuthorChapterMeta(id) {

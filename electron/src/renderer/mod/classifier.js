@@ -276,32 +276,46 @@ function renderClassifierRelation(m, d) {
   </div>`;
 }
 
-const classifierModuleRelations = (m, d) => {
-  const keys = new Set(d.objects.map(o => `cobj_${o.id}`));
-  return (d.relations || []).filter(r => keys.has(r.from_key) && keys.has(r.to_key));
-};
-
 async function mountClassifierRelationGraph(c) {
   const m = c.source;
   const d = clsData(m.id);
   const box = c.root.querySelector('[data-r="rel-graph"]');
   if (!box) return;
   await loadModule('src/renderer/sage.js'); // buildSageGraph lives there
-  const rels = classifierModuleRelations(m, d);
-  // Procress 17 P1: only objects that have a relation — the graph is about the
-  // links, and laying out 3,000 unconnected dots took ~2 s for nothing.
-  const linked = new Set(rels.flatMap(r => [r.from_key, r.to_key]));
-  const nodes = d.objects.filter(o => linked.has(`cobj_${o.id}`)).map(o => ({
-    id: `cobj_${o.id}`, objId: o.id, module: 'obj', label: o.name,
-    fill: o.color_code || m.color_code || '#8b5cf6',
-  }));
-  const edges = rels.map(r => ({ source: r.from_key, target: r.to_key, color: r.color_code }));
-  buildSageGraph({ nodes, edges }, new Set(), {
-    container: box,
-    colors: { obj: m.color_code || '#8b5cf6' },
-    labels: { obj: x(m.name) },
+  // Procress 28 part 3: every object, not only the linked ones — an object
+  // with no relation sits on the outer rings (sage.js n.outer), out of the
+  // force layout that made 3,000 dots cost ~2 s (Procress 17 P1). Modules
+  // linked to this one (api.module.linked — relations and [[links]]) bring
+  // their elements too, each behind the graph's own module checkbox; which
+  // ones are ticked is kept per module (module_ui clsRelInclude).
+  const [linkedMods, ui, index] = await Promise.all([
+    api.module.linked(m.id), api.module.getUi(m.id), S.nexus ? api.viewer.index(S.nexus.id) : [],
+  ]);
+  if (!box.isConnected) return;
+  let shown = new Set();
+  try { shown = new Set(JSON.parse(ui?.clsRelInclude || '[]').map(Number)); } catch (_) {}
+  const others = linkedMods.map((e) => findModuleNode(e.id)).filter((mm) => mm && mm.kind !== 'collector');
+  const otherIds = new Set(others.map((mm) => mm.id));
+  const extra = index.filter((e) => otherIds.has(e.moduleId) && e.kind !== 'module' && e.kind !== 'file');
+  const keys = new Set([...d.objects.map((o) => `cobj_${o.id}`), ...extra.map((e) => e.key)]);
+  const rels = (d.relations || []).filter((r) => keys.has(r.from_key) && keys.has(r.to_key));
+  const touched = new Set(rels.flatMap((r) => [r.from_key, r.to_key]));
+  const own = d.objects.map((o) => {
+    const key = `cobj_${o.id}`;
+    return { id: key, objId: o.id, module: 'obj', label: o.name, hoverKey: key, outer: !touched.has(key),
+      fill: o.color_code || m.color_code || '#8b5cf6', iconHtml: o.icon ? classifierObjectIconHtml(o, m) : null };
+  });
+  const ext = extra.map((e) => ({ id: e.key, module: `m${e.moduleId}`, label: e.name, hoverKey: e.key, outer: !touched.has(e.key),
+    fill: e.color || findModuleNode(e.moduleId)?.color_code || 'var(--t2)' }));
+  const edges = rels.map((r) => ({ source: r.from_key, target: r.to_key, color: r.color_code }));
+  const colors = { obj: m.color_code || '#8b5cf6' }, labels = { obj: x(m.name) };
+  for (const mm of others) { colors[`m${mm.id}`] = mm.color_code || 'var(--t2)'; labels[`m${mm.id}`] = x(mm.name); }
+  const hidden = new Set(others.filter((mm) => !shown.has(mm.id)).map((mm) => `m${mm.id}`));
+  buildSageGraph({ nodes: [...own, ...ext], edges }, hidden, {
+    container: box, colors, labels,
     // §7.5 bug #9: a node opens the element, not the rename modal.
-    onNodeClick: (n) => openItemNode('classifier', m.id, n.objId),
-    onNodeContext: (n, e) => openCtx('classifier.object', e, { moduleId: m.id, objectId: n.objId }),
+    onNodeClick: (n) => (n.objId ? openItemNode('classifier', m.id, n.objId) : openEntityByKey(n.id)),
+    onNodeContext: (n, e) => { if (n.objId) openCtx('classifier.object', e, { moduleId: m.id, objectId: n.objId }); },
+    onFilterChange: (h) => api.module.setUi(m.id, 'clsRelInclude', JSON.stringify(others.filter((mm) => !h.has(`m${mm.id}`)).map((mm) => mm.id))),
   });
 }

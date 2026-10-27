@@ -356,7 +356,8 @@ function pbHoverAt(el, html) {
 }
 document.addEventListener('mouseover', (e) => {
   if (S.settings?.linkPreview === false) return;
-  const el = e.target.closest?.('#main-inner .wikilink[data-key], #main-inner .pb-link[data-key], #main-inner .fn-ref');
+  // [data-hover-key]: a graph node (sage.js, Procress 28 part 3) — no link text, same card
+  const el = e.target.closest?.('#main-inner .wikilink[data-key], #main-inner .pb-link[data-key], #main-inner .fn-ref, #main-inner [data-hover-key]');
   if (!el || _pbHover?.el === el) return;
   pbHoverHide(true);
   const state = { el };
@@ -368,7 +369,7 @@ document.addEventListener('mouseover', (e) => {
       pbHoverAt(el, `<div class="pb-sum"><div class="pb-sum-body"><div class="pb-fn-note">${note ? _mdInline(note, resolveWikiNameCached) : x(t('pbFootnoteMissing'))}</div></div></div>`);
       return;
     }
-    const s = await pbEntitySummary(el.dataset.key);
+    const s = await pbEntitySummary(el.dataset.key || el.dataset.hoverKey);
     if (_pbHover === state && s) pbHoverAt(el, pbSummaryHtml(s));
   }, 400);
   el.addEventListener('mouseleave', () => { if (_pbHover === state) pbHoverHide(); }, { once: true });

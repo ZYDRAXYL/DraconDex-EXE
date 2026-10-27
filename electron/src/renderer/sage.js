@@ -35,10 +35,22 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
     (neighbors.get(e.target) || neighbors.set(e.target, new Set()).get(e.target)).add(e.source);
   });
 
+  // Procress 28 part 3: two stacked layers. The ring (n.outer nodes, still)
+  // is its own composited layer below the force-laid graph, so a layout
+  // frame repaints the few moving nodes, not 3,000 still ones (measured:
+  // ~190 ms a frame in one layer, ~12 ms apart). The ring layer is also the
+  // background that takes a pan.
+  const svgRing = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svgRing.setAttribute('width','100%');
+  svgRing.setAttribute('height','100%');
+  svgRing.style.cssText = 'position:absolute;inset:0;background:var(--bg);cursor:grab;will-change:transform';
+  wrap.appendChild(svgRing);
+  const ringViewport = document.createElementNS('http://www.w3.org/2000/svg','g');
+  svgRing.appendChild(ringViewport);
   const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
   svg.setAttribute('width','100%');
   svg.setAttribute('height','100%');
-  svg.style.cssText = 'position:absolute;inset:0;background:var(--bg);cursor:grab';
+  svg.style.cssText = 'position:absolute;inset:0;pointer-events:none;will-change:transform';
   wrap.appendChild(svg);
 
   const viewport = document.createElementNS('http://www.w3.org/2000/svg','g');
@@ -46,12 +58,27 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
   const gLinks = document.createElementNS('http://www.w3.org/2000/svg','g');
   const gNodes = document.createElementNS('http://www.w3.org/2000/svg','g');
   viewport.appendChild(gLinks); viewport.appendChild(gNodes);
+  gNodes.style.pointerEvents = 'auto';
 
   const nodes = data.nodes.map(n => ({
     ...n,
     r: Math.min(28, 8 + Math.sqrt(degree.get(n.id)||0)*4),
     x: W/2 + (Math.random()-.5)*300, y: H/2 + (Math.random()-.5)*300,
   }));
+  // Procress 28 part 3: a node with nothing to pull on (n.outer — an object
+  // with no relation) sits on rings round the graph instead of in the force
+  // layout, so 3,000 of them cost a placement, not 3,000² repulsions.
+  {
+    const outer = nodes.filter(n => n.outer);
+    let ring = 0, placed = 0;
+    while (placed < outer.length) {
+      const R = Math.min(W, H) * 0.42 + ring * 26;
+      const cap = Math.max(1, Math.floor((2 * Math.PI * R) / 22));
+      const take = outer.slice(placed, placed + cap);
+      take.forEach((n, i) => { const a = (i / take.length) * 2 * Math.PI; n.x = W / 2 + R * Math.cos(a); n.y = H / 2 + R * Math.sin(a); n.r = 8; });
+      placed += take.length; ring++;
+    }
+  }
   const nodeById = new Map(nodes.map(n => [n.id, n]));
 
   const lines = data.edges.map(e => {
@@ -67,13 +94,14 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
   let view = { scale: 1, tx: 0, ty: 0 };
   function applyView() {
     viewport.setAttribute('transform', `translate(${view.tx},${view.ty}) scale(${view.scale})`);
+    ringViewport.setAttribute('transform', `translate(${view.tx},${view.ty}) scale(${view.scale})`);
   }
   let panning = false, panStartX=0, panStartY=0, panOrigTx=0, panOrigTy=0;
-  svg.addEventListener('mousedown', ev => {
-    if (ev.target !== svg) return; // node drags handle their own mousedown
+  svgRing.addEventListener('mousedown', ev => {
+    if (ev.target !== svgRing) return; // node drags handle their own mousedown
     panning = true; panStartX = ev.clientX; panStartY = ev.clientY;
     panOrigTx = view.tx; panOrigTy = view.ty;
-    svg.style.cursor = 'grabbing';
+    svgRing.style.cursor = 'grabbing';
   });
   window.addEventListener('mousemove', ev => {
     if (!panning) return;
@@ -81,8 +109,8 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
     view.ty = panOrigTy + (ev.clientY - panStartY);
     applyView();
   });
-  window.addEventListener('mouseup', () => { panning = false; svg.style.cursor = 'grab'; });
-  svg.addEventListener('wheel', ev => {
+  window.addEventListener('mouseup', () => { panning = false; svgRing.style.cursor = 'grab'; });
+  wrap.addEventListener('wheel', ev => {
     ev.preventDefault();
     const rect = svg.getBoundingClientRect();
     const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
@@ -99,10 +127,17 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
     const g = document.createElementNS('http://www.w3.org/2000/svg','g');
     g.style.cursor = 'grab';
     g.dataset.id = n.id;
+    if (n.hoverKey) g.dataset.hoverKey = n.hoverKey; // the hover card (page/links.js)
     const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
     c.setAttribute('r', n.r);
-    c.setAttribute('fill', n.fill || moduleColors[n.module]||'var(--raised)');
-    c.setAttribute('stroke','var(--bg)'); c.setAttribute('stroke-width','2');
+    const fill = n.fill || moduleColors[n.module] || 'var(--raised)';
+    // Procress 28 part 3: an element with its own icon draws it, in its
+    // colour, on a plain disc; without one it stays a coloured dot.
+    if (n.iconHtml) {
+      c.setAttribute('fill', 'var(--surface)'); c.setAttribute('stroke', fill); c.setAttribute('stroke-width', '1.5');
+    } else {
+      c.setAttribute('fill', fill); c.setAttribute('stroke','var(--bg)'); c.setAttribute('stroke-width','2');
+    }
     const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
     txt.setAttribute('text-anchor','middle'); txt.setAttribute('y', n.r + 12);
     txt.setAttribute('fill','var(--t2)'); txt.setAttribute('font-size','10'); txt.setAttribute('pointer-events','none');
@@ -112,24 +147,40 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
     txt.style.opacity = '0';
     txt.style.transition = 'opacity .12s';
     txt.textContent = n.label.length > 14 ? n.label.slice(0,13)+'…' : n.label;
-    g.appendChild(c); g.appendChild(txt);
-    gNodes.appendChild(g);
+    g.appendChild(c);
+    if (n.iconHtml) {
+      const s = Math.round(n.r * 1.3);
+      const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+      fo.setAttribute('x', -s / 2); fo.setAttribute('y', -s / 2); fo.setAttribute('width', s); fo.setAttribute('height', s);
+      fo.setAttribute('pointer-events', 'none');
+      const box = document.createElement('div');
+      box.className = 'graph-node-icon';
+      box.style.color = fill;
+      box.innerHTML = n.iconHtml;
+      fo.appendChild(box);
+      g.appendChild(fo);
+    }
+    g.appendChild(txt);
+    (n.outer ? ringViewport : gNodes).appendChild(g);
 
-    let dragging = false, dx=0, dy=0, moved=false;
-    g.addEventListener('mousedown', ev => {
-      dragging = true; moved = false;
-      dx = (ev.clientX - svg.getBoundingClientRect().left - view.tx)/view.scale - n.x;
-      dy = (ev.clientY - svg.getBoundingClientRect().top - view.ty)/view.scale - n.y;
-      g.style.cursor = 'grabbing'; ev.stopPropagation(); ev.preventDefault();
-    });
-    window.addEventListener('mousemove', ev => {
-      if (!dragging) return;
+    // Procress 28 part 3: the window listeners exist only during a drag —
+    // one pair per node, always on, was 6,000 handlers per mouse move at 3,000.
+    let dx=0, dy=0, moved=false;
+    const onMove = (ev) => {
       moved = true;
       n.x = (ev.clientX - svg.getBoundingClientRect().left - view.tx)/view.scale - dx;
       n.y = (ev.clientY - svg.getBoundingClientRect().top - view.ty)/view.scale - dy;
       updatePositions();
+    };
+    const onUp = () => { g.style.cursor = 'grab'; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    g.addEventListener('mousedown', ev => {
+      moved = false;
+      dx = (ev.clientX - svg.getBoundingClientRect().left - view.tx)/view.scale - n.x;
+      dy = (ev.clientY - svg.getBoundingClientRect().top - view.ty)/view.scale - n.y;
+      g.style.cursor = 'grabbing'; ev.stopPropagation(); ev.preventDefault();
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
     });
-    window.addEventListener('mouseup', () => { dragging = false; g.style.cursor = 'grab'; });
     g.addEventListener('mouseenter', () => highlightNode(n.id));
     g.addEventListener('mouseleave', () => highlightNode(null));
     if (opts.onNodeClick) g.addEventListener('click', () => { if (!moved) opts.onNodeClick(n); });
@@ -167,8 +218,8 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
     });
   }
 
-  function updatePositions() {
-    circles.forEach(({ el, node }) => { el.setAttribute('transform', `translate(${node.x},${node.y})`); });
+  function updatePositions(list = circles) {
+    list.forEach(({ el, node }) => { el.setAttribute('transform', `translate(${node.x},${node.y})`); });
     lines.forEach(({ el, source, target }) => {
       const s = nodeById.get(source), t = nodeById.get(target);
       if (!s||!t) return;
@@ -180,7 +231,7 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
   // Simple force layout (repulsion + spring edges), hidden nodes excluded from forces.
   function tick() {
     const k = 0.01, repel = 1400;
-    const active = nodes.filter(n => !hiddenModules.has(n.module));
+    const active = nodes.filter(n => !n.outer && !hiddenModules.has(n.module));
     for (const n of active) { n.vx = (n.vx||0)*0.85; n.vy = (n.vy||0)*0.85; }
     for (let i=0;i<active.length;i++) {
       for (let j=i+1;j<active.length;j++) {
@@ -208,13 +259,18 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
       n.x += (n.vx||0);
       n.y += (n.vy||0);
     }
-    updatePositions();
+    updatePositions(moving);
   }
+  // only the force-laid nodes move while the layout settles
+  const moving = circles.filter(c => !c.node.outer);
 
   let animating = true;
   let frame = 0;
   function animate() {
-    if (!animating || !q('#sage-graph-wrap')) { return; }
+    // Procress 28 part 3: stop when THIS graph leaves the page — it checked
+    // for the Sage Hut's #sage-graph-wrap, so a graph anywhere else (the
+    // Classifier relation view) never ran its layout at all.
+    if (!animating || !wrap.isConnected) { return; }
     if (frame++ < 220) { tick(); requestAnimationFrame(animate); }
     else updatePositions();
   }
@@ -241,6 +297,8 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
       const mod = cb.dataset.mod;
       if (cb.checked) hiddenModules.delete(mod); else hiddenModules.add(mod);
       applyModuleFilter();
+      if (frame >= 220) { frame = 0; animate(); } // let what just appeared settle in
+      opts.onFilterChange?.(hiddenModules);
     });
   });
 }
