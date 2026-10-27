@@ -59,7 +59,9 @@ function floatingRect(r, w, h, vw, vh, placement = 'bottom-start', gap = null, m
 }
 
 function placeFloating(el, anchor, { placement = 'bottom-start', gap = null } = {}) {
-  const r = anchorRect(anchor);
+  let r = anchorRect(anchor);
+  // the anchor was re-rendered away since: keep to where it was
+  if (r && anchor?.isConnected === false && el?._float) r = el._float.r;
   if (!el || !r) return;
   // taller than the window: cap it and let it scroll rather than run off-screen
   const room = window.innerHeight - 2 * POPOVER_MARGIN;
@@ -68,6 +70,28 @@ function placeFloating(el, anchor, { placement = 'bottom-start', gap = null } = 
   el.style.left = `${p.left}px`;
   el.style.top = `${p.top}px`;
   el.dataset.side = p.side;
+  floatFollowSize(el, { anchor, r: { left: r.left, top: r.top, right: r.right, bottom: r.bottom }, placement, gap, side: p.side });
+}
+
+// Procress 29 part 1: a floating box placed once ran off the window when its
+// content grew afterwards — the link-module popup lists its search results
+// after it opens, a picker swaps tabs, a menu loads rows. Every box placed
+// here is re-placed whenever its size changes, keeping the side it opened
+// on (a list growing as you type must not jump from below to above), and so
+// stays POPOVER_MARGIN inside every edge.
+function floatFollowSize(el, f) {
+  const [, align = 'start'] = f.placement.split('-');
+  el._float = { ...f, placement: `${f.side}-${align}` };
+  if (el._floatRo || typeof ResizeObserver !== 'function') return;
+  let w = el.offsetWidth, h = el.offsetHeight;
+  el._floatRo = new ResizeObserver(() => {
+    if (!el.isConnected) { el._floatRo.disconnect(); el._floatRo = null; return; }
+    if (el.offsetWidth === w && el.offsetHeight === h) return;
+    w = el.offsetWidth; h = el.offsetHeight;
+    const g = el._float;
+    placeFloating(el, g.anchor?.isConnected === false ? g.r : g.anchor, { placement: g.placement, gap: g.gap });
+  });
+  el._floatRo.observe(el);
 }
 
 function pointAnchor(x, y) {

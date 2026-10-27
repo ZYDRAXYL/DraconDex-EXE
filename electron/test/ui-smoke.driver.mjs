@@ -1385,3 +1385,15 @@ test('29 part 5: a colour pick keeps the icon, an icon pick keeps the colour, tw
   assert.ok(sizes.every((s) => s[0] === sizes[0][0] && s[1] === sizes[0][1] && s[2]), `fixed size, no x-scroll: ${JSON.stringify(sizes)}`);
   await win.evaluate(() => { closeAllPopups(); closeModal(); });
 });
+
+test('29 part 1: a popup that grows after it opens stays 8 px inside the window', async () => {
+  await win.setViewportSize({ width: 900, height: 520 });
+  const mid = await win.evaluate(async () => { const nx = S.nexus.id; await api.module.createMany(Array.from({ length: 30 }, (_, i) => ({ nexus_ref: nx, name: 'Edge ' + i, kind: 'scribe' }))); await reloadModuleTree(); return flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Edge 0').id; });
+  await win.evaluate((id) => openModuleNode(id), mid); await sleep(500);
+  await win.locator('.module-page .ph-links-open').first().click();
+  await win.locator('.ph-links-pop .ph-link-q').fill('Edge'); await sleep(700);
+  const r = await win.evaluate(() => { const b = q('.ph-links-pop').getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: innerWidth, h: innerHeight }; });
+  assert.ok(r.l >= 8 && r.t >= 8 && r.r <= r.w - 8 && r.b <= r.h - 8, `inside the window: ${JSON.stringify(r)}`);
+  await win.keyboard.press('Escape');
+  await win.setViewportSize({ width: 1280, height: 800 });
+});
