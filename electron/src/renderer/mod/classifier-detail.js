@@ -264,7 +264,9 @@ function renderClassifierAttrRowHtml(o, c) {
 // (src/renderer/mod/item.js) passes its own freshly-fetched templates, since
 // it can be opened without the module's data ever having loaded.
 function renderClassifierObjectDetail(m, o, templates = clsData(m.id).templates) {
-  let html = `<h3 style="margin-bottom:8px" oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})">${x(o.name)}</h3>`;
+  // Procress 29 part 6: the name renames on a click, like the fields under it;
+  // the icon before it opens the icon & colour popup.
+  let html = `<h3 class="cls-detail-name" style="margin-bottom:8px" oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})">${clsObjectIconBtnHtml(m, o)}${clsObjectNameHtml(o)}</h3>`;
   for (const c of templates) html += renderClassifierAttrRowHtml(o, c);
   // §7.4: a field is reachable where it is missing — no trip to the fields
   // modal to add one more.

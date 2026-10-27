@@ -889,8 +889,8 @@ test('26 part 3: add without a form, rename in place, edit a choice, reorder', a
   await win.click('.classifier-toolbar [data-cmd="classifier.addObject"]'); await sleep(600);
   await win.keyboard.press('Escape'); await sleep(500);
   assert.deepEqual(await names(), [...start, 'Smoke Rook']);
-  // double click renames; Esc keeps the old name
-  await win.dblclick('tr[data-cls-oid] .cls-name >> text=Smoke Rook'); await sleep(300);
+  // one click renames (Procress 29 part 6 — it was a double click); Esc keeps the old name
+  await win.click('tr[data-cls-oid] .cls-name >> text=Smoke Rook'); await sleep(300);
   await win.keyboard.type('zz'); await win.keyboard.press('Escape'); await sleep(300);
   assert.ok((await names()).includes('Smoke Rook'));
   // a choice field is set in its cell
@@ -1415,4 +1415,26 @@ test('29 part 4: rename in the Nest while the module is open; one click renames 
   await win.keyboard.type('renamemed'); await win.keyboard.press('Enter'); await sleep(500);
   assert.equal((await win.evaluate((id) => api.module.get(id), mid)).handle, 'renamemed');
   assert.match(await win.locator('.module-page .navbar-h .module-handle').innerText(), /@renamemed/, 'shown after the title');
+});
+
+test('29 part 6: Classifier — the dot opens the icon popup, the name renames on one click, no object form left', async () => {
+  const mid = await win.evaluate(async () => { const id = await api.module.create({ nexus_ref: S.nexus.id, name: 'Smoke cls', kind: 'classifier' }); await api.classifier.createObject(id, 'Rook', null, null); await api.module.setUi(id, 'activeView', 'table'); await reloadModuleTree(); await openModuleNode(id); return id; });
+  await sleep(700);
+  assert.equal(await win.locator('.module-page .cls-rowacts').count(), 0, 'no ✎ / 🗑 at the row end');
+  assert.equal(await win.evaluate(() => typeof openClassifierObjectModal), 'undefined', 'the object form is gone');
+  await win.locator('tr[data-cls-oid] .cls-name >> text=Rook').click(); await sleep(250);
+  await win.keyboard.type('s'); await win.keyboard.press('Enter'); await sleep(400);
+  const o = () => win.evaluate((m) => api.classifier.getObjects(m).then((l) => l[0]), mid);
+  assert.equal((await o()).name, 'Rooks', 'one click, caret at the end');
+  await win.locator('tr[data-cls-oid] .cls-obj-icon').first().click(); await sleep(400);
+  await win.locator('.icon-edit-popup .ipk-icon-grid .ipk-cell[data-name="sword"]').click(); await sleep(500);
+  assert.equal((await o()).icon, 'svg:sword');
+  assert.equal(await win.locator('tr[data-cls-oid] .cls-obj-icon .cls-obj-ico').count(), 1, 'the icon replaces the dot');
+  await win.keyboard.press('Escape');
+  // the detail view's name renames on a click too
+  await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'listDetail'), mid); await sleep(500);
+  await win.locator('.cls-listdetail .ls-row').first().click(); await sleep(400);
+  await win.locator('.cls-detail-name .cls-name').click(); await sleep(250);
+  await win.keyboard.type('!'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.equal((await o()).name, 'Rooks!');
 });

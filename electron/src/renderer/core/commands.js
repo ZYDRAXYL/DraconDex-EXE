@@ -222,8 +222,8 @@ const COMMANDS = {
   'classifier.fieldRename': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFieldsModal(c.moduleId, c.tplId), surfaces: ['classifier.ctx'] },
   'classifier.fieldDelete': { label: 'delete', icon: 'delete', danger: true, scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => deleteClassifierFieldUndoable(c.tplId), surfaces: ['classifier.ctx'] },
   'classifier.openObject': { label: 'open', icon: 'eye', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openItemNode('classifier', c.moduleId, c.objectId), surfaces: ['classifier.ctx'] },
-  'classifier.renameObject': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openClassifierObjectModal(c.moduleId, c.objectId), surfaces: ['classifier.ctx'] },
-  'classifier.objectIcon': { label: 'clsColorIcon', icon: 'colors', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openClassifierObjectModal(c.moduleId, c.objectId), surfaces: ['classifier.ctx'] },
+  'classifier.renameObject': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => startRenameClsObject(c.objectId), surfaces: ['classifier.ctx'] },
+  'classifier.objectIcon': { label: 'clsColorIcon', icon: 'colors', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c, el) => openClsObjectIconPopup(c.moduleId, c.objectId, q(`[data-cls-oid="${c.objectId}"] .cls-obj-icon`) || el || ctxAnchor()), surfaces: ['classifier.ctx'] },
   'classifier.duplicateObject': { label: 'duplicate', icon: 'copy', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => duplicateClassifierObject(c.objectId), surfaces: ['classifier.ctx'] },
   'classifier.objectExhibitor': { label: 'openInExhibitor', icon: 'relation', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openExhibitorFor(c.moduleId, `cobj_${c.objectId}`), surfaces: ['classifier.ctx'] },
   'classifier.moveObject': {
