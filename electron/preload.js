@@ -126,6 +126,7 @@ contextBridge.exposeInMainWorld('api', {
     move:    (nx,id,parentId,ids) => inv('module:move', nx,id,parentId,ids),
     normalizeReport: ()          => inv('module:normalizeReport'),
     count:   (nx)          => inv('module:count', nx),
+    uploadedIcons: (nx)    => inv('module:uploadedIcons', nx),
     getUi:   (id)          => inv('module:getUi', id),
     setUi:   (id,k,v)      => inv('module:setUi', id,k,v),
     getTags: (id)          => inv('module:getTags', id),

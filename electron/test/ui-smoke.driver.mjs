@@ -1480,3 +1480,36 @@ test('29 part 2: a folder found in the Nest opens as its page; four views, remem
   assert.equal(await win.evaluate(() => S.folderPage), fid);
   await win.evaluate(async (id) => { await api.module.update(id, { pinned: 0 }); await reloadModuleTree(); renderModuleRail(); }, fid);
 });
+
+test('29 part 5: icon sets, a typed glyph, uploads reused across the Nexus, a colour of your own', async () => {
+  const png = 'img:data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const a = await win.evaluate(async (img) => { const nx = S.nexus.id;
+    const a = await api.module.create({ nexus_ref: nx, name: 'Smoke sets', kind: 'scribe' });
+    await api.module.create({ nexus_ref: nx, name: 'Smoke upload', kind: 'scribe', icon: img });
+    await reloadModuleTree(); renderNexusHome(); await openModuleNode(a); return a; }, png);
+  await sleep(400);
+  await win.evaluate((id) => openModuleIconPopup(id, document.querySelector(`[data-mid="${id}"] .kicon`) || q('.page-title')), a);
+  await win.waitForSelector('.icon-edit-popup .ipk-sets');
+  await win.locator('.icon-edit-popup .ipk-sets [data-value="tabler"]').click(); await sleep(800);
+  assert.ok(await win.locator('.icon-edit-popup .ipk-icon-grid .ipk-cell[data-name^="tabler/"]').count() > 20, 'a set fills the grid');
+  await win.locator('.icon-edit-popup .ipk-search').fill('castle'); await sleep(1500);
+  const found = await win.locator('.icon-edit-popup .ipk-icon-grid .ipk-cell').evaluateAll((els) => els.map((e) => e.dataset.name));
+  assert.ok(['lucide/', 'phosphor/', 'tabler/'].every((p) => found.some((n) => n.startsWith(p))), `search runs through every set: ${found}`);
+  await win.locator('.icon-edit-popup .ipk-icon-grid .ipk-cell[data-name="lucide/castle"]').click(); await sleep(500);
+  assert.equal((await win.evaluate((id) => api.module.get(id), a)).icon, 'svg:lucide/castle');
+  assert.match(await win.locator(`[data-mid="${a}"] .kicon`).innerHTML(), /<svg[^>]*viewBox="0 0 24 24"/, 'drawn in the Nest');
+  await win.locator('.icon-edit-popup [data-ipktab="uploaded"]').click();
+  assert.equal(await win.locator('.icon-edit-popup .ipk-uploads .ipk-upload').count(), 1, "the other module's upload is offered here");
+  await win.locator('.icon-edit-popup .ipk-custom-text').fill('龍'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.equal((await win.evaluate((id) => api.module.get(id), a)).icon, 'sym:龍');
+  await win.locator('.icon-edit-popup .ipk-uploads .ipk-upload').click(); await sleep(400);
+  assert.equal((await win.evaluate((id) => api.module.get(id), a)).icon, png, 'an upload reused');
+  await win.locator('.icon-edit-popup .ipk-color-custom').click(); await sleep(300);
+  await win.locator('.icon-edit-popup .cpanel [data-value="rgb"]').click();
+  await win.locator('.icon-edit-popup .cpanel-hex').fill('#123456'); await sleep(100);
+  await win.locator('.icon-edit-popup .cpanel-ok').click(); await sleep(800);
+  const m = await win.evaluate((id) => api.module.get(id), a);
+  assert.equal((await win.evaluate((cid) => S.colors.find((c) => c.id === cid)?.color_code, m.color)).toLowerCase(), '#123456', 'the new colour is saved');
+  assert.equal(m.icon, png, 'and the icon stayed');
+  await win.keyboard.press('Escape');
+});

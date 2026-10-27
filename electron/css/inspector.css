@@ -100,6 +100,40 @@
 .ipk-scroll{overflow-y:auto;overflow-x:hidden;min-height:0;flex:1;overscroll-behavior:contain}
 .ipk-color-row{flex-shrink:0;margin:10px 0 0}
 #modal .ipk-pane{flex:none;height:240px}
+.ipk-sets{margin-bottom:8px;overflow-x:auto;flex-shrink:0}
+.ipk-sets .seg{width:100%}
+.ipk-grid .lazy-more{grid-column:1/-1;height:1px}
+.set-icon-pending{display:inline-block;width:1em;height:1em}
+.ipk-custom{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.ipk-custom .pk{flex-shrink:0;color:var(--t3-aa,var(--t2));font-size:calc(var(--fs-meta) * var(--fsc,1))}
+.ipk-custom-text{flex:1;min-width:0;font-size:calc(16px * var(--fsc,1))}
+.ipk-upload img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.ipk-color-custom{width:20px;height:20px;padding:0;border-radius:var(--rs);border:1px dashed var(--t3-aa,var(--t2));background:transparent;
+	color:var(--t1);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.ipk-color-custom .icon{width:12px;height:12px}
+.ipk-color-custom[aria-expanded="true"]{outline:1px solid var(--accent)}
+.ipk-color-panel{flex:1;min-height:0;overflow-y:auto;margin-top:8px;border-top:1px solid var(--border);padding-top:8px}
+.ipk-color-open .ipk-pane{display:none}
+/* Procress 29 part 5: core/color-panel.js */
+.cpanel{display:flex;flex-direction:column;gap:8px}
+.cpanel-body{display:flex;flex-direction:column;align-items:center;gap:8px}
+.cpanel-body[hidden]{display:none}
+.cpanel-wheel{width:168px;height:168px;border-radius:50%;cursor:crosshair;touch-action:none}
+.cpanel-v{width:168px;accent-color:var(--accent)}
+.cpanel-rgb{display:flex;align-items:center;gap:8px;width:100%}
+.cpanel-rgb span{width:30px;flex-shrink:0;color:var(--t3-aa,var(--t2));font-size:calc(var(--fs-meta) * var(--fsc,1))}
+.cpanel-rgb input[type=range]{flex:1;accent-color:var(--accent)}
+.cpanel-rgb output{width:28px;text-align:right;font-variant-numeric:tabular-nums}
+.cpanel-hex{flex:1;font-family:var(--font-mono,monospace)}
+.cpanel-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;align-items:stretch}
+.cpanel-cell{aspect-ratio:1;border:0;border-radius:3px;padding:0;cursor:pointer;min-height:0}
+.cpanel-cell:focus-visible{outline:var(--focus-ring) solid var(--accentH,var(--accent));outline-offset:1px}
+.cpanel-foot{display:flex;align-items:center;gap:8px}
+.cpanel-swatch{width:22px;height:22px;border-radius:50%;border:1px solid var(--border)}
+.cpanel-code{flex:1;font-variant-numeric:tabular-nums}
+.cpanel-ok{flex-shrink:0}
+.ipk-custom-use{flex-shrink:0}
+.ipk-uploads{margin-top:4px}
 
 /* Tag-link popup (Plan part6 #3) — wraps hashtagSelector()'s own .fg/
    .tag-add-box markup unchanged, just needs the floating-panel sizing. */

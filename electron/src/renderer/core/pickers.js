@@ -10,6 +10,7 @@ function iconRefHtml(ref, fallbackHtml) {
     if (ref.startsWith('img:')) return `<img src="${x(ref.slice(4))}" class="kicon-img-icon" aria-hidden="true" alt="">`;
     const key = ref.startsWith('svg:') ? ref.slice(4) : ref;
     if (I[key]) return I[key];
+    if (isSetIconRef(key)) return setIconHtml(key); // Procress 29: svg:<set>/<name> (core/icon-sets.js)
   }
   return fallbackHtml;
 }

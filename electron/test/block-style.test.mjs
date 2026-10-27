@@ -22,6 +22,8 @@ const ctx = {
   componentLabel: (c) => c?.labelKey || '?',
   t: (k) => k, x: (s) => String(s ?? ''), xj: (s) => JSON.stringify(String(s)), I: { star: '<svg/>' },
   PB_TYPE_KEY: { text: 'pbText' }, CSS: { escape: (s) => s },
+  // Procress 29: a header icon may be from an icon set (core/icon-sets.js)
+  isSetIconRef: (k) => /^[a-z]+\/[a-z0-9-]+$/.test(k || ''), setIconHtml: (k) => `<span data-set-icon="${k}"></span>`,
 };
 vm.createContext(ctx);
 vm.runInContext(`${read('src/renderer/page/style.js')}

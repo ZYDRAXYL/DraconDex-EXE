@@ -37,17 +37,54 @@ const ICROP_OUTPUT = 128;  // stored icon size
 const ipkRoot = (el) => el?.closest?.('.ipk-wrap') || null;
 const ipkQ = (root, sel) => root?.querySelector(sel) || null;
 
+// Procress 29 part 5: Icons offers the app's own set and three open ones
+// (core/icon-sets.js — Lucide, Phosphor, Tabler), one at a time by a chip,
+// every icon of it in the grid (rendered as it scrolls) and searchable across
+// all of them. "Custom icon" (was "Uploaded") takes a typed letter or emoji,
+// the images already uploaded in this Nexus, or a new upload. The square
+// after "Colour" opens a colour of your own (core/color-panel.js).
+const IPK_APP_SET = 'app';
+const ipkSetOf = (key) => (isSetIconRef(key) ? key.split('/')[0] : IPK_APP_SET);
+
+function ipkCellHtml(ref, sel, svg, title) {
+  return `<div class="ipk-cell${sel === ref ? ' sel' : ''}" data-name="${x(ref)}" onclick="pickIconPickerIcon(this,${xj(ref)})" title="${x(title || ref)}">${svg}</div>`;
+}
+
+// The cells of one set (or of a search over all), through lazyRows.
+function ipkGridHtml(root, set, query, sel) {
+  const st = (root._ipkLazy ||= {});
+  const q0 = String(query || '').trim().toLowerCase();
+  let refs;
+  if (q0) {
+    const words = q0.split(/\s+/);
+    const hit = (name, extra) => words.every((w) => name.includes(w) || (extra || '').includes(w));
+    refs = iconCatalogKeys().filter(({ key }) => iconMatches(key, q0)).map(({ key }) => key);
+    for (const { id } of ICON_SET_LIST) {
+      const icons = ICON_SETS[id]?.icons || {};
+      for (const name in icons) if (hit(name, icons[name][1])) refs.push(`${id}/${name}`);
+    }
+  } else refs = set === IPK_APP_SET ? iconCatalogKeys().map(({ key }) => key) : Object.keys(ICON_SETS[set]?.icons || {}).map((n) => `${set}/${n}`);
+  const key = `${set}|${q0}`;
+  if (st.key !== key) { st.key = key; st.shown = 0; }
+  if (!refs.length) return `<p class="drafter-hint">${t('pbNoMatch')}</p>`;
+  return lazyRows(refs, (r) => ipkCellHtml(r, sel, I[r] || setIconSvg(r) || '', r), st, { step: 240 });
+}
+
 async function iconPicker(selIcon, selColorId, previewName, previewKind) {
-  const symbols = await api.color.getSymbolCollection();
+  const [symbols, uploads] = await Promise.all([api.color.getSymbolCollection(), S.nexus ? api.module.uploadedIcons(S.nexus.id).catch(() => []) : []]);
   const selImg = selIcon && selIcon.startsWith('img:') ? selIcon.slice(4) : null;
   const selKey = selIcon && selIcon.startsWith('svg:') ? selIcon.slice(4) : (selIcon && !selIcon.startsWith('sym:') && !selImg ? selIcon : null);
   const selSym = selIcon && selIcon.startsWith('sym:') ? selIcon.slice(4) : null;
+  const set = ipkSetOf(selKey);
+  if (set !== IPK_APP_SET) await loadIconSet(set);
   const tab = (id, key, on) => `<button type="button" class="seg-opt${on ? ' on' : ''}" role="tab" aria-selected="${on}" data-ipktab="${id}" onclick="switchIconPickerTab(this,'${id}')">${t(key)}</button>`;
-  return `<div class="ipk-wrap">
+  const fake = { _ipkLazy: {} };
+  const selColor = (S.colors.find(c=>c.id===selColorId)||{}).color_code;
+  return `<div class="ipk-wrap" data-set="${set}">
     <div class="ipk-preview-row">
       <span class="pk">${t('preview')}</span>
       <div class="li ipk-preview" style="pointer-events:none;display:inline-flex;width:auto">
-        <span class="kicon ipk-preview-icon" aria-hidden="true" style="color:${x((S.colors.find(c=>c.id===selColorId)||{}).color_code || 'var(--accent)')}">${selSym ? `<span class="kicon-glyph" aria-hidden="true">${x(selSym)}</span>` : (selImg ? `<img src="${x(selImg)}" class="icrop-preview-img">` : (I[selKey] || I.layer))}</span>
+        <span class="kicon ipk-preview-icon" aria-hidden="true" style="color:${x(selColor || 'var(--accent)')}">${selSym ? `<span class="kicon-glyph" aria-hidden="true">${x(selSym)}</span>` : (selImg ? `<img src="${x(selImg)}" class="icrop-preview-img">` : (iconRefHtml(selKey ? `svg:${selKey}` : null, I.layer)))}</span>
         <span class="name">${x(previewName||'')}</span>
         ${previewKind ? `<span class="kind">${x(previewKind)}</span>` : ''}
       </div>
@@ -56,14 +93,13 @@ async function iconPicker(selIcon, selColorId, previewName, previewKind) {
       ${tab('icons', 'iconTabIcons', true)}${tab('emoji', 'iconTabEmoji', false)}${tab('symbols', 'iconTabSymbols', false)}${tab('uploaded', 'iconTabUploaded', false)}
     </div>
     <div class="ipk-pane" data-pane="icons">
+      <div class="ipk-sets">${segmentedHtml([{ value: IPK_APP_SET, text: 'DraconDex' }, ...ICON_SET_LIST.map((s) => ({ value: s.id, text: s.label }))], set, { size: 'sm', aria: t('iconSet'), noI18n: true, onclick: (v) => `ipkShowSet(this,'${v}')` })}</div>
       <input type="search" class="ipk-search" placeholder="${x(t('iconSearchPh'))}" aria-label="${x(t('iconSearchPh'))}" oninput="filterIconPicker(this,this.value)">
       <div class="ipk-scroll">
       ${iconRecent().length ? `<div class="ipk-recent"><span class="pk">${t('iconRecent')}</span>${iconRecent().map((r) => r.startsWith('sym:')
         ? `<div class="ipk-cell ipk-symbol${selSym === r.slice(4) ? ' sel' : ''}" onclick="pickIconPickerSymbol(this,${xj(r.slice(4))})">${x(r.slice(4))}</div>`
-        : (I[r.slice(4)] ? `<div class="ipk-cell${selKey === r.slice(4) ? ' sel' : ''}" onclick="pickIconPickerIcon(this,${xj(r.slice(4))})" title="${x(r.slice(4))}">${I[r.slice(4)]}</div>` : '')).join('')}</div>` : ''}
-      <div class="ipk-grid ipk-icon-grid">
-        ${iconCatalogKeys().map(({ key: k, cat }) => `<div class="ipk-cell${selKey===k?' sel':''}" data-name="${k}" data-cat="${cat}" onclick="pickIconPickerIcon(this,'${k}')" title="${k}">${I[k]}</div>`).join('')}
-      </div>
+        : (I[r.slice(4)] || isSetIconRef(r.slice(4)) ? ipkCellHtml(r.slice(4), selKey, iconRefHtml(r, ''), r.slice(4)) : '')).join('')}</div>` : ''}
+      <div class="ipk-grid ipk-icon-grid">${ipkGridHtml(fake, set, '', selKey)}</div>
       </div>
     </div>
     <div class="ipk-pane ipk-scroll" data-pane="emoji" hidden>
@@ -72,17 +108,94 @@ async function iconPicker(selIcon, selColorId, previewName, previewKind) {
     <div class="ipk-pane ipk-scroll" data-pane="symbols" hidden>
       <div class="ipk-grid">${symbols.map(s => `<div class="ipk-cell ipk-symbol${selSym===s.glyph?' sel':''}" data-name="${x((s.label||'').toLowerCase())}" onclick="pickIconPickerSymbol(this,${xj(s.glyph)})" title="${x(s.label||'')}">${x(s.glyph)}</div>`).join('')}</div>
     </div>
-    <div class="ipk-pane ipk-scroll" data-pane="uploaded" hidden><div class="ipk-upload-pane">${icropUploadPromptHtml()}</div></div>
+    <div class="ipk-pane ipk-scroll" data-pane="uploaded" hidden>
+      <label class="ipk-custom"><span class="pk">${t('iconCustomText')}</span>
+        <input class="ipk-custom-text" maxlength="16" placeholder="${x(t('iconCustomTextPh'))}" aria-label="${x(t('iconCustomText'))}" value="${x(selSym && !emojiList().includes(selSym) ? selSym : '')}"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.nextElementSibling.click()}" data-no-i18n>
+        <button type="button" class="btn btn-g btn-sm ipk-custom-use" onclick="pickIconPickerText(this.previousElementSibling)">${t('useThisIcon')}</button></label>
+      ${uploads.length ? `<span class="pk">${t('iconUploadedHere')}</span><div class="ipk-grid ipk-uploads">${uploads.map((u) => `<div class="ipk-cell ipk-upload${selIcon === u ? ' sel' : ''}" onclick="pickIconPickerImage(this)" data-ref="${x(u)}"><img src="${x(u.slice(4))}" alt=""></div>`).join('')}</div>` : ''}
+      <div class="ipk-upload-pane">${icropUploadPromptHtml()}</div>
+    </div>
     <input type="file" accept="image/*" class="icrop-file-input" style="display:none" onchange="handleIconUpload(this)">
     <div class="ipk-color-row">
       <span class="pk">${t('color')}</span>
-      <div class="ipk-colors">${sortColorsByHex(S.colors).map(c =>
-        `<div class="cswatch${selColorId===c.id?' sel':''}" style="background:${c.color_code}" data-cid="${c.id}" onclick="pickIconPickerColor(this,${c.id})"></div>`
-      ).join('')}</div>
+      <div class="ipk-colors"><button type="button" class="btn btn-g ipk-color-custom" title="${x(t('colorCustom'))}" aria-label="${x(t('colorCustom'))}" aria-expanded="false" onclick="ipkToggleColorPanel(this)">${I.plus}</button>${ipkSwatchesHtml(selColorId)}</div>
     </div>
+    <div class="ipk-color-panel" hidden></div>
     <input type="hidden" class="ipk-icon-value" value="${x(selIcon||'')}">
     <input type="hidden" class="ipk-color-value" value="${selColorId||''}">
   </div>`;
+}
+
+const ipkSwatchesHtml = (selColorId) => sortColorsByHex(S.colors).map(c =>
+  `<div class="cswatch${selColorId===c.id?' sel':''}" style="background:${c.color_code}" data-cid="${c.id}" onclick="pickIconPickerColor(this,${c.id})"></div>`).join('');
+
+async function ipkShowSet(btn, set) {
+  const root = ipkRoot(btn);
+  btn.parentElement.querySelectorAll('.seg-opt').forEach((b) => { const on = b.dataset.value === set; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+  root.dataset.set = set;
+  if (set !== IPK_APP_SET) await loadIconSet(set);
+  ipkRenderGrid(root);
+}
+
+function ipkRenderGrid(root) {
+  const grid = ipkQ(root, '.ipk-icon-grid');
+  if (!grid) return;
+  const sel = (ipkQ(root, '.ipk-icon-value').value || '').replace(/^svg:/, '');
+  grid.innerHTML = ipkGridHtml(root, root.dataset.set || IPK_APP_SET, ipkQ(root, '.ipk-search')?.value, sel);
+  const sc = grid.closest('.ipk-scroll');
+  if (sc) sc.scrollTop = 0;
+}
+
+// A typed letter or emoji is stored like a symbol (sym:) — one or two
+// characters as the eye sees them (a flag or a family emoji is one).
+function pickIconPickerText(inp) {
+  const g = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(inp.value.trim())].map((s) => s.segment).slice(0, 2).join('');
+  if (!g) return;
+  inp.value = g;
+  const root = ipkRoot(inp);
+  root.querySelectorAll('.ipk-cell').forEach(b => b.classList.remove('sel'));
+  ipkQ(root, '.ipk-icon-value').value = `sym:${g}`;
+  iconRecentPush(`sym:${g}`);
+  ipkSetPreview(root, `<span class="kicon-glyph" aria-hidden="true">${x(g)}</span>`);
+}
+
+function pickIconPickerImage(el) {
+  const root = ipkRoot(el);
+  root.querySelectorAll('.ipk-cell').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  ipkQ(root, '.ipk-icon-value').value = el.dataset.ref;
+  ipkSetPreview(root, `<img src="${x(el.dataset.ref.slice(4))}" class="icrop-preview-img">`);
+}
+
+function ipkToggleColorPanel(btn) {
+  const root = ipkRoot(btn);
+  const panel = ipkQ(root, '.ipk-color-panel');
+  const open = panel.hidden;
+  btn.setAttribute('aria-expanded', String(open));
+  root.classList.toggle('ipk-color-open', open); // the panel takes the grid's place while it is open
+  if (!open) { panel.hidden = true; panel.innerHTML = ''; return; }
+  const cur = (S.colors || []).find((c) => String(c.id) === ipkQ(root, '.ipk-color-value').value)?.color_code || '#6366f1';
+  panel.innerHTML = colorPanelHtml(cur, 'await ipkAddCustomColor(this, hex)');
+  panel.hidden = false;
+  colorPanelMount(panel);
+}
+
+// A colour of your own joins the palette (use_color — the same table every
+// colour picker reads) and is picked like any swatch, so a live-saving popup
+// saves it through its usual path.
+async function ipkAddCustomColor(el, hex) {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return;
+  const root = ipkRoot(el);
+  await api.color.add(hex);
+  S.colors = await api.color.getAll();
+  const nc = S.colors.find((c) => c.color_code.toLowerCase() === hex.toLowerCase());
+  if (!nc) return;
+  const box = ipkQ(root, '.ipk-colors');
+  box.querySelectorAll('.cswatch').forEach((s) => s.remove());
+  box.insertAdjacentHTML('beforeend', ipkSwatchesHtml(Number(ipkQ(root, '.ipk-color-value').value) || null));
+  ipkToggleColorPanel(ipkQ(root, '.ipk-color-custom'));
+  box.querySelector(`.cswatch[data-cid="${nc.id}"]`)?.click(); // picks it, and a live popup saves it
 }
 
 function switchIconPickerTab(el, tabName) {
@@ -101,8 +214,14 @@ function icropUploadPromptHtml() {
   </div>`;
 }
 
-function filterIconPicker(el, query) {
-  ipkRoot(el)?.querySelectorAll('.ipk-icon-grid .ipk-cell').forEach((c) => { c.style.display = iconMatches(c.dataset.name, query) ? '' : 'none'; });
+// A search looks through every set, so the first one typed loads them all.
+async function filterIconPicker(el, query) {
+  const root = ipkRoot(el);
+  clearTimeout(root._ipkT);
+  root._ipkT = setTimeout(async () => {
+    if (String(query).trim()) await Promise.all(ICON_SET_LIST.map((s) => loadIconSet(s.id)));
+    if (root.isConnected) ipkRenderGrid(root);
+  }, 150);
 }
 
 function ipkSetPreview(root, html) {
@@ -116,7 +235,7 @@ function pickIconPickerIcon(el, key) {
   el.classList.add('sel');
   ipkQ(root, '.ipk-icon-value').value = `svg:${key}`;
   iconRecentPush(`svg:${key}`);
-  ipkSetPreview(root, I[key] || I.layer);
+  ipkSetPreview(root, iconRefHtml(`svg:${key}`, I.layer));
 }
 
 function pickIconPickerSymbol(el, glyph) {
@@ -151,7 +270,7 @@ const getIconPickerColor = (root) => ipkQ(ipkWrapOf(root), '.ipk-color-value')?.
 // one could overwrite the other). null = the click picked nothing.
 function iconPickerChange(e) {
   if (e.target.closest('.cswatch')) return 'color';
-  if (e.target.closest('.ipk-cell') || e.target.closest('.icrop-confirm')) return 'icon';
+  if (e.target.closest('.ipk-cell') || e.target.closest('.icrop-confirm') || e.target.closest('.ipk-custom-use')) return 'icon';
   return null;
 }
 

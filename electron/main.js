@@ -1060,6 +1060,7 @@ h('module:duplicate',   (id)          => db.duplicateModule(id));
 h('module:move',        (nx,id,parentId,ids) => db.moveModule(nx,id,parentId,ids));
 h('module:normalizeReport', ()        => db.takeParentNormalizeReport());
 h('module:count',       (nx)          => db.countModules(nx));
+h('module:uploadedIcons', (nx)        => db.uploadedIcons(nx));
 h('module:getUi',       (id)          => db.getModuleUi(id));
 h('module:setUi',       (id,k,v)      => db.setModuleUi(id,k,v));
 h('module:getTags',     (id)          => db.getModuleTags(id));

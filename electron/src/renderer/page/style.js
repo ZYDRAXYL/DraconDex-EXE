@@ -69,6 +69,7 @@ function pbIconHtml(icon) {
   if (icon.startsWith('sym:')) return `<span class="pb-ico" data-no-i18n>${x(icon.slice(4, 16))}</span>`;
   if (icon.startsWith('img:')) return /^img:data:image\/(png|jpeg|webp|gif);base64,/.test(icon) ? `<span class="pb-ico"><img src="${x(icon.slice(4))}" alt=""></span>` : '';
   const key = icon.startsWith('svg:') ? icon.slice(4) : icon;
+  if (isSetIconRef(key)) return `<span class="pb-ico">${setIconHtml(key)}</span>`;
   return I[key] ? `<span class="pb-ico">${I[key]}</span>` : '';
 }
 
