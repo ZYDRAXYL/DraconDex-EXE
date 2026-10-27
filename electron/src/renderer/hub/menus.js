@@ -383,7 +383,9 @@ async function quickCreateModule(kind, parentId, presetRef = null, tplId = null,
   // only for a plain create; a preset/template start was a deliberate choice.
   S.justCreatedId = presetRef || tplId ? null : moduleId;
   const created = findModuleNode(moduleId);
-  if (created && created.kind !== 'collector') await openModuleNode(moduleId);
+  const opens = created && created.kind !== 'collector';
+  S.renamingWhere = opens ? 'head' : 'nest'; // named where it shows: its page, or (a folder) its Nest row
+  if (opens) await openModuleNode(moduleId);
   else renderNexusHome();
   focusRenameInput(moduleId);
   if (shaped) toast(shaped, 'ok');

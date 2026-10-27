@@ -1397,3 +1397,22 @@ test('29 part 1: a popup that grows after it opens stays 8 px inside the window'
   await win.keyboard.press('Escape');
   await win.setViewportSize({ width: 1280, height: 800 });
 });
+
+test('29 part 4: rename in the Nest while the module is open; one click renames on the page; the handle after the title', async () => {
+  const mid = await win.evaluate(async () => { const id = await api.module.create({ nexus_ref: S.nexus.id, name: 'Rename me', kind: 'scribe' }); await reloadModuleTree(); await openModuleNode(id); return id; });
+  await sleep(400);
+  await win.locator(`[data-mid="${mid}"] .name`).dblclick(); await sleep(300);
+  assert.equal(await win.locator(`#rename-head-${mid}`).count(), 0, 'one box only — in the Nest');
+  const box = win.locator(`#rename-nest-${mid}`);
+  await box.click({ position: { x: 4, y: 6 } }); await sleep(200);
+  assert.equal(await win.evaluate(() => document.activeElement.id), `rename-nest-${mid}`, 'a click places the caret, the box stays');
+  await win.keyboard.press('End'); await win.keyboard.type('d'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.equal((await win.evaluate((id) => api.module.get(id), mid)).name, 'Rename med');
+  await win.locator('.module-page .ph-name').click(); await sleep(200);
+  assert.equal(await win.evaluate(() => document.activeElement.id), `rename-head-${mid}`, 'one click on the title renames');
+  await win.keyboard.press('Escape'); await sleep(300);
+  await win.locator('.module-page .navbar-h .module-handle-add').click(); await sleep(200);
+  await win.keyboard.type('renamemed'); await win.keyboard.press('Enter'); await sleep(500);
+  assert.equal((await win.evaluate((id) => api.module.get(id), mid)).handle, 'renamemed');
+  assert.match(await win.locator('.module-page .navbar-h .module-handle').innerText(), /@renamemed/, 'shown after the title');
+});

@@ -160,8 +160,8 @@ const COMMANDS = {
       .map(([dir, key]) => ({ label: t(key), onClick: () => openModuleInNewPane(c.moduleId, dir) })),
     surfaces: ['nest.ctx'],
   },
-  'module.rename': { label: 'rename', icon: 'edit', scope: 'module', run: (c) => startRenameModule(c.moduleId), surfaces: ['nest.ctx'] },
-  'module.handle': { label: 'moduleHandle', icon: 'hashtag', scope: 'module', run: (c) => startEditModuleHandle(c.moduleId), surfaces: ['nest.ctx'] },
+  'module.rename': { label: 'rename', icon: 'edit', scope: 'module', run: (c) => startRenameModule(c.moduleId, 'nest'), surfaces: ['nest.ctx'] },
+  'module.handle': { label: 'moduleHandle', icon: 'hashtag', scope: 'module', run: (c) => startEditModuleHandle(c.moduleId, 'head'), surfaces: ['nest.ctx'] },
   'module.icon': { label: 'clsColorIcon', icon: 'colors', scope: 'module', run: (c, el) => openModuleIconPopup(c.moduleId, el || ctxAnchor()), surfaces: ['nest.ctx', 'classifier.ctx'] },
   'module.duplicate': { label: 'duplicate', icon: 'copy', scope: 'module', run: (c) => duplicateModuleNode(c.moduleId), surfaces: ['nest.ctx'] },
   'module.moveTo': {
