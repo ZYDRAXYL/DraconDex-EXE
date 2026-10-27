@@ -1438,3 +1438,18 @@ test('29 part 6: Classifier — the dot opens the icon popup, the name renames o
   await win.keyboard.type('!'); await win.keyboard.press('Enter'); await sleep(400);
   assert.equal((await o()).name, 'Rooks!');
 });
+
+test('29 part 3: delete and Undo on a long page keep the page where it was, with no frame at the top', async () => {
+  const mid = await win.evaluate(async () => { const id = await api.module.create({ nexus_ref: S.nexus.id, name: 'Smoke long', kind: 'classifier' }); await api.classifier.createObjects(id, Array.from({ length: 150 }, (_, i) => ({ name: 'Row ' + i }))); await api.module.setUi(id, 'activeView', 'table'); await reloadModuleTree(); await openModuleNode(id); return id; });
+  await sleep(900);
+  const body = '.bpane-body';
+  await win.evaluate((b) => { q(b).scrollTop = 1500; }, body); await sleep(300);
+  await win.evaluate(() => { window._p29 = []; const b = q('.bpane-body'); (function f() { window._p29.push(b.scrollTop); if (window._p29.length < 300) requestAnimationFrame(f); })(); });
+  await win.locator('tr[data-cls-oid] >> nth=40').click({ button: 'right' });
+  await win.locator('.context-menu-popup [data-cmd="classifier.deleteObject"], .context-menu-popup .kind-list-item:has-text("Delete"), .context-menu-popup .kind-list-item:has-text("ลบ")').first().click(); await sleep(700);
+  assert.ok(Math.abs(await win.evaluate((b) => q(b).scrollTop, body) - 1500) <= 1, 'still there after the delete');
+  await win.locator('#toast .toast-act').click(); await sleep(800);
+  assert.equal(await win.evaluate((m) => clsData(m).objects.length, mid), 150, 'undone');
+  assert.ok(Math.abs(await win.evaluate((b) => q(b).scrollTop, body) - 1500) <= 1, 'still there after Undo');
+  assert.ok(!(await win.evaluate(() => window._p29)).some((v) => v < 1400), 'never drawn at the top in between');
+});

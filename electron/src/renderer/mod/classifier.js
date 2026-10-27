@@ -196,7 +196,7 @@ function renderClassifierTable(m, d, inst) {
   // Procress 24: a column's head is its field — click it for the field menu
   // (type · rename · delete), two clicks from the module page. Procress 26:
   // drag the head to move the column.
-  let html = `<div class="cls-table-wrap"><table class="cls-table"><tr><th>${t('name')}</th>${d.templates.map(c => `<th class="cls-col-head" data-cls-tid="${c.id}" onpointerdown="clsDragDown(event,this,'tpl',${m.id},${c.id},'x')"><button type="button" class="btn btn-g btn-sm" aria-haspopup="menu" title="${x(clsColumnTip(c))}" onclick="event.stopPropagation();openClsFieldMenu(this,${m.id},${c.id})" data-no-i18n>${x(c.description)}</button></th>`).join('')}</tr>`;
+  let html = `<div class="cls-table-wrap" data-scroll-key="cls-table-${m.id}"><table class="cls-table"><tr><th>${t('name')}</th>${d.templates.map(c => `<th class="cls-col-head" data-cls-tid="${c.id}" onpointerdown="clsDragDown(event,this,'tpl',${m.id},${c.id},'x')"><button type="button" class="btn btn-g btn-sm" aria-haspopup="menu" title="${x(clsColumnTip(c))}" onclick="event.stopPropagation();openClsFieldMenu(this,${m.id},${c.id})" data-no-i18n>${x(c.description)}</button></th>`).join('')}</tr>`;
   const keep = S.clsRenamingObject != null ? d.objects.findIndex((o) => o.id === S.clsRenamingObject) : -1;
   html += lazyRows(d.objects, (o) => {
     let html = `<tr data-cls-oid="${o.id}" oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})">${classifierNameCellHtml(m, o)}`;
@@ -253,7 +253,7 @@ function renderClassifierListDetail(m, d, c) {
       + listActHtml({ hidden: true, key: 'Delete', name: t('delete'), onclick: `deleteClassifierObjectRow(${o.id})` }),
   }), clsLazy(c, 'list'), { keep: sel ? d.objects.indexOf(sel) : -1 });
   const detail = sel ? renderClassifierObjectDetail(m, sel, d.templates) : '';
-  return `<div class="cls-listdetail"><div class="cls-list ls-list" role="listbox" aria-label="${x(m.name)}" oncontextmenu="if(event.target===this)openCtx('classifier.category',event,{moduleId:${m.id}})">${list}</div><div class="cls-detail">${detail}</div></div>`;
+  return `<div class="cls-listdetail"><div class="cls-list ls-list" data-scroll-key="cls-list-${m.id}" role="listbox" aria-label="${x(m.name)}" oncontextmenu="if(event.target===this)openCtx('classifier.category',event,{moduleId:${m.id}})">${list}</div><div class="cls-detail">${detail}</div></div>`;
 }
 
 function selectClassifierObject(iid, id) {

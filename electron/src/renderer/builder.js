@@ -494,6 +494,9 @@ function renderBuilderPanes(contentHtml, runMounts) {
   if (!main) return;
   main.classList.add('builder-grid');
   main.classList.toggle('builder-split', b.layoutTree.type === 'split');
+  // Procress 29 part 3: read every pane's scroll BEFORE the layout pass —
+  // re-placing a pane element resets it.
+  const scrolls = new Map([...main.querySelectorAll('.bpane-body')].map((body) => [body, body._pageKey ? paneScrollSnap(body) : null]));
 
   pruneStaleLayoutElements(b.layoutTree);
   renderLayoutNode(b.layoutTree, main, null, null);
@@ -506,7 +509,14 @@ function renderBuilderPanes(contentHtml, runMounts) {
     paneEl.querySelector('.bpane-head').innerHTML = builderPaneHeadHtml(idx, pane, focused);
     syncTabBarCompact(paneEl.querySelector('.bpane-tabs'));
     if (focused) {
-      paneEl.querySelector('.bpane-body').innerHTML = withRenderPane(idx, contentHtml);
+      const body = paneEl.querySelector('.bpane-body');
+      // Procress 29 part 3: the same page drawn again (a move, delete, create,
+      // undo…) stays where the user was reading — it used to jump to the top.
+      // Another page opens at its top, as before.
+      const keep = body._pageKey === pane.active ? scrolls.get(body) : null;
+      body.innerHTML = withRenderPane(idx, contentHtml);
+      body._pageKey = pane.active;
+      if (keep) { paneScrollRestore(body, keep); restoreAfterMounts.push([body, keep, pane.active]); }
     } else {
       // Was this pane's DOM lost (fresh grid after a legacy view)? Give it
       // a static render of its page so a split never shows a hole.
@@ -519,6 +529,27 @@ function renderBuilderPanes(contentHtml, runMounts) {
   observeTitlebarTabs(main);
   syncTitlebarTabs();
   if (runMounts) runMounts();
+  // A mount that fills in after this (a graph, an editor) can make the page
+  // shorter for a moment and clamp the scroll — put it back once, if so.
+  for (const [body, keep, key] of restoreAfterMounts.splice(0)) {
+    requestAnimationFrame(() => { if (body._pageKey === key && body.scrollTop < keep.top - 1) paneScrollRestore(body, keep); });
+  }
+}
+const restoreAfterMounts = [];
+
+// The pane's own scroll and every inner scroller that names itself with
+// data-scroll-key (a wide Classifier table scrolls sideways, a list in a
+// list-detail view scrolls on its own).
+function paneScrollSnap(body) {
+  return { top: body.scrollTop, left: body.scrollLeft,
+    inner: [...body.querySelectorAll('[data-scroll-key]')].map((e) => [e.dataset.scrollKey, e.scrollTop, e.scrollLeft]) };
+}
+function paneScrollRestore(body, s) {
+  body.scrollTop = s.top; body.scrollLeft = s.left;
+  for (const [k, top, left] of s.inner) {
+    const e = body.querySelector(`[data-scroll-key="${CSS.escape(k)}"]`);
+    if (e) { e.scrollTop = top; e.scrollLeft = left; }
+  }
 }
 
 // Procress 18 part 5: the tab strip from the keyboard — Tab reaches the
