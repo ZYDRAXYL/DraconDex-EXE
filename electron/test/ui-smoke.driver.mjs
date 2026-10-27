@@ -1359,3 +1359,29 @@ test('28 part 5: a Part divider is added, named, dragged between chapters and ke
   await win.keyboard.press('Delete'); await sleep(400);
   assert.equal(await win.locator('.author-chapters .au-part').count(), 0, 'Delete removes it');
 });
+
+// ── Procress 29 ────────────────────────────────────────────────────────
+const firstModuleId = (kind) => win.evaluate((k) => flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === k)?.id, kind);
+
+test('29 part 5: a colour pick keeps the icon, an icon pick keeps the colour, two pickers never mix', async () => {
+  const mid = await win.evaluate(async () => { const id = await api.module.create({ nexus_ref: S.nexus.id, name: 'Smoke icon', kind: 'scribe' }); await api.module.update(id, { icon: 'svg:sword' }); await reloadModuleTree(); renderNexusHome(); return id; });
+  // a second picker is in the DOM first (a modal) — the popup must not read or write it
+  await win.evaluate(async () => openModal('x', await iconPicker('svg:star', null, 'other')));
+  await win.evaluate((id) => openModuleIconPopup(id, document.querySelector(`[data-mid="${id}"] .kicon`) || document.body), mid);
+  await win.waitForSelector('.icon-edit-popup .cswatch');
+  await win.locator('.icon-edit-popup .cswatch').nth(3).click(); await sleep(400);
+  let m = await win.evaluate((id) => api.module.get(id), mid);
+  assert.equal(m.icon, 'svg:sword', 'colour pick left the icon alone');
+  assert.ok(m.color, 'colour saved');
+  const color = m.color;
+  await win.locator('.icon-edit-popup [data-ipktab="emoji"]').click();
+  await win.locator('.icon-edit-popup .ipk-pane[data-pane="emoji"] .ipk-cell').first().click(); await sleep(400);
+  m = await win.evaluate((id) => api.module.get(id), mid);
+  assert.match(m.icon, /^sym:/, 'icon pick saved');
+  assert.equal(m.color, color, 'icon pick left the colour alone');
+  assert.equal(await win.evaluate(() => getIconPickerValue(q('#modal'))), 'svg:star', 'the modal picker untouched');
+  // one size for every tab, only the grid scrolls, never sideways
+  const sizes = await win.evaluate(() => { const p = q('.icon-edit-popup'); return ['icons', 'emoji', 'symbols', 'uploaded'].map((t) => { p.querySelector(`[data-ipktab=${t}]`).click(); const sc = p.querySelector('.ipk-pane:not([hidden]) .ipk-scroll') || p.querySelector('.ipk-pane.ipk-scroll:not([hidden])'); return [p.offsetWidth, p.offsetHeight, sc.scrollWidth <= sc.clientWidth]; }); });
+  assert.ok(sizes.every((s) => s[0] === sizes[0][0] && s[1] === sizes[0][1] && s[2]), `fixed size, no x-scroll: ${JSON.stringify(sizes)}`);
+  await win.evaluate(() => { closeAllPopups(); closeModal(); });
+});

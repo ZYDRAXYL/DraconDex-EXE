@@ -81,13 +81,19 @@ async function openModuleIconPopup(id, anchor) {
   const m = findModuleNode(id);
   if (!m || !anchor) return;
   openPopover(anchor, await iconPicker(m.icon || null, m.color || null, m.name, kindLabel(m.kind)), { cls: 'icon-edit-popup', keep: true, focus: false,
-    onClick: (e) => { if (e.target.closest('.ipk-cell') || e.target.closest('.cswatch')) saveModuleIconLive(id); } });
+    onClick: (e, pop) => { const what = iconPickerChange(e); if (what) saveModuleIconLive(id, pop, what); } });
 }
 
-async function saveModuleIconLive(id) {
-  const icon = getIconPickerValue() || null;
-  const color = q('#sel-color')?.value || null;
-  await api.module.update(id, { icon, color, icon_color: color });
+// Procress 29 part 5: a colour pick writes only the colour and an icon pick
+// only the icon — writing both from the picker could put back an icon (or a
+// colour) the user never picked here.
+async function saveModuleIconLive(id, root, what) {
+  if (what === 'color') {
+    const color = getIconPickerColor(root) || null;
+    await api.module.update(id, { color, icon_color: color });
+  } else {
+    await api.module.update(id, { icon: getIconPickerValue(root) || null });
+  }
   await reloadModuleTree();
 }
 

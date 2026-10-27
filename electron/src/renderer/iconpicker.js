@@ -18,6 +18,7 @@
 // Upload-crop module-scope state (iconpicker.js has no shared store beyond
 // DOM queries — a few `let`s is the right amount of state for this).
 let icropImg = null;       // loaded Image (or null before a file is picked)
+let icropRoot = null;      // the .ipk-wrap the image was picked in
 let icropZoom = 1;         // 1..3
 let icropPanX = 0;         // px offset, clamped to keep image covering the canvas
 let icropPanY = 0;
@@ -27,112 +28,132 @@ let icropPanStartX = 0, icropPanStartY = 0;
 const ICROP_CANVAS = 220;  // preview/crop canvas size
 const ICROP_OUTPUT = 128;  // stored icon size
 
+// Procress 29 part 5: everything below works inside ONE picker — the
+// .ipk-wrap an event came from — never through document-wide ids. A picker
+// used to be read with q('#sel-color') / q('#ipk-icon-value'), which is the
+// FIRST such element in the document: with a second picker or colour field
+// open (a modal, the Properties panel, another popover) a pick could read or
+// toggle the other one's.
+const ipkRoot = (el) => el?.closest?.('.ipk-wrap') || null;
+const ipkQ = (root, sel) => root?.querySelector(sel) || null;
+
 async function iconPicker(selIcon, selColorId, previewName, previewKind) {
   const symbols = await api.color.getSymbolCollection();
   const selImg = selIcon && selIcon.startsWith('img:') ? selIcon.slice(4) : null;
   const selKey = selIcon && selIcon.startsWith('svg:') ? selIcon.slice(4) : (selIcon && !selIcon.startsWith('sym:') && !selImg ? selIcon : null);
   const selSym = selIcon && selIcon.startsWith('sym:') ? selIcon.slice(4) : null;
+  const tab = (id, key, on) => `<button type="button" class="seg-opt${on ? ' on' : ''}" role="tab" aria-selected="${on}" data-ipktab="${id}" onclick="switchIconPickerTab(this,'${id}')">${t(key)}</button>`;
   return `<div class="ipk-wrap">
     <div class="ipk-preview-row">
       <span class="pk">${t('preview')}</span>
-      <div class="li" id="ipk-preview" style="pointer-events:none;display:inline-flex;width:auto">
-        <span class="kicon" aria-hidden="true" id="ipk-preview-icon" style="color:${x((S.colors.find(c=>c.id===selColorId)||{}).color_code || 'var(--accent)')}">${selSym ? `<span class="kicon-glyph" aria-hidden="true">${x(selSym)}</span>` : (selImg ? `<img src="${x(selImg)}" class="icrop-preview-img">` : (I[selKey] || I.layer))}</span>
+      <div class="li ipk-preview" style="pointer-events:none;display:inline-flex;width:auto">
+        <span class="kicon ipk-preview-icon" aria-hidden="true" style="color:${x((S.colors.find(c=>c.id===selColorId)||{}).color_code || 'var(--accent)')}">${selSym ? `<span class="kicon-glyph" aria-hidden="true">${x(selSym)}</span>` : (selImg ? `<img src="${x(selImg)}" class="icrop-preview-img">` : (I[selKey] || I.layer))}</span>
         <span class="name">${x(previewName||'')}</span>
         ${previewKind ? `<span class="kind">${x(previewKind)}</span>` : ''}
       </div>
     </div>
     <div class="seg seg-sm seg-fill ipk-tabs" role="tablist">
-      <button type="button" class="seg-opt on" role="tab" aria-selected="true" data-ipktab="icons" onclick="switchIconPickerTab('icons')">${t('iconTabIcons')}</button>
-      <button type="button" class="seg-opt" role="tab" aria-selected="false" data-ipktab="emoji" onclick="switchIconPickerTab('emoji')">${t('iconTabEmoji')}</button>
-      <button type="button" class="seg-opt" role="tab" aria-selected="false" data-ipktab="symbols" onclick="switchIconPickerTab('symbols')">${t('iconTabSymbols')}</button>
-      <button type="button" class="seg-opt" role="tab" aria-selected="false" data-ipktab="uploaded" onclick="switchIconPickerTab('uploaded')">${t('iconTabUploaded')}</button>
+      ${tab('icons', 'iconTabIcons', true)}${tab('emoji', 'iconTabEmoji', false)}${tab('symbols', 'iconTabSymbols', false)}${tab('uploaded', 'iconTabUploaded', false)}
     </div>
-    <div id="ipk-icon-pane">
-      <input type="search" class="ipk-search" placeholder="${x(t('iconSearchPh'))}" aria-label="${x(t('iconSearchPh'))}" oninput="filterIconPicker(this.value)">
+    <div class="ipk-pane" data-pane="icons">
+      <input type="search" class="ipk-search" placeholder="${x(t('iconSearchPh'))}" aria-label="${x(t('iconSearchPh'))}" oninput="filterIconPicker(this,this.value)">
+      <div class="ipk-scroll">
       ${iconRecent().length ? `<div class="ipk-recent"><span class="pk">${t('iconRecent')}</span>${iconRecent().map((r) => r.startsWith('sym:')
         ? `<div class="ipk-cell ipk-symbol${selSym === r.slice(4) ? ' sel' : ''}" onclick="pickIconPickerSymbol(this,${xj(r.slice(4))})">${x(r.slice(4))}</div>`
         : (I[r.slice(4)] ? `<div class="ipk-cell${selKey === r.slice(4) ? ' sel' : ''}" onclick="pickIconPickerIcon(this,${xj(r.slice(4))})" title="${x(r.slice(4))}">${I[r.slice(4)]}</div>` : '')).join('')}</div>` : ''}
-      <div class="ipk-grid" id="ipk-icon-grid">
+      <div class="ipk-grid ipk-icon-grid">
         ${iconCatalogKeys().map(({ key: k, cat }) => `<div class="ipk-cell${selKey===k?' sel':''}" data-name="${k}" data-cat="${cat}" onclick="pickIconPickerIcon(this,'${k}')" title="${k}">${I[k]}</div>`).join('')}
       </div>
+      </div>
     </div>
-    <div class="ipk-grid" id="ipk-emoji-grid" style="display:none">
-      ${emojiList().map((e) => `<div class="ipk-cell ipk-symbol${selSym===e?' sel':''}" onclick="pickIconPickerSymbol(this,${xj(e)})" data-no-i18n>${e}</div>`).join('')}
+    <div class="ipk-pane ipk-scroll" data-pane="emoji" hidden>
+      <div class="ipk-grid">${emojiList().map((e) => `<div class="ipk-cell ipk-symbol${selSym===e?' sel':''}" onclick="pickIconPickerSymbol(this,${xj(e)})" data-no-i18n>${e}</div>`).join('')}</div>
     </div>
-    <div class="ipk-grid" id="ipk-symbol-grid" style="display:none">
-      ${symbols.map(s => `<div class="ipk-cell ipk-symbol${selSym===s.glyph?' sel':''}" data-name="${x((s.label||'').toLowerCase())}" onclick="pickIconPickerSymbol(this,${xj(s.glyph)})" title="${x(s.label||'')}">${x(s.glyph)}</div>`).join('')}
+    <div class="ipk-pane ipk-scroll" data-pane="symbols" hidden>
+      <div class="ipk-grid">${symbols.map(s => `<div class="ipk-cell ipk-symbol${selSym===s.glyph?' sel':''}" data-name="${x((s.label||'').toLowerCase())}" onclick="pickIconPickerSymbol(this,${xj(s.glyph)})" title="${x(s.label||'')}">${x(s.glyph)}</div>`).join('')}</div>
     </div>
-    <div class="ipk-grid" id="ipk-upload-pane" style="display:none">${icropUploadPromptHtml()}</div>
-    <input type="file" accept="image/*" id="icrop-file-input" style="display:none" onchange="handleIconUpload(this)">
+    <div class="ipk-pane ipk-scroll" data-pane="uploaded" hidden><div class="ipk-upload-pane">${icropUploadPromptHtml()}</div></div>
+    <input type="file" accept="image/*" class="icrop-file-input" style="display:none" onchange="handleIconUpload(this)">
     <div class="ipk-color-row">
       <span class="pk">${t('color')}</span>
-      <div class="ipk-colors" id="ipk-colors">${sortColorsByHex(S.colors).map(c =>
+      <div class="ipk-colors">${sortColorsByHex(S.colors).map(c =>
         `<div class="cswatch${selColorId===c.id?' sel':''}" style="background:${c.color_code}" data-cid="${c.id}" onclick="pickIconPickerColor(this,${c.id})"></div>`
       ).join('')}</div>
     </div>
-    <input type="hidden" id="ipk-icon-value" value="${x(selIcon||'')}">
-    <input type="hidden" id="sel-color" value="${selColorId||''}">
+    <input type="hidden" class="ipk-icon-value" value="${x(selIcon||'')}">
+    <input type="hidden" class="ipk-color-value" value="${selColorId||''}">
   </div>`;
 }
 
-function switchIconPickerTab(tabName) {
-  document.querySelectorAll('.ipk-tabs [data-ipktab]').forEach(b => { const on = b.dataset.ipktab === tabName; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
-  const q1 = q('#ipk-icon-pane'), q2 = q('#ipk-symbol-grid'), q3 = q('#ipk-upload-pane'), q4 = q('#ipk-emoji-grid');
-  if (q1) q1.style.display = tabName === 'icons' ? '' : 'none';
-  if (q4) q4.style.display = tabName === 'emoji' ? '' : 'none';
-  if (q2) q2.style.display = tabName === 'symbols' ? '' : 'none';
-  if (q3) q3.style.display = tabName === 'uploaded' ? '' : 'none';
+function switchIconPickerTab(el, tabName) {
+  const root = ipkRoot(el);
+  if (!root) return;
+  root.querySelectorAll('.ipk-tabs [data-ipktab]').forEach(b => { const on = b.dataset.ipktab === tabName; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+  root.querySelectorAll('.ipk-pane').forEach((p) => { p.hidden = p.dataset.pane !== tabName; });
 }
 
 // Uploaded-tab pane states ────────────────────────────────────────────
 
 function icropUploadPromptHtml() {
-  return `<div class="icrop-empty" onclick="q('#icrop-file-input').click()">
+  return `<div class="icrop-empty" onclick="ipkQ(ipkRoot(this),'.icrop-file-input').click()">
     ${I.folder || ''}
     <span>${t('iconUploadPrompt')}</span>
   </div>`;
 }
 
-function updateIconPickerPreviewName(name, kind) {
-  const nameEl = q('#ipk-preview .name');
-  if (nameEl) nameEl.textContent = name || '';
-  const kindEl = q('#ipk-preview .kind');
-  if (kindEl) kindEl.textContent = kind || '';
+function filterIconPicker(el, query) {
+  ipkRoot(el)?.querySelectorAll('.ipk-icon-grid .ipk-cell').forEach((c) => { c.style.display = iconMatches(c.dataset.name, query) ? '' : 'none'; });
 }
 
-function filterIconPicker(query) {
-  document.querySelectorAll('#ipk-icon-grid .ipk-cell').forEach((c) => { c.style.display = iconMatches(c.dataset.name, query) ? '' : 'none'; });
+function ipkSetPreview(root, html) {
+  const prevIcon = ipkQ(root, '.ipk-preview-icon');
+  if (prevIcon) prevIcon.innerHTML = html;
 }
 
 function pickIconPickerIcon(el, key) {
-  document.querySelectorAll('.ipk-wrap .ipk-cell').forEach(b => b.classList.remove('sel'));
+  const root = ipkRoot(el);
+  root.querySelectorAll('.ipk-cell').forEach(b => b.classList.remove('sel'));
   el.classList.add('sel');
-  q('#ipk-icon-value').value = `svg:${key}`;
+  ipkQ(root, '.ipk-icon-value').value = `svg:${key}`;
   iconRecentPush(`svg:${key}`);
-  const prevIcon = q('#ipk-preview-icon');
-  if (prevIcon) prevIcon.innerHTML = I[key] || I.layer;
+  ipkSetPreview(root, I[key] || I.layer);
 }
 
 function pickIconPickerSymbol(el, glyph) {
-  document.querySelectorAll('.ipk-wrap .ipk-cell').forEach(b => b.classList.remove('sel'));
+  const root = ipkRoot(el);
+  root.querySelectorAll('.ipk-cell').forEach(b => b.classList.remove('sel'));
   el.classList.add('sel');
-  q('#ipk-icon-value').value = `sym:${glyph}`;
+  ipkQ(root, '.ipk-icon-value').value = `sym:${glyph}`;
   iconRecentPush(`sym:${glyph}`);
-  const prevIcon = q('#ipk-preview-icon');
-  if (prevIcon) prevIcon.innerHTML = `<span class="kicon-glyph" aria-hidden="true">${x(glyph)}</span>`;
+  ipkSetPreview(root, `<span class="kicon-glyph" aria-hidden="true">${x(glyph)}</span>`);
 }
 
 async function pickIconPickerColor(el, id) {
-  q('#ipk-colors')?.querySelectorAll('.cswatch').forEach(s => s.classList.remove('sel'));
+  const root = ipkRoot(el);
+  root.querySelectorAll('.ipk-colors .cswatch').forEach(s => s.classList.remove('sel'));
   el.classList.add('sel');
-  q('#sel-color').value = id;
+  ipkQ(root, '.ipk-color-value').value = id;
   const code = (S.colors || []).find(c => c.id === id)?.color_code;
-  const prevIcon = q('#ipk-preview-icon');
+  const prevIcon = ipkQ(root, '.ipk-preview-icon');
   if (prevIcon && code) prevIcon.style.color = code;
   await api.color.markUsed(id);
 }
 
-const getIconPickerValue = () => q('#ipk-icon-value')?.value || '';
+// What a picker holds now. `root` is the .ipk-wrap (or anything inside it,
+// or the popover/modal around it).
+const ipkWrapOf = (root) => (root?.classList?.contains('ipk-wrap') ? root : root?.querySelector?.('.ipk-wrap')) || ipkRoot(root);
+const getIconPickerValue = (root) => ipkQ(ipkWrapOf(root), '.ipk-icon-value')?.value || '';
+const getIconPickerColor = (root) => ipkQ(ipkWrapOf(root), '.ipk-color-value')?.value || '';
+
+// Which half of the pick a click inside a live-saving picker changed — a
+// colour swatch changes ONLY the colour, an icon cell or a confirmed upload
+// ONLY the icon (Procress 29 part 5: they used to be written together, so
+// one could overwrite the other). null = the click picked nothing.
+function iconPickerChange(e) {
+  if (e.target.closest('.cswatch')) return 'color';
+  if (e.target.closest('.ipk-cell') || e.target.closest('.icrop-confirm')) return 'icon';
+  return null;
+}
 
 // ═══ Uploaded tab: native <input type=file> + FileReader + <canvas> ═══
 // circular crop, no libs. Crop state lives in the module-scope `let`s
@@ -141,6 +162,7 @@ const getIconPickerValue = () => q('#ipk-icon-value')?.value || '';
 function handleIconUpload(inputEl) {
   const file = inputEl.files && inputEl.files[0];
   if (!file) return;
+  icropRoot = ipkRoot(inputEl);
   const reader = new FileReader();
   reader.onload = () => {
     const img = new Image();
@@ -158,11 +180,11 @@ function handleIconUpload(inputEl) {
 }
 
 function icropRenderCropUI() {
-  const pane = q('#ipk-upload-pane');
+  const pane = ipkQ(icropRoot, '.ipk-upload-pane');
   if (!pane || !icropImg) return;
   pane.innerHTML = `
     <div class="icrop-stage">
-      <canvas id="icrop-canvas" width="${ICROP_CANVAS}" height="${ICROP_CANVAS}" onmousedown="icropStartDrag(event)"></canvas>
+      <canvas class="icrop-canvas" width="${ICROP_CANVAS}" height="${ICROP_CANVAS}" onmousedown="icropStartDrag(event)"></canvas>
       <div class="icrop-mask"></div>
     </div>
     <input type="range" class="icrop-zoom" min="1" max="3" step="0.01" value="${icropZoom}" oninput="icropOnZoom(this.value)">
@@ -191,7 +213,7 @@ function icropClampPan() {
 }
 
 function icropRedraw() {
-  const canvas = q('#icrop-canvas');
+  const canvas = ipkQ(icropRoot, '.icrop-canvas');
   if (!canvas || !icropImg) return;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, ICROP_CANVAS, ICROP_CANVAS);
@@ -250,16 +272,15 @@ function icropConfirm() {
   ctx.restore();
   const dataUrl = out.toDataURL('image/png');
 
-  q('#ipk-icon-value').value = 'img:' + dataUrl;
-  document.querySelectorAll('#ipk-icon-grid .ipk-cell, #ipk-symbol-grid .ipk-cell').forEach(b => b.classList.remove('sel'));
-  const prevIcon = q('#ipk-preview-icon');
-  if (prevIcon) prevIcon.innerHTML = `<img src="${dataUrl}" class="icrop-preview-img">`;
+  ipkQ(icropRoot, '.ipk-icon-value').value = 'img:' + dataUrl;
+  icropRoot.querySelectorAll('.ipk-cell').forEach(b => b.classList.remove('sel'));
+  ipkSetPreview(icropRoot, `<img src="${dataUrl}" class="icrop-preview-img">`);
 
   icropShowResult(dataUrl);
 }
 
 function icropShowResult(dataUrl) {
-  const pane = q('#ipk-upload-pane');
+  const pane = ipkQ(icropRoot, '.ipk-upload-pane');
   if (!pane) return;
   pane.innerHTML = `<div class="icrop-result">
     <img src="${dataUrl}" class="icrop-result-img">
@@ -275,6 +296,6 @@ function icropReset() {
   icropZoom = 1;
   icropPanX = 0;
   icropPanY = 0;
-  const pane = q('#ipk-upload-pane');
+  const pane = ipkQ(icropRoot, '.ipk-upload-pane');
   if (pane) pane.innerHTML = icropUploadPromptHtml();
 }

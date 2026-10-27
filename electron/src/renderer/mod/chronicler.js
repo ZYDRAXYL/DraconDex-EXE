@@ -333,13 +333,15 @@ async function openChroniclerEventIconPopup(evId, anchor, tlid) {
   const ev = evs.find(e => e.id === evId);
   if (!ev) return;
   openPopover(anchor, await iconPicker(ev.icon || null, ev.color || null, ev.event_name), { cls: 'icon-edit-popup', keep: true, focus: false,
-    onClick: (e) => { if (e.target.closest('.ipk-cell') || e.target.closest('.cswatch')) saveChroniclerEventIconLive(evId, tlid); } });
+    onClick: (e, pop) => { const what = iconPickerChange(e); if (what) saveChroniclerEventIconLive(evId, tlid, pop, what); } });
 }
 
-async function saveChroniclerEventIconLive(evId, tlid) {
+async function saveChroniclerEventIconLive(evId, tlid, root, what) {
   const __iid = pbCurrent(); // re-bound below: an await can hand the turn to another instance
-  const icon = getIconPickerValue() || null;
-  const color = q('#sel-color')?.value || null;
+  // only the half that was picked changes (Procress 29 part 5)
+  const ev = (await api.timeline.getEvents(tlid)).find(e => e.id === evId);
+  const icon = what === 'icon' ? getIconPickerValue(root) || null : ev?.icon ?? null;
+  const color = what === 'color' ? getIconPickerColor(root) || null : ev?.color ?? null;
   await api.timeline.updateEventIcon(evId, icon, color);
   if (S.chroniclerData?.moduleId != null) invalidateNestItems(S.chroniclerData.moduleId);
   pbUse(__iid); await mountChroniclerGraph();

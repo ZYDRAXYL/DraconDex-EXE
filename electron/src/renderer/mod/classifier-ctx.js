@@ -98,8 +98,8 @@ async function submitClassifierObjectForm(moduleId, objectId) {
   const name = q('#co-name').value.trim();
   // §7.5 bug #8: an empty name used to do nothing at all.
   if (!name) { toast(t('nameRequired'), 'err'); q('#co-name')?.focus(); return; }
-  const colorId = q('#sel-color').value || null;
-  const icon = typeof getIconPickerValue === 'function' ? getIconPickerValue() : null;
+  const colorId = getIconPickerColor(q('#modal')) || null;
+  const icon = getIconPickerValue(q('#modal')) || null;
   if (objectId) await api.classifier.updateObject(objectId, name, colorId, icon);
   else S.clsPendingSelect = await api.classifier.createObject(moduleId, name, colorId, icon);
   closeModal();
