@@ -44,6 +44,10 @@ const ipkQ = (root, sel) => root?.querySelector(sel) || null;
 // the images already uploaded in this Nexus, or a new upload. The square
 // after "Colour" opens a colour of your own (core/color-panel.js).
 const IPK_APP_SET = 'app';
+// The + of the custom-colour square, drawn on the 16 px inside its border at
+// whole pixels — I.plus scaled to fit drew 1.5 px lines between pixels, and
+// the blur read as a + sitting crooked.
+const IPK_PLUS = '<svg class="icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" shape-rendering="crispEdges"><path d="M8 3v10M3 8h10"/></svg>';
 const ipkSetOf = (key) => (isSetIconRef(key) ? key.split('/')[0] : IPK_APP_SET);
 
 function ipkCellHtml(ref, sel, svg, title) {
@@ -119,7 +123,7 @@ async function iconPicker(selIcon, selColorId, previewName, previewKind) {
     <input type="file" accept="image/*" class="icrop-file-input" style="display:none" onchange="handleIconUpload(this)">
     <div class="ipk-color-row">
       <span class="pk">${t('color')}</span>
-      <div class="ipk-colors"><button type="button" class="btn btn-g ipk-color-custom" title="${x(t('colorCustom'))}" aria-label="${x(t('colorCustom'))}" aria-expanded="false" onclick="ipkToggleColorPanel(this)">${I.plus}</button>${ipkSwatchesHtml(selColorId)}</div>
+      <div class="ipk-colors"><button type="button" class="btn btn-g ipk-color-custom" title="${x(t('colorCustom'))}" aria-label="${x(t('colorCustom'))}" aria-expanded="false" onclick="ipkToggleColorPanel(this)">${IPK_PLUS}</button>${ipkSwatchesHtml(selColorId)}</div>
     </div>
     <label class="ipk-hexbox"><span class="pk">HEX</span><input class="ipk-hex" value="${x(selColor || '')}" maxlength="7" spellcheck="false" placeholder="#RRGGBB" aria-label="${x(t('colorHex'))}"
       onkeydown="if(event.key==='Enter'){event.preventDefault();ipkUseHex(this,this.value)}" onchange="ipkUseHex(this,this.value)" oninput="this.removeAttribute('aria-invalid')" data-no-i18n></label>
