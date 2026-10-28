@@ -265,6 +265,14 @@
 .nest-filter-box input{flex:1;padding-right:28px}
 .nest-filter-box input::-webkit-search-cancel-button{display:none}
 .nest-filter-clear,.nest-filter-kbd{position:absolute;right:4px}
+/* Procress 30: the detailed-search toggle beside the box, and the Objects it adds */
+.nest-filter-line{display:flex;align-items:center;gap:4px}
+.nest-filter-line .nest-filter-box{flex:1;min-width:0}
+.nest-filter-deep.on{background:var(--accent-soft,rgba(99,102,241,.15));color:var(--accent);border-color:var(--accent)}
+.nest-filter-sec{padding:8px 10px 2px;font-size:var(--fs-micro);color:var(--t3-aa,var(--t2));text-transform:uppercase;letter-spacing:.04em}
+.nest-filter-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor}
+.drafter-hint.nest-filter-wait{padding:12px 10px}
+.empty.nest-filter-none{padding:16px 10px}
 .nest-filter-kbd{font:calc(11px * var(--fsc,1)) var(--mono,ui-monospace,monospace);color:var(--t3-aa,var(--t2));
 	border:1px solid var(--border);border-radius:var(--rs);padding:0 5px;pointer-events:none}
 /* Procress 18 part 1: rail buttons — ≥ 36 px to hit, and the open one shows a

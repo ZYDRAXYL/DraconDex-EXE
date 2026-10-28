@@ -1169,6 +1169,33 @@ test('30: opening a page or switching tabs leaves the left panel open', async ()
   await win.mouse.move(5, 300); await sleep(300);
 });
 
+test('30: a Collector takes an @handle on its folder page', async () => {
+  const id = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'collector').id);
+  await win.evaluate((id) => openFolderPage(id), id); await sleep(500);
+  await win.locator('#main-inner .folder-page').waitFor();
+  await win.locator('#main-inner .module-handle-add').first().click(); await sleep(200);
+  await win.keyboard.type('lore'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.equal(await win.evaluate(async (id) => (await api.module.get(id)).handle, id), 'lore');
+  assert.equal(await win.locator('#main-inner .module-handle').first().innerText(), '@lore');
+  assert.ok(await win.locator('#main-inner .folder-page').count(), 'still on the folder page');
+});
+
+test('30: Nest filter — hits in their own icon and colour; detailed search adds matching objects', async () => {
+  await win.evaluate(() => showLeftDest('nest')); await sleep(200);
+  try {
+  await win.locator('#nest-filter-q').fill('Mira'); await sleep(300);
+  const hit = await win.evaluate(() => { const h = [...document.querySelectorAll('.nest-filter-hit')].find((e) => e.querySelector('.name').textContent === 'About Mira'); const m = flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'About Mira');
+    const want = document.createElement('span'); want.innerHTML = moduleIconHtml(m); // compared as the browser serialises both
+    return { icon: h.querySelector('.kicon').innerHTML === want.innerHTML, colour: h.querySelector('.kicon').style.color !== '' }; });
+  assert.deepEqual(hit, { icon: true, colour: true });
+  assert.equal(await win.locator('.nest-filter-hit[data-key]').count(), 0, 'objects only in detailed search');
+  await win.locator('.nest-filter-deep').click(); await sleep(500);
+  assert.deepEqual(await win.locator('.nest-filter-hit[data-key] .name').allInnerTexts(), ['Mira']);
+  await win.locator('.nest-filter-hit[data-key]').first().click(); await sleep(600);
+  assert.equal(await win.evaluate(() => S.activeModuleNode?.name), 'Characters');
+  } finally { await win.evaluate(() => { S.nestDeep = false; setNestFilter(''); renderNexusHome(); }); await sleep(200); } // later tests need the tree, not results
+});
+
 test('28 part 1: a tab\'s right-click — close others, close to the right; Ctrl+Shift+→ moves it', async () => {
   await openTwoTabs(); await sleep(400);
   const strip = '#main-inner .bpane-tabs[role="tablist"]';
