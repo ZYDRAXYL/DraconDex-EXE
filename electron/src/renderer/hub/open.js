@@ -6,8 +6,6 @@
 async function openModuleNode(id) {
   const m = findModuleNode(id);
   if (!m) return;
-  // page/focus.js — before the first await, while the click is window.event
-  if (m.kind !== 'collector' && S.activeModuleNode?.id !== id) pageAutoCollapseLeft();
   // Process 6 part 1: used to only toggle-expand a top-level collector —
   // a nested one (parent_id != null) silently no-opped on row click (the
   // chevron's own toggleMajorExpand still worked, but the row body didn't),

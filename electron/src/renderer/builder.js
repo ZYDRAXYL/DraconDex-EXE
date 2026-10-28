@@ -761,14 +761,18 @@ async function onTabDrop(ev, paneIdx, key, tabEl) {
   if (crossPane && !drag.armed) { clearDragReflow(); S.dragTab = null; return; } // still locked — bounce back, no move
   clearDragReflow();
   S.dragTab = null;
-  if (!drag || (drag.paneIdx === paneIdx && drag.key === key)) return; // dropped on itself
+  if (!drag) return;
   // Plan part1 #2: a same-pane reorder uses the exact slot the drag-over
   // reflow animation was already driving (d.curIndex, computed once from
   // the frozen pre-drag rects) instead of re-deriving a target key +
   // before/after zone from tabEl's LIVE bounding rect at drop time — that
   // rect can be transform-shifted by the reflow itself and disagree with
   // what the animation visually showed, landing the tab in the wrong slot.
-  if (!crossPane && drag.curIndex >= 0) { builderMoveTabToIndex(drag, paneIdx, drag.curIndex); return; }
+  // Procress 30: checked BEFORE "dropped on itself" — since Procress 27 the
+  // dragged tab follows the pointer, so it is the tab under the pointer at
+  // release, and every reorder bounced back to where it started.
+  if (!crossPane && drag.curIndex >= 0) { if (drag.curIndex !== drag.fromIndex) builderMoveTabToIndex(drag, paneIdx, drag.curIndex); return; }
+  if (drag.paneIdx === paneIdx && drag.key === key) return; // dropped on itself
   await builderMoveTabTo(drag, paneIdx, key, tabDropZone(ev, tabEl));
 }
 
@@ -787,6 +791,8 @@ async function onTabStripDrop(ev, paneIdx) {
   clearDragReflow();
   S.dragTab = null;
   if (!drag) return;
+  // same pane: the slot the reflow showed (dropped in a gap between tabs), not the end
+  if (!crossPane && drag.curIndex >= 0) { if (drag.curIndex !== drag.fromIndex) builderMoveTabToIndex(drag, paneIdx, drag.curIndex); return; }
   await builderMoveTabTo(drag, paneIdx, null, null); // no target key -> append to end
 }
 
@@ -978,10 +984,20 @@ function trackDragArm(ev) {
 
 async function onTabDragEnd(ev, paneIdx, key) {
   if (!S.dragTab) return; // a real drop already handled + cleared it
+  const drag = S.dragTab;
   clearDragReflow();
-  const armed = S.dragTab.armed;
-  if (S.dragTab.armTimer) clearTimeout(S.dragTab.armTimer);
+  const armed = drag.armed;
+  if (drag.armTimer) clearTimeout(drag.armTimer);
   S.dragTab = null;
+  // Procress 30: released on its own bar with no drop event at all —
+  // Chromium sends only dragend when the pointer ends over the dragged tab's
+  // close button, say — after the bar already showed the new slot. Keep
+  // the slot it showed; it used to snap back. (Escape lands here too, but
+  // Escape can't be told apart from this in HTML5 DnD — see above.)
+  if (!armed && drag.curIndex >= 0 && drag.curIndex !== drag.fromIndex && ev.dataTransfer?.dropEffect === 'none') {
+    builderMoveTabToIndex(drag, paneIdx, drag.curIndex);
+    return;
+  }
   if (!armed) return; // never crossed the distance+hold threshold — a reflow jiggle or an early cancel, not an intentional detach
   await builderPopOutTab(paneIdx, key);
 }

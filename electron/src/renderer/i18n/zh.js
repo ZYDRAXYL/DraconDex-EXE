@@ -104,7 +104,7 @@ i18nAdd('zh', {
   importFolder:'导入文件夹', linkedTo:'关联到', notLinked:'未关联', changeLinker:'更改关联', useAsImage:'用作展示图片', importDocxLater:'编辑导入的文档将在后续阶段转换为 Drafter',
   assetsHeader:'资源', importFolderHere:'在此导入文件夹', addAssetLink:'添加链接…', assetUrl:'URL', assetNameOptional:'名称（可选）', assetUrlInvalid:'只能添加 http:// 和 https:// 链接', assetMissing:'找不到原始文件', assetRelink:'重新链接', assetRelinkFolder:'从文件夹重新链接缺失文件…', assetRelinkMismatch:'此文件内容与原文件不同。仍要链接吗？', assetRelinkWrongType:'请选择相同类型的文件', assetRelinked:'已重新链接', assetMoveToModule:'移动到模块', assetMoveToTray:'移到未归档', assetOpenExternal:'用默认应用打开', assetOpenLink:'打开链接', assetNoPreview:'此文件类型无法预览',
   htmlExport:'导出为网站 (HTML)', htmlExportHint:'一组任何人都能在浏览器中离线打开的网页。选择起始页面，能到达的所有页面会列在下方。', htmlExportIndex:'索引页面', htmlExportDepth:'跟随链接的深度：', htmlExportWarn:'此处勾选的页面上的所有内容都会被导出 — 不会隐藏任何内容。取消勾选不想分享的页面。', htmlExportGo:'导出', htmlExportNone:'未找到页面', htmlExportWorking:'正在导出…', htmlExportPages:'个页面',
-  focusMode:'专注模式', focusModeHint:'专注模式 — 按 Ctrl+Shift+F 退出', pageReadable:'适读宽度', settingPages:'页面', settingAutoCollapseLeft:'打开页面时收起左侧面板',
+  focusMode:'专注模式', focusModeHint:'专注模式 — 按 Ctrl+Shift+F 退出', pageReadable:'适读宽度', settingPages:'页面', 
   pageLayout:'标题布局', titleAlign:'标题对齐', alignLeft:'左', alignCenter:'居中', alignRight:'右', pageIcon:'标题上方的图标', pageLinksTitle:'已链接的模块', pageLinksNone:'尚未链接其他模块——在上方搜索以链接。', pageLinkSearch:'链接模块…', pageLinkAddGroup:'链接', pageLinkDirect:'已链接', pageLinkViaWiki:'来自 [[链接]]', pageLinkRemove:'取消链接', pageCover:'封面图片', pageCoverNone:'无封面', pageCoverEmpty:'先将图片导入此 Nexus，才能用作封面', pageLayoutScope:'仅应用于此页面',
   settingSearch:'搜索设置', settingSearchNone:'没有匹配的设置', qsRecent:'最近使用',
   addrUp:'上一级页面', addrEditHint:'点击输入名称或 @句柄',

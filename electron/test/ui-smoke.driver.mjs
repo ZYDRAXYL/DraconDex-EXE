@@ -1139,6 +1139,36 @@ test('28 part 1: the buttons on the title-bar tab group are not window-drag area
   assert.deepEqual(r.filter((b) => b.region !== 'no-drag'), [], 'every button there takes clicks');
 });
 
+test('30: a tab dragged along its bar stays where it is dropped — both ways, and over its own close button', async () => {
+  await openTwoTabs(); await sleep(400);
+  const strip = '#main-inner .bpane-tabs[role="tablist"]';
+  const keys = () => win.locator(`${strip} [role="tab"]`).evaluateAll((els) => els.map((e) => e.dataset.tabKey));
+  async function drag(from, to) {
+    const t = win.locator(`${strip} [role="tab"]`);
+    const a = await t.nth(from).boundingBox(), b = await t.nth(to).boundingBox();
+    const x0 = a.x + a.width / 2, y = a.y + a.height / 2, x1 = to > from ? b.x + b.width - 6 : b.x + 6;
+    await win.mouse.move(x0, y); await win.mouse.down();
+    for (let i = 1; i <= 20; i++) { await win.mouse.move(x0 + (x1 - x0) * i / 20, y); await sleep(15); }
+    await sleep(120); await win.mouse.up(); await sleep(400);
+  }
+  const [h, c, r] = await keys();
+  await drag(0, 2); // released over the dragged tab's own x — Chromium sends no drop there
+  assert.deepEqual(await keys(), [c, r, h], 'first to last');
+  await drag(2, 0);
+  assert.deepEqual(await keys(), [h, c, r], 'last to first');
+  await win.mouse.move(5, 300); await sleep(300); // off the tabs: a hovered tab lends its title to the tooltip
+});
+
+test('30: opening a page or switching tabs leaves the left panel open', async () => {
+  await win.evaluate(() => { if (S.leftPanelCollapsed) setLeftPanelCollapsed(false); });
+  await openTwoTabs(); await sleep(300);
+  await win.locator('#main-inner .bpane-tabs [role="tab"]').nth(1).click(); await sleep(300);
+  await win.locator('#main-inner .bpane-tabs [role="tab"]').nth(0).click(); await sleep(300);
+  await win.evaluate(() => document.querySelector('#main-inner .module-page a, #main-inner .module-page .chip-link')?.click()); await sleep(400);
+  assert.equal(await win.evaluate(() => !!S.leftPanelCollapsed), false);
+  await win.mouse.move(5, 300); await sleep(300);
+});
+
 test('28 part 1: a tab\'s right-click — close others, close to the right; Ctrl+Shift+→ moves it', async () => {
   await openTwoTabs(); await sleep(400);
   const strip = '#main-inner .bpane-tabs[role="tablist"]';

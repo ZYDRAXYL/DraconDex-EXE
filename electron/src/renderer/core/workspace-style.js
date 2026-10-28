@@ -97,7 +97,6 @@ function settingWorkspaceAnimationHtml() {
     </div>
     <div class="settings-label" style="margin-top:18px">${t('settingPages')}</div>
     <div class="settings-group">
-      <div class="togglerow" onclick="toggleAutoCollapseLeft()"><span class="tg${S.settings.autoCollapseLeft !== false ? ' on' : ''}"></span>${t('settingAutoCollapseLeft')}</div>
       <div class="togglerow" onclick="toggleLinkPreview()"><span class="tg${S.settings.linkPreview !== false ? ' on' : ''}"></span>${t('settingLinkPreview')}</div>
     </div>`;
 }
