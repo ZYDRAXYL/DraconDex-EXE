@@ -111,10 +111,10 @@
 .ipk-custom .pk{flex-shrink:0;color:var(--t3-aa,var(--t2));font-size:calc(var(--fs-meta) * var(--fsc,1))}
 .ipk-custom-text{flex:1;min-width:0;font-size:calc(16px * var(--fsc,1))}
 .ipk-upload img{width:100%;height:100%;border-radius:50%;object-fit:cover}
-/* Procress 30: reads as "add one" — a solid ring and a + in the theme's own
+/* Procress 30: reads as "add one" — a square (as before) with a solid border and a + in the theme's own
    text colour (white on a dark theme, dark on a light one). Scoped past
    .btn.btn-g, whose border:none and padding hid it (the + drew 0 px wide). */
-.ipk-colors .btn.ipk-color-custom{width:20px;height:20px;min-width:0;min-height:0;padding:0;border-radius:50%;border:2px solid var(--t1);background:transparent;
+.ipk-colors .btn.ipk-color-custom{width:20px;height:20px;min-width:0;min-height:0;padding:0;border-radius:var(--rs);border:2px solid var(--t1);background:transparent;
 	color:var(--t1);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
 .ipk-colors .btn.ipk-color-custom .icon{width:12px;height:12px;min-width:12px;flex-shrink:0;stroke-width:3}
 .ipk-hexbox{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-top:8px}
