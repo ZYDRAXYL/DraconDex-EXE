@@ -126,7 +126,9 @@ function moduleHandleHtml(m, where = 'props') {
 const focusHandleInput = (id) => setTimeout(() => { const el = q(`#handle-${S.editingHandleWhere || 'props'}-${id}`); el?.focus(); el?.select(); }, 30);
 
 async function startEditModuleHandle(id, where = 'props') {
-  if (S.activeModuleNode?.id !== id) await openModuleNode(id);
+  // a Collector's handle is edited on its folder page, already open — opening
+  // the node would fold/unfold it in the tree instead
+  if (S.activeModuleNode?.id !== id && findModuleNode(id)?.kind !== 'collector') await openModuleNode(id);
   S.editingHandleId = id;
   S.editingHandleWhere = where;
   S.handleDraft = null;

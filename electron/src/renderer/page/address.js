@@ -129,9 +129,9 @@ function paintAddrSuggestions(pathEl) {
   const box = pathEl.querySelector('.addr-sugg');
   const hits = addrMatches(pathEl.querySelector('.addr-input').value);
   box.hidden = !hits.length;
-  // Fixed, under the row: the path clips its overflow.
-  const r = pathEl.getBoundingClientRect();
-  Object.assign(box.style, { left: `${r.left}px`, top: `${r.bottom + 4}px`, width: `${r.width}px` });
+  // Fixed, under the row (the path clips its overflow) — placed by
+  // placeFloating once filled, so it keeps POPOVER_MARGIN from the window edge.
+  box.style.width = `${pathEl.getBoundingClientRect().width}px`;
   box.innerHTML = hits.map((it, i) => `<div class="kind-list-item" data-i="${i}">
     <span class="kli-name" data-no-i18n>${x(it.name)}</span>
     <span class="kli-hint" data-no-i18n>${it.handle ? `@${x(it.handle)} · ` : ''}${x(it.moduleName || kindLabel(it.ownKind || it.kind))}</span></div>`).join('');
@@ -139,6 +139,7 @@ function paintAddrSuggestions(pathEl) {
     e.preventDefault();
     openAddrHit(hits[Number(row.dataset.i)]);
   }));
+  if (hits.length) placeFloating(box, pathEl, { gap: 4 }); // core/popover.js
 }
 
 // A module opens its page; an element with a page opens its page; anything

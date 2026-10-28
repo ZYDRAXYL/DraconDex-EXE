@@ -339,7 +339,8 @@ function _quickIndex(nexusId) {
     try {
       for (const r of scopedAll(d, sql, nx)) {
         // moduleId: an object's module, for the [[obj:Module/Object]] path (Procress 26)
-        out.push({ key: `${prefix}${r.id}`, name: r.name, type, module, color: r.color_code || null, ...(r.mid != null ? { moduleId: r.mid } : {}) });
+        // icon: a Classifier object's own (the Nest's detailed search draws it, Procress 30)
+        out.push({ key: `${prefix}${r.id}`, name: r.name, type, module, color: r.color_code || null, ...(r.mid != null ? { moduleId: r.mid } : {}), ...(r.icon ? { icon: r.icon } : {}) });
       }
     } catch (_) {}
   };
@@ -357,7 +358,7 @@ function _quickIndex(nexusId) {
   add(`SELECT m.id, m.name, uc.color_code FROM module m LEFT JOIN use_color uc ON uc.id=m.color WHERE (? IS NULL OR m.nexus_ref=?)`, 'module_', 'module', 'hub');
   add(`SELECT ch.id, ch.name, NULL AS color_code FROM book_chapter ch JOIN module m ON ch.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'bchp_', 'chapter', 'author');
   add(`SELECT s.id, s.name, NULL AS color_code FROM chat_session s JOIN module m ON s.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'chss_', 'chat', 'scribe');
-  add(`SELECT o.id, o.name, uc.color_code, o.module_ref AS mid FROM classifier_object o JOIN module m ON o.module_ref=m.id LEFT JOIN use_color uc ON uc.id=o.color WHERE (? IS NULL OR m.nexus_ref=?)`, 'cobj_', 'object', 'classifier');
+  add(`SELECT o.id, o.name, uc.color_code, o.module_ref AS mid, o.icon FROM classifier_object o JOIN module m ON o.module_ref=m.id LEFT JOIN use_color uc ON uc.id=o.color WHERE (? IS NULL OR m.nexus_ref=?)`, 'cobj_', 'object', 'classifier');
   add(`SELECT t.id, t.name, NULL AS color_code FROM diviner_table t JOIN module m ON t.module_ref=m.id WHERE (? IS NULL OR m.nexus_ref=?)`, 'divt_', 'table', 'diviner');
   // aliases last, so a real name keeps precedence in the renderer's cache too
   try {

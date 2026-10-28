@@ -1139,6 +1139,63 @@ test('28 part 1: the buttons on the title-bar tab group are not window-drag area
   assert.deepEqual(r.filter((b) => b.region !== 'no-drag'), [], 'every button there takes clicks');
 });
 
+test('30: a tab dragged along its bar stays where it is dropped — both ways, and over its own close button', async () => {
+  await openTwoTabs(); await sleep(400);
+  const strip = '#main-inner .bpane-tabs[role="tablist"]';
+  const keys = () => win.locator(`${strip} [role="tab"]`).evaluateAll((els) => els.map((e) => e.dataset.tabKey));
+  async function drag(from, to) {
+    const t = win.locator(`${strip} [role="tab"]`);
+    const a = await t.nth(from).boundingBox(), b = await t.nth(to).boundingBox();
+    const x0 = a.x + a.width / 2, y = a.y + a.height / 2, x1 = to > from ? b.x + b.width - 6 : b.x + 6;
+    await win.mouse.move(x0, y); await win.mouse.down();
+    for (let i = 1; i <= 20; i++) { await win.mouse.move(x0 + (x1 - x0) * i / 20, y); await sleep(15); }
+    await sleep(120); await win.mouse.up(); await sleep(400);
+  }
+  const [h, c, r] = await keys();
+  await drag(0, 2); // released over the dragged tab's own x — Chromium sends no drop there
+  assert.deepEqual(await keys(), [c, r, h], 'first to last');
+  await drag(2, 0);
+  assert.deepEqual(await keys(), [h, c, r], 'last to first');
+  await win.mouse.move(5, 300); await sleep(300); // off the tabs: a hovered tab lends its title to the tooltip
+});
+
+test('30: opening a page or switching tabs leaves the left panel open', async () => {
+  await win.evaluate(() => { if (S.leftPanelCollapsed) setLeftPanelCollapsed(false); });
+  await openTwoTabs(); await sleep(300);
+  await win.locator('#main-inner .bpane-tabs [role="tab"]').nth(1).click(); await sleep(300);
+  await win.locator('#main-inner .bpane-tabs [role="tab"]').nth(0).click(); await sleep(300);
+  await win.evaluate(() => document.querySelector('#main-inner .module-page a, #main-inner .module-page .chip-link')?.click()); await sleep(400);
+  assert.equal(await win.evaluate(() => !!S.leftPanelCollapsed), false);
+  await win.mouse.move(5, 300); await sleep(300);
+});
+
+test('30: a Collector takes an @handle on its folder page', async () => {
+  const id = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((m) => m.kind === 'collector').id);
+  await win.evaluate((id) => openFolderPage(id), id); await sleep(500);
+  await win.locator('#main-inner .folder-page').waitFor();
+  await win.locator('#main-inner .module-handle-add').first().click(); await sleep(200);
+  await win.keyboard.type('lore'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.equal(await win.evaluate(async (id) => (await api.module.get(id)).handle, id), 'lore');
+  assert.equal(await win.locator('#main-inner .module-handle').first().innerText(), '@lore');
+  assert.ok(await win.locator('#main-inner .folder-page').count(), 'still on the folder page');
+});
+
+test('30: Nest filter — hits in their own icon and colour; detailed search adds matching objects', async () => {
+  await win.evaluate(() => showLeftDest('nest')); await sleep(200);
+  try {
+  await win.locator('#nest-filter-q').fill('Mira'); await sleep(300);
+  const hit = await win.evaluate(() => { const h = [...document.querySelectorAll('.nest-filter-hit')].find((e) => e.querySelector('.name').textContent === 'About Mira'); const m = flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'About Mira');
+    const want = document.createElement('span'); want.innerHTML = moduleIconHtml(m); // compared as the browser serialises both
+    return { icon: h.querySelector('.kicon').innerHTML === want.innerHTML, colour: h.querySelector('.kicon').style.color !== '' }; });
+  assert.deepEqual(hit, { icon: true, colour: true });
+  assert.equal(await win.locator('.nest-filter-hit[data-key]').count(), 0, 'objects only in detailed search');
+  await win.locator('.nest-filter-deep').click(); await sleep(500);
+  assert.deepEqual(await win.locator('.nest-filter-hit[data-key] .name').allInnerTexts(), ['Mira']);
+  await win.locator('.nest-filter-hit[data-key]').first().click(); await sleep(600);
+  assert.equal(await win.evaluate(() => S.activeModuleNode?.name), 'Characters');
+  } finally { await win.evaluate(() => { S.nestDeep = false; setNestFilter(''); renderNexusHome(); }); await sleep(200); } // later tests need the tree, not results
+});
+
 test('28 part 1: a tab\'s right-click — close others, close to the right; Ctrl+Shift+→ moves it', async () => {
   await openTwoTabs(); await sleep(400);
   const strip = '#main-inner .bpane-tabs[role="tablist"]';
@@ -1386,14 +1443,40 @@ test('29 part 5: a colour pick keeps the icon, an icon pick keeps the colour, tw
   await win.evaluate(() => { closeAllPopups(); closeModal(); });
 });
 
-test('29 part 1: a popup that grows after it opens stays 8 px inside the window', async () => {
+test('30: icon popup — recent icons fill two rows, colours three rows by last use, the HEX box picks a colour', async () => {
+  const id = await win.evaluate(() => flattenModulesByKind(S.moduleTree, [])[2].id);
+  const open = async () => { await win.evaluate((id) => openModuleIconPopup(id, document.querySelector(`[data-mid="${id}"] .kicon`) || document.body), id); await win.waitForSelector('.icon-edit-popup .ipk-icon-grid .ipk-cell'); };
+  await open();
+  for (let i = 0; i < 20; i++) await win.locator('.icon-edit-popup .ipk-icon-grid .ipk-cell').nth(i).click();
+  const before = await win.evaluate(async (id) => (await api.module.get(id)).icon, id);
+  await win.locator('.icon-edit-popup .ipk-hex').fill('#3a7');
+  await win.locator('.icon-edit-popup .ipk-hex').press('Enter'); await sleep(600);
+  const m = await win.evaluate(async (id) => { const m = await api.module.get(id); return { icon: m.icon, code: S.colors.find((c) => c.id === m.color)?.color_code }; }, id);
+  assert.deepEqual(m, { icon: before, code: '#33aa77' }, 'the HEX box set the colour and left the icon alone');
+  await win.locator('.icon-edit-popup .ipk-hex').fill('zz'); await win.locator('.icon-edit-popup .ipk-hex').press('Enter');
+  assert.equal(await win.locator('.icon-edit-popup .ipk-hex').getAttribute('aria-invalid'), 'true');
+  await win.evaluate(() => closeAllPopups()); await sleep(200);
+  await open();
+  const r = await win.evaluate(() => {
+    const p = q('.icon-edit-popup');
+    const rows = (box, sel) => { const b = box.getBoundingClientRect(); return new Set([...box.querySelectorAll(sel)].filter((c) => c.getBoundingClientRect().bottom <= b.bottom + 0.5).map((c) => Math.round(c.getBoundingClientRect().top))).size; };
+    const plus = p.querySelector('.ipk-color-custom').getBoundingClientRect();
+    return { rec: rows(p.querySelector('.ipk-recent'), '.ipk-cell'), recScrolls: getComputedStyle(p.querySelector('.ipk-recent')).overflowY !== 'hidden', cols: rows(p.querySelector('.ipk-colors'), '.cswatch,.ipk-color-custom'),
+      first: p.querySelector('.ipk-colors .cswatch').style.background, hex: p.querySelector('.ipk-hex').value, plus: plus.width > 0 && plus.height > 0 };
+  });
+  assert.deepEqual(r, { rec: 2, recScrolls: false, cols: Math.min(r.cols, 3), first: 'rgb(51, 170, 119)', hex: '#33aa77', plus: true });
+  assert.ok(r.cols <= 3, 'at most three lines of colours');
+  await win.evaluate(() => closeAllPopups());
+});
+
+test('29 part 1 / 30 part 4: a popup that grows after it opens stays 10 px inside the window', async () => {
   await win.setViewportSize({ width: 900, height: 520 });
   const mid = await win.evaluate(async () => { const nx = S.nexus.id; await api.module.createMany(Array.from({ length: 30 }, (_, i) => ({ nexus_ref: nx, name: 'Edge ' + i, kind: 'scribe' }))); await reloadModuleTree(); return flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Edge 0').id; });
   await win.evaluate((id) => openModuleNode(id), mid); await sleep(500);
   await win.locator('.module-page .ph-links-open').first().click();
   await win.locator('.ph-links-pop .ph-link-q').fill('Edge'); await sleep(700);
   const r = await win.evaluate(() => { const b = q('.ph-links-pop').getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: innerWidth, h: innerHeight }; });
-  assert.ok(r.l >= 8 && r.t >= 8 && r.r <= r.w - 8 && r.b <= r.h - 8, `inside the window: ${JSON.stringify(r)}`);
+  assert.ok(r.l >= 10 && r.t >= 10 && r.r <= r.w - 10 && r.b <= r.h - 10, `inside the window: ${JSON.stringify(r)}`);
   await win.keyboard.press('Escape');
   await win.setViewportSize({ width: 1280, height: 800 });
 });

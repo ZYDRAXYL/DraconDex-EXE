@@ -229,9 +229,15 @@ function createMarkdownEditor(container, opts) {
         acIdx = 0;
         paintAc();
         const pos = caretXY();
-        acFloat.style.top = `${Math.max(0, pos.top + 26)}px`;
-        acFloat.style.left = `${Math.min(Math.max(0, pos.left), wrap.clientWidth - 240)}px`;
         acFloat.style.display = '';
+        // Procress 30: placed against the WINDOW (floatingRect — flips above
+        // the caret near the bottom, POPOVER_MARGIN from every edge), then
+        // written back relative to the editor it is positioned in.
+        const wr = wrap.getBoundingClientRect();
+        const cx = wr.left + pos.left, cy = wr.top + pos.top;
+        const p = floatingRect({ left: cx, top: cy, right: cx, bottom: cy + 22 }, acFloat.offsetWidth, acFloat.offsetHeight, window.innerWidth, window.innerHeight, 'bottom-start', 4);
+        acFloat.style.left = `${p.left - wr.left}px`;
+        acFloat.style.top = `${p.top - wr.top}px`;
       };
       const acceptAc = () => {
         const it = acItems[acIdx];

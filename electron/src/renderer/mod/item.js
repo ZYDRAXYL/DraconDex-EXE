@@ -209,7 +209,6 @@ async function fetchOneItem(itemKind, moduleId, id) {
 }
 
 async function openItemNode(itemKind, moduleId, id) {
-  if (S.activeItemNode?.id !== id || S.activeItemNode?.itemKind !== itemKind) pageAutoCollapseLeft(); // page/focus.js
   const reg = ITEM_KIND[itemKind];
   if (!reg) return;
   const key = builderPageKey({ kind: 'item', itemKind, moduleId, id });

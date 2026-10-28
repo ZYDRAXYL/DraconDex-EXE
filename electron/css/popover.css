@@ -9,7 +9,7 @@
 .popover{
 	position:fixed;z-index:calc(var(--z-tooltip) + 200);background:var(--surface);border:1px solid var(--border);
 	border-radius:var(--r);box-shadow:var(--shadow-menu);
-	max-width:calc(100vw - 16px);
+	max-width:calc(100vw - 20px);
 }
 .popover:focus{outline:none}
 /* sizes — a menu is md */
@@ -20,7 +20,7 @@
 /* Procress 26 part 2: the Create menu (hub/menus.js openKindPopup, size .popover-xl) shows every
    kind at once — up to three columns under its search box, a heading kept with
    its first row. It only scrolls when the window is too small for that. */
-.popover-xl{width:min(820px,calc(100vw - 16px));max-height:calc(100vh - 16px)}
+.popover-xl{width:min(820px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
 .popover-xl .kind-cols{columns:250px 3;column-gap:8px}
 .popover-xl .kind-cols > *{break-inside:avoid}
 .popover-xl .kind-cols > [data-kind-head]{break-after:avoid}

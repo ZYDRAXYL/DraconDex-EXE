@@ -117,7 +117,8 @@ function buildFolderPageHtml() {
   return wrapPageView(`${pageHeadHtml({
       addr: { moduleId: m.id }, title: x(m.name), titleText: m.name, icon: moduleIconHtml(m),
       color: m.icon_color_code || m.color_code || KIND_COLOR.collector,
-      after: `<span class="chip">${x(kindLabel('collector'))}</span>`, acts,
+      // Procress 30: a Collector takes an @handle like any module — after the name, as on a module's page
+      after: `${moduleHandleHtml(m, 'head')}<span class="chip">${x(kindLabel('collector'))}</span>`, acts,
     })}<div class="folder-page" data-view="${view}">${body}</div>`);
 }
 

@@ -77,12 +77,14 @@ function nestFilterHtml() {
   // its shortcut shown (/ focuses it — the listener below).
   return `<label class="nest-filter" onclick="event.stopPropagation()">
     <span class="nest-filter-label">${x(t('nestFilter'))}</span>
-    <span class="nest-filter-box">
+    <span class="nest-filter-line"><span class="nest-filter-box">
       <input id="nest-filter-q" type="search" value="${x(v)}" autocomplete="off" spellcheck="false" aria-label="${x(t('nestFilter'))}"
         oninput="setNestFilter(this.value)" onkeydown="if(event.key==='Escape'){this.value='';setNestFilter('');this.blur()}">
       ${v ? `<button class="btn btn-g btn-i nest-filter-clear" onclick="event.preventDefault();setNestFilter('');renderNexusHome()" title="${t('pbClear')}" aria-label="${t('pbClear')}">${I.close}</button>`
         : '<kbd class="nest-filter-kbd" data-no-i18n>/</kbd>'}
     </span>
+    <button type="button" class="btn btn-g btn-i nest-filter-deep${S.nestDeep ? ' on' : ''}" aria-pressed="${!!S.nestDeep}" onclick="event.preventDefault();toggleNestDeep(this)"
+      title="${x(t('nestDeepSearch'))}" aria-label="${x(t('nestDeepSearch'))}">${I.search}</button></span>
   </label>`;
 }
 // "/" focuses the Nest filter, like a site's search box — never while typing.
@@ -99,7 +101,7 @@ function nestTreeBodyHtml() {
   const q0 = String(S.nestFilter || '').trim().toLowerCase();
   if (!q0) return buildNestTreeHtml() + nestUnsortedHtml();
   const qy = parseNestQuery(q0);
-  if (qy.l.length && !S.nestTagIndex) { loadNestTagIndex(); return `<p class="drafter-hint" style="padding:12px 10px">${t('syncWorking')}</p>`; }
+  if (qy.l.length && !S.nestTagIndex) { loadNestTagIndex(); return `<p class="drafter-hint nest-filter-wait">${t('syncWorking')}</p>`; }
   const words = (s) => qy.text.every((w) => String(s || '').toLowerCase().includes(w));
   const anyOf = (list, test) => !list.length || list.some(test);
   const hits = [];
@@ -116,18 +118,45 @@ function nestTreeBodyHtml() {
   // files too — they have a type, no kind or label
   const files = qy.k.length || qy.l.length || (!qy.t.length && !qy.text.length) ? [] : (S.importFiles || [])
     .filter((f) => words(f.file_name) && anyOf(qy.t, (tp) => assetClass(f) === tp || String(f.file_type || '').toLowerCase() === tp));
-  if (!hits.length && !files.length) return `<div class="empty" style="padding:16px 10px">${x(t('nestFilterNone'))}</div>`;
+  // Procress 30: detailed search — also the objects (Classifier objects,
+  // chapters, notes, …) whose name matches, from the [[link]] index.
+  const objs = S.nestDeep && qy.text.length && !qy.k.length && !qy.l.length && !qy.t.length
+    ? (typeof _wikiCacheList !== 'undefined' ? _wikiCacheList : []).filter((e) => !e.key.startsWith('module_') && e.type !== 'alias' && words(e.name)).slice(0, NEST_DEEP_MAX) : [];
+  if (!hits.length && !files.length && !objs.length) return `<div class="empty nest-filter-none">${x(t('nestFilterNone'))}</div>`;
   // Procress 29 part 2: a folder found here opens as its page — folding it
   // in a list of search results showed nothing at all.
+  // Procress 30: the module's own icon and colour, as in the tree.
   return hits.map(({ m, path }) => `<div class="li nest-filter-hit" onclick="${m.kind === 'collector' ? 'openFolderPage' : 'openModuleNode'}(${m.id})" oncontextmenu="openModuleContextMenu(event,${m.id})">
-      <span class="kicon" aria-hidden="true">${I[KIND_ICON[m.kind]] || I.layer}</span>
+      <span class="kicon" aria-hidden="true" style="color:${x(m.icon_color_code || m.color_code || 'var(--accent)')}">${moduleIconHtml(m)}</span>
       <span class="name">${x(m.name)}</span>
       <span class="nest-filter-path" data-no-i18n>${x(path.join(' › '))}</span>
     </div>`).join('') + files.map((f) => `<div class="li nest-filter-hit" onclick="openImportFile(${f.id})" oncontextmenu="openImportFileContextMenu(event,${f.id})">
       <span class="kicon dock-ficon" aria-hidden="true" data-no-i18n>${assetGlyph(f)}</span>
       <span class="name" data-no-i18n>${x(f.file_name)}</span>
       <span class="nest-filter-path" data-no-i18n>${x(f.module_ref != null ? findModuleNode(f.module_ref)?.name || '' : t('nestUnsorted'))}</span>
-    </div>`).join('');
+    </div>`).join('') + (objs.length ? `<div class="nest-filter-sec">${t('nestDeepObjects')}</div>` + objs.map((e) => `<div class="li nest-filter-hit" data-key="${x(e.key)}" onclick="openEntityByKey(${xj(e.key)})">
+      ${nestObjIconHtml(e)}
+      <span class="name" data-no-i18n>${x(e.name)}</span>
+      <span class="nest-filter-path" data-no-i18n>${x(e.moduleId != null ? findModuleNode(e.moduleId)?.name || '' : '')}</span>
+    </div>`).join('') : '');
+}
+const NEST_DEEP_MAX = 200;
+// A Classifier object as its Classifier draws it (its own icon, else the
+// category's glyph, in its colour); anything else a dot in its colour.
+function nestObjIconHtml(e) {
+  const m = e.key.startsWith('cobj_') && e.moduleId != null ? findModuleNode(e.moduleId) : null;
+  return `<span class="kicon" aria-hidden="true" style="color:${x(e.color || (m ? 'var(--accent)' : 'var(--t3-aa,var(--t2))'))}">${m ? classifierObjectIconHtml(e, m) : '<span class="nest-filter-dot"></span>'}</span>`;
+}
+
+// The detailed-search button: objects join the results. Loads the [[link]]
+// index the first time it is needed.
+async function toggleNestDeep(btn) {
+  S.nestDeep = !S.nestDeep;
+  btn?.classList.toggle('on', S.nestDeep);
+  btn?.setAttribute('aria-pressed', String(S.nestDeep));
+  if (S.nestDeep && typeof _wikiCacheList !== 'undefined' && !_wikiCacheList.length) await refreshWikiCache();
+  setNestFilter(S.nestFilter);
+  q('#nest-filter-q')?.focus();
 }
 
 // Procress 16 part 2 — Unity's Project-window search: k:kind (k:classifier,

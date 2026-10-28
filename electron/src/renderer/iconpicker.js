@@ -44,6 +44,10 @@ const ipkQ = (root, sel) => root?.querySelector(sel) || null;
 // the images already uploaded in this Nexus, or a new upload. The square
 // after "Colour" opens a colour of your own (core/color-panel.js).
 const IPK_APP_SET = 'app';
+// The + of the custom-colour square, drawn on the 16 px inside its border at
+// whole pixels — I.plus scaled to fit drew 1.5 px lines between pixels, and
+// the blur read as a + sitting crooked.
+const IPK_PLUS = '<svg class="icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" shape-rendering="crispEdges"><path d="M8 3v10M3 8h10"/></svg>';
 const ipkSetOf = (key) => (isSetIconRef(key) ? key.split('/')[0] : IPK_APP_SET);
 
 function ipkCellHtml(ref, sel, svg, title) {
@@ -95,10 +99,10 @@ async function iconPicker(selIcon, selColorId, previewName, previewKind) {
     <div class="ipk-pane" data-pane="icons">
       <div class="ipk-sets">${segmentedHtml([{ value: IPK_APP_SET, text: 'DraconDex' }, ...ICON_SET_LIST.map((s) => ({ value: s.id, text: s.label }))], set, { size: 'sm', aria: t('iconSet'), noI18n: true, onclick: (v) => `ipkShowSet(this,'${v}')` })}</div>
       <input type="search" class="ipk-search" placeholder="${x(t('iconSearchPh'))}" aria-label="${x(t('iconSearchPh'))}" oninput="filterIconPicker(this,this.value)">
-      <div class="ipk-scroll">
-      ${iconRecent().length ? `<div class="ipk-recent"><span class="pk">${t('iconRecent')}</span>${iconRecent().map((r) => r.startsWith('sym:')
+      ${iconRecent().length ? `<span class="pk ipk-recent-label">${t('iconRecent')}</span><div class="ipk-recent">${iconRecent().map((r) => r.startsWith('sym:')
         ? `<div class="ipk-cell ipk-symbol${selSym === r.slice(4) ? ' sel' : ''}" onclick="pickIconPickerSymbol(this,${xj(r.slice(4))})">${x(r.slice(4))}</div>`
         : (I[r.slice(4)] || isSetIconRef(r.slice(4)) ? ipkCellHtml(r.slice(4), selKey, iconRefHtml(r, ''), r.slice(4)) : '')).join('')}</div>` : ''}
+      <div class="ipk-scroll">
       <div class="ipk-grid ipk-icon-grid">${ipkGridHtml(fake, set, '', selKey)}</div>
       </div>
     </div>
@@ -119,15 +123,22 @@ async function iconPicker(selIcon, selColorId, previewName, previewKind) {
     <input type="file" accept="image/*" class="icrop-file-input" style="display:none" onchange="handleIconUpload(this)">
     <div class="ipk-color-row">
       <span class="pk">${t('color')}</span>
-      <div class="ipk-colors"><button type="button" class="btn btn-g ipk-color-custom" title="${x(t('colorCustom'))}" aria-label="${x(t('colorCustom'))}" aria-expanded="false" onclick="ipkToggleColorPanel(this)">${I.plus}</button>${ipkSwatchesHtml(selColorId)}</div>
+      <div class="ipk-colors"><button type="button" class="btn btn-g ipk-color-custom" title="${x(t('colorCustom'))}" aria-label="${x(t('colorCustom'))}" aria-expanded="false" onclick="ipkToggleColorPanel(this)">${IPK_PLUS}</button>${ipkSwatchesHtml(selColorId)}</div>
     </div>
+    <label class="ipk-hexbox"><span class="pk">HEX</span><input class="ipk-hex" value="${x(selColor || '')}" maxlength="7" spellcheck="false" placeholder="#RRGGBB" aria-label="${x(t('colorHex'))}"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();ipkUseHex(this,this.value)}" onchange="ipkUseHex(this,this.value)" oninput="this.removeAttribute('aria-invalid')" data-no-i18n></label>
     <div class="ipk-color-panel" hidden></div>
     <input type="hidden" class="ipk-icon-value" value="${x(selIcon||'')}">
     <input type="hidden" class="ipk-color-value" value="${selColorId||''}">
   </div>`;
 }
 
-const ipkSwatchesHtml = (selColorId) => sortColorsByHex(S.colors).map(c =>
+// Procress 30: the colours used last first (use_color.update_at, which
+// markUsed bumps; a colour never picked keeps the time it was added), the
+// rest by hex as before. The row is clipped to three lines by CSS — a colour
+// past that is reached through the HEX box or a colour of your own.
+const ipkColorsByUse = (colors) => sortColorsByHex(colors).sort((a, b) => String(b.update_at || '').localeCompare(String(a.update_at || '')));
+const ipkSwatchesHtml = (selColorId) => ipkColorsByUse(S.colors).map(c =>
   `<div class="cswatch${selColorId===c.id?' sel':''}" style="background:${c.color_code}" data-cid="${c.id}" onclick="pickIconPickerColor(this,${c.id})"></div>`).join('');
 
 async function ipkShowSet(btn, set) {
@@ -176,25 +187,43 @@ function ipkToggleColorPanel(btn) {
   root.classList.toggle('ipk-color-open', open); // the panel takes the grid's place while it is open
   if (!open) { panel.hidden = true; panel.innerHTML = ''; return; }
   const cur = (S.colors || []).find((c) => String(c.id) === ipkQ(root, '.ipk-color-value').value)?.color_code || '#6366f1';
-  panel.innerHTML = colorPanelHtml(cur, 'await ipkAddCustomColor(this, hex)');
+  panel.innerHTML = colorPanelHtml(cur, 'await ipkUseHex(this, hex)');
   panel.hidden = false;
   colorPanelMount(panel);
 }
 
-// A colour of your own joins the palette (use_color — the same table every
-// colour picker reads) and is picked like any swatch, so a live-saving popup
-// saves it through its usual path.
-async function ipkAddCustomColor(el, hex) {
-  if (!/^#[0-9a-f]{6}$/i.test(hex)) return;
+// A typed colour code: 3 or 6 hex digits, with or without the leading hash,
+// any case → the 6-digit lowercase form; anything else → null.
+function ipkHex(v) {
+  let h = String(v || '').trim().toLowerCase();
+  if (!h.startsWith('#')) h = `#${h}`;
+  if (/^#[0-9a-f]{3}$/.test(h)) h = `#${[...h.slice(1)].map((c) => c + c).join('')}`;
+  return /^#[0-9a-f]{6}$/.test(h) ? h : null;
+}
+
+// A colour of your own — from the panel or typed in the HEX box — joins the
+// palette (use_color — the same table every colour picker reads; a code
+// already there keeps its id) and is picked like any swatch, so a
+// live-saving popup saves it through its usual path.
+async function ipkUseHex(el, value) {
   const root = ipkRoot(el);
+  const hex = ipkHex(value);
+  const inp = ipkQ(root, '.ipk-hex');
+  if (!hex) { if (String(value || '').trim()) inp?.setAttribute('aria-invalid', 'true'); return; }
+  inp?.removeAttribute('aria-invalid');
+  const cur = (S.colors || []).find((c) => String(c.id) === ipkQ(root, '.ipk-color-value').value);
+  if (cur && cur.color_code.toLowerCase() === hex) { if (inp) inp.value = hex; return; } // already this colour (a blur after Enter)
   await api.color.add(hex);
   S.colors = await api.color.getAll();
-  const nc = S.colors.find((c) => c.color_code.toLowerCase() === hex.toLowerCase());
+  const nc = S.colors.find((c) => c.color_code.toLowerCase() === hex);
   if (!nc) return;
+  await api.color.markUsed(nc.id); // first in the row, even when it was already in the palette
+  S.colors = await api.color.getAll();
   const box = ipkQ(root, '.ipk-colors');
   box.querySelectorAll('.cswatch').forEach((s) => s.remove());
   box.insertAdjacentHTML('beforeend', ipkSwatchesHtml(Number(ipkQ(root, '.ipk-color-value').value) || null));
-  ipkToggleColorPanel(ipkQ(root, '.ipk-color-custom'));
+  const btn = ipkQ(root, '.ipk-color-custom');
+  if (btn?.getAttribute('aria-expanded') === 'true') ipkToggleColorPanel(btn);
   box.querySelector(`.cswatch[data-cid="${nc.id}"]`)?.click(); // picks it, and a live popup saves it
 }
 
@@ -255,7 +284,10 @@ async function pickIconPickerColor(el, id) {
   const code = (S.colors || []).find(c => c.id === id)?.color_code;
   const prevIcon = ipkQ(root, '.ipk-preview-icon');
   if (prevIcon && code) prevIcon.style.color = code;
+  const hex = ipkQ(root, '.ipk-hex');
+  if (hex && code) { hex.value = code.toLowerCase(); hex.removeAttribute('aria-invalid'); }
   await api.color.markUsed(id);
+  S.colors = await api.color.getAll(); // the next picker opened lists it first (this one does not reorder under the cursor)
 }
 
 // What a picker holds now. `root` is the .ipk-wrap (or anything inside it,

@@ -20,7 +20,8 @@
 // runs once — a MutationObserver watches for the removal, so no close path
 // can forget it. Tab stays inside (focus trap). APK: DdxPopover / showDdxPopover.
 
-const POPOVER_MARGIN = 8;
+// Procress 30: 10 px from the window edge, for every box placed here
+const POPOVER_MARGIN = 10;
 
 // anchor: an Element, anything with getBoundingClientRect(), or a rect.
 function anchorRect(anchor) {
