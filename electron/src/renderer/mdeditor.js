@@ -235,9 +235,10 @@ function createMarkdownEditor(container, opts) {
         // written back relative to the editor it is positioned in.
         const wr = wrap.getBoundingClientRect();
         const cx = wr.left + pos.left, cy = wr.top + pos.top;
-        const p = floatingRect({ left: cx, top: cy, right: cx, bottom: cy + 22 }, acFloat.offsetWidth, acFloat.offsetHeight, window.innerWidth, window.innerHeight, 'bottom-start', 4);
-        acFloat.style.left = `${p.left - wr.left}px`;
-        acFloat.style.top = `${p.top - wr.top}px`;
+        const p = floatingRect({ left: cx, top: cy, right: cx, bottom: cy + 22 }, acFloat.offsetWidth * floatZoom(acFloat), acFloat.offsetHeight * floatZoom(acFloat), window.innerWidth, window.innerHeight, 'bottom-start', 4);
+        const z = floatZoom(acFloat); // UI Size zoom — core/popover.js
+        acFloat.style.left = `${(p.left - wr.left) / z}px`;
+        acFloat.style.top = `${(p.top - wr.top) / z}px`;
       };
       const acceptAc = () => {
         const it = acItems[acIdx];

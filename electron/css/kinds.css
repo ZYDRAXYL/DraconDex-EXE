@@ -302,7 +302,7 @@
    floating-panel chrome, wider than the 280px icon/kind-list baseline since
    nested group/rule rows need more horizontal room. Live-saves on every
    control, no Save/Cancel footer, matching every other .popover. */
-.filter-popup{padding:12px;width:380px;max-height:calc(100vh - 40px);overflow-y:auto}
+.filter-popup{padding:12px;width:380px;max-height:calc((100vh - 40px) / var(--ui-scale, 1));overflow-y:auto}
 .fp-groups{display:flex;flex-direction:column;gap:2px}
 .fp-group{border:1px solid var(--border);border-radius:var(--rs);padding:8px;background:var(--raised)}
 .fp-rules{display:flex;flex-direction:column}

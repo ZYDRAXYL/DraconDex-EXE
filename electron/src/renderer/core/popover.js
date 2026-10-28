@@ -59,17 +59,25 @@ function floatingRect(r, w, h, vw, vh, placement = 'bottom-start', gap = null, m
   return { left: Math.round(left), top: Math.round(top), side: used };
 }
 
+// The zoom a floating box is drawn at. UI Size is CSS zoom on <body>
+// (core/settings.js): a box inside it is drawn zoom× its own px — its left,
+// top and size alike — while rects, clientX/Y and innerWidth are window px.
+// Procress 30: placing it in window px unconverted put every popup and menu
+// off the window at any UI Size but 100 % (125 %: 300 px past the right edge).
+const floatZoom = (el) => el?.currentCSSZoom || 1;
+
 function placeFloating(el, anchor, { placement = 'bottom-start', gap = null } = {}) {
   let r = anchorRect(anchor);
   // the anchor was re-rendered away since: keep to where it was
   if (r && anchor?.isConnected === false && el?._float) r = el._float.r;
   if (!el || !r) return;
+  const z = floatZoom(el);
   // taller than the window: cap it and let it scroll rather than run off-screen
   const room = window.innerHeight - 2 * POPOVER_MARGIN;
-  if (el.offsetHeight > room) { el.style.maxHeight = `${room}px`; el.style.overflowY = 'auto'; }
-  const p = floatingRect(r, el.offsetWidth, el.offsetHeight, window.innerWidth, window.innerHeight, placement, gap);
-  el.style.left = `${p.left}px`;
-  el.style.top = `${p.top}px`;
+  if (el.offsetHeight * z > room) { el.style.maxHeight = `${room / z}px`; el.style.overflowY = 'auto'; }
+  const p = floatingRect(r, el.offsetWidth * z, el.offsetHeight * z, window.innerWidth, window.innerHeight, placement, gap);
+  el.style.left = `${p.left / z}px`;
+  el.style.top = `${p.top / z}px`;
   el.dataset.side = p.side;
   floatFollowSize(el, { anchor, r: { left: r.left, top: r.top, right: r.right, bottom: r.bottom }, placement, gap, side: p.side });
 }

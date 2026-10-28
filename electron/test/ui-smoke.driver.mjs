@@ -1469,6 +1469,27 @@ test('30: icon popup — recent icons fill two rows, colours three rows by last 
   await win.evaluate(() => closeAllPopups());
 });
 
+test('30: at every UI Size (50–200 %) a popup and a context menu stay 10 px inside the window, from all four corners', async () => {
+  const id = await win.evaluate(() => flattenModulesByKind(S.moduleTree, [])[2].id);
+  const inside = () => win.evaluate(() => [...document.querySelectorAll('.popover')].map((p) => { const b = p.getBoundingClientRect();
+    return b.left >= 9.5 && b.top >= 9.5 && b.right <= innerWidth - 9.5 && b.bottom <= innerHeight - 9.5 ? 'in' : `out ${p.className} ${JSON.stringify(b)}`; }));
+  try {
+    for (const size of [50, 75, 125, 150, 200]) {
+      await win.evaluate((s) => setUiSetting('size', s), size); await sleep(400);
+      // a box placed in window px without the zoom ran 300 px off at 125 %
+      for (const [fx, fy] of [[1, 1], [0, 0], [1, 0], [0, 1]]) {
+        const pt = await win.evaluate(([fx, fy]) => ({ x: fx ? innerWidth - 4 : 4, y: fy ? innerHeight - 4 : 4 }), [fx, fy]);
+        await win.evaluate(({ id, pt }) => openModuleIconPopup(id, { getBoundingClientRect: () => ({ left: pt.x - 2, top: pt.y - 2, right: pt.x, bottom: pt.y }) }), { id, pt }); await sleep(350);
+        assert.deepEqual(await inside(), ['in'], `icon popup at ${size} % from ${JSON.stringify(pt)}`);
+        await win.evaluate(() => closeAllPopups()); await sleep(100);
+        await win.evaluate(({ id, pt }) => openModuleContextMenu(new MouseEvent('contextmenu', { clientX: pt.x, clientY: pt.y }), id), { id, pt }); await sleep(250);
+        assert.deepEqual(await inside(), ['in'], `context menu at ${size} % from ${JSON.stringify(pt)}`);
+        await win.evaluate(() => closeAllPopups()); await sleep(100);
+      }
+    }
+  } finally { await win.evaluate(() => { closeAllPopups(); setUiSetting('size', 100); }); await sleep(300); }
+});
+
 test('29 part 1 / 30 part 4: a popup that grows after it opens stays 10 px inside the window', async () => {
   await win.setViewportSize({ width: 900, height: 520 });
   const mid = await win.evaluate(async () => { const nx = S.nexus.id; await api.module.createMany(Array.from({ length: 30 }, (_, i) => ({ nexus_ref: nx, name: 'Edge ' + i, kind: 'scribe' }))); await reloadModuleTree(); return flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Edge 0').id; });
