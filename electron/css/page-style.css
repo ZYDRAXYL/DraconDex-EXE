@@ -99,7 +99,7 @@ body.ddx-site .pblock.pb-closed > .pb-head{padding-bottom:8px}
 
 /* the ⚙ popover (page/style-pop.js) */
 .pb-gear.active{background:var(--hover);color:var(--accentH)}
-.pb-pop{position:fixed;z-index:var(--z-popover);width:320px;max-height:min(560px,calc(100vh - 24px));overflow:auto;
+.pb-pop{position:fixed;z-index:var(--z-popover);width:320px;max-height:min(560px,calc((100vh - 24px) / var(--ui-scale, 1)));overflow:auto;
 	background:var(--material-base,var(--surface));border:1px solid var(--border);border-radius:var(--rl);
 	box-shadow:var(--shadow-menu);padding:12px;color:var(--t1);font-size:calc(var(--fs-body) * var(--fsc,1))}
 @supports (backdrop-filter:blur(1px)){

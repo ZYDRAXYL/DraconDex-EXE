@@ -89,10 +89,11 @@ function _guidePaint() {
   const r = el.getBoundingClientRect();
   const pad = 6;
   const spot = ov.querySelector('.guide-spotlight');
-  spot.style.left = `${r.left - pad}px`;
-  spot.style.top = `${r.top - pad}px`;
-  spot.style.width = `${r.width + pad * 2}px`;
-  spot.style.height = `${r.height + pad * 2}px`;
+  const z = floatZoom(spot); // UI Size zoom: the rect is window px — core/popover.js
+  spot.style.left = `${(r.left - pad) / z}px`;
+  spot.style.top = `${(r.top - pad) / z}px`;
+  spot.style.width = `${(r.width + pad * 2) / z}px`;
+  spot.style.height = `${(r.height + pad * 2) / z}px`;
 
   ov.querySelector('#guide-title').textContent = t(step.title);
   ov.querySelector('#guide-text').textContent = t(step.text);

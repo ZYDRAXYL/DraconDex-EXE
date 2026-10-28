@@ -263,10 +263,11 @@ function bindTimelineGraphInteractions(tlid){
       const br = board.getBoundingClientRect();
       const lo = (a, b) => Math.max(a, b) + POPOVER_MARGIN;
       const fit = (v, min, max) => Math.max(min, Math.min(v, Math.max(min, max)));
-      const vx = fit(e.clientX + 10, lo(br.left, 0), Math.min(br.right, window.innerWidth) - POPOVER_MARGIN - tip.offsetWidth);
-      const vy = fit(e.clientY - 28, lo(br.top, 0), Math.min(br.bottom, window.innerHeight) - POPOVER_MARGIN - tip.offsetHeight);
-      tip.style.left = `${vx - br.left}px`;
-      tip.style.top = `${vy - br.top}px`;
+      const z = floatZoom(tip); // UI Size zoom — core/popover.js
+      const vx = fit(e.clientX + 10, lo(br.left, 0), Math.min(br.right, window.innerWidth) - POPOVER_MARGIN - tip.offsetWidth * z);
+      const vy = fit(e.clientY - 28, lo(br.top, 0), Math.min(br.bottom, window.innerHeight) - POPOVER_MARGIN - tip.offsetHeight * z);
+      tip.style.left = `${(vx - br.left) / z}px`;
+      tip.style.top = `${(vy - br.top) / z}px`;
     });
     axis.addEventListener('mouseleave', () => tip.classList.add('hidden'));
   }
