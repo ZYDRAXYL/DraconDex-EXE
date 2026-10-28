@@ -1480,10 +1480,12 @@ test('30: at every UI Size (50–200 %) a popup and a context menu stay 10 px in
       for (const [fx, fy] of [[1, 1], [0, 0], [1, 0], [0, 1]]) {
         const pt = await win.evaluate(([fx, fy]) => ({ x: fx ? innerWidth - 4 : 4, y: fy ? innerHeight - 4 : 4 }), [fx, fy]);
         await win.evaluate(({ id, pt }) => openModuleIconPopup(id, { getBoundingClientRect: () => ({ left: pt.x - 2, top: pt.y - 2, right: pt.x, bottom: pt.y }) }), { id, pt }); await sleep(350);
-        assert.deepEqual(await inside(), ['in'], `icon popup at ${size} % from ${JSON.stringify(pt)}`);
+        let r = await inside(); // every open box — one closing may still be in the DOM
+        assert.ok(r.length && r.every((v) => v === 'in'), `icon popup at ${size} % from ${JSON.stringify(pt)}: ${r}`);
         await win.evaluate(() => closeAllPopups()); await sleep(100);
         await win.evaluate(({ id, pt }) => openModuleContextMenu(new MouseEvent('contextmenu', { clientX: pt.x, clientY: pt.y }), id), { id, pt }); await sleep(250);
-        assert.deepEqual(await inside(), ['in'], `context menu at ${size} % from ${JSON.stringify(pt)}`);
+        r = await inside();
+        assert.ok(r.length && r.every((v) => v === 'in'), `context menu at ${size} % from ${JSON.stringify(pt)}: ${r}`);
         await win.evaluate(() => closeAllPopups()); await sleep(100);
       }
     }
