@@ -7,7 +7,7 @@ i18nAdd('uk', {
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Оновлення готове', updateReadyHint:'Версію {v} завантажено й перевірено — встановіть зараз, і DraconDex відкриється сам.', updateInstallRestart:'Встановити й перезапустити', updateLater:'Пізніше', updateMode:'Коли виходить нова версія', updateModeAsk:'Завантажити й запитати', updateModeQuit:'Під час закриття', updateModeNotify:'Лише повідомити', updateModeOff:'Не перевіряти', updateModeQuitUnsigned:'Релізи ще не підписані, тож перед встановленням і далі буде запит.', updateDone:'Оновлено до {v}', updateWhatsNew:'Що нового',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
-  iconSet:'Набір значків', iconCustomText:'Літера або емодзі', iconCustomTextPh:'Введіть 1–2 символи', iconUploadedHere:'Завантажено в цей Nexus', colorCustom:'Власний колір', colorWheel:'Коло', colorRgb:'RGB', colorGrid:'Сітка', colorBrightness:'Яскравість',
+  iconSet:'Набір значків', iconCustomText:'Літера або емодзі', iconCustomTextPh:'Введіть 1–2 символи', iconUploadedHere:'Завантажено в цей Nexus', colorCustom:'Власний колір',colorHex:'Код кольору (HEX)', colorWheel:'Коло', colorRgb:'RGB', colorGrid:'Сітка', colorBrightness:'Яскравість',
   // Procress 29 part 2: a folder's page — File Explorer views
   folderOpenPage:'Відкрити як сторінку', folderView:'Вигляд', folderViewLarge:'Великі значки', folderViewSmall:'Малі значки', folderViewList:'Список', folderViewDetails:'Таблиця', folderColKind:'Тип', folderColItems:'Елементи',
   // Procress 24: customisation within 2–3 clicks

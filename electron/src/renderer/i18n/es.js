@@ -7,7 +7,7 @@ i18nAdd('es', {
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Actualización lista', updateReadyHint:'La versión {v} está descargada y verificada: instálala ahora y DraconDex se volverá a abrir solo.', updateInstallRestart:'Instalar y reiniciar', updateLater:'Más tarde', updateMode:'Cuando haya una versión nueva', updateModeAsk:'Descargar y preguntar', updateModeQuit:'Al cerrar', updateModeNotify:'Solo avisar', updateModeOff:'No buscar', updateModeQuitUnsigned:'Las versiones aún no están firmadas, así que se seguirá preguntando antes de instalar.', updateDone:'Actualizado a {v}', updateWhatsNew:'Novedades',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
-  iconSet:'Conjunto de iconos', iconCustomText:'Letra o emoji', iconCustomTextPh:'Escribe 1–2 caracteres', iconUploadedHere:'Subidos en este Nexus', colorCustom:'Color personalizado', colorWheel:'Rueda', colorRgb:'RGB', colorGrid:'Cuadrícula', colorBrightness:'Brillo',
+  iconSet:'Conjunto de iconos', iconCustomText:'Letra o emoji', iconCustomTextPh:'Escribe 1–2 caracteres', iconUploadedHere:'Subidos en este Nexus', colorCustom:'Color personalizado',colorHex:'Código de color (HEX)', colorWheel:'Rueda', colorRgb:'RGB', colorGrid:'Cuadrícula', colorBrightness:'Brillo',
   // Procress 29 part 2: a folder's page — File Explorer views
   folderOpenPage:'Abrir como página', folderView:'Vista', folderViewLarge:'Iconos grandes', folderViewSmall:'Iconos pequeños', folderViewList:'Lista', folderViewDetails:'Detalles', folderColKind:'Tipo', folderColItems:'Elementos',
   // Procress 24: customisation within 2–3 clicks

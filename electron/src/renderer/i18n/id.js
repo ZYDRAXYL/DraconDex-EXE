@@ -7,7 +7,7 @@ i18nAdd('id', {
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Pembaruan siap', updateReadyHint:'Versi {v} sudah diunduh dan diperiksa — pasang sekarang, DraconDex akan terbuka lagi sendiri.', updateInstallRestart:'Pasang dan mulai ulang', updateLater:'Nanti', updateMode:'Saat ada versi baru', updateModeAsk:'Unduh, lalu tanya', updateModeQuit:'Pasang saat ditutup', updateModeNotify:'Hanya beri tahu', updateModeOff:'Jangan periksa', updateModeQuitUnsigned:'Rilis belum ditandatangani, jadi tetap ditanya sebelum dipasang.', updateDone:'Diperbarui ke {v}', updateWhatsNew:'Yang baru',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
-  iconSet:'Set ikon', iconCustomText:'Huruf atau emoji', iconCustomTextPh:'Ketik 1–2 karakter', iconUploadedHere:'Diunggah di Nexus ini', colorCustom:'Warna sendiri', colorWheel:'Roda', colorRgb:'RGB', colorGrid:'Kisi', colorBrightness:'Kecerahan',
+  iconSet:'Set ikon', iconCustomText:'Huruf atau emoji', iconCustomTextPh:'Ketik 1–2 karakter', iconUploadedHere:'Diunggah di Nexus ini', colorCustom:'Warna sendiri',colorHex:'Kode warna (HEX)', colorWheel:'Roda', colorRgb:'RGB', colorGrid:'Kisi', colorBrightness:'Kecerahan',
   // Procress 29 part 2: a folder's page — File Explorer views
   folderOpenPage:'Buka sebagai halaman', folderView:'Tampilan', folderViewLarge:'Ikon besar', folderViewSmall:'Ikon kecil', folderViewList:'Daftar', folderViewDetails:'Detail', folderColKind:'Jenis', folderColItems:'Item',
   // Procress 24: customisation within 2–3 clicks

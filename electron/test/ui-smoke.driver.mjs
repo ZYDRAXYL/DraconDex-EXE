@@ -1386,14 +1386,40 @@ test('29 part 5: a colour pick keeps the icon, an icon pick keeps the colour, tw
   await win.evaluate(() => { closeAllPopups(); closeModal(); });
 });
 
-test('29 part 1: a popup that grows after it opens stays 8 px inside the window', async () => {
+test('30: icon popup — recent icons fill two rows, colours three rows by last use, the HEX box picks a colour', async () => {
+  const id = await win.evaluate(() => flattenModulesByKind(S.moduleTree, [])[2].id);
+  const open = async () => { await win.evaluate((id) => openModuleIconPopup(id, document.querySelector(`[data-mid="${id}"] .kicon`) || document.body), id); await win.waitForSelector('.icon-edit-popup .ipk-icon-grid .ipk-cell'); };
+  await open();
+  for (let i = 0; i < 20; i++) await win.locator('.icon-edit-popup .ipk-icon-grid .ipk-cell').nth(i).click();
+  const before = await win.evaluate(async (id) => (await api.module.get(id)).icon, id);
+  await win.locator('.icon-edit-popup .ipk-hex').fill('#3a7');
+  await win.locator('.icon-edit-popup .ipk-hex').press('Enter'); await sleep(600);
+  const m = await win.evaluate(async (id) => { const m = await api.module.get(id); return { icon: m.icon, code: S.colors.find((c) => c.id === m.color)?.color_code }; }, id);
+  assert.deepEqual(m, { icon: before, code: '#33aa77' }, 'the HEX box set the colour and left the icon alone');
+  await win.locator('.icon-edit-popup .ipk-hex').fill('zz'); await win.locator('.icon-edit-popup .ipk-hex').press('Enter');
+  assert.equal(await win.locator('.icon-edit-popup .ipk-hex').getAttribute('aria-invalid'), 'true');
+  await win.evaluate(() => closeAllPopups()); await sleep(200);
+  await open();
+  const r = await win.evaluate(() => {
+    const p = q('.icon-edit-popup');
+    const rows = (box, sel) => { const b = box.getBoundingClientRect(); return new Set([...box.querySelectorAll(sel)].filter((c) => c.getBoundingClientRect().bottom <= b.bottom + 0.5).map((c) => Math.round(c.getBoundingClientRect().top))).size; };
+    const plus = p.querySelector('.ipk-color-custom').getBoundingClientRect();
+    return { rec: rows(p.querySelector('.ipk-recent'), '.ipk-cell'), recScrolls: getComputedStyle(p.querySelector('.ipk-recent')).overflowY !== 'hidden', cols: rows(p.querySelector('.ipk-colors'), '.cswatch,.ipk-color-custom'),
+      first: p.querySelector('.ipk-colors .cswatch').style.background, hex: p.querySelector('.ipk-hex').value, plus: plus.width > 0 && plus.height > 0 };
+  });
+  assert.deepEqual(r, { rec: 2, recScrolls: false, cols: Math.min(r.cols, 3), first: 'rgb(51, 170, 119)', hex: '#33aa77', plus: true });
+  assert.ok(r.cols <= 3, 'at most three lines of colours');
+  await win.evaluate(() => closeAllPopups());
+});
+
+test('29 part 1 / 30 part 4: a popup that grows after it opens stays 10 px inside the window', async () => {
   await win.setViewportSize({ width: 900, height: 520 });
   const mid = await win.evaluate(async () => { const nx = S.nexus.id; await api.module.createMany(Array.from({ length: 30 }, (_, i) => ({ nexus_ref: nx, name: 'Edge ' + i, kind: 'scribe' }))); await reloadModuleTree(); return flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Edge 0').id; });
   await win.evaluate((id) => openModuleNode(id), mid); await sleep(500);
   await win.locator('.module-page .ph-links-open').first().click();
   await win.locator('.ph-links-pop .ph-link-q').fill('Edge'); await sleep(700);
   const r = await win.evaluate(() => { const b = q('.ph-links-pop').getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: innerWidth, h: innerHeight }; });
-  assert.ok(r.l >= 8 && r.t >= 8 && r.r <= r.w - 8 && r.b <= r.h - 8, `inside the window: ${JSON.stringify(r)}`);
+  assert.ok(r.l >= 10 && r.t >= 10 && r.r <= r.w - 10 && r.b <= r.h - 10, `inside the window: ${JSON.stringify(r)}`);
   await win.keyboard.press('Escape');
   await win.setViewportSize({ width: 1280, height: 800 });
 });

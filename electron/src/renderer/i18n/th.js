@@ -7,7 +7,7 @@ i18nAdd('th', {
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'อัปเดตพร้อมติดตั้ง', updateReadyHint:'ดาวน์โหลดและตรวจเวอร์ชัน {v} แล้ว — ติดตั้งตอนนี้ แล้ว DraconDex จะเปิดใหม่เอง', updateInstallRestart:'ติดตั้งและรีสตาร์ท', updateLater:'ภายหลัง', updateMode:'เมื่อมีเวอร์ชันใหม่', updateModeAsk:'ดาวน์โหลดเอง แล้วถามก่อนติดตั้ง', updateModeQuit:'ติดตั้งเงียบตอนปิดแอป', updateModeNotify:'แจ้งเตือนอย่างเดียว', updateModeOff:'ไม่ต้องตรวจ', updateModeQuitUnsigned:'release ยังไม่มีลายเซ็น — จึงยังถามก่อนติดตั้งเหมือนเดิม', updateDone:'อัปเดตเป็น {v} แล้ว', updateWhatsNew:'ดูว่ามีอะไรใหม่',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
-  iconSet:'ชุดไอคอน', iconCustomText:'ตัวอักษร / อีโมจิ', iconCustomTextPh:'พิมพ์ 1–2 ตัว', iconUploadedHere:'ที่อัปโหลดไว้ใน Nexus นี้', colorCustom:'สีกำหนดเอง', colorWheel:'วงล้อสี', colorRgb:'RGB', colorGrid:'ตารางสี', colorBrightness:'ความสว่าง',
+  iconSet:'ชุดไอคอน', iconCustomText:'ตัวอักษร / อีโมจิ', iconCustomTextPh:'พิมพ์ 1–2 ตัว', iconUploadedHere:'ที่อัปโหลดไว้ใน Nexus นี้', colorCustom:'สีกำหนดเอง',colorHex:'รหัสสี (HEX)', colorWheel:'วงล้อสี', colorRgb:'RGB', colorGrid:'ตารางสี', colorBrightness:'ความสว่าง',
   // Procress 29 part 2: a folder's page — File Explorer views
   folderOpenPage:'เปิดเป็นหน้า', folderView:'มุมมอง', folderViewLarge:'ไอคอนใหญ่', folderViewSmall:'ไอคอนเล็ก', folderViewList:'รายการ', folderViewDetails:'รายละเอียด', folderColKind:'ชนิด', folderColItems:'จำนวน',
   // Procress 24: customisation within 2–3 clicks

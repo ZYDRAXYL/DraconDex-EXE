@@ -7,7 +7,7 @@ i18nAdd('nl', {
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Update klaar', updateReadyHint:'Versie {v} is gedownload en gecontroleerd — installeer nu en DraconDex opent vanzelf opnieuw.', updateInstallRestart:'Installeren en herstarten', updateLater:'Later', updateMode:'Als er een nieuwe versie is', updateModeAsk:'Downloaden, dan vragen', updateModeQuit:'Bij afsluiten', updateModeNotify:'Alleen melden', updateModeOff:'Niet controleren', updateModeQuitUnsigned:'Releases zijn nog niet ondertekend, dus er wordt nog gevraagd vóór installatie.', updateDone:'Bijgewerkt naar {v}', updateWhatsNew:'Wat is er nieuw',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
-  iconSet:'Pictogrammenset', iconCustomText:'Letter of emoji', iconCustomTextPh:'Typ 1–2 tekens', iconUploadedHere:'Geüpload in deze Nexus', colorCustom:'Eigen kleur', colorWheel:'Kleurenwiel', colorRgb:'RGB', colorGrid:'Raster', colorBrightness:'Helderheid',
+  iconSet:'Pictogrammenset', iconCustomText:'Letter of emoji', iconCustomTextPh:'Typ 1–2 tekens', iconUploadedHere:'Geüpload in deze Nexus', colorCustom:'Eigen kleur',colorHex:'Kleurcode (HEX)', colorWheel:'Kleurenwiel', colorRgb:'RGB', colorGrid:'Raster', colorBrightness:'Helderheid',
   // Procress 29 part 2: a folder's page — File Explorer views
   folderOpenPage:'Openen als pagina', folderView:'Weergave', folderViewLarge:'Grote pictogrammen', folderViewSmall:'Kleine pictogrammen', folderViewList:'Lijst', folderViewDetails:'Details', folderColKind:'Soort', folderColItems:'Items',
   // Procress 24: customisation within 2–3 clicks

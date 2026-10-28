@@ -7,7 +7,7 @@ i18nAdd('zh', {
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'更新已就绪', updateReadyHint:'版本 {v} 已下载并校验——现在安装，DraconDex 会自动重新打开。', updateInstallRestart:'安装并重启', updateLater:'稍后', updateMode:'有新版本时', updateModeAsk:'下载后询问', updateModeQuit:'关闭时安装', updateModeNotify:'仅通知', updateModeOff:'不检查', updateModeQuitUnsigned:'发行版尚未签名，因此安装前仍会询问。', updateDone:'已更新到 {v}', updateWhatsNew:'新功能',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
-  iconSet:'图标集', iconCustomText:'文字或表情', iconCustomTextPh:'输入 1–2 个字符', iconUploadedHere:'此 Nexus 中已上传', colorCustom:'自定义颜色', colorWheel:'色轮', colorRgb:'RGB', colorGrid:'色板', colorBrightness:'亮度',
+  iconSet:'图标集', iconCustomText:'文字或表情', iconCustomTextPh:'输入 1–2 个字符', iconUploadedHere:'此 Nexus 中已上传', colorCustom:'自定义颜色',colorHex:'颜色代码 (HEX)', colorWheel:'色轮', colorRgb:'RGB', colorGrid:'色板', colorBrightness:'亮度',
   // Procress 29 part 2: a folder's page — File Explorer views
   folderOpenPage:'作为页面打开', folderView:'视图', folderViewLarge:'大图标', folderViewSmall:'小图标', folderViewList:'列表', folderViewDetails:'详细信息', folderColKind:'类型', folderColItems:'项目数',
   // Procress 24: customisation within 2–3 clicks

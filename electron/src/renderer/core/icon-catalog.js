@@ -114,12 +114,15 @@ function iconMatches(key, query) {
 const emojiList = (cat) => (cat ? EMOJI_CATS[cat] || '' : Object.values(EMOJI_CATS).join(' ')).split(' ').filter(Boolean);
 
 // Icons used last, newest first — a per-viewer convenience, so browser
-// storage; a private window just starts without one.
+// storage; a private window just starts without one. Procress 30: a picker
+// shows as many as fit in TWO rows at its width (CSS clips the rest), so
+// this keeps enough to fill two rows of the widest one.
 const ICON_RECENT_KEY = 'ddx.iconRecent';
+const ICON_RECENT_MAX = 32;
 function iconRecent() {
-  try { const v = JSON.parse(localStorage.getItem(ICON_RECENT_KEY) || '[]'); return Array.isArray(v) ? v.filter((r) => typeof r === 'string' && /^(svg|sym):/.test(r)).slice(0, 12) : []; } catch (_) { return []; }
+  try { const v = JSON.parse(localStorage.getItem(ICON_RECENT_KEY) || '[]'); return Array.isArray(v) ? v.filter((r) => typeof r === 'string' && /^(svg|sym):/.test(r)).slice(0, ICON_RECENT_MAX) : []; } catch (_) { return []; }
 }
 function iconRecentPush(ref) {
   if (!/^(svg|sym):/.test(String(ref || ''))) return;
-  try { localStorage.setItem(ICON_RECENT_KEY, JSON.stringify([ref, ...iconRecent().filter((r) => r !== ref)].slice(0, 12))); } catch (_) { /* no storage: no recents */ }
+  try { localStorage.setItem(ICON_RECENT_KEY, JSON.stringify([ref, ...iconRecent().filter((r) => r !== ref)].slice(0, ICON_RECENT_MAX))); } catch (_) { /* no storage: no recents */ }
 }

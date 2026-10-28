@@ -21,11 +21,11 @@ test('flips above when there is no room below', () => {
   assert.equal(p.top, 700 - 150 - 6);
 });
 test('shifts left instead of running off the right edge', () => {
-  assert.equal(P.floatingRect(R(950, 100), 200, 150, 1000, 800).left, 1000 - 200 - 8);
+  assert.equal(P.floatingRect(R(950, 100), 200, 150, 1000, 800).left, 1000 - 200 - 10);
 });
 test('never off-screen, even with no room either side', () => {
   const p = P.floatingRect(R(10, 390), 300, 700, 1000, 800);
-  assert.ok(p.top >= 8 && p.left >= 8);
+  assert.ok(p.top >= 10 && p.left >= 10);
 });
 test('a submenu goes right, and flips left at the edge', () => {
   assert.deepEqual({ ...P.floatingRect(R(500, 100, 280, 28), 200, 100, 1000, 800, 'right-start') }, { left: 782, top: 100, side: 'right' });

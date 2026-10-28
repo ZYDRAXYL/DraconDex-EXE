@@ -105,8 +105,12 @@
 .pb-ipk-cell .pb-ico{color:inherit}
 /* the module icon picker's search + recent row (iconpicker.js) */
 .ipk-search{width:100%;margin:4px 0 6px;background:var(--raised);color:var(--t1);border:1px solid var(--border);border-radius:var(--r);padding:5px 8px;font:inherit}
-.ipk-recent{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin-bottom:6px}
-.ipk-recent .pk{margin-right:6px}
+/* Procress 30: as many recent icons as fit in TWO rows at the picker's width —
+   the rest is clipped, never scrolled, and the row never grows the popup. */
+.ipk-recent-label{display:block;margin-bottom:4px;color:var(--t3-aa,var(--t2));font-size:calc(var(--fs-meta) * var(--fsc,1))}
+.ipk-recent{display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));grid-auto-rows:36px;justify-items:center;gap:6px;
+	max-height:calc(2 * 36px + 6px);overflow:hidden;flex-shrink:0;margin-bottom:8px}
+.pb-ipk-recent{grid-auto-rows:34px;max-height:calc(2 * 34px + 2px);overflow:hidden}
 
 /* the picture picker */
 .pb-imgpick-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}

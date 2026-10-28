@@ -7,7 +7,7 @@ i18nAdd('tr', {
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Güncelleme hazır', updateReadyHint:'{v} sürümü indirildi ve doğrulandı — şimdi kurun, DraconDex kendiliğinden yeniden açılır.', updateInstallRestart:'Kur ve yeniden başlat', updateLater:'Sonra', updateMode:'Yeni sürüm çıktığında', updateModeAsk:'İndir, sonra sor', updateModeQuit:'Kapanırken kur', updateModeNotify:'Sadece bildir', updateModeOff:'Denetleme', updateModeQuitUnsigned:'Sürümler henüz imzalı değil, bu yüzden kurulumdan önce yine sorulur.', updateDone:'{v} sürümüne güncellendi', updateWhatsNew:'Yenilikler',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
-  iconSet:'Simge seti', iconCustomText:'Harf veya emoji', iconCustomTextPh:'1–2 karakter yazın', iconUploadedHere:'Bu Nexus\'a yüklenenler', colorCustom:'Özel renk', colorWheel:'Çark', colorRgb:'RGB', colorGrid:'Izgara', colorBrightness:'Parlaklık',
+  iconSet:'Simge seti', iconCustomText:'Harf veya emoji', iconCustomTextPh:'1–2 karakter yazın', iconUploadedHere:'Bu Nexus\'a yüklenenler', colorCustom:'Özel renk',colorHex:'Renk kodu (HEX)', colorWheel:'Çark', colorRgb:'RGB', colorGrid:'Izgara', colorBrightness:'Parlaklık',
   // Procress 29 part 2: a folder's page — File Explorer views
   folderOpenPage:'Sayfa olarak aç', folderView:'Görünüm', folderViewLarge:'Büyük simgeler', folderViewSmall:'Küçük simgeler', folderViewList:'Liste', folderViewDetails:'Ayrıntılar', folderColKind:'Tür', folderColItems:'Öğeler',
   // Procress 24: customisation within 2–3 clicks

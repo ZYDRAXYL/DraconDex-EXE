@@ -258,9 +258,15 @@ function bindTimelineGraphInteractions(tlid){
       const xWorld = svgX(e.clientX) - st.tx;
       const ratio = Math.max(0, Math.min(1, (xWorld - margin) / (usable * st.scale)));
       tip.textContent = fmtTimelinePoint(minTs + ratio * spanTs);
-      tip.style.left = `${e.clientX - board.getBoundingClientRect().left + 10}px`;
-      tip.style.top = `${e.clientY - board.getBoundingClientRect().top - 28}px`;
       tip.classList.remove('hidden');
+      // Procress 30: kept POPOVER_MARGIN inside the board and the window
+      const br = board.getBoundingClientRect();
+      const lo = (a, b) => Math.max(a, b) + POPOVER_MARGIN;
+      const fit = (v, min, max) => Math.max(min, Math.min(v, Math.max(min, max)));
+      const vx = fit(e.clientX + 10, lo(br.left, 0), Math.min(br.right, window.innerWidth) - POPOVER_MARGIN - tip.offsetWidth);
+      const vy = fit(e.clientY - 28, lo(br.top, 0), Math.min(br.bottom, window.innerHeight) - POPOVER_MARGIN - tip.offsetHeight);
+      tip.style.left = `${vx - br.left}px`;
+      tip.style.top = `${vy - br.top}px`;
     });
     axis.addEventListener('mouseleave', () => tip.classList.add('hidden'));
   }

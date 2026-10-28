@@ -52,7 +52,7 @@ function pbIpkRender() {
     <div class="seg seg-sm seg-fill pb-tabs2" role="tablist">${tab('icons', 'iconTabIcons')}${tab('emoji', 'iconTabEmoji')}${tab('symbols', 'iconTabSymbols')}</div>
     ${s.tab === 'icons' ? `<input type="search" class="pb-ipk-q" value="${x(s.query)}" placeholder="${x(t('iconSearchPh'))}" aria-label="${x(t('iconSearchPh'))}"
       oninput="_pbIpk.query=this.value;clearTimeout(this._t);this._t=setTimeout(()=>{pbIpkRender();const i=q('#pb-ipk .pb-ipk-q');i.focus();i.setSelectionRange(i.value.length,i.value.length)},120)">` : ''}
-    ${recent.length ? `<h6>${t('iconRecent')}</h6><div class="pb-ipk-grid">${recent.map((r) => cell(r, pbIconHtml(r))).join('')}</div>` : ''}
+    ${recent.length ? `<h6>${t('iconRecent')}</h6><div class="pb-ipk-grid pb-ipk-recent">${recent.map((r) => cell(r, pbIconHtml(r))).join('')}</div>` : ''}
     ${body}`;
 }
 
