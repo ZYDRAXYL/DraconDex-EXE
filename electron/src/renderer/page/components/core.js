@@ -37,8 +37,9 @@ registerFilled('core.infobox', {
   setTimeout(() => { if (pic && typeof watchPageCovers === 'function') watchPageCovers(); }, 0);
   const body = rows.length
     ? rows.map((r) => (layout === 'table'
-      ? `<div class="pc-ib-row"><span class="pc-ib-k">${x(r.label)}</span><span class="pc-ib-v">${r.value === '' ? '<span class="ghost">—</span>' : x(r.value)}</span></div>`
-      : `<div class="pc-ib-stack"><div class="pc-ib-k">${x(r.label)}</div><div class="pc-ib-v">${r.value === '' ? '<span class="ghost">—</span>' : x(r.value)}</div></div>`)).join('')
+      // Procress 31 part 5: a value's [[links]] show as links (wikiViewHtml escapes the rest)
+      ? `<div class="pc-ib-row"><span class="pc-ib-k">${x(r.label)}</span><span class="pc-ib-v">${r.value === '' ? '<span class="ghost">—</span>' : wikiViewHtml(r.value)}</span></div>`
+      : `<div class="pc-ib-stack"><div class="pc-ib-k">${x(r.label)}</div><div class="pc-ib-v">${r.value === '' ? '<span class="ghost">—</span>' : wikiViewHtml(r.value)}</div></div>`)).join('')
     : pcEmpty(t('pcInfoboxEmpty'));
   return `<aside class="pc-infobox" data-dock="${dock}">${title ? `<div class="pc-ib-title">${x(title)}</div>` : ''}
     ${pic ? `<div class="ph-cover pc-ib-pic" data-cover-sha="${x(pic)}"></div>` : ''}${body}</aside>`;
