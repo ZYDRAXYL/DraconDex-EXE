@@ -75,7 +75,7 @@ function pbcEntries(page, where = null) {
 function pbcCardHtml(e, where) {
   const pic = e.mod
     ? `<span class="pbc-pic" data-pic="kind" style="color:${x(e.mod.color_code || KIND_COLOR[e.mod.kind] || 'var(--accent)')}">${moduleIconHtml(e.mod)}</span>`
-    : `<span class="pbc-pic" data-pic="${PBC_PIC_OF[e.key] || PBC_PIC[e.cat]}" aria-hidden="true"><i></i><i></i><i></i></span>`;
+    : `<span class="pbc-pic" data-pic="${PBC_PIC_OF[e.key] || PBC_PIC[e.cat]}"${e.key.startsWith('c:') ? ` data-live="${x(e.key)}"` : ''} aria-hidden="true"><i></i><i></i><i></i></span>`;
   return `<button class="btn pbc-card" draggable="true" data-key="${x(e.key)}"
       ondragstart="pbcDragStart(event,${xj(e.key)})" ondragend="_pbNew=null"
       onclick="pbcInsert(${xj(e.key)},${xv(where)})">${pic}
@@ -92,7 +92,81 @@ function pbcBodyHtml(page, where = null) {
   const recent = q ? [] : pbcRecent().map((k) => byKey.get(k)).filter(Boolean);
   const cats = [...PBC_CATS.map(([c, key]) => [c, t(key)]), ['this', t('pbcThis')], ['other', t('pbcOther')]];
   const body = cats.map(([c, title]) => sec(title, all.filter((e) => e.cat === c && hit(e)))).join('');
+  requestAnimationFrame(pbcLiveScan); // after the caller has put this in the document
   return `${sec(t('pbcRecent'), recent)}${body || `<p class="drafter-hint">${t('pbNoMatch')}</p>`}`;
+}
+
+// ── Live previews (Procress 31 part 6, D6) ──────────────────────────────
+// A component's card shows the component itself, drawn from the page being
+// arranged — its real name, properties, objects, children — instead of a
+// drawn shape. It is the component's own render(c) with this page as c, then
+// its mount() once in a hidden box inside the panel (that is where most fill in
+// their data), copied as a static picture: shrunk with zoom, inert, with no
+// ids or handlers. Media, 3D and video never mount in a card (nothing to
+// gain, a decoder or WebGL context to pay for). Drawn when the card scrolls
+// into view, kept per page object (reloading the page makes a new one).
+// Anything that throws, or shows only its "nothing here yet" hint, or holds
+// blocks of its own (tabs, toggle), keeps the drawn shape.
+const PBC_NO_MOUNT = new Set(['core.model3d', 'core.video', 'core.audio', 'core.pdf', 'core.media']);
+const _pbcLive = new WeakMap(); // page → Map(key → Promise<html | null>)
+let _pbcLiveIo = null;
+
+function pbcPreviewHtml(page, key, host) {
+  let memo = _pbcLive.get(page);
+  if (!memo) _pbcLive.set(page, memo = new Map());
+  if (!memo.has(key)) memo.set(key, pbcDrawPreview(page, key, host).catch(() => null));
+  return memo.get(key);
+}
+
+// host: where the hidden stage goes (the collection's own body — not <body>,
+// it is not a layer anyone sees).
+async function pbcDrawPreview(page, key, host = document.querySelector('.pbc-body') || document.querySelector('#main-inner')) {
+  const comp = COMPONENTS[key.slice(2)];
+  const source = findModuleNode(page.moduleId);
+  if (!comp || comp.container || !source) return null;
+  const block = { id: -1, block_type: 'component', component: comp.id, config: {}, source_key: null, parent_id: null };
+  const c = { iid: `pbc-preview.${comp.id}`, block, page, source, config: {}, state: {}, itemKey: page.itemKey, preview: true };
+  const box = document.createElement('div');
+  box.className = 'pbc-stage';
+  box.setAttribute('aria-hidden', 'true');
+  box.innerHTML = comp.render(c) || '';
+  host.append(box);
+  try {
+    if (comp.mount && !PBC_NO_MOUNT.has(comp.id)) {
+      c.root = box;
+      // mount() starts its read without returning it (common.js pcFill): wait
+      // until the shell's "Loading…" is replaced, at most 800 ms.
+      await Promise.resolve(comp.mount(c));
+      for (let waited = 0; box.querySelector('.pc-loading') && waited < 800; waited += 40) await new Promise((r) => setTimeout(r, 40));
+    }
+    for (const el of box.querySelectorAll('*')) {
+      for (const a of [...el.attributes]) if (a.name === 'id' || a.name.startsWith('on') || a.name === 'contenteditable' || a.name === 'tabindex') el.removeAttribute(a.name);
+    }
+    const probe = box.cloneNode(true);
+    probe.querySelectorAll('.drafter-hint,.pb-loading,.pb-empty,.pc-loading,.pc-empty').forEach((n) => n.remove());
+    return probe.textContent.trim() || probe.querySelector('img,svg') ? box.innerHTML : null;
+  } finally {
+    box.remove();
+  }
+}
+
+function pbcLiveScan() {
+  const pics = document.querySelectorAll('.pbc-pic[data-live]:not([data-seen])');
+  if (!pics.length) return;
+  _pbcLiveIo ||= new IntersectionObserver((entries) => {
+    const page = pbcPage();
+    for (const en of entries) {
+      if (!en.isIntersecting || !page) continue;
+      _pbcLiveIo.unobserve(en.target);
+      const pic = en.target;
+      pbcPreviewHtml(page, pic.dataset.live, pic.closest('.pbc-body')).then((html) => {
+        if (!html || !pic.isConnected) return;
+        pic.classList.add('pbc-pic-live');
+        pic.innerHTML = `<span class="pbc-live" inert>${html}</span>`;
+      });
+    }
+  });
+  for (const el of pics) { el.dataset.seen = '1'; _pbcLiveIo.observe(el); }
 }
 
 // The left panel while arranging (hub/activity.js buildLeftPanelHtml).

@@ -1775,3 +1775,38 @@ test('31 part 5: ]] makes a link as you type, Backspace takes a link whole, page
     for (const id of ids) await api.classifier.deleteObject(id); await openModuleNode(m);
   }, [mid, tpl, [first.id, other.id]]);
 });
+
+// ── Procress 31 part 6 ───────────────────────────────────────────────────
+test('31 part 6: the component collection shows each component drawn from the page being arranged', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('Characters').click(); await sleep(600);
+  const name = await win.evaluate(() => S.activeModuleNode.name);
+  const t0 = Date.now();
+  await win.evaluate(() => runCommand('page.arrange')); await sleep(800);
+  // drawn as they scroll in: bring the data cards into view
+  await win.locator('#left-panel-inner .pbc-card[data-key="c:core.infobox"]').scrollIntoViewIfNeeded(); await sleep(1200);
+  const live = win.locator('#left-panel-inner .pbc-pic-live');
+  assert.ok(await live.count() >= 2, `live previews (${await live.count()})`);
+  assert.equal(await win.locator('#left-panel-inner .pbc-card[data-key="c:core.banner"] .pbc-pic-live').count(), 0, 'a "nothing yet" hint keeps the drawn shape');
+  const opened = Date.now() - t0;
+  await win.screenshot({ path: process.env.SMOKE_SHOTS ? `${process.env.SMOKE_SHOTS}/31-collection.png` : undefined });
+  // the infobox / properties preview carries this page's real data, not a shape
+  const texts = await live.evaluateAll((els) => els.map((e) => e.textContent));
+  assert.ok(texts.some((tx) => tx.includes(name)), `some card shows "${name}"`);
+  const leak = await win.evaluate(() => [...document.querySelectorAll('.pbc-live')].reduce((n, el) => n + el.querySelectorAll('[id],[onclick],[onpointerdown],[contenteditable]').length, 0));
+  assert.equal(leak, 0, 'no ids (they would clash with the page) and no handlers in a picture');
+  assert.equal(await live.first().locator('.pbc-live[inert]').count(), 1, 'inert');
+  // a card still adds its block: drag/click are the card's, not the picture's
+  const before = await win.evaluate(() => pageOf(S.activeModuleNode.id, null).blocks.length);
+  await live.first().click(); await sleep(800);
+  assert.equal(await win.evaluate(() => pageOf(S.activeModuleNode.id, null).blocks.length), before + 1, 'a click on the card adds it');
+  // what drawing every card costs (render + mount, in sequence, uncached)
+  const cost = await win.evaluate(async () => {
+    const p = pbcPage(); const keys = pbcEntries(p).map((e) => e.key).filter((k) => k.startsWith('c:'));
+    const t = performance.now(); let shown = 0;
+    for (const k of keys) if (await pbcDrawPreview(p, k)) shown++;
+    return { n: keys.length, shown, ms: Math.round(performance.now() - t) };
+  });
+  console.log(`# 31 part 6: every card drawn once: ${JSON.stringify(cost)} (panel open ${opened} ms incl. an 800 ms wait)`);
+  await win.evaluate(async () => { const p = pageOf(S.activeModuleNode.id, null); const last = p.blocks.at(-1); await api.block.remove(last.id); runCommand('page.arrange'); await reloadModulePage(S.activeModuleNode.id, null); });
+});

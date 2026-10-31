@@ -269,6 +269,12 @@ body.focus-mode #title-left-zone{width:44px}
 .pbc-sub{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2))}
 .pbc-pic{display:flex;gap:3px;height:40px;padding:6px;border-radius:var(--rs);background:var(--raised);overflow:hidden}
 .pbc-pic i{display:block;background:var(--t3-aa,var(--t2));opacity:.45;border-radius:2px}
+/* Procress 31 part 6: the component itself, drawn from the page being arranged
+   and shrunk (page/collection.js pbcPreviewHtml) — a picture, never a control */
+.pbc-pic.pbc-pic-live{display:block;height:72px;padding:0;background:var(--bg);border:1px solid var(--border)}
+.pbc-live{display:block;width:400px;zoom:.28;padding:12px;pointer-events:none;user-select:none}
+.pbc-body{position:relative}
+.pbc-stage{position:absolute;left:0;top:0;width:400px;height:0;overflow:hidden;visibility:hidden;pointer-events:none;contain:layout paint}
 .pbc-pic[data-pic=lines]{flex-direction:column}.pbc-pic[data-pic=lines] i{height:4px}.pbc-pic[data-pic=lines] i:last-child{width:60%}
 .pbc-pic[data-pic=title]{flex-direction:column}.pbc-pic[data-pic=title] i:first-child{height:10px;width:70%;opacity:.8}.pbc-pic[data-pic=title] i{height:4px}
 .pbc-pic[data-pic=cols] i,.pbc-pic[data-pic=tabs] i{flex:1}.pbc-pic[data-pic=tabs]{flex-direction:column}.pbc-pic[data-pic=tabs] i:first-child{flex:0 0 6px;width:50%;opacity:.8}
