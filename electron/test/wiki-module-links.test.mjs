@@ -162,3 +162,19 @@ test('the link pattern: a lone " is a character, a quote never spans ]] , and ma
   all('[[' + '""'.repeat(20000));
   assert.ok(Date.now() - t0 < 500, 'no exponential backtracking');
 });
+
+// Procress 31 part 4: the relation view's dashed lines.
+test('linksAmong: links whose both ends are in the set, each pair once, either direction', () => {
+  freshVault();
+  const c = mkModule('Cast', 'classifier');
+  const a = cls.createObject(c, 'Ann', null, null), b = cls.createObject(c, 'Bo', null, null), z = cls.createObject(c, 'Zed', null, null);
+  const ins = db.prepare(`INSERT INTO wiki_link (nexus_ref, src_key, target_key, target_text) VALUES (1,?,?,?)`);
+  ins.run(`cobj_${a}`, `cobj_${b}`, 'Bo'); ins.run(`cobj_${b}`, `cobj_${a}`, 'Ann'); // both ways: one pair
+  ins.run(`cobj_${a}`, `cobj_${z}`, 'Zed');                                          // Zed is not in the set
+  ins.run(`cobj_${a}`, null, 'Nobody');                                              // unresolved
+  ins.run(`cobj_${a}`, `cobj_${a}`, 'Ann');                                          // itself
+  const got = wiki.linksAmong(1, [`cobj_${a}`, `cobj_${b}`]);
+  assert.equal(got.length, 1);
+  assert.deepEqual(new Set([got[0].from_key, got[0].to_key]), new Set([`cobj_${a}`, `cobj_${b}`]));
+  assert.deepEqual(wiki.linksAmong(1, [`cobj_${a}`]), []);
+});

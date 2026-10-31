@@ -1691,3 +1691,31 @@ test('31 parts 2–3: Classifier view options — sort (manual stays), hidden fi
   assert.ok(await win.locator('tr[data-cls-oid] .cls-name-cell').first().evaluate((td) => !!td.querySelector('[onpointerdown]')), 'and the grip is back');
   await win.evaluate(async ([m, t]) => { await api.classifier.deleteTemplate(t); await setClsTable(m, { hidden: [], lines: 'auto', overflow: 'hidden' }); await refreshClassifier(); }, [mid, tpl]);
 });
+
+// ── Procress 31 part 4 ───────────────────────────────────────────────────
+test('31 part 4: a [[link]] between two objects is a dashed line in the Relation view; the legend hides it', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('Characters').click(); await sleep(600);
+  const mid = await win.evaluate(() => S.activeModuleNode.id);
+  // two new objects: the sample ones are already joined by relations, and a relation wins over a link
+  const [a, b] = await win.evaluate(async (m) => {
+    const ids = [await api.classifier.createObject(m, 'Smoke Ash', null, null), await api.classifier.createObject(m, 'Smoke Birch', null, null)];
+    return ids.map((id, i) => ({ id, name: ['Smoke Ash', 'Smoke Birch'][i] }));
+  }, mid);
+  const tpl = await win.evaluate(async ([m, oid, name]) => {
+    const t = await api.classifier.createTemplate(m, 'Smoke knows', 'text', false, false, null);
+    await api.classifier.upsertAttr(oid, t, `[[${name}]]`); await refreshClassifier(); return t;
+  }, [mid, a.id, b.name]);
+  await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'relationCat'), mid);
+  await sleep(1500);
+  const dashed = () => win.locator('.cls-rel-graph line[stroke-dasharray]').evaluateAll((ls) => ls.filter((l) => l.style.display !== 'none').length);
+  const before = await win.evaluate((m) => api.wiki.linksAmong(S.nexus.id, clsData(m).objects.map((o) => `cobj_${o.id}`)), mid);
+  assert.ok(before.some((l) => [l.from_key, l.to_key].sort().join() === [`cobj_${a.id}`, `cobj_${b.id}`].sort().join()), 'the link is indexed');
+  assert.ok(await dashed() >= 1, 'a dashed line for the link');
+  await win.locator('.cls-rel-graph .sage-graph-wiki-toggle').uncheck(); await sleep(300);
+  assert.equal(await dashed(), 0, 'hidden from the legend');
+  assert.equal((await win.evaluate((m) => api.module.getUi(m), mid)).clsRelLinks, '0', 'and remembered');
+  await win.locator('.cls-rel-graph .sage-graph-wiki-toggle').check(); await sleep(200);
+  await win.evaluate(async ([t, ids]) => { await api.classifier.deleteTemplate(t); for (const id of ids) await api.classifier.deleteObject(id); await refreshClassifier(); }, [tpl, [a.id, b.id]]);
+  await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'table'), mid);
+});

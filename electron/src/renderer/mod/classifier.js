@@ -320,7 +320,14 @@ async function mountClassifierRelationGraph(c) {
   const extra = index.filter((e) => otherIds.has(e.moduleId) && e.kind !== 'module' && e.kind !== 'file');
   const keys = new Set([...d.objects.map((o) => `cobj_${o.id}`), ...extra.map((e) => e.key)]);
   const rels = (d.relations || []).filter((r) => keys.has(r.from_key) && keys.has(r.to_key));
-  const touched = new Set(rels.flatMap((r) => [r.from_key, r.to_key]));
+  // Procress 31 part 4: a [[link]] either way between two shown nodes is a
+  // dashed line too — unless a relation already joins them (that one wins).
+  const pair = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+  const related = new Set(rels.map((r) => pair(r.from_key, r.to_key)));
+  const links = S.nexus ? (await api.wiki.linksAmong(S.nexus.id, [...keys])).filter((l) => !related.has(pair(l.from_key, l.to_key))) : [];
+  if (!box.isConnected) return;
+  const showLinks = ui?.clsRelLinks !== '0';
+  const touched = new Set([...rels, ...(showLinks ? links : [])].flatMap((r) => [r.from_key, r.to_key]));
   const own = d.objects.map((o) => {
     const key = `cobj_${o.id}`;
     return { id: key, objId: o.id, module: 'obj', label: o.name, hoverKey: key, outer: !touched.has(key),
@@ -328,7 +335,8 @@ async function mountClassifierRelationGraph(c) {
   });
   const ext = extra.map((e) => ({ id: e.key, module: `m${e.moduleId}`, label: e.name, hoverKey: e.key, outer: !touched.has(e.key),
     fill: e.color || findModuleNode(e.moduleId)?.color_code || 'var(--t2)' }));
-  const edges = rels.map((r) => ({ source: r.from_key, target: r.to_key, color: r.color_code }));
+  const edges = [...rels.map((r) => ({ source: r.from_key, target: r.to_key, color: r.color_code })),
+    ...links.map((l) => ({ source: l.from_key, target: l.to_key, wiki: true }))];
   const colors = { obj: m.color_code || '#8b5cf6' }, labels = { obj: x(m.name) };
   for (const mm of others) { colors[`m${mm.id}`] = mm.color_code || 'var(--t2)'; labels[`m${mm.id}`] = x(mm.name); }
   const hidden = new Set(others.filter((mm) => !shown.has(mm.id)).map((mm) => `m${mm.id}`));
@@ -338,5 +346,6 @@ async function mountClassifierRelationGraph(c) {
     onNodeClick: (n) => (n.objId ? openItemNode('classifier', m.id, n.objId) : openEntityByKey(n.id)),
     onNodeContext: (n, e) => { if (n.objId) openCtx('classifier.object', e, { moduleId: m.id, objectId: n.objId }); },
     onFilterChange: (h) => api.module.setUi(m.id, 'clsRelInclude', JSON.stringify(others.filter((mm) => !h.has(`m${mm.id}`)).map((mm) => mm.id))),
+    wikiToggle: links.length ? { name: t('clsRelLinkEdges'), on: showLinks, onChange: (on) => api.module.setUi(m.id, 'clsRelLinks', on ? '1' : '0') } : null,
   });
 }

@@ -382,6 +382,27 @@ function _quickIndex(nexusId) {
   return out;
 }
 
+// Procress 31 part 4: the [[links]] whose source AND target are both among
+// `keys` — the Classifier relation view draws them as dashed lines. Pairs are
+// unordered and unique. ponytail: reads every resolved link of the Nexus and
+// filters in JS (one indexed-by-nothing scan, fine at tens of thousands of
+// links); a src_key IN (…) query in chunks if a vault outgrows that.
+function linksAmong(nexusId, keys) {
+  const want = new Set(keys || []);
+  if (want.size < 2) return [];
+  const seen = new Set();
+  const out = [];
+  const rows = scopedAll(getDB(), `SELECT src_key, target_key FROM wiki_link WHERE (? IS NULL OR nexus_ref=?) AND target_key IS NOT NULL`, nexusId ?? null);
+  for (const r of rows) {
+    if (r.src_key === r.target_key || !want.has(r.src_key) || !want.has(r.target_key)) continue;
+    const k = r.src_key < r.target_key ? `${r.src_key}|${r.target_key}` : `${r.target_key}|${r.src_key}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push({ from_key: r.src_key, to_key: r.target_key });
+  }
+  return out;
+}
+
 // Vault-scoped Obsidian-style graph: every quickIndex entity is a node
 // (node.key feeds openEntityByKey), edges = structural containment/links +
 // Director relations + wiki_link references (flagged wiki:true so the UI can
@@ -651,5 +672,5 @@ module.exports = {
   resolveWikiName, reindexWikiLinks, reindexSource, rebuildWikiIndex,
   nexusOfNote, nexusOfObject, nexusOfChapter,
   getBacklinks, getOutgoingLinks, resolveEntityKeys,
-  quickIndex, getEntityPath, getGraph, getLinkCounts,
+  quickIndex, getEntityPath, getGraph, getLinkCounts, linksAmong,
 };
