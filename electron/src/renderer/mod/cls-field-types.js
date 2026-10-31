@@ -74,7 +74,8 @@ function clsFieldValueHtml(o, c) {
   const data = `data-oid="${o.id}" data-tid="${c.id}" aria-label="${x(c.description || '')}"`; // named by its field (Procress 18 part 5)
   switch (clsType(c)) {
     case 'textarea':
-      return wikiTextareaHtml(`class="pv-textarea" ${data} onblur="saveClassifierAttrInput(this)"`, raw);
+      // Procress 31 part 5: one editable box whose links stay links (core/wiki-field.js)
+      return `<div class="pv-textarea wiki-view" contenteditable="plaintext-only" ${wikiViewAttrs(raw)} ${data} onblur="saveClassifierAttrCell(this)">${wikiViewHtml(raw)}</div>`;
     case 'date':
       return clsDateInputsHtml(o, c);
     case 'number':

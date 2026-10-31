@@ -12,8 +12,6 @@
 
 /* a [[link]] a component draws (navbox, children, see also) — the md
    preview's own rule (editor.css) still wins inside text */
-:where(.page-blocks) .wikilink{color:var(--accentH);cursor:pointer;text-decoration:none}
-:where(.page-blocks) .wikilink:hover{text-decoration:underline}
 
 /* link bar */
 .pc-linkbar{display:flex;flex-wrap:wrap;gap:4px;align-items:center}

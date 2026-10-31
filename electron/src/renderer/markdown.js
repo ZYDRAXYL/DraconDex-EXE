@@ -69,13 +69,17 @@ function mdExtractWikilinks(text) {
 
 // One rendered [[link]] — shared with plain wiki fields (core/wiki-field.js).
 // It shows the object's name alone for [[obj:Module/Object]], or |alias.
-function mdWikiLinkHtml(name, alias, resolveLink) {
+// `src` (a field's link, Procress 31 part 5): its raw [[…]] text, kept on the
+// element so the field's text can be read back, and the link is one
+// non-editable piece — typing can never land inside its label.
+function mdWikiLinkHtml(name, alias, resolveLink, src = null) {
   const nm = name.trim();
   const key = resolveLink ? (resolveLink(nm) || '') : '';
   // red only once the names are loaded — before that, "not found" means "not looked up yet"
   const known = typeof pbWikiLoaded !== 'function' || pbWikiLoaded();
   const cls = key ? 'wikilink' : known ? 'wikilink wikilink-unresolved' : 'wikilink';
-  return `<a class="${cls}" data-name="${_mdEsc(nm)}" data-key="${_mdEsc(key)}">${_mdEsc(alias?.trim() || wikiPathParse(nm)?.object || nm)}</a>`;
+  const own = src != null ? ` data-src="${_mdEsc(src)}" contenteditable="false"` : '';
+  return `<a class="${cls}" data-name="${_mdEsc(nm)}" data-key="${_mdEsc(key)}"${own}>${_mdEsc(alias?.trim() || wikiPathParse(nm)?.object || nm)}</a>`;
 }
 
 // Inline pass. Protects code spans / links / wikilinks behind \x00n\x00
