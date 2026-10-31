@@ -901,7 +901,7 @@ test('26 part 3: add without a form, rename in place, edit a choice, reorder', a
   const stored = await win.evaluate(([m, id]) => api.classifier.getObjectsFull(m).then((f) => f.objects.find((o) => o.id === id).attrMap), [mid, rook]);
   assert.ok(Object.values(stored).includes(choice), `saved (${JSON.stringify(stored)})`);
   // Alt+↑ from a cell moves the row and is saved
-  await win.locator(`tr[data-cls-oid="${rook}"] td.cls-cell[contenteditable]`).first().click();
+  await win.locator(`tr[data-cls-oid="${rook}"] .cls-cell[contenteditable]`).first().click();
   await win.keyboard.press('Alt+ArrowUp'); await sleep(500);
   const moved = [...start.slice(0, -1), 'Smoke Rook', start.at(-1)];
   assert.deepEqual(await names(), moved);
@@ -919,7 +919,7 @@ test('26 part 4: [[ suggests an object with its module, asks which page, and the
   await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'table'), mid);
   await sleep(500);
   const [first, other] = await win.evaluate((m) => clsData(m).objects.slice(0, 2).map((o) => ({ id: o.id, name: o.name })), mid);
-  const cell = win.locator(`td.cls-cell[data-oid="${first.id}"][data-tid="${tpl}"]`);
+  const cell = win.locator(`.cls-cell[data-oid="${first.id}"][data-tid="${tpl}"]`);
   await cell.click();
   await win.keyboard.type(`[[${other.name.slice(0, 3)}`); await sleep(500);
   const rows = () => win.locator('.wiki-field-ac .mded-ac-item').allInnerTexts();
@@ -998,7 +998,7 @@ test('27 part 1: a field shows its [[link]] as the name, raw only while it is ed
   const raw = `see [[obj:Characters/${other.name}]] now`;
   await win.evaluate(async ([o, t, v]) => { await api.classifier.upsertAttr(o, t, v); await refreshWikiCache(); await refreshClassifier(); }, [first.id, tpl, raw]);
   await sleep(500);
-  const cell = win.locator(`td.cls-cell[data-oid="${first.id}"][data-tid="${tpl}"]`);
+  const cell = win.locator(`.cls-cell[data-oid="${first.id}"][data-tid="${tpl}"]`);
   assert.equal(await cell.innerText(), `see ${other.name} now`, 'the name, not [[obj:…]]');
   assert.equal(await cell.locator('a.wikilink').innerText(), other.name, 'highlighted as a link');
   // hovering the link shows its card
@@ -1636,4 +1636,58 @@ test('29 part 9: update mode is stored; a ready update asks once, from the title
   await win.evaluate(() => titlebarUpdateClick()); await sleep(200);
   assert.equal(await win.locator('#modal-overlay:not(.hidden) #update-install-btn').count(), 1, 'the arrow asks again on purpose');
   await win.evaluate(() => { closeModal(); onUpdateState({ mode: 'ask', current: '0.0.1', available: false, ready: false }); });
+});
+
+// ── Procress 31 parts 2–3 ────────────────────────────────────────────────
+test('31 parts 2–3: Classifier view options — sort (manual stays), hidden fields, wordwrap, expand; an edit is "last edited"', async () => {
+  await win.evaluate(() => { showLeftDest('nest'); return builderOpenPage(null); });
+  await row('Characters').click(); await sleep(600);
+  const mid = await win.evaluate(() => S.activeModuleNode.id);
+  const tpl = await win.evaluate(async (m) => { const id = await api.classifier.createTemplate(m, 'Smoke long', 'text', false, false, null); await refreshClassifier(); return id; }, mid);
+  await win.evaluate((m) => setClassifierView(Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid, 'table'), mid);
+  await sleep(500);
+  const names = () => win.locator('tr[data-cls-oid] .cls-name').allInnerTexts();
+  const manual = await names();
+  // sort by name, descending — the grip goes, the saved order does not change
+  await win.locator('.classifier-toolbar .cls-vopts-btn').click(); await sleep(300);
+  assert.equal(await win.locator('.cls-vopts-popup').count(), 1, 'one click opens the popover');
+  await win.locator('.cls-vopts-popup select').first().selectOption('name'); await sleep(300);
+  await win.locator('.cls-vopts-popup .seg-opt[data-value="desc"]').click(); await sleep(300);
+  const coll = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  assert.deepEqual(await names(), [...manual].sort((a, b) => coll.compare(b, a)), 'Z→A');
+  assert.equal(await win.locator('tr[data-cls-oid] .nar-grip').count(), 0, 'no grip while sorted');
+  assert.deepEqual(await win.evaluate((m) => api.classifier.getObjects(m).then((r) => r.map((o) => o.name)), mid), manual, 'display_order untouched');
+  // edit a cell of the last object, sort by last edited (newest first): it comes first
+  const lastName = manual.at(-1);
+  const lastId = await win.evaluate(([m, n]) => clsData(m).objects.find((o) => o.name === n).id, [mid, lastName]);
+  await win.keyboard.press('Escape');
+  const cell = win.locator(`.cls-cell[data-oid="${lastId}"][data-tid="${tpl}"]`);
+  await cell.click(); await win.keyboard.type('word '.repeat(80)); await win.keyboard.press('Tab'); await sleep(500);
+  await win.evaluate((m) => setClsSort(m, { by: 'edited', dir: 'desc' }), mid); await sleep(400);
+  assert.equal((await names())[0], lastName, 'the edited object is first');
+  await win.evaluate(() => refreshClassifier()); await sleep(400);
+  assert.equal((await names())[0], lastName, 'and still after a reload (update_at was saved)');
+  // wordwrap 2 lines: the long cell is clamped, then expand widens it and the table scrolls sideways
+  await win.evaluate((m) => setClsTable(m, { lines: 2, overflow: 'hidden' }), mid); await sleep(400);
+  const lh = await cell.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight) || 20);
+  const h = (await cell.boundingBox()).height;
+  assert.ok(h < lh * 2 + 24, `2 lines, not 80 words (${h}px)`);
+  await win.evaluate((m) => setClsTable(m, { overflow: 'expand' }), mid); await sleep(400);
+  const wrap = await win.evaluate(() => { const w = q('.cls-table-wrap'); return [w.scrollWidth, w.clientWidth]; });
+  assert.ok(wrap[0] > wrap[1], `the table is wider than the page and scrolls (${wrap})`);
+  await win.screenshot({ path: process.env.SMOKE_SHOTS ? `${process.env.SMOKE_SHOTS}/31-expand.png` : undefined });
+  // hide the field: its column goes, the row's other cells stay
+  await win.locator('.classifier-toolbar .cls-vopts-btn').click(); await sleep(300);
+  await win.screenshot({ path: process.env.SMOKE_SHOTS ? `${process.env.SMOKE_SHOTS}/31-popover.png` : undefined });
+  const colsBefore = await win.locator('.cls-table th.cls-col-head').count();
+  await win.locator('.cls-vopts-popup .cls-vo-fields [role="switch"]', { hasText: 'Smoke long' }).click(); await sleep(400);
+  assert.equal(await win.locator('.cls-table th.cls-col-head').count(), colsBefore - 1);
+  assert.equal(await win.locator(`.cls-cell[data-tid="${tpl}"]`).count(), 0, 'no cell of the hidden field');
+  assert.equal(await win.locator('.cls-vopts-popup').count(), 1, 'the popover stays open while you set things');
+  await win.keyboard.press('Escape');
+  // back to self-align: the dragged order, untouched
+  await win.evaluate((m) => setClsSort(m, { by: 'manual' }), mid); await sleep(400);
+  assert.deepEqual(await names(), manual, 'self-align comes back as it was');
+  assert.ok(await win.locator('tr[data-cls-oid] .cls-name-cell').first().evaluate((td) => !!td.querySelector('[onpointerdown]')), 'and the grip is back');
+  await win.evaluate(async ([m, t]) => { await api.classifier.deleteTemplate(t); await setClsTable(m, { hidden: [], lines: 'auto', overflow: 'hidden' }); await refreshClassifier(); }, [mid, tpl]);
 });

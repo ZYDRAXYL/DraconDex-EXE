@@ -237,6 +237,21 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .cls-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--t2)}
 .cls-table td:first-child{color:var(--t1);white-space:nowrap}
 .cls-cell:focus{outline:1px solid var(--accent);outline-offset:-1px;background:var(--raised)}
+/* Procress 31 part 2: a text cell is a div in its td, so it can be line-clamped
+   (the module's wordwrap setting); while it is being edited it shows everything. */
+.cls-table td.cls-td{padding:0}
+/* the inset is a transparent border, not padding: a clamped box clips at its
+   padding edge, so padding would show a sliver of the next line */
+.cls-td>.cls-cell{border:solid transparent;border-width:8px 10px;min-height:100%}
+.cls-table[data-lines]{--cls-lines:attr(data-lines type(<integer>))}
+.cls-table[data-overflow="expand"] .cls-td>.cls-cell[data-w]{min-width:calc(attr(data-w type(<number>)) * 1ch)}
+.cls-table[data-lines] .cls-td>.cls-cell:not(:focus){display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--cls-lines);overflow:hidden}
+.cls-vopts{display:flex;flex-direction:column;gap:var(--sp-1);min-width:240px;max-width:320px;padding:var(--sp-1)}
+.cls-vo-line{display:flex;align-items:center;gap:var(--sp-1)}
+.cls-vo-line>select{flex:1;min-width:0}
+.cls-vo-line.is-off{opacity:.5;pointer-events:none}
+.cls-vo-lines{width:6em}
+.cls-vo-fields{max-height:240px;overflow-y:auto}
 .cls-rowacts{display:flex;gap:2px;white-space:nowrap}
 .cls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
 .card.cls-tile{padding:14px 10px;text-align:center}

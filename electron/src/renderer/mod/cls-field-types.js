@@ -116,29 +116,30 @@ function clsFieldValueHtml(o, c) {
 }
 
 // ── The table cell ──────────────────────────────────────────────────────
-function clsFieldCellHtml(m, o, c) {
+// Procress 31 part 2: a text cell is a <div class="cls-cell"> inside its <td>
+// — a table cell cannot be line-clamped, the div can (the table's wordwrap
+// setting, css/inspector.css .cls-table[data-lines]); `d` gives the expand width.
+function clsFieldCellHtml(m, o, c, d = null) {
   const type = clsType(c);
   const raw = o.attrMap?.[c.id] ?? '';
+  const td = (cls, attrs, inner, text = raw) => `<td class="cls-td"><div class="cls-cell${cls}"${d ? clsCellWidthAttr(d, text) : ''} ${attrs}>${inner}</div></td>`;
+  const edit = `contenteditable="true" data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)"`;
   if (CLS_CELL_EDIT_TYPES.has(type)) {
     const wiki = type === 'text';
-    return `<td class="cls-cell${type === 'number' ? ' cls-num' : ''}" contenteditable="true"${wiki ? ` ${wikiViewAttrs(raw)}` : ''} data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${wiki ? wikiViewHtml(raw) : x(raw)}</td>`;
+    return td(type === 'number' ? ' cls-num' : '', `${edit}${wiki ? ` ${wikiViewAttrs(raw)}` : ''}`, wiki ? wikiViewHtml(raw) : x(raw));
   }
-  if (type === 'textarea') {
-    return `<td class="cls-cell" contenteditable="true" ${wikiViewAttrs(raw)} data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${wikiViewHtml(raw)}</td>`;
-  }
-  if (type === 'date') {
-    return `<td class="cls-cell" contenteditable="true" data-oid="${o.id}" data-tid="${c.id}" onblur="saveClassifierAttrCell(this)">${x(raw)}</td>`;
-  }
+  if (type === 'textarea') return td('', `${edit} ${wikiViewAttrs(raw)}`, wikiViewHtml(raw));
+  if (type === 'date') return td('', edit, x(raw));
   if (CLS_CELL_CONTROL_TYPES.has(type)) return `<td class="cls-cell cls-cell-ctl">${clsFieldValueHtml(o, c)}</td>`;
   const text = type === 'formula' ? clsFormulaText(o, c).text : raw;
-  return `<td class="cls-cell cls-cell-ro${type === 'formula' ? ' cls-num' : ''}" onclick="openItemNode('classifier',${m.id},${o.id})" data-no-i18n>${x(text || '')}</td>`;
+  return td(` cls-cell-ro${type === 'formula' ? ' cls-num' : ''}`, `onclick="openItemNode('classifier',${m.id},${o.id})" data-no-i18n`, x(text || ''), text);
 }
 
 // ── Saving ──────────────────────────────────────────────────────────────
 async function clsStoreValue(oid, tid, value) {
   await api.classifier.upsertAttr(oid, tid, value);
   const obj = clsFindObject(oid);
-  if (obj) obj.attrMap[tid] = value;
+  if (obj) { if (obj.attrMap[tid] !== value) clsTouched(obj); obj.attrMap[tid] = value; }
 }
 
 async function saveClsMulti(oid, tid, el) {
