@@ -1755,6 +1755,9 @@ test('31 part 5: ]] makes a link as you type, Backspace takes a link whole, page
   const col = await cell.locator('a.wikilink').evaluate((a) => getComputedStyle(a).color);
   const want = await win.evaluate(() => { const s = document.createElement('span'); s.style.color = 'var(--link, var(--accent-text, var(--accent)))'; document.body.append(s); const c = getComputedStyle(s).color; s.remove(); return c; });
   assert.equal(col, want);
+  // SDB 2.1.3 vendored: every built-in theme has --link — the blue, not the accent
+  const link = await win.evaluate(() => getComputedStyle(document.body).getPropertyValue('--link').trim());
+  assert.match(link, /^#(60a5fa|1d4ed8)$/i, `--link is the blue (${link})`);
   // Backspace after " ok" ×3 then once more: the whole link goes, not one letter of it
   for (let i = 0; i < 4; i++) await win.keyboard.press('Backspace');
   await sleep(150);
