@@ -130,3 +130,35 @@ test('deleting an object breaks the links to it (Problems lists them); Undo mend
   assert.equal(keyOf(n, 'obj:Cast/Gone'), `cobj_${id}`);
   assert.equal(keyOf(n, 'Gone'), `cobj_${id}`);
 });
+
+// Procress 31 part 1: a module or object whose name holds | [ ] — the link
+// pattern used to end the name at the first | and read the rest as an alias.
+test('names with | [ ] : quoted links resolve, are written quoted, and old unquoted ones still resolve', () => {
+  freshVault();
+  const abs = mkModule('Absolute |12|', 'collector');
+  const cast = mkModule('Charactors', 'classifier', abs);
+  mkModule('Charactors', 'classifier'); // a second Charactors: the folder is needed
+  const o1 = cls.createObject(cast, 'object1', null, null);
+  const br = cls.createObject(cast, 'A[1]', null, null);
+  assert.equal(wiki.formatWikiPath({ ns: 'mod', modules: ['Absolute |12|', 'Charactors'], object: 'A[1]' }), 'mod:"Absolute |12|"/Charactors/"A[1]"');
+  const n = note('[[mod:"Absolute |12|"/Charactors/object1]] · [[obj:"Absolute |12|"/Charactors/"A[1]"|her]] · [[mod:Absolute |12|/Charactors/object1]]');
+  index(n);
+  assert.equal(keyOf(n, 'mod:"Absolute |12|"/Charactors/object1'), `cobj_${o1}`);
+  assert.equal(keyOf(n, 'obj:"Absolute |12|"/Charactors/"A[1]"'), `cobj_${br}`, 'the |alias after a quoted name still works');
+  assert.equal(keyOf(n, 'mod:Absolute |12|/Charactors/object1'), `cobj_${o1}`, 'a link written before the quotes is read whole');
+  cls.updateObject(o1, 'object one', null, null);
+  assert.equal(noteText(n), '[[mod:"Absolute |12|"/Charactors/object one]] · [[obj:"Absolute |12|"/Charactors/"A[1]"|her]] · [[mod:"Absolute |12|"/Charactors/object one]]',
+    'rename rewrites both, the old one now quoted');
+});
+
+test('the link pattern: a lone " is a character, a quote never spans ]] , and many quotes stay fast', () => {
+  const all = (s) => [...s.matchAll(wiki.WIKILINK_RE)].map((m) => [m[1], m[2] ?? null]);
+  assert.deepEqual(all('[[Name|alias]] [[B]]'), [['Name', 'alias'], ['B', null]]);
+  assert.deepEqual(all('[[He said "hi]] then [[x]]'), [['He said "hi', null], ['x', null]]);
+  assert.deepEqual(all('[[a "b]] text "c]]'), [['a "b', null]]);
+  assert.deepEqual(all('[[a]][[b]]'), [['a', null], ['b', null]]);
+  const t0 = Date.now();
+  all('[[' + '"x'.repeat(20000) + ' |');
+  all('[[' + '""'.repeat(20000));
+  assert.ok(Date.now() - t0 < 500, 'no exponential backtracking');
+});

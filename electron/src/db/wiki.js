@@ -13,8 +13,9 @@ const { ENTITY_KINDS } = require('./entity-kinds');
 // wchar_7, wobj_4, gchar_2, gel_9, wchp_5, wnote_1, proj_6, world_2, game_1,
 // write_3.
 
-// Keep in sync with MD_WIKILINK_RE in src/renderer/markdown.js.
-const WIKILINK_RE = /\[\[([^\[\]|]+?)(?:\|([^\[\]]+?))?\]\]/g;
+// Keep in sync with MD_WIKILINK_RE in src/renderer/markdown.js (Procress 31
+// part 1 explains the "…" parts).
+const WIKILINK_RE = /\[\[((?:"(?:[^"\n[\]]|\[(?!\[)|\](?!\]))*"|"(?!(?:[^"\n[\]]|\[(?!\[)|\](?!\]))*")|[^[\]|"])+?)(?:\|([^[\]]+?))?\]\]/g;
 
 // ── Name resolution ─────────────────────────────────────────────────────────
 // Fixed, deterministic precedence; case-insensitive (ASCII). A namespace
@@ -75,8 +76,19 @@ function parseWikiPath(text) {
   if (names.length < 2 || names.some((s) => !s)) return null;
   return { ns: m[1].toLowerCase(), modules: names.slice(0, -1), object: names[names.length - 1] };
 }
-const wikiPathSeg = (s) => (String(s).includes('/') ? `"${s}"` : String(s));
+// Procress 31 part 1: | [ ] in a name need the quotes too — unquoted, the
+// link pattern ends the name at the first | and reads the rest as an alias.
+const wikiPathSeg = (s) => (/[/|[\]]/.test(String(s)) ? `"${s}"` : String(s));
 const formatWikiPath = (p) => `${p.ns}:${[...p.modules, p.object].map(wikiPathSeg).join('/')}`;
+
+// A path link from before those quotes ([[mod:Absolute |12|/Charactors/x]])
+// matches cut at its first |: read it whole when only the whole is a path.
+// Keep in sync with wikiLinkSplit in src/renderer/markdown.js.
+function wikiLinkSplit(name, alias) {
+  if (alias == null || parseWikiPath(name) || !/^\s*(obj|mod):/i.test(name)) return [name, alias];
+  const whole = `${name}|${alias}`;
+  return parseWikiPath(whole) ? [whole, null] : [name, alias];
+}
 
 // The objects a path names: modules called like its last module segment whose
 // parents match the folders written before it, each holding an object of that
@@ -157,7 +169,7 @@ function reindexWikiLinks(srcKey, content, nexusId) {
   WIKILINK_RE.lastIndex = 0;
   let m;
   while ((m = WIKILINK_RE.exec(String(content || ''))) !== null) {
-    const name = m[1].trim();
+    const name = wikiLinkSplit(m[1], m[2])[0].trim();
     if (name) links.push(name);
   }
   const tx = d.transaction(() => {
@@ -582,7 +594,8 @@ function rewriteWikiPaths(rows, edit) {
     const src = m && CONTENT_SOURCES[m[1]];
     if (!src) continue;
     let touched = false;
-    const next = src.rewrite(d, Number(m[2]), (c) => String(c || '').replace(WIKILINK_RE, (full, inner, alias) => {
+    const next = src.rewrite(d, Number(m[2]), (c) => String(c || '').replace(WIKILINK_RE, (full, inner0, alias0) => {
+      const [inner, alias] = wikiLinkSplit(inner0, alias0);
       const p = parseWikiPath(inner);
       const key = keys.get(inner.trim().toLowerCase());
       const np = p && key ? edit(p) : null;
@@ -634,7 +647,7 @@ function renameWikiTarget(targetKey, oldName, newName) {
 }
 
 module.exports = {
-  renameWikiTarget, renameWikiModulePath, resolveDanglingLinks, parseWikiPath, formatWikiPath,
+  renameWikiTarget, renameWikiModulePath, resolveDanglingLinks, parseWikiPath, formatWikiPath, wikiLinkSplit, WIKILINK_RE,
   resolveWikiName, reindexWikiLinks, reindexSource, rebuildWikiIndex,
   nexusOfNote, nexusOfObject, nexusOfChapter,
   getBacklinks, getOutgoingLinks, resolveEntityKeys,

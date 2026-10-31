@@ -120,7 +120,7 @@ vm.runInContext(`
   var _wikiCache = new Map([['selene', 'cobj_12'], ['map', 'module_3']]);
   var _wikiCacheList = [{ key: 'cobj_12', name: 'Selene' }, { key: 'module_3', name: 'Map' }];
   var resolveWikiNameCached = (n) => _wikiCache.get(String(n).toLowerCase()) || null;
-  this.api = { pbLinkParseInput, pbLinkResolve, pbLinkLabel, mdRender, mdFootnotes };`, ctx);
+  this.api = { pbLinkParseInput, pbLinkResolve, pbLinkLabel, mdRender, mdFootnotes, mdExtractWikilinks, wikiPathFormat };`, ctx);
 const L = ctx.api;
 
 test('a typed link becomes one of the known shapes; anything else is refused', () => {
@@ -195,4 +195,16 @@ test('recent changes: edits and hub events, one row per module, newest first', (
   assert.deepEqual(r.map((x) => x.name), ['Gone', 'Alpha', 'Beta']);
   assert.equal(r.find((x) => x.name === 'Alpha').at, at(5), 'its latest change');
   assert.equal(r.length, 3);
+});
+
+// Procress 31 part 1: a name holding | — quoted, or from before the quotes —
+// shows the object's name, not "12|/Charactors/object1".
+test('renderer: a path link whose module name holds | shows the object, quoted or not', () => {
+  const shown = (src) => L.mdRender(src).match(/<a class="[^"]*" data-name="([^"]*)"[^>]*>([^<]*)<\/a>/).slice(1);
+  assert.deepEqual(shown('[[mod:"Absolute |12|"/Charactors/object1]]'), ['mod:&quot;Absolute |12|&quot;/Charactors/object1', 'object1']);
+  assert.deepEqual(shown('[[mod:Absolute |12|/Charactors/object1]]'), ['mod:Absolute |12|/Charactors/object1', 'object1']);
+  assert.deepEqual(shown('[[Selene|the moon]]'), ['Selene', 'the moon'], 'a plain alias is untouched');
+  assert.equal(JSON.stringify(L.mdExtractWikilinks('[[obj:"A[1]"/x|y]]').map((l) => [l.name, l.alias])), JSON.stringify([['obj:"A[1]"/x', 'y']]));
+  assert.equal(L.wikiPathFormat('mod', ['Absolute |12|', 'Cast'], 'A[1]'), 'mod:"Absolute |12|"/Cast/"A[1]"');
+  assert.equal(L.pbLinkLabel({ label: '[[mod:"Absolute |12|"/Cast/Aria]]', to: 'anchor:x' }), 'Aria');
 });

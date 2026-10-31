@@ -197,7 +197,7 @@ function wikiViewHtml(raw) {
   if (!_wikiCache) wikiViewsWhenLoaded();
   let out = '', at = 0;
   for (const m of s.matchAll(MD_WIKILINK_RE)) {
-    out += x(s.slice(at, m.index)) + mdWikiLinkHtml(m[1], m[2], resolveWikiNameCached);
+    out += x(s.slice(at, m.index)) + mdWikiLinkHtml(...wikiLinkSplit(m[1], m[2]), resolveWikiNameCached);
     at = m.index + m[0].length;
   }
   return out + x(s.slice(at));
