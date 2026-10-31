@@ -285,6 +285,17 @@ function getObjectsFull(moduleRef) {
   })();
 }
 
+// Procress 31 part 3: a cell or level edit is an edit of its object — the
+// list's "last edited" order reads classifier_object.update_at. Each write
+// and its touch share one transaction: that is one undo step (conn.js), so
+// Undo reverts the edit, not just the timestamp.
+const touchObject = (d, objectId) => d.prepare(`UPDATE classifier_object SET update_at=datetime('now') WHERE id=?`).run(objectId);
+// A plain WHERE id=? — the undo recorder (undo.js) snapshots the row by it.
+const touchObjectOfLevel = (d, levelId) => {
+  const oid = d.prepare(`SELECT object_ref FROM classifier_level WHERE id=?`).get(levelId)?.object_ref;
+  if (oid != null) touchObject(d, oid);
+};
+
 const upsertAttr = (objectId, templateId, value) => {
   const d = getDB();
   const obj = d.prepare(`SELECT name, module_ref FROM classifier_object WHERE id=?`).get(objectId);
@@ -293,10 +304,15 @@ const upsertAttr = (objectId, templateId, value) => {
   // update-by-id or insert, not an upsert: the session undo (undo.js) can
   // reverse these two shapes, and a field edit is the edit most often undone.
   const row = d.prepare(`SELECT id FROM classifier_attribute WHERE object_ref=? AND template_ref=?`).get(objectId, templateId);
-  const r = row
-    ? d.prepare(`UPDATE classifier_attribute SET attribute_value=?, update_at=datetime('now') WHERE id=?`).run(value, row.id)
-    : d.prepare(`INSERT INTO classifier_attribute (object_ref, template_ref, attribute_value) VALUES (?,?,?)`).run(objectId, templateId, value);
-  if (obj && (prev?.attribute_value ?? '') !== (value ?? '')) {
+  const changed = obj && (prev?.attribute_value ?? '') !== (value ?? '');
+  const r = d.transaction(() => {
+    const res = row
+      ? d.prepare(`UPDATE classifier_attribute SET attribute_value=?, update_at=datetime('now') WHERE id=?`).run(value, row.id)
+      : d.prepare(`INSERT INTO classifier_attribute (object_ref, template_ref, attribute_value) VALUES (?,?,?)`).run(objectId, templateId, value);
+    if (changed) touchObject(d, objectId);
+    return res;
+  })();
+  if (changed) {
     versions.recordVersion(obj.module_ref, 'attr',
       `${obj.name} · ${tpl?.description ?? ''}: ${prev?.attribute_value ?? '—'} → ${value ?? ''}`,
       { op: 'classifierAttr', args: { objectId, templateId, value: prev?.attribute_value ?? '' } });
@@ -329,18 +345,33 @@ function createLevel(objectId, templateId) {
   const d = getDB();
   const maxOrder = d.prepare(`SELECT COALESCE(MAX(display_order),-1) AS m FROM classifier_level WHERE object_ref=? AND template_ref=?`)
     .get(objectId, templateId).m;
-  return d.prepare(`INSERT INTO classifier_level (object_ref, template_ref, display_order) VALUES (?,?,?)`)
-    .run(objectId, templateId, maxOrder + 1).lastInsertRowid;
+  return d.transaction(() => {
+    const id = d.prepare(`INSERT INTO classifier_level (object_ref, template_ref, display_order) VALUES (?,?,?)`)
+      .run(objectId, templateId, maxOrder + 1).lastInsertRowid;
+    touchObject(d, objectId);
+    return id;
+  })();
 }
 
 // One cell at a time — each input saves on blur independently, so a whole-row
 // update would clobber whatever the user is still typing in a sibling cell.
 const updateLevelField = (id, field, value) => {
   if (!['level_label', 'condition_value', 'info_value'].includes(field)) throw new Error('bad level field');
-  return getDB().prepare(`UPDATE classifier_level SET ${field}=?, update_at=datetime('now') WHERE id=?`).run(value, id);
+  const d = getDB();
+  return d.transaction(() => {
+    const r = d.prepare(`UPDATE classifier_level SET ${field}=?, update_at=datetime('now') WHERE id=?`).run(value, id);
+    touchObjectOfLevel(d, id);
+    return r;
+  })();
 };
 
-const deleteLevel = (id) => getDB().prepare(`DELETE FROM classifier_level WHERE id=?`).run(id);
+const deleteLevel = (id) => {
+  const d = getDB();
+  return d.transaction(() => {
+    touchObjectOfLevel(d, id);
+    return d.prepare(`DELETE FROM classifier_level WHERE id=?`).run(id);
+  })();
+};
 
 // Rewrites the whole order in one transaction from the list the UI dragged
 // into shape — same shape as narrator.js's moveTalks. object_ref AND

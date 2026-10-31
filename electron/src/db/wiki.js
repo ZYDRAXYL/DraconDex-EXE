@@ -13,8 +13,9 @@ const { ENTITY_KINDS } = require('./entity-kinds');
 // wchar_7, wobj_4, gchar_2, gel_9, wchp_5, wnote_1, proj_6, world_2, game_1,
 // write_3.
 
-// Keep in sync with MD_WIKILINK_RE in src/renderer/markdown.js.
-const WIKILINK_RE = /\[\[([^\[\]|]+?)(?:\|([^\[\]]+?))?\]\]/g;
+// Keep in sync with MD_WIKILINK_RE in src/renderer/markdown.js (Procress 31
+// part 1 explains the "…" parts).
+const WIKILINK_RE = /\[\[((?:"(?:[^"\n[\]]|\[(?!\[)|\](?!\]))*"|"(?!(?:[^"\n[\]]|\[(?!\[)|\](?!\]))*")|[^[\]|"])+?)(?:\|([^[\]]+?))?\]\]/g;
 
 // ── Name resolution ─────────────────────────────────────────────────────────
 // Fixed, deterministic precedence; case-insensitive (ASCII). A namespace
@@ -75,8 +76,19 @@ function parseWikiPath(text) {
   if (names.length < 2 || names.some((s) => !s)) return null;
   return { ns: m[1].toLowerCase(), modules: names.slice(0, -1), object: names[names.length - 1] };
 }
-const wikiPathSeg = (s) => (String(s).includes('/') ? `"${s}"` : String(s));
+// Procress 31 part 1: | [ ] in a name need the quotes too — unquoted, the
+// link pattern ends the name at the first | and reads the rest as an alias.
+const wikiPathSeg = (s) => (/[/|[\]]/.test(String(s)) ? `"${s}"` : String(s));
 const formatWikiPath = (p) => `${p.ns}:${[...p.modules, p.object].map(wikiPathSeg).join('/')}`;
+
+// A path link from before those quotes ([[mod:Absolute |12|/Charactors/x]])
+// matches cut at its first |: read it whole when only the whole is a path.
+// Keep in sync with wikiLinkSplit in src/renderer/markdown.js.
+function wikiLinkSplit(name, alias) {
+  if (alias == null || parseWikiPath(name) || !/^\s*(obj|mod):/i.test(name)) return [name, alias];
+  const whole = `${name}|${alias}`;
+  return parseWikiPath(whole) ? [whole, null] : [name, alias];
+}
 
 // The objects a path names: modules called like its last module segment whose
 // parents match the folders written before it, each holding an object of that
@@ -157,7 +169,7 @@ function reindexWikiLinks(srcKey, content, nexusId) {
   WIKILINK_RE.lastIndex = 0;
   let m;
   while ((m = WIKILINK_RE.exec(String(content || ''))) !== null) {
-    const name = m[1].trim();
+    const name = wikiLinkSplit(m[1], m[2])[0].trim();
     if (name) links.push(name);
   }
   const tx = d.transaction(() => {
@@ -367,6 +379,27 @@ function _quickIndex(nexusId) {
       for (const a of String(r.content || '').split(',').map((s) => s.trim()).filter(Boolean)) out.push({ key: `module_${r.id}`, name: a, type: 'alias', module: 'hub', color: null });
     }
   } catch (_) {}
+  return out;
+}
+
+// Procress 31 part 4: the [[links]] whose source AND target are both among
+// `keys` — the Classifier relation view draws them as dashed lines. Pairs are
+// unordered and unique. ponytail: reads every resolved link of the Nexus and
+// filters in JS (one indexed-by-nothing scan, fine at tens of thousands of
+// links); a src_key IN (…) query in chunks if a vault outgrows that.
+function linksAmong(nexusId, keys) {
+  const want = new Set(keys || []);
+  if (want.size < 2) return [];
+  const seen = new Set();
+  const out = [];
+  const rows = scopedAll(getDB(), `SELECT src_key, target_key FROM wiki_link WHERE (? IS NULL OR nexus_ref=?) AND target_key IS NOT NULL`, nexusId ?? null);
+  for (const r of rows) {
+    if (r.src_key === r.target_key || !want.has(r.src_key) || !want.has(r.target_key)) continue;
+    const k = r.src_key < r.target_key ? `${r.src_key}|${r.target_key}` : `${r.target_key}|${r.src_key}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push({ from_key: r.src_key, to_key: r.target_key });
+  }
   return out;
 }
 
@@ -582,7 +615,8 @@ function rewriteWikiPaths(rows, edit) {
     const src = m && CONTENT_SOURCES[m[1]];
     if (!src) continue;
     let touched = false;
-    const next = src.rewrite(d, Number(m[2]), (c) => String(c || '').replace(WIKILINK_RE, (full, inner, alias) => {
+    const next = src.rewrite(d, Number(m[2]), (c) => String(c || '').replace(WIKILINK_RE, (full, inner0, alias0) => {
+      const [inner, alias] = wikiLinkSplit(inner0, alias0);
       const p = parseWikiPath(inner);
       const key = keys.get(inner.trim().toLowerCase());
       const np = p && key ? edit(p) : null;
@@ -634,9 +668,9 @@ function renameWikiTarget(targetKey, oldName, newName) {
 }
 
 module.exports = {
-  renameWikiTarget, renameWikiModulePath, resolveDanglingLinks, parseWikiPath, formatWikiPath,
+  renameWikiTarget, renameWikiModulePath, resolveDanglingLinks, parseWikiPath, formatWikiPath, wikiLinkSplit, WIKILINK_RE,
   resolveWikiName, reindexWikiLinks, reindexSource, rebuildWikiIndex,
   nexusOfNote, nexusOfObject, nexusOfChapter,
   getBacklinks, getOutgoingLinks, resolveEntityKeys,
-  quickIndex, getEntityPath, getGraph, getLinkCounts,
+  quickIndex, getEntityPath, getGraph, getLinkCounts, linksAmong,
 };

@@ -209,11 +209,14 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
     });
   }
 
+  // Procress 31 part 4: opts.wikiToggle { name, on, onChange(on) } — one more
+  // legend row that hides the dashed [[link]] lines.
+  let showWiki = opts.wikiToggle ? opts.wikiToggle.on !== false : true;
   function applyModuleFilter() {
     circles.forEach(({el, node}) => { el.style.display = hiddenModules.has(node.module) ? 'none' : ''; });
-    lines.forEach(({el, source, target}) => {
+    lines.forEach(({el, source, target, wiki}) => {
       const s = nodeById.get(source), t = nodeById.get(target);
-      const hide = !s || !t || hiddenModules.has(s.module) || hiddenModules.has(t.module);
+      const hide = !s || !t || hiddenModules.has(s.module) || hiddenModules.has(t.module) || (wiki && !showWiki);
       el.style.display = hide ? 'none' : '';
     });
   }
@@ -290,8 +293,17 @@ function buildSageGraph(data, hiddenModules, opts = {}) {
       <span style="width:10px;height:10px;border-radius:50%;background:${moduleColors[mod]};display:inline-block;flex-shrink:0"></span>
       <span style="flex:1">${moduleLabels[mod]}</span>
       <span style="color:var(--t3-aa,var(--t2))">${counts[mod]||0}</span>
-    </label>`).join('');
+    </label>`).join('') + (opts.wikiToggle ? `
+    <label class="sage-graph-wiki-opt">
+      <input type="checkbox" class="sage-graph-wiki-toggle" ${showWiki ? 'checked' : ''}>
+      <span class="sage-graph-dash" aria-hidden="true"></span><span>${x(opts.wikiToggle.name)}</span>
+    </label>` : '');
   wrap.appendChild(panel);
+  panel.querySelector(".sage-graph-wiki-toggle")?.addEventListener('change', (ev) => {
+    showWiki = ev.target.checked;
+    applyModuleFilter();
+    opts.wikiToggle.onChange?.(showWiki);
+  });
   panel.querySelectorAll('.sage-graph-mod-cb').forEach(cb => {
     cb.addEventListener('change', () => {
       const mod = cb.dataset.mod;

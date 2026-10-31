@@ -70,12 +70,14 @@ function pbPropInputHtml(c, r) {
   const on = `onchange="pbPropSave(${xj(c.iid)},${r.id},this)"`;
   const v = r.content ?? '';
   switch (r.prop_type) {
-    case 'textarea': return `<textarea class="pv-textarea" rows="2" ${on}>${x(v)}</textarea>`;
+    // Procress 31 part 5: text properties show their [[links]] as links (core/wiki-field.js)
+    case 'textarea': return `<div class="pv-textarea wiki-view" contenteditable="plaintext-only" ${wikiViewAttrs(v)} onblur="pbPropSave(${xj(c.iid)},${r.id},this)">${wikiViewHtml(v)}</div>`;
     case 'number': return `<input class="pv-input" type="number" value="${x(v)}" ${on}>`;
     case 'date': return `<input class="pv-input" type="date" value="${x(v)}" ${on}>`;
     case 'checkbox': return `<input type="checkbox" ${v === '1' ? 'checked' : ''} ${on}>`;
     case 'url': return `<input class="pv-input" type="url" value="${x(v)}" ${on}>${/^https?:\/\//i.test(v) ? ` <a class="chip chip-link" href="${x(v)}" target="_blank" rel="noopener" aria-label="${x(v)}">${I.external}</a>` : ''}`;
-    default: return `<input class="pv-input" value="${x(v)}" ${on}>`;
+    default: return `<span class="pv-input wiki-view pv-wiki-line" contenteditable="plaintext-only" ${wikiViewAttrs(v)} onblur="pbPropSave(${xj(c.iid)},${r.id},this)"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${wikiViewHtml(v)}</span>`;
   }
 }
 
@@ -97,7 +99,8 @@ const pbPropOf = (iid, pid) => { const i = pbInst(iid); return pageOf(i?.moduleI
 async function pbPropSave(iid, pid, el) {
   const i = pbInst(iid); const r = pbPropOf(iid, pid);
   if (!i || !r) return;
-  const value = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value;
+  const value = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.isContentEditable ? el.textContent.trim() : el.value;
+  if (value === (r.content ?? '')) return;
   await api.block.setProp(i.moduleId, i.itemKey, pid, r.prop_name, value, r.prop_type || 'text');
   r.content = value;
 }

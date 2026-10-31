@@ -11,8 +11,13 @@ const _mdEsc = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-// Canonical wikilink pattern — keep in sync with WIKILINK_RE in src/db/wiki.js.
-const MD_WIKILINK_RE = /\[\[([^\[\]|]+?)(?:\|([^\[\]]+?))?\]\]/g;
+// Canonical wikilink pattern — keep in sync with WIKILINK_RE in src/db/wiki.js
+// (and WikiService.linkRe in DraconDex-APK). Procress 31 part 1: a "…" part
+// of the name is taken whole, so a module called `Absolute |12|` or `A[1]`
+// stays in the name instead of starting the |alias. A "…" never spans a
+// line or a [[ / ]]; a lone " is an ordinary character. Each " has one way
+// to match, so text with many quotes cannot backtrack exponentially.
+const MD_WIKILINK_RE = /\[\[((?:"(?:[^"\n[\]]|\[(?!\[)|\](?!\]))*"|"(?!(?:[^"\n[\]]|\[(?!\[)|\](?!\]))*")|[^[\]|"])+?)(?:\|([^[\]]+?))?\]\]/g;
 
 // → [{name, alias, start, end}] for every [[...]] in raw text.
 // Procress 26 part 4: [[obj:Module/Object]] / [[mod:Module/Object]] — a link
@@ -36,7 +41,19 @@ function wikiPathParse(text) {
   if (names.length < 2 || names.some((s) => !s)) return null;
   return { ns: m[1].toLowerCase(), modules: names.slice(0, -1), object: names[names.length - 1] };
 }
-const wikiPathFormat = (ns, modules, object) => `${ns}:${[...modules, object].map((s) => (String(s).includes('/') ? `"${s}"` : String(s))).join('/')}`;
+// A segment holding / | [ or ] is written in "…" (db/wiki.js wikiPathSeg).
+const wikiPathSegment = (s) => (/[/|[\]]/.test(String(s)) ? `"${s}"` : String(s));
+const wikiPathFormat = (ns, modules, object) => `${ns}:${[...modules, object].map(wikiPathSegment).join('/')}`;
+
+// A path link written before such names were quoted
+// ([[mod:Absolute |12|/Charactors/object1]]) matches as a name cut at its
+// first | plus an "alias". When the part before the | is not a path but
+// the whole text is, it is read whole (db/wiki.js wikiLinkSplit).
+function wikiLinkSplit(name, alias) {
+  if (alias == null || wikiPathParse(name) || !/^\s*(obj|mod):/i.test(name)) return [name, alias];
+  const whole = `${name}|${alias}`;
+  return wikiPathParse(whole) ? [whole, null] : [name, alias];
+}
 
 function mdExtractWikilinks(text) {
   const out = [];
@@ -44,20 +61,25 @@ function mdExtractWikilinks(text) {
   MD_WIKILINK_RE.lastIndex = 0;
   let m;
   while ((m = MD_WIKILINK_RE.exec(text)) !== null) {
-    out.push({ name: m[1].trim(), alias: m[2]?.trim() || null, start: m.index, end: m.index + m[0].length });
+    const [name, alias] = wikiLinkSplit(m[1], m[2]);
+    out.push({ name: name.trim(), alias: alias?.trim() || null, start: m.index, end: m.index + m[0].length });
   }
   return out;
 }
 
 // One rendered [[link]] — shared with plain wiki fields (core/wiki-field.js).
 // It shows the object's name alone for [[obj:Module/Object]], or |alias.
-function mdWikiLinkHtml(name, alias, resolveLink) {
+// `src` (a field's link, Procress 31 part 5): its raw [[…]] text, kept on the
+// element so the field's text can be read back, and the link is one
+// non-editable piece — typing can never land inside its label.
+function mdWikiLinkHtml(name, alias, resolveLink, src = null) {
   const nm = name.trim();
   const key = resolveLink ? (resolveLink(nm) || '') : '';
   // red only once the names are loaded — before that, "not found" means "not looked up yet"
   const known = typeof pbWikiLoaded !== 'function' || pbWikiLoaded();
   const cls = key ? 'wikilink' : known ? 'wikilink wikilink-unresolved' : 'wikilink';
-  return `<a class="${cls}" data-name="${_mdEsc(nm)}" data-key="${_mdEsc(key)}">${_mdEsc(alias?.trim() || wikiPathParse(nm)?.object || nm)}</a>`;
+  const own = src != null ? ` data-src="${_mdEsc(src)}" contenteditable="false"` : '';
+  return `<a class="${cls}" data-name="${_mdEsc(nm)}" data-key="${_mdEsc(key)}"${own}>${_mdEsc(alias?.trim() || wikiPathParse(nm)?.object || nm)}</a>`;
 }
 
 // Inline pass. Protects code spans / links / wikilinks behind \x00n\x00
@@ -74,7 +96,7 @@ function _mdInline(text, resolveLink, fn = null) {
     const note = fn.notes.get(id);
     return stash(`<sup class="fn-ref${note == null ? ' fn-missing' : ''}" data-fn="${_mdEsc(id)}" data-note="${_mdEsc(note ?? '')}" tabindex="0">${fn.num(id)}</sup>`);
   });
-  s = s.replace(MD_WIKILINK_RE, (_, name, alias) => stash(mdWikiLinkHtml(name, alias, resolveLink)));
+  s = s.replace(MD_WIKILINK_RE, (_, name, alias) => stash(mdWikiLinkHtml(...wikiLinkSplit(name, alias), resolveLink)));
   s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, label, url) =>
     stash(`<a class="md-link" href="${_mdEsc(url)}" title="${_mdEsc(url)}" onclick="return false">${_mdEsc(label)}</a>`));
 

@@ -49,7 +49,7 @@ function pbLinkResolve(l) {
 }
 
 const pbLinkLabel = (l, r = pbLinkResolve(l)) =>
-  String(l?.label || '').replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, n, a) => a || n).trim() || r.name || r.host || (r.anchor ? `#${r.anchor}` : '—');
+  String(l?.label || '').replace(MD_WIKILINK_RE, (_, n, a) => { const [nm, al] = wikiLinkSplit(n, a); return al || wikiPathParse(nm)?.object || nm; }).trim() || r.name || r.host || (r.anchor ? `#${r.anchor}` : '—');
 
 // The links an option holds, cleaned: a link whose `to` is not one of the
 // shapes above is dropped (a newer template's kind, a hand-edited row).

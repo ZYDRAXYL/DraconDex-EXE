@@ -464,6 +464,7 @@ contextBridge.exposeInMainWorld('api', {
     resolveKeys: (keys)    => inv('wiki:resolveKeys', keys),
     linkCounts:  (nx)      => inv('wiki:linkCounts', nx),
     getGraph:   (nx)       => inv('wiki:getGraph', nx),
+    linksAmong: (nx,keys)  => inv('wiki:linksAmong', nx,keys),
     renameTarget: (key,o,n) => inv('wiki:renameTarget', key,o,n),
   },
   timeline: {

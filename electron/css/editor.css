@@ -34,9 +34,6 @@
 .md-preview ul,.md-preview ol{margin:.4em 0;padding-left:1.5em}
 .md-preview li.md-task{list-style:none;margin-left:-1.2em}
 .md-preview .md-hl{background:color-mix(in srgb, var(--accent) 30%, transparent);color:inherit;border-radius:2px;padding:0 2px}
-.md-preview .wikilink{color:var(--accent-text,var(--accent));cursor:pointer;text-decoration:none;border-bottom:1px solid color-mix(in srgb, var(--accent) 45%, transparent)}
-.md-preview .wikilink:hover{border-bottom-color:var(--accent)}
-.md-preview .wikilink-unresolved{opacity:.6;border-bottom-style:dashed}
 .md-preview .md-link{color:var(--accent-text,var(--accent));text-decoration:underline;cursor:default}
 
 /* ═══ QUICK SWITCHER (Ctrl+P) ═══ */

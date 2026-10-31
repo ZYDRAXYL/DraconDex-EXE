@@ -14,12 +14,18 @@
 // [[Wikilink|alias]] becomes its text: a link to a page the file does not
 // hold would go nowhere.
 
-const WIKI = /\[\[([^[\]|]+?)(?:\|([^[\]]+?))?\]\]/g;
+// Procress 31 part 1: db/wiki.js's own pattern (a name in "…" may hold | [ ]),
+// and a path link reads as its object's name, like the page does.
+const { WIKILINK_RE: WIKI, wikiLinkSplit, parseWikiPath } = require('./wiki');
+const wikiText = (name, alias) => {
+  const [nm, al] = wikiLinkSplit(name, alias);
+  return (al || parseWikiPath(nm)?.object || nm).trim();
+};
 
 // ── Markdown → blocks ──────────────────────────────────────────────────
 function inlineRuns(text) {
   const runs = [];
-  const src = String(text).replace(WIKI, (_, name, alias) => (alias || name).trim());
+  const src = String(text).replace(WIKI, (_, name, alias) => wikiText(name, alias));
   // tokens: `code`, [label](http…), **b**, *i* / _i_, ~~s~~
   const re = /`([^`\n]+)`|\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)|\*\*([^*\n]+)\*\*|~~([^~\n]+)~~|(?:^|(?<=[^*\w]))\*([^*\n]+)\*(?!\*)|(?:^|(?<=\W))_([^_\n]+)_(?!\w)/g;
   let at = 0, m;

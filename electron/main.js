@@ -1966,6 +1966,7 @@ h('wiki:rebuild',      ()          => db.rebuildWikiIndex());
 h('wiki:resolveKeys',  (keys)      => db.resolveEntityKeys(keys));
 h('wiki:linkCounts',   (nx)        => db.getLinkCounts(nx));
 h('wiki:getGraph',     (nx)        => db.getGraph(nx));
+h('wiki:linksAmong',   (nx,keys)   => db.linksAmong(nx, keys));
 h('wiki:renameTarget', (key,o,n)   => db.renameWikiTarget(key,o,n));
 
 // Color

@@ -111,7 +111,7 @@ function buildClassifierMainHtml(m, c) {
   const toolbar = `<div class="classifier-toolbar" oncontextmenu="openCtx('classifier.category',event,{moduleId:${m.id}})">
     ${cmdBtn('classifier.addObject', { moduleId: m.id }, { cls: 'btn-p' })}
     ${cmdBtn('classifier.fields', { moduleId: m.id })}
-    ${viewBar}
+    ${viewBar}${clsViewOptsBtnHtml(m, view)}
   </div>`;
   let body;
   if (!d.objects.length) {
@@ -134,7 +134,7 @@ function buildClassifierMainHtml(m, c) {
 // here wrote a value no view ever showed. Procress 26 part 3: the cell edits
 // the LAST level row's own field (its level, else its condition) in place;
 // "· N" opens the element for the rest, and an empty cell's + adds the first.
-function classifierTableCellHtml(m, o, c) {
+function classifierTableCellHtml(m, o, c, d = null) {
   if (c.levelable || c.has_condition) {
     const rows = o.levelMap?.[c.id] || [];
     const last = rows[rows.length - 1];
@@ -146,7 +146,7 @@ function classifierTableCellHtml(m, o, c) {
     return `<td class="cls-cell cls-cell-ctl"><span class="cls-lv-cell" contenteditable="true" data-oid="${o.id}" data-tid="${c.id}" data-lid="${last.id}" data-field="${field}"
       aria-label="${x(c.description || '')}" onblur="saveClsLevelCell(this)" data-no-i18n>${x(last[field] || '')}</span>${all}</td>`;
   }
-  return clsFieldCellHtml(m, o, c); // v5 Part 7 (§11.3), mod/cls-field-types.js
+  return clsFieldCellHtml(m, o, c, d); // v5 Part 7 (§11.3), mod/cls-field-types.js
 }
 
 async function saveClsLevelCell(el) {
@@ -155,6 +155,8 @@ async function saveClsLevelCell(el) {
   if (row && (row[el.dataset.field] || '') === value) return;
   await api.classifier.updateLevelField(Number(el.dataset.lid), el.dataset.field, value);
   if (row) row[el.dataset.field] = value;
+  const obj = clsFindObject(Number(el.dataset.oid));
+  if (obj) clsTouched(obj);
 }
 
 async function addClsLevelFromCell(oid, tid) {
@@ -183,8 +185,10 @@ function clsObjectNameHtml(o, tag = 'span') {
     : `<${tag} class="cls-name" role="button" tabindex="0" title="${x(t('rename'))}" onclick="event.stopPropagation();startRenameClsObject(${o.id},'end')"
         onkeydown="if(event.key==='Enter'||event.key==='F2'){event.preventDefault();startRenameClsObject(${o.id})}" data-no-i18n>${x(o.name)}</${tag}>`;
 }
-function classifierNameCellHtml(m, o) {
-  const grip = reorderGripHtml(`clsDragDown(event,this.closest('tr'),'obj',${m.id},${o.id})`);
+// Procress 31 part 3: no grip while another order than self-align is on —
+// a drag there would renumber display_order from a list it is not showing.
+function classifierNameCellHtml(m, o, drag = true) {
+  const grip = drag ? reorderGripHtml(`clsDragDown(event,this.closest('tr'),'obj',${m.id},${o.id})`) : '';
   return `<td class="cls-name-cell">${grip}${clsObjectIconBtnHtml(m, o)}${clsObjectNameHtml(o)}</td>`;
 }
 
@@ -196,15 +200,20 @@ function renderClassifierTable(m, d, inst) {
   // Procress 24: a column's head is its field — click it for the field menu
   // (type · rename · delete), two clicks from the module page. Procress 26:
   // drag the head to move the column.
-  let html = `<div class="cls-table-wrap" data-scroll-key="cls-table-${m.id}"><table class="cls-table"><tr><th>${t('name')}</th>${d.templates.map(c => `<th class="cls-col-head" data-cls-tid="${c.id}" onpointerdown="clsDragDown(event,this,'tpl',${m.id},${c.id},'x')"><button type="button" class="btn btn-g btn-sm" aria-haspopup="menu" title="${x(clsColumnTip(c))}" onclick="event.stopPropagation();openClsFieldMenu(this,${m.id},${c.id})" data-no-i18n>${x(c.description)}</button></th>`).join('')}</tr>`;
-  const keep = S.clsRenamingObject != null ? d.objects.findIndex((o) => o.id === S.clsRenamingObject) : -1;
-  html += lazyRows(d.objects, (o) => {
-    let html = `<tr data-cls-oid="${o.id}" oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})">${classifierNameCellHtml(m, o)}`;
-    for (const c of d.templates) html += classifierTableCellHtml(m, o, c);
+  // Procress 31 part 2: only the fields the module shows; wordwrap/overflow
+  // ride on the table (mod/classifier-view.js).
+  const cols = clsShownTemplates(d);
+  const objects = clsSortedObjects(d);
+  const drag = clsManualOrder(d);
+  let html = `<div class="cls-table-wrap" data-scroll-key="cls-table-${m.id}"><table class="cls-table"${clsTableAttrs(d)}><tr><th${drag ? '' : ` title="${x(t('clsDragOnlyManual'))}"`}>${t('name')}</th>${cols.map(c => `<th class="cls-col-head" data-cls-tid="${c.id}" onpointerdown="clsDragDown(event,this,'tpl',${m.id},${c.id},'x')"><button type="button" class="btn btn-g btn-sm" aria-haspopup="menu" title="${x(clsColumnTip(c))}" onclick="event.stopPropagation();openClsFieldMenu(this,${m.id},${c.id})" data-no-i18n>${x(c.description)}</button></th>`).join('')}</tr>`;
+  const keep = S.clsRenamingObject != null ? objects.findIndex((o) => o.id === S.clsRenamingObject) : -1;
+  html += lazyRows(objects, (o) => {
+    let html = `<tr data-cls-oid="${o.id}" oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})">${classifierNameCellHtml(m, o, drag)}`;
+    for (const c of cols) html += classifierTableCellHtml(m, o, c, d);
     // Procress 29 part 6: no ✎ / 🗑 at the row's end — the name and the icon
     // are edited where they are, and delete is in the row's menu (and the Delete key).
     return html + '</tr>';
-  }, clsLazy(inst, 'table'), { keep, more: (id) => `<tr class="lazy-more" data-lazy="${id}"><td colspan="${d.templates.length + 1}"></td></tr>` });
+  }, clsLazy(inst, 'table'), { keep, more: (id) => `<tr class="lazy-more" data-lazy="${id}"><td colspan="${cols.length + 1}"></td></tr>` });
   html += `</table></div>`;
   return html;
 }
@@ -214,7 +223,7 @@ async function saveClassifierAttrCell(el) {
   const value = el.textContent.trim();
   await api.classifier.upsertAttr(oid, tid, value);
   const obj = clsFindObject(oid);
-  if (obj) obj.attrMap[tid] = value;
+  if (obj) { if (obj.attrMap[tid] !== value) clsTouched(obj); obj.attrMap[tid] = value; }
 }
 
 // An object's own icon (iconPicker()'s svg:/sym:/img: value), falling back
@@ -227,11 +236,12 @@ function classifierObjectIconHtml(o, m) {
 // §7.5 bug #9: a card opened the rename/icon modal; it opens the element now
 // (rename and colour moved to the card's right-click menu).
 function renderClassifierGrid(m, d, inst) {
-  return `<div class="cls-grid" oncontextmenu="if(event.target===this)openCtx('classifier.category',event,{moduleId:${m.id}})">${lazyRows(d.objects, o => {
+  const drag = clsManualOrder(d);
+  return `<div class="cls-grid" oncontextmenu="if(event.target===this)openCtx('classifier.category',event,{moduleId:${m.id}})">${lazyRows(clsSortedObjects(d), o => {
     const col = o.color_code || 'var(--accent)';
     return `
     <div class="card card-link cls-tile" data-cls-oid="${o.id}" style="border-top:3px solid ${x(col)}" onclick="openItemNode('classifier',${m.id},${o.id})"
-        oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})" onpointerdown="clsDragDown(event,this,'obj',${m.id},${o.id},'xy')">
+        oncontextmenu="openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})"${drag ? ` onpointerdown="clsDragDown(event,this,'obj',${m.id},${o.id},'xy')"` : ''}>
       <span class="disp-thumb"><img data-display-key="cobj_${o.id}" alt=""></span>
       <span class="cls-card-icon" style="border-color:${x(col)};color:${x(col)}">${classifierObjectIconHtml(o, m)}</span>
       <div class="cls-card-name">${S.clsRenamingObject === o.id ? clsObjectNameHtml(o) : x(o.name)}</div>
@@ -244,14 +254,16 @@ function renderClassifierListDetail(m, d, c) {
   const sel = clsSelectedOf(c, d);
   // Procress 21: compact rows of the shared list (core/list.js) — ⋯ and a
   // right click are the object menu; F2 renames, Delete deletes (with Undo).
-  const list = lazyRows(d.objects, o => listRowHtml({
-    density: 'compact', drag: true, state: { selected: !!(sel && o.id === sel.id) }, onclick: `selectClassifierObject(${xj(c.iid)},${o.id})`,
+  const objects = clsSortedObjects(d);
+  const drag = clsManualOrder(d);
+  const list = lazyRows(objects, o => listRowHtml({
+    density: 'compact', drag, state: { selected: !!(sel && o.id === sel.id) }, onclick: `selectClassifierObject(${xj(c.iid)},${o.id})`,
     icon: `<span class="cls-obj-icon-wrap" style="color:${x(o.color_code || 'var(--accent)')}" role="button" tabindex="-1" title="${x(t('clsColorIcon'))}" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();openClsObjectIconPopup(${m.id},${o.id},this)">${classifierObjectIconHtml(o, m)}</span>`, title: o.name,
     menu: `openCtx('classifier.object',event,{moduleId:${m.id},objectId:${o.id}})`,
-    attrs: `data-no-i18n data-cls-oid="${o.id}" onpointerdown="clsDragDown(event,this,'obj',${m.id},${o.id})"`,
+    attrs: `data-no-i18n data-cls-oid="${o.id}"${drag ? ` onpointerdown="clsDragDown(event,this,'obj',${m.id},${o.id})"` : ''}`,
     actions: listActHtml({ hidden: true, key: 'F2', name: t('rename'), onclick: `selectClassifierObject(${xj(c.iid)},${o.id});startRenameClsObject(${o.id})` })
       + listActHtml({ hidden: true, key: 'Delete', name: t('delete'), onclick: `deleteClassifierObjectRow(${o.id})` }),
-  }), clsLazy(c, 'list'), { keep: sel ? d.objects.indexOf(sel) : -1 });
+  }), clsLazy(c, 'list'), { keep: sel ? objects.indexOf(sel) : -1 });
   const detail = sel ? renderClassifierObjectDetail(m, sel, d.templates) : '';
   return `<div class="cls-listdetail"><div class="cls-list ls-list" data-scroll-key="cls-list-${m.id}" role="listbox" aria-label="${x(m.name)}" oncontextmenu="if(event.target===this)openCtx('classifier.category',event,{moduleId:${m.id}})">${list}</div><div class="cls-detail">${detail}</div></div>`;
 }
@@ -267,7 +279,7 @@ async function saveClassifierAttrInput(el) {
   const value = el.value.trim();
   await api.classifier.upsertAttr(oid, tid, value);
   const obj = clsFindObject(oid);
-  if (obj) obj.attrMap[tid] = value;
+  if (obj) { if (obj.attrMap[tid] !== value) clsTouched(obj); obj.attrMap[tid] = value; }
 }
 
 // ── Relation view (read-only, v5) ───────────────────────────────────────
@@ -308,7 +320,14 @@ async function mountClassifierRelationGraph(c) {
   const extra = index.filter((e) => otherIds.has(e.moduleId) && e.kind !== 'module' && e.kind !== 'file');
   const keys = new Set([...d.objects.map((o) => `cobj_${o.id}`), ...extra.map((e) => e.key)]);
   const rels = (d.relations || []).filter((r) => keys.has(r.from_key) && keys.has(r.to_key));
-  const touched = new Set(rels.flatMap((r) => [r.from_key, r.to_key]));
+  // Procress 31 part 4: a [[link]] either way between two shown nodes is a
+  // dashed line too — unless a relation already joins them (that one wins).
+  const pair = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+  const related = new Set(rels.map((r) => pair(r.from_key, r.to_key)));
+  const links = S.nexus ? (await api.wiki.linksAmong(S.nexus.id, [...keys])).filter((l) => !related.has(pair(l.from_key, l.to_key))) : [];
+  if (!box.isConnected) return;
+  const showLinks = ui?.clsRelLinks !== '0';
+  const touched = new Set([...rels, ...(showLinks ? links : [])].flatMap((r) => [r.from_key, r.to_key]));
   const own = d.objects.map((o) => {
     const key = `cobj_${o.id}`;
     return { id: key, objId: o.id, module: 'obj', label: o.name, hoverKey: key, outer: !touched.has(key),
@@ -316,7 +335,8 @@ async function mountClassifierRelationGraph(c) {
   });
   const ext = extra.map((e) => ({ id: e.key, module: `m${e.moduleId}`, label: e.name, hoverKey: e.key, outer: !touched.has(e.key),
     fill: e.color || findModuleNode(e.moduleId)?.color_code || 'var(--t2)' }));
-  const edges = rels.map((r) => ({ source: r.from_key, target: r.to_key, color: r.color_code }));
+  const edges = [...rels.map((r) => ({ source: r.from_key, target: r.to_key, color: r.color_code })),
+    ...links.map((l) => ({ source: l.from_key, target: l.to_key, wiki: true }))];
   const colors = { obj: m.color_code || '#8b5cf6' }, labels = { obj: x(m.name) };
   for (const mm of others) { colors[`m${mm.id}`] = mm.color_code || 'var(--t2)'; labels[`m${mm.id}`] = x(mm.name); }
   const hidden = new Set(others.filter((mm) => !shown.has(mm.id)).map((mm) => `m${mm.id}`));
@@ -326,5 +346,6 @@ async function mountClassifierRelationGraph(c) {
     onNodeClick: (n) => (n.objId ? openItemNode('classifier', m.id, n.objId) : openEntityByKey(n.id)),
     onNodeContext: (n, e) => { if (n.objId) openCtx('classifier.object', e, { moduleId: m.id, objectId: n.objId }); },
     onFilterChange: (h) => api.module.setUi(m.id, 'clsRelInclude', JSON.stringify(others.filter((mm) => !h.has(`m${mm.id}`)).map((mm) => mm.id))),
+    wikiToggle: links.length ? { name: t('clsRelLinkEdges'), on: showLinks, onChange: (on) => api.module.setUi(m.id, 'clsRelLinks', on ? '1' : '0') } : null,
   });
 }

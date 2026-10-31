@@ -237,6 +237,21 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .cls-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--t2)}
 .cls-table td:first-child{color:var(--t1);white-space:nowrap}
 .cls-cell:focus{outline:1px solid var(--accent);outline-offset:-1px;background:var(--raised)}
+/* Procress 31 part 2: a text cell is a div in its td, so it can be line-clamped
+   (the module's wordwrap setting); while it is being edited it shows everything. */
+.cls-table td.cls-td{padding:0}
+/* the inset is a transparent border, not padding: a clamped box clips at its
+   padding edge, so padding would show a sliver of the next line */
+.cls-td>.cls-cell{border:solid transparent;border-width:8px 10px;min-height:100%}
+.cls-table[data-lines]{--cls-lines:attr(data-lines type(<integer>))}
+.cls-table[data-overflow="expand"] .cls-td>.cls-cell[data-w]{min-width:calc(attr(data-w type(<number>)) * 1ch)}
+.cls-table[data-lines] .cls-td>.cls-cell:not(:focus){display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--cls-lines);overflow:hidden}
+.cls-vopts{display:flex;flex-direction:column;gap:var(--sp-1);min-width:240px;max-width:320px;padding:var(--sp-1)}
+.cls-vo-line{display:flex;align-items:center;gap:var(--sp-1)}
+.cls-vo-line>select{flex:1;min-width:0}
+.cls-vo-line.is-off{opacity:.5;pointer-events:none}
+.cls-vo-lines{width:6em}
+.cls-vo-fields{max-height:240px;overflow-y:auto}
 .cls-rowacts{display:flex;gap:2px;white-space:nowrap}
 .cls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
 .card.cls-tile{padding:14px 10px;text-align:center}
@@ -257,11 +272,13 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 .pv-textarea{min-height:60px;resize:vertical}
 /* Procress 27 part 1 — core/wiki-field.js: a field shows its [[links]] as
    links until it is edited (same look as .md-preview's) */
-:is([data-wiki-view],[data-wiki-box]) .wikilink{color:var(--accent-text,var(--accent));cursor:pointer;text-decoration:none;border-bottom:1px solid color-mix(in srgb, var(--accent) 45%, transparent)}
-:is([data-wiki-view],[data-wiki-box]) .wikilink:hover{border-bottom-color:var(--accent)}
-.wiki-view-wrap{flex:1;min-width:0;display:flex}
-.wiki-view-wrap>*{flex:1;min-width:0}
-.wiki-view-wrap:not(.editing) textarea,.wiki-view-wrap.editing .wiki-view{display:none}
+/* Procress 31 part 5 (D1): ONE look for a [[link]] everywhere — fields, pages,
+   Markdown preview. --link is the blue DraconDex-SDB gives every built-in
+   theme; a package theme without one keeps the accent. Unresolved: page-wiki.css. */
+.wikilink{color:var(--link,var(--accent-text,var(--accent)));cursor:pointer;text-decoration:none;border-bottom:1px solid color-mix(in srgb, currentColor 45%, transparent)}
+.wikilink:hover{border-bottom-color:currentColor}
+/* the one link being edited in a field shows its [[…]] text (core/wiki-field.js) */
+.wikilink-src{color:var(--link,var(--accent-text,var(--accent)))}
 .wiki-view{white-space:pre-wrap;overflow-wrap:anywhere;cursor:text;resize:none}
 /* ── Classifier element level/condition table + links (Process 8 part 1) ── */
 .cls-lv-wrap{padding:6px 14px 10px}
@@ -383,3 +400,5 @@ body.renaming-lock *:has(.rename-input){pointer-events:auto}
 /* v5 Part 7 §11.6: relations in story time (mod/exhibitor-time.js). */
 .exh-asof{width:6.5em}
 .exh-span{display:flex;gap:6px;flex-wrap:wrap}
+/* Procress 31 part 5: a one-line text property, editable in place with its links drawn */
+.pv-wiki-line{display:inline-block;min-width:10em;white-space:nowrap;overflow:hidden;vertical-align:middle}
