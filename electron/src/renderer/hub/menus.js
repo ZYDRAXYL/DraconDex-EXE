@@ -30,6 +30,23 @@ CTX_PROVIDERS['nest.module'] = (c) => {
   ].filter((g) => g.slice(1).some(Boolean));
   return [...groups.flatMap((g, i) => (i ? [{ sep: true }, ...g] : g)), { sep: true }, cmdItem('module.delete', c)];
 };
+// Right-click on the Nest's empty space: the Nexus root — the same groups
+// as a folder's menu, for the top level (nothing to rename, move or delete).
+CTX_PROVIDERS['nest.root'] = () => {
+  const head = (key) => ({ head: t(key) });
+  const groups = [
+    [head('create'), cmdItem('root.create'), cmdItem('app.newCollector'), cmdItem('root.importMenu')],
+    [head('pageMenuShare'), cmdItem('app.exportHtml'), cmdItem('app.exportMarkdown')],
+    [head('pageMenuMore'), cmdItem('root.settings')],
+  ].map((g) => g.filter(Boolean)).filter((g) => g.length > 1);
+  return groups.flatMap((g, i) => (i ? [{ sep: true }, ...g] : g));
+};
+const nestRootImportItems = () => [cmdItem('root.importModule'), cmdItem('app.importFolder'), cmdItem('dock.addLink')].filter(Boolean);
+// Only the space between and below the rows — a row has its own menu.
+function openNestRootContextMenu(ev) {
+  if (ev.target.closest('.li, input, button, a')) return;
+  openCtx('nest.root', ev, {});
+}
 const nestImportItems = (c) => [cmdItem('module.importModule', c), cmdItem('module.importFolder', c), cmdItem('module.addLink', c)].filter(Boolean);
 const nestExportItems = (c) => [cmdItem('module.exportAs', c), cmdItem('module.export', c), cmdItem('module.savePreset', c), cmdItem('module.saveBundle', c)].filter(Boolean);
 

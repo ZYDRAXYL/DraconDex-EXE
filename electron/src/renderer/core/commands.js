@@ -94,6 +94,11 @@ const COMMANDS = {
   'app.importFolder': { label: 'importFolder', icon: 'import', scope: 'app', when: () => !!S.nexus, run: () => importDockPickFolder(null), surfaces: ['nest.head'] },
   'app.newModule': { label: 'createMajorModule', icon: 'plus', scope: 'app', run: (c, el) => openKindPopup(null, el || paletteAnchor()), surfaces: ['nest.head'] },
   'app.settings': { label: 'settingOpenWindow', icon: 'settings', scope: 'app', run: () => openSettingWindow(), surfaces: ['settings.menu'] },
+  // The Nest's empty space is the Nexus root (hub/menus.js 'nest.root')
+  'root.create': { label: 'create', icon: 'plus', scope: 'app', when: () => !!S.nexus, run: () => openKindPopup(null, ctxAnchor(null)), palette: () => openKindPopup(null, paletteAnchor()), surfaces: ['nest.ctx'] },
+  'root.importModule': { label: 'settingDbImportModule', icon: 'import', scope: 'app', when: () => !!S.nexus, run: () => ctxImportModule(null), surfaces: ['nest.ctx'] },
+  'root.importMenu': { label: 'menuImport', icon: 'import', scope: 'app', when: () => !!S.nexus, sub: () => nestRootImportItems(), surfaces: ['nest.ctx'] },
+  'root.settings': { label: 'nexusSettingsThis', icon: 'settings', scope: 'app', when: () => !!S.nexus, run: () => openNexusModal(S.nexus.id), surfaces: ['nest.ctx'] },
   'dock.addLink': { label: 'addAssetLink', icon: 'plus', scope: 'app', run: () => openAddAssetUrlModal(null), surfaces: ['nest.head'] },
   'dock.relinkFolder': { label: 'assetRelinkFolder', icon: 'folder', scope: 'app', when: () => (S.importFiles || []).some(f => f.missing), run: () => relinkMissingFromFolder(), surfaces: ['problems'] },
   // v5 Part 8 (§12.5/§12.8): the page's own buttons.

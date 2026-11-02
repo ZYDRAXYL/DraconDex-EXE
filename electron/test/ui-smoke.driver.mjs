@@ -46,6 +46,25 @@ test('B1: every rail button does something, with no page error', async () => {
   await win.click('#nav-sidebar [data-cmd="app.nest"]');
 });
 
+// Right-clicking the Nest's empty space opens the Nexus root's menu; a row
+// keeps its own.
+test('Nest: empty space right-click is the Nexus root menu', async () => {
+  // the sample tree fills the panel, so the right-click lands on the panel itself
+  await win.evaluate(() => { const el = document.querySelector('#left-panel-inner .acc-body[data-key="nest"]'); const b = el.getBoundingClientRect();
+    el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: b.left + 40, clientY: b.bottom - 8 })); });
+  await sleep(250);
+  const items = () => win.locator('.context-menu-popup .kind-list-item').allTextContents().then((a) => a.map((s) => s.trim()));
+  const root = await items();
+  assert.ok(root.some((s) => /^Create/.test(s)), `root menu: ${root}`);
+  assert.ok(!root.some((s) => /Rename|Delete/.test(s)), 'nothing to rename or delete at the root');
+  await win.locator('.context-menu-popup .kind-list-item:has-text("Create")').first().click();
+  await win.waitForSelector('.popover-menu .kind-search');
+  await win.keyboard.press('Escape'); await sleep(150);
+  await row('Guide').click({ button: 'right' }); await sleep(200);
+  assert.ok((await items()).some((s) => /Rename/.test(s)), 'a row still opens its own menu');
+  await win.keyboard.press('Escape');
+});
+
 // B4 + Procress 17 I2: Create opens the searchable kind picker on a click (it
 // was a hover flyout that opened by itself); the hover flyouts that remain
 // survive moving through them and a diagonal across a sibling with its own.
