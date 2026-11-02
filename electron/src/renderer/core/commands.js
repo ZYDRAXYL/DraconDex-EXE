@@ -266,7 +266,7 @@ const COMMANDS = {
 
   // ── Narrator / Author / Scribe ───────────────────────────────────────
   'narrator.addDialogue': { label: 'addDialogue', icon: 'plus', scope: 'kind:narrator', run: (c) => openNarratorDialogueModal(c.moduleId), surfaces: ['narrator.toolbar', 'canvas.ctx'] },
-  'author.newChapter': { label: 'writeChapterNew', icon: 'plus', scope: 'kind:author', run: (c) => openAuthorChapterModal(c.moduleId), surfaces: ['author.toolbar'] },
+  'author.newChapter': { label: 'writeChapterNew', icon: 'plus', scope: 'kind:author', run: (c) => newAuthorChapter(c.moduleId), surfaces: ['author.toolbar'] },
   // v5 Part 7 (§11.5) — Diviner.
   'diviner.newTable': { label: 'divNewTable', icon: 'plus', scope: 'kind:diviner', run: (c) => openDivinerTableModal(c.moduleId), surfaces: ['diviner.toolbar', 'empty.state'] },
   'diviner.roll': { label: 'divRoll', icon: 'dice', scope: 'kind:diviner', when: () => !!divTable(), run: () => rollDiviner(), surfaces: ['diviner.toolbar'] },
