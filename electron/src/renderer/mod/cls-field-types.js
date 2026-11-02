@@ -230,10 +230,6 @@ function clsFieldOptionsHtml(cur) {
     </div>`;
 }
 
-function onClsTypeChange(sel) {
-  document.querySelectorAll('.cls-opt').forEach(el => { el.hidden = !el.dataset.for.split(' ').includes(sel.value); });
-}
-
 // The options JSON for the type chosen in the modal, or null.
 function readClsFieldOptions(type) {
   if (type === 'select' || type === 'multi') {

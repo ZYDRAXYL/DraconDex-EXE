@@ -94,12 +94,17 @@ const fieldsFocusables = () => [...document.querySelectorAll('#main-inner :is(in
 
 // Wait for the field to be drawn (a new thing's page opens asynchronously),
 // then focus it — selecting its text, ready to type over.
-async function fieldsFocus(key, select = true) {
-  // a save can be followed by one more redraw (the Nest's, a module reload),
-  // so keep the focus on it until the page has been still for a moment
+function fieldsFocus(key, select = true) {
+  return focusWhenSettled(`#main-inner .fstrip [data-fkey="${CSS.escape(key)}"]`, select);
+}
+
+// Focus `sel` once it is drawn — and keep it there until the page has been
+// still for a moment: a save or an open is often followed by one more
+// redraw (the Nest's, a module reload) that would drop it.
+async function focusWhenSettled(sel, select = true) {
   let still = 0;
   for (let i = 0; i < 50 && still < 4; i++) {
-    const el = document.querySelector(`#main-inner .fstrip [data-fkey="${CSS.escape(key)}"]`);
+    const el = document.querySelector(sel);
     if (el && document.activeElement !== el) { el.focus(); if (select) el.select?.(); still = 0; }
     else if (el) still++;
     await new Promise((r) => setTimeout(r, 50));

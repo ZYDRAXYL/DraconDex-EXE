@@ -670,3 +670,13 @@ select.fp-input[multiple]{padding:2px}
 .au-card-add{align-items:center;justify-content:center;color:var(--t3-aa,var(--t2));cursor:pointer;border-style:dashed}
 /* a table cell that opens what it names (Sage hut) */
 td.lk{cursor:pointer}
+/* the fields of a category, edited in its Structure tab (no-modal #02) */
+.cls-fe{display:flex;flex-direction:column;gap:2px}
+.cls-fe>.prop{gap:8px}
+.cls-fe-name{flex:1;min-width:0;border-color:transparent;background:transparent}
+.cls-fe-name:hover{border-color:var(--border)}
+.cls-fe-name:focus{border-color:var(--accent);background:var(--surface)}
+.cls-fe>.prop select{width:auto;flex:0 0 auto}
+.cls-fe>.prop.open{background:var(--raised)}
+.cls-fe-more{padding:8px 12px 10px 34px;border-left:2px solid var(--accent);margin:0 0 6px}
+.cls-fe-add{margin-top:6px}

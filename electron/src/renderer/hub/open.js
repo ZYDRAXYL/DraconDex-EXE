@@ -123,16 +123,7 @@ function pageTabsHtml(moduleId, tab) {
   return `<div class="page-tabs" role="tablist">${one('overview', 'gameOverview')}${one('structure', 'kindCatStructure')}</div>`;
 }
 function pageStructureHtml(m) {
-  const fields = m.kind === 'classifier' ? clsData(m.id).templates.map((tpl) => `
-      <div class="prop insp-attr">
-        <span class="pk pk-link" role="button" tabindex="0" data-no-i18n onclick="openClassifierFieldsModal(${m.id},${tpl.id})"
-          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" title="${t('editAttribute')}">${x(tpl.description)}</span>
-        <span class="pv ghost">${t(CLASSIFIER_DISPTYPE_KEY[tpl.attribute_type] || 'dispTypeText')}</span>
-        <span class="acts">
-          <button class="btn btn-g btn-i" onclick="openClassifierFieldsModal(${m.id},${tpl.id})" title="${t('edit')}" aria-label="${t('edit')}">${I.edit}</button>
-          <button class="btn btn-g btn-i" onclick="deleteClassifierFieldUndoable(${tpl.id})" title="${t('delete')}" aria-label="${t('delete')}">${I.delete}</button>
-        </span>
-      </div>`).join('') || `<p class="drafter-hint">${t('clsFieldsEmpty')}</p>` : null;
+  const fields = m.kind === 'classifier' ? clsFieldsEditorHtml(m) : null; // mod/classifier-fields.js
   return `<div class="page-structure">
     ${fields == null ? '' : `<section class="page-structure-sec"><h3>${t('clsFieldsOfCategory')}</h3>${fields}</section>`}
     <section class="page-structure-sec"><h3>${t('pbProperties')}</h3>${pbPropsEditorHtml(m.id, null, `full${_pbPane}`)}</section>
@@ -142,7 +133,7 @@ function pageStructureHtml(m) {
 // field of the category; a Manager's is a property of its page.
 async function pageAddAttribute(moduleId) {
   const m = findModuleNode(moduleId);
-  if (m?.kind === 'classifier') { openClassifierFieldsModal(moduleId); return; }
+  if (m?.kind === 'classifier') { openClassifierFields(moduleId); return; }
   setPageTab(moduleId, 'structure');
   const iid = q(`.page-structure .pbc-core-properties[data-iid]`)?.dataset.iid;
   if (iid) await pbPropAdd(iid);

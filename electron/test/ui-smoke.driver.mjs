@@ -1068,21 +1068,21 @@ test('27 part 2 + 3: "Fields of this category" reorders by its = grip; the table
   const mid = await openCharactersTable();
   const tpls = await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.map((x) => x.id)), mid);
   assert.ok(tpls.length >= 2, 'needs two fields');
-  await win.evaluate((m) => openClassifierFieldsModal(m), mid); await sleep(400);
-  const grips = win.locator('#modal-overlay [data-cls-tid] .nar-grip');
+  // no-modal #02: the fields are listed (and edited) in the Structure tab
+  await win.evaluate((m) => openClassifierFields(m), mid); await sleep(600);
+  const list = '#main-inner .cls-fe';
+  const grips = win.locator(`${list} [data-cls-tid] .nar-grip`);
   assert.equal(await grips.first().locator('svg line').count(), 2, 'the grip is the two-bar icon (28 part 4)');
-  await win.locator('#modal-overlay #ct-name').fill('half-typed');
-  const target = win.locator('#modal-overlay [data-cls-tid]').first();
+  const target = win.locator(`${list} [data-cls-tid]`).first();
   await grips.last().dragTo(target, { targetPosition: { x: 40, y: 2 } }); await sleep(600);
   const want = [tpls.at(-1), ...tpls.slice(0, -1)];
   assert.deepEqual(await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.map((x) => x.id)), mid), want, 'saved');
-  assert.deepEqual(await win.locator('#modal-overlay [data-cls-tid]').evaluateAll((els) => els.map((e) => Number(e.dataset.clsTid))), want, 'the modal shows it');
-  assert.equal(await win.locator('#modal-overlay #ct-name').inputValue(), 'half-typed', 'the form was not reset');
+  assert.deepEqual(await win.locator(`${list} [data-cls-tid]`).evaluateAll((els) => els.map((e) => Number(e.dataset.clsTid))), want, 'the list shows it');
   // Alt+↓ on a focused row moves it back one
-  await win.locator('#modal-overlay [data-cls-tid]').first().focus();
+  await win.locator(`${list} [data-cls-tid]`).first().focus();
   await win.keyboard.press('Alt+ArrowDown'); await sleep(500);
   assert.deepEqual((await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.map((x) => x.id)), mid)).slice(0, 2), [want[1], want[0]]);
-  await win.keyboard.press('Escape'); await sleep(300);
+  await win.evaluate((m) => setPageTab(m, 'overview'), mid); await sleep(500);
   assert.deepEqual(await win.locator('.cls-table th[data-cls-tid]').evaluateAll((els) => els.map((e) => Number(e.dataset.clsTid))).then((r) => r.slice(0, 2)), [want[1], want[0]], 'the columns follow');
   await win.evaluate(async ([m, t]) => { await api.classifier.moveTemplates(m, t); await refreshClassifier(); }, [mid, tpls]);
 });
@@ -1374,19 +1374,18 @@ test('28 part 3: a linked module\'s elements join the relation view by its check
   await win.evaluate(async ([m, h]) => { const r = (await api.module.linked(m)).find((e) => e.id === h); if (r?.relationId) await api.viewer.deleteRelation(r.relationId); await api.module.setUi(m, 'clsRelInclude', '[]'); }, [mid, hist]);
 });
 
-test('28 part 3: the field form\'s Level & Condition is always open, two checkboxes that save', async () => {
+test('28 part 3: a field\'s Level & Condition are two checkboxes that save', async () => {
   const mid = await openCharactersTable();
-  await win.evaluate((m) => openClassifierFieldsModal(m), mid); await sleep(400);
-  assert.equal(await win.locator('#modal-overlay details.cls-adv').count(), 0, 'not folded away');
-  assert.equal(await win.locator('#modal-overlay .cls-flags input[type="checkbox"]').count(), 2);
-  assert.equal(await win.locator('#modal-overlay .cls-flags .cls-flag-hint').count(), 2, 'each says what it does');
-  await win.locator('#modal-overlay #ct-name').fill('Smoke levels');
-  await win.locator('#modal-overlay #ct-lv').check();
-  await win.locator('#modal-overlay .mfoot .btn-p').click(); await sleep(500);
-  const tpl = await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.find((x) => x.description === 'Smoke levels')), mid);
-  assert.ok(tpl && tpl.levelable && !tpl.has_condition, 'levelable saved, condition not');
-  await win.keyboard.press('Escape');
-  await win.evaluate(async ([m, id]) => { await api.classifier.deleteTemplate(id); await refreshClassifier(); }, [mid, tpl.id]);
+  const tpl = await win.evaluate(async (m) => { await api.classifier.createTemplate(m, 'Smoke levels', 'text', false, false, null); await refreshClassifier(); return (await api.classifier.getTemplates(m)).find((x) => x.description === 'Smoke levels'); }, mid);
+  // no-modal #02: the field's row in the Structure tab, its settings unfolded (⚙)
+  await win.evaluate(([m, id]) => openClassifierFields(m, id), [mid, tpl.id]); await sleep(600);
+  const more = '#main-inner .cls-fe-more';
+  assert.equal(await win.locator(`${more} input[type="checkbox"]#ct-lv, ${more} input[type="checkbox"]#ct-cond`).count(), 2);
+  assert.equal(await win.locator(`${more} .cls-flag-hint`).count(), 2, 'each says what it does');
+  await win.locator(`${more} #ct-lv`).check(); await sleep(800);
+  const saved = await win.evaluate(([m, id]) => api.classifier.getTemplates(m).then((r) => r.find((x) => x.id === id)), [mid, tpl.id]);
+  assert.ok(saved.levelable && !saved.has_condition, 'levelable saved, condition not');
+  await win.evaluate(async ([m, id]) => { await api.classifier.deleteTemplate(id); await refreshClassifier(); setPageTab(m, 'overview'); }, [mid, tpl.id]);
 });
 
 const openBook = async () => {
@@ -2036,4 +2035,39 @@ test('no-modal 07/08: a relation and a map pin are edited in a panel; made at on
   assert.equal((await pins(wm)).find((p) => p.id === made2).linker_key, opt, 'its link saves');
   assert.equal(await win.locator(`${panel} [data-fkey="key"]`).inputValue(), opt, 'and the panel stays with it');
   await win.evaluate((id) => api.wanderer.delete(id), made2);
+});
+
+// #02 / #03: a category's fields are edited in its Structure tab; an
+// object's own field is typed in at the end of its fields.
+test('no-modal 02/03: fields edited in Structure; a private field typed in place', async () => {
+  const mid = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'classifier').id);
+  const tpls = () => win.evaluate((m) => api.classifier.getTemplates(m), mid);
+  await win.evaluate((m) => runCommand('classifier.fields', { moduleId: m }), mid); await sleep(900);
+  assert.equal(await win.locator('#modal-overlay.open').count(), 0, 'no modal');
+  assert.equal(await win.evaluate(() => document.activeElement?.dataset?.r), 'addfield', 'the + field box is ready');
+  await win.keyboard.type('Smoke field'); await win.keyboard.press('Enter'); await sleep(900);
+  const f = (await tpls()).find((tp) => tp.description === 'Smoke field');
+  assert.ok(f, 'added');
+  const row = `#main-inner .cls-fe [data-cls-tid="${f.id}"]`;
+  await win.locator(`${row} [data-f="name"]`).fill('Smoke field 2'); await win.keyboard.press('Enter'); await sleep(900);
+  assert.equal((await tpls()).find((tp) => tp.id === f.id).description, 'Smoke field 2', 'renamed in place');
+  await win.locator(`${row} [data-f="type"]`).selectOption('select'); await sleep(900);
+  assert.equal((await tpls()).find((tp) => tp.id === f.id).attribute_type, 'select', 'its type saves on change');
+  await win.locator(`${row} .acts button`).first().click(); await sleep(500);
+  await win.locator('#main-inner .cls-fe-more #ct-choices').fill('Red\nBlue'); await win.locator('#main-inner .cls-fe-more #ct-choices').blur(); await sleep(900);
+  assert.deepEqual(JSON.parse((await tpls()).find((tp) => tp.id === f.id).options || '{}').choices, ['Red', 'Blue'], 'its settings save as they change');
+  await win.evaluate((id) => api.classifier.deleteTemplate(id), f.id);
+
+  // 03 — an object's own field
+  const oid = await win.evaluate((m) => api.classifier.getObjects(m).then((o) => o[0].id), mid);
+  // the list view's detail (an object's page can be arranged without it)
+  await win.evaluate(async ([m, o]) => { await openModuleNode(m); setPageTab(m, 'overview'); const iid = Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid; await setClassifierView(iid, 'list'); selectClassifierObject(iid, o); }, [mid, oid]); await sleep(900);
+  await win.evaluate(() => { const d = document.querySelector('#main-inner details.cls-priv'); if (d && !d.open) d.querySelector('summary').click(); }); await sleep(200);
+  const box = win.locator('#main-inner [data-r="addprivfield"]').first();
+  await box.fill('Smoke secret'); await win.keyboard.press('Enter'); await sleep(900);
+  assert.equal(await win.locator('#modal-overlay.open').count(), 0, 'no modal');
+  const priv = (await win.evaluate(([m, o]) => api.classifier.getObjectTemplates(m, o), [mid, oid])).find((tp) => tp.description === 'Smoke secret');
+  assert.ok(priv && priv.object_ref === oid, 'a field of this object only');
+  assert.equal(await win.evaluate(() => document.activeElement?.dataset?.r), 'addprivfield', 'ready for the next');
+  await win.evaluate((id) => api.classifier.deleteTemplate(id), priv.id);
 });

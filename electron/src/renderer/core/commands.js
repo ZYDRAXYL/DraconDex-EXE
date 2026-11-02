@@ -224,9 +224,9 @@ const COMMANDS = {
   // ── Classifier ───────────────────────────────────────────────────────
   'classifier.quickStart': { label: 'clsQuickStart', icon: 'plus', scope: 'kind:classifier', when: (c) => !clsData(c?.moduleId).objects.length || c.always, run: (c) => classifierQuickStart(c.moduleId), surfaces: ['empty.state'] },
   'classifier.addObject': { label: 'addObject', icon: 'plus', scope: 'kind:classifier', run: (c) => createClassifierObjectQuick(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
-  'classifier.fields': { label: 'clsFieldsOfCategory', icon: 'edit', scope: 'kind:classifier', run: (c) => openClassifierFieldsModal(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
-  'classifier.fieldType': { label: 'clsFieldChangeType', icon: 'fields', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFieldsModal(c.moduleId, c.tplId), surfaces: ['classifier.ctx'] },
-  'classifier.fieldRename': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFieldsModal(c.moduleId, c.tplId), surfaces: ['classifier.ctx'] },
+  'classifier.fields': { label: 'clsFieldsOfCategory', icon: 'edit', scope: 'kind:classifier', run: (c) => openClassifierFields(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
+  'classifier.fieldType': { label: 'clsFieldChangeType', icon: 'fields', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFields(c.moduleId, c.tplId, 'type'), surfaces: ['classifier.ctx'] },
+  'classifier.fieldRename': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFields(c.moduleId, c.tplId, 'name'), surfaces: ['classifier.ctx'] },
   'classifier.fieldDelete': { label: 'delete', icon: 'delete', danger: true, scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => deleteClassifierFieldUndoable(c.tplId), surfaces: ['classifier.ctx'] },
   'classifier.openObject': { label: 'open', icon: 'eye', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openItemNode('classifier', c.moduleId, c.objectId), surfaces: ['classifier.ctx'] },
   'classifier.renameObject': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => startRenameClsObject(c.objectId), surfaces: ['classifier.ctx'] },
