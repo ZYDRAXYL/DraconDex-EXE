@@ -81,7 +81,7 @@ function buildChatScribeMainHtml(m, c) {
       <span class="name">${x(s.name)}<small class="chs-snippet">${x(String(s.last_message || '').slice(0, 40))}</small></span>
       <span class="cnt" data-no-i18n>${s.message_count}</span>
       <span class="acts">
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();openChatSessionModal(${m.id},${s.id})" title="${t('edit')}">${I.edit}</button>
+        <button class="btn btn-g btn-i" onclick="event.stopPropagation();openItemNode('scribe',${m.id},${s.id})" title="${t('edit')}">${I.edit}</button>
       </span>
     </div>`).join('');
   const column = `<div class="author-chapters chs-sessions">
@@ -290,41 +290,14 @@ function buildChatTranscriptHtml(d) {
 }
 
 // ── Session + message CRUD ──────────────────────────────────────────────
-function openChatSessionModal(moduleId, id = null) {
-  const ses = id ? S.chatScribeData?.sessions.find(s => s.id === id) : null;
-  openModal(ses ? t('moduleEdit') : t('chatNewSession'), `
-    <div class="fg"><label>${t('name')} *</label><input id="cs-name" value="${x(ses?.name || '')}"></div>
-    <div class="mfoot">
-      ${ses ? `<button class="btn btn-d" onclick="deleteChatSessionRow(${ses.id})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitChatSession(${moduleId},${ses ? ses.id : 'null'})">${ses ? t('save') : t('create')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#cs-name').focus(), 60);
-}
-
-async function submitChatSession(moduleId, id) {
-  const name = pbQOr('#cs-name').value.trim();
-  if (!name) return;
-  if (id) await api.chatscribe.renameSession(id, name);
-  else {
-    const newId = await api.chatscribe.createSession(moduleId, name);
-    S.chatScribeData.selectedId = newId;
-  }
-  closeModal();
-  await reloadSource(moduleId);
-  invalidateNestItems(moduleId, id ? 0 : 1);
-  toast(id ? t('saved') : t('created'), 'ok');
-}
-
-async function deleteChatSessionRow(id) {
-  if (!await uiConfirm(t('confirmDeleteItem'))) return;
-  await api.chatscribe.deleteSession(id);
-  closeModal();
-  const d = S.chatScribeData;
-  if (d.selectedId === id) d.selectedId = null;
-  await reloadSource(d.moduleId);
-  invalidateNestItems(d.moduleId, -1);
-  toast(t('deleted'), 'ok');
+// No modal (APP src/design/no-modal #15): a new session is made at once and
+// opens on its page with its name selected.
+async function newChatSession(moduleId) {
+  const id = await api.chatscribe.createSession(moduleId, t('chatNewSessionName'));
+  if (S.chatScribeData?.moduleId === moduleId) S.chatScribeData.selectedId = id;
+  invalidateNestItems(moduleId, 1);
+  await openItemNode('scribe', moduleId, Number(id));
+  fieldsFocus('name');
 }
 
 // Current session id regardless of which of the two contexts (Plan part4)

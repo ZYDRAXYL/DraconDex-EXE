@@ -1897,3 +1897,47 @@ test('no-modal 13: a new node is typed on the board; its page saves by itself', 
   assert.equal((await win.evaluate((m) => api.designer.getNodes(m), mid)).find((n) => n.id === node.id).color, await sw.getAttribute('data-color'), 'a colour saves on the click');
   await win.evaluate((id) => api.designer.deleteNode(id), node.id);
 });
+
+// #09 / #11 / #15: the fields strip (core/fields.js) — new = made at once on
+// its page with the name selected; each field saves by itself; Esc puts it back.
+async function stripNew(kind, cmd, list) {
+  const mid = await win.evaluate(async (k) => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === k); await openModuleNode(m.id); return m.id; }, kind);
+  await sleep(600);
+  const n0 = (await win.evaluate(list, mid)).length;
+  await win.evaluate(([c, m]) => runCommand(c, { moduleId: m }), [cmd, mid]); await sleep(1200);
+  assert.equal((await win.evaluate(list, mid)).length, n0 + 1, `${kind}: made at once`);
+  assert.equal(await win.locator('#modal-overlay.open').count(), 0, `${kind}: no modal`);
+  assert.equal(await win.evaluate(() => document.activeElement?.dataset?.fkey), 'name', `${kind}: its name is ready to type`);
+  await win.keyboard.type(`Smoke ${kind}`); await win.keyboard.press('Enter'); await sleep(900);
+  const made = (await win.evaluate(list, mid)).find((r) => r.name === `Smoke ${kind}`);
+  assert.ok(made, `${kind}: the name saved`);
+  assert.match(await win.locator('#main-inner .page-title').innerText(), new RegExp(`Smoke ${kind}`), `${kind}: the page head follows`);
+  const name = win.locator('#main-inner .fstrip [data-fkey="name"]');
+  await name.fill('thrown away'); await win.keyboard.press('Escape'); await sleep(300);
+  assert.equal(await name.inputValue(), `Smoke ${kind}`, `${kind}: Esc puts it back`);
+  return { mid, made };
+}
+
+test('no-modal 09/11/15: dialogue, table and session are named and edited on their page', async () => {
+  const d = await stripNew('narrator', 'narrator.addDialogue', (m) => api.narrator.getDialogues(m));
+  await win.locator('#main-inner .fstrip .fstrip-color').click(); await sleep(300);
+  const cid = await win.locator('.fstrip-color-pop .cswatch').nth(3).getAttribute('data-cid');
+  await win.locator('.fstrip-color-pop .cswatch').nth(3).click(); await sleep(900);
+  assert.equal(String((await win.evaluate((m) => api.narrator.getDialogues(m), d.mid)).find((r) => r.id === d.made.id).color), cid, 'a colour saves on its pick');
+  await win.evaluate((id) => api.narrator.deleteDialogue(id), d.made.id);
+
+  const tb = await stripNew('diviner', 'diviner.newTable', (m) => api.diviner.getTables(m));
+  const dice = win.locator('#main-inner .fstrip [data-fkey="dice"]');
+  await dice.fill('2d6'); await win.keyboard.press('Tab'); await sleep(900);
+  assert.equal((await win.evaluate((m) => api.diviner.getTables(m), tb.mid)).find((r) => r.id === tb.made.id).dice, '2d6', 'dice saves on leaving it');
+  await win.locator('#main-inner .fstrip [data-fkey="dice"]').fill('nonsense'); await win.keyboard.press('Enter'); await sleep(700);
+  assert.equal((await win.evaluate((m) => api.diviner.getTables(m), tb.mid)).find((r) => r.id === tb.made.id).dice, '2d6', 'bad dice is refused');
+  await win.locator('#main-inner .fstrip [data-fkey="mode"]').selectOption('join'); await sleep(900);
+  assert.equal((await win.evaluate((m) => api.diviner.getTables(m), tb.mid)).find((r) => r.id === tb.made.id).mode, 'join', 'a select saves on change');
+  assert.equal(await win.locator('#main-inner .fstrip [data-fkey="dice"]').count(), 0, 'join has no dice');
+
+  await win.evaluate((id) => api.diviner.deleteTable(id), tb.made.id);
+
+  const s = await stripNew('scribe', 'scribe.newSession', (m) => api.chatscribe.getSessions(m));
+  await win.evaluate((id) => api.chatscribe.deleteSession(id), s.made.id);
+});
