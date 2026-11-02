@@ -392,8 +392,8 @@ async function newAuthorChapter(moduleId) {
     d.selectedId = id;
     if (d.view !== 'editor' && d.view !== 'board') await setAuthorView('editor');
   }
+  invalidateNestItems(moduleId, 1); // queues a render — before ours, or it re-renders past the focus below
   await reloadSource(moduleId);
-  invalidateNestItems(moduleId, 1);
   const inp = pbQOr(`.au-card[data-chid="${id}"] .au-card-name`) || pbQOr('#author-editor .au-title:not(.au-no)');
   inp?.focus();
   inp?.select();
