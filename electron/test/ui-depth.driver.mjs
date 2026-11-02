@@ -52,10 +52,10 @@ const TASKS = [
   { task: 'Module icon · colour', budget: 1, path: [`${nestRow('Characters')} .kicon`], target: '.icon-edit-popup', keyboard: false },
   { task: 'Field values of an element', budget: 1, path: [nestRow('Mira')], target: '#main-inner .module-page input, #main-inner .module-page select' },
   { task: 'Change view', budget: 1, path: [nestRow('Characters')], target: '#main-inner .viewbar' },
-  { task: 'Add a field', budget: 2, path: [nestRow('Characters'), '#main-inner button[onclick^="pageAddAttribute"]'], target: '#modal-overlay:not(.hidden) #ct-name' },
-  { task: 'Field type (Structure tab)', budget: 3, path: [nestRow('Characters'), '#main-inner .page-tab[onclick*="structure"]', '#main-inner .page-structure .pk-link'], target: '#modal-overlay:not(.hidden) #ct-disptype' },
+  { task: 'Add a field', budget: 2, path: [nestRow('Characters'), '#main-inner button[onclick^="pageAddAttribute"]'], target: '#main-inner .cls-fe-add [data-r="addfield"]' }, // no-modal #02: the Structure tab's + field
+  { task: 'Field type (Structure tab)', budget: 3, path: [nestRow('Characters'), '#main-inner .page-tab[onclick*="structure"]'], target: '#main-inner .page-structure .cls-fe [data-f="type"]' }, // no-modal #02: the type is in the row
   { task: 'Field type (table column head)', budget: 3, setup: 'table',
-    path: [nestRow('Characters'), '#main-inner .cls-table th button[aria-haspopup="menu"]', menuItem('Change type')], target: '#modal-overlay:not(.hidden) #ct-disptype' },
+    path: [nestRow('Characters'), '#main-inner .cls-table th button[aria-haspopup="menu"]', menuItem('Change type')], target: '#main-inner .page-structure .cls-fe [data-f="type"]' },
   { task: 'Layout (Workspace style), from Settings', budget: 2, path: [SETTINGS, settingNav('style')], target: () => S.settingPage === 'style' },
   { task: 'Layout, from the page ⋯ (View)', budget: 3, path: [nestRow('Characters'), PAGE_MENU, menuItem('Choose layout')], target: () => S.settingPage === 'style' && !!document.getElementById('setting-window') },
   { task: 'Title layout (align · icon · cover)', budget: 3, path: [nestRow('Characters'), PAGE_MENU, menuItem('Title layout')], target: '.ph-pop' },
