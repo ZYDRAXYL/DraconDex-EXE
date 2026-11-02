@@ -191,7 +191,8 @@ function mountDesignerBoard() {
     }
     el.addEventListener('dblclick', (ev) => {
       ev.stopPropagation();
-      openDesignNodeModal(n.id);
+      if (el.querySelector('.dg-label[contenteditable]')) return; // typing its text
+      openItemNode('designer', d.moduleId, n.id);
     });
     el.addEventListener('pointerdown', (ev) => {
       if (ev.button !== 0) return;
@@ -292,9 +293,43 @@ async function addDesignNode(shape) {
   const jitter = () => (Math.random() - 0.5) * 60;
   const color = DG_COLORS[(d.nodes.length) % (DG_COLORS.length - 1)];
   const id = await api.designer.createNode(d.moduleId, shape, c.x + jitter(), c.y + jitter(), '', color, null);
+  invalidateNestItems(d.moduleId, 1); // queues a render — before ours (see newAuthorChapter)
   await reloadSource(d.moduleId);
-  invalidateNestItems(d.moduleId, 1);
-  openDesignNodeModal(id);
+  startDesignNodeText(id);
+}
+
+// A new node's text is typed on the board, where it was put (no modal —
+// APP src/design/no-modal #13). Enter / clicking away saves, Shift+Enter is
+// a new line, Esc leaves it as it was. A shape with no text label (a comic
+// panel or balloon) opens its page instead.
+function startDesignNodeText(id) {
+  const d = S.designerData;
+  const n = d?.nodes.find((nn) => nn.id === id);
+  const label = pbQOr(`.dg-node[data-node="${id}"] .dg-label`);
+  if (!n || !label || n.linker_key) { if (n) openItemNode('designer', d.moduleId, id); return; }
+  const before = n.node_text || '';
+  label.contentEditable = 'plaintext-only';
+  label.addEventListener('pointerdown', (e) => e.stopPropagation()); // not a drag while typing
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    label.removeAttribute('contenteditable');
+    const text = label.innerText.trim();
+    if (!save || text === before) { label.textContent = dgNodeName(n); return; }
+    await api.designer.updateNode(id, n.shape, text, n.color);
+    n.node_text = text;
+    invalidateNestItems(d.moduleId);
+    await reloadSource(d.moduleId);
+  };
+  label.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  label.addEventListener('blur', () => finish(true));
+  label.focus();
+  getSelection().selectAllChildren(label);
 }
 
 function startDesignEdge() {
@@ -361,50 +396,8 @@ function buildDesignNodeFieldsHtml(n, opts = {}) {
         `<option value="${s}" ${n.shape === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
     <div class="fg"><label data-no-i18n>Color</label>
       <div class="vw-kindchecks" id="${prefix}-colors">${DG_COLORS.map(c =>
-        `<span class="sk-swatch${(n.color || '') === c ? ' act' : ''}" style="background:${c}" onclick="document.querySelectorAll('#${prefix}-colors .sk-swatch').forEach(e=>e.classList.remove('act'));this.classList.add('act')" data-color="${c}"></span>`).join('')}
+        `<button type="button" class="btn sk-swatch${(n.color || '') === c ? ' act' : ''}" style="background:${c}" aria-label="${c}" onclick="document.querySelectorAll('#${prefix}-colors .sk-swatch').forEach(e=>e.classList.remove('act'));this.classList.add('act')" data-color="${c}"></button>`).join('')}
       </div></div>`;
-}
-
-async function openDesignNodeModal(id) {
-  const d = S.designerData;
-  const n = d.nodes.find(nn => nn.id === id);
-  if (!n) return;
-  const comic = await dgComicFieldsHtml(n);
-  openModal(t('moduleEdit'), `
-    ${buildDesignNodeFieldsHtml(n, { prefix: 'dn' })}
-    ${comic}
-    <div class="mfoot">
-      <button class="btn btn-d" onclick="deleteDesignNodeRow(${n.id})">${t('delete')}</button>
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitDesignNode(${n.id})">${t('save')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#dn-text')?.focus(), 60);
-}
-
-async function submitDesignNode(id) {
-  const d = S.designerData;
-  const n = d.nodes.find(nn => nn.id === id);
-  if (!n) return;
-  const text = pbQOr('#dn-text')?.value ?? n.node_text;
-  const shape = pbQOr('#dn-shape')?.value || n.shape;
-  const colorEl = document.querySelector('#dn-colors .sk-swatch.act');
-  const color = colorEl ? colorEl.dataset.color : n.color;
-  await api.designer.updateNode(id, shape, text, color);
-  if (dgIsComic(shape)) await dgComicSubmit(id);
-  closeModal();
-  await reloadSource(d.moduleId);
-  invalidateNestItems(d.moduleId);
-  toast(t('saved'), 'ok');
-}
-
-async function deleteDesignNodeRow(id) {
-  if (!await uiConfirm(t('confirmDeleteItem'))) return;
-  const moduleId = S.designerData.moduleId;
-  await api.designer.deleteNode(id);
-  closeModal();
-  await reloadSource(moduleId);
-  invalidateNestItems(moduleId, -1);
-  toast(t('deleted'), 'ok');
 }
 
 function openDesignEdgeModal(edgeId, fromId = null, toId = null) {

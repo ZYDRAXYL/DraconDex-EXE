@@ -50,53 +50,39 @@ async function deleteChroniclerTimeline(moduleId, id) {
 // ═══ Event CRUD (module-scoped: no Director relation/hashtag coupling —
 // those systems are project-scoped, see progress.md Section C item 8 for
 // the same reasoning applied to Classifier) ═════════════════════════════
-async function openChroniclerEventModal(tlid, evId = null) {
-  let ev = null;
-  if (evId) { const evs = await api.timeline.getEvents(tlid); ev = evs.find(e => e.id === evId); }
-  openModal(ev ? t('chroniclerEventEdit') : t('chroniclerEventNew'), `
-    <div class="fg"><label>${t('name')} *</label><input id="chr-ev-n" value="${x(ev?.event_name || '')}"></div>
-    <div class="fg"><label>${t('startDate')} *</label>${dateInputsHTML('chr-ev-s', ev, 's_day', 's_month', 's_years', 's_hour', 's_minute')}</div>
-    <div class="fg"><label>${t('endDate')}</label>${dateInputsHTML('chr-ev-e', ev, 'e_day', 'e_month', 'e_years', 'e_hour', 'e_minute')}</div>
-    <div class="fg"><label>${t('story')}</label><textarea id="chr-ev-story" data-wiki>${x(ev?.story || '')}</textarea></div>
-    <div class="mfoot">${ev ? `<button class="btn btn-d" onclick="deleteChroniclerEvent(${evId},${tlid})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="${ev ? `saveChroniclerEvent(${evId},${tlid})` : `createChroniclerEvent(${tlid})`}">${ev ? t('save') : t('create')}</button></div>`);
-  setTimeout(() => q('#chr-ev-n').focus(), 60);
-}
-
-async function createChroniclerEvent(tlid) {
+// No modal (APP src/design/no-modal #05): the event's page and the Down-line
+// row already edit every field, so a new event is made at once — on the
+// line's latest date, named "New event" — with its name selected to type
+// over: in the Down-line list when that is showing, else on its own page.
+async function newChroniclerEvent(tlid) {
   const __iid = pbCurrent(); // re-bound below: an await can hand the turn to another instance
   try {
-    const n = q('#chr-ev-n').value.trim();
-    if (!n) { toast(t('name'), 'err'); return; }
-    const sid = await getDateFromInputs('chr-ev-s');
-    if (!sid) { toast(t('startDate'), 'err'); return; }
-    const eid = await getDateFromInputs('chr-ev-e');
-    const story = q('#chr-ev-story')?.value.trim() || '';
-    await api.timeline.createEvent(tlid, n, sid, eid, null, story); // color/icon set later via the dot's icon popup
-    closeModal();
-    pbUse(__iid); await mountChroniclerGraph();
-    if (S.chroniclerData?.moduleId != null) invalidateNestItems(S.chroniclerData.moduleId, 1);
-    toast(t('created'), 'ok');
+    const data = S.chroniclerData;
+    const evs = await api.timeline.getEvents(tlid);
+    const last = evs[evs.length - 1], cur = data?.calCursor;
+    const sid = await api.timeline.getOrCreateDate(last?.s_day || cur?.d || 1, last?.s_month || cur?.m || 1,
+      last?.s_years || cur?.y || 1, last?.s_hour || 0, last?.s_minute || 0);
+    const r = await api.timeline.createEvent(tlid, t('chroniclerEventNew'), sid, null, null, '');
+    const id = Number(r?.lastInsertRowid) || Math.max(...(await api.timeline.getEvents(tlid)).map((e) => e.id));
+    const moduleId = data?.moduleId;
+    const inList = data?.view === 'downline';
+    if (inList) data.inspectorEventId = id;
+    // the Nest's re-render redraws the graph too (asynchronously), so the row
+    // opens with it; wait for its name box rather than racing that redraw
+    if (moduleId != null) invalidateNestItems(moduleId, 1);
+    if (!inList && moduleId != null) await openItemNode('chronicler', moduleId, id);
+    else if (moduleId == null) { pbUse(__iid); await mountChroniclerGraph(); }
+    for (let i = 0; i < 40; i++) {
+      const inp = document.querySelector(inList ? `#chr-insp-body-${id} #chr-insp-n` : '#item-chr-insp #chr-insp-n');
+      if (inp?.isConnected) { await new Promise((r) => setTimeout(r, 60)); if (inp.isConnected) { inp.focus(); inp.select(); break; } }
+      await new Promise((r) => setTimeout(r, 50));
+    }
   } catch (e) { toast(e.message, 'err'); console.error(e); }
 }
 
-async function saveChroniclerEvent(evId, tlid) {
-  const __iid = pbCurrent(); // re-bound below: an await can hand the turn to another instance
-  try {
-    const n = q('#chr-ev-n').value.trim();
-    if (!n) { toast(t('name'), 'err'); return; }
-    const sid = await getDateFromInputs('chr-ev-s');
-    if (!sid) { toast(t('startDate'), 'err'); return; }
-    const eid = await getDateFromInputs('chr-ev-e');
-    const story = q('#chr-ev-story')?.value.trim() || '';
-    const existing = (await api.timeline.getEvents(tlid)).find(e => e.id === evId);
-    await api.timeline.updateEvent(evId, n, sid, eid, existing?.color || null, story); // color/icon unchanged — set via the dot's icon popup
-    closeModal();
-    pbUse(__iid); await mountChroniclerGraph();
-    if (S.chroniclerData?.moduleId != null) invalidateNestItems(S.chroniclerData.moduleId);
-    toast(t('saved'), 'ok');
-  } catch (e) { toast(e.message, 'err'); console.error(e); }
+// A dot on the line opens the event's page — where all of it is edited.
+function openChroniclerEventPage(evId) {
+  if (S.chroniclerData?.moduleId != null) openItemNode('chronicler', S.chroniclerData.moduleId, evId);
 }
 
 async function deleteChroniclerEvent(evId, tlid) {
@@ -104,7 +90,6 @@ async function deleteChroniclerEvent(evId, tlid) {
   if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.timeline.deleteEvent(evId);
   if (S.chroniclerData?.inspectorEventId === evId) S.chroniclerData.inspectorEventId = null;
-  closeModal();
   const moduleId = S.chroniclerData?.moduleId;
   pbUse(__iid); await mountChroniclerGraph();
   if (moduleId != null) invalidateNestItems(moduleId, -1);

@@ -241,7 +241,7 @@ async function mountChroniclerGraph() {
 
   if (!evs.length) {
     host.innerHTML = `<div class="empty" style="margin-top:20px"><div class="ei">${I.timeline}</div><h3>${t('noEventsYet')}</h3>
-        <button class="btn btn-p" onclick="openChroniclerEventModal(${data.activeId})">${I.plus} ${t('addEvent')}</button></div>`;
+        <button class="btn btn-p" onclick="newChroniclerEvent(${data.activeId})">${I.plus} ${t('addEvent')}</button></div>`;
     return;
   }
   if (data.view === 'downline') {
@@ -385,7 +385,7 @@ async function saveChroniclerInspectorField(evId, tlid) {
 // whichever other row was open.
 async function buildChroniclerEventListHtml(evs, tlid, col, inspectorEventId) {
   if (!evs.length) return '';
-  let html = `<div class="ph"><h4>${t('name')}</h4><button class="btn btn-p" style="padding:6px 12px;font-size:calc(12.5px * var(--fsc,1))" onclick="openChroniclerEventModal(${tlid})">${I.plus} ${t('addEvent')}</button></div><div class="objlist ls-list" role="listbox" aria-label="${x(t('addEvent'))}">`;
+  let html = `<div class="ph"><h4>${t('name')}</h4><button class="btn btn-p" style="padding:6px 12px;font-size:calc(12.5px * var(--fsc,1))" onclick="newChroniclerEvent(${tlid})">${I.plus} ${t('addEvent')}</button></div><div class="objlist ls-list" role="listbox" aria-label="${x(t('addEvent'))}">`;
   for (const ev of evs) {
     const ec = ev.color_code || col;
     const sTxt = fmtDate(ev.s_day, ev.s_month, ev.s_years, ev.s_hour, ev.s_minute);

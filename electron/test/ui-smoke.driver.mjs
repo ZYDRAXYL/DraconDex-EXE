@@ -1852,3 +1852,48 @@ test('31 part 6: the component collection shows each component drawn from the pa
   console.log(`# 31 part 6: every card drawn once: ${JSON.stringify(cost)} (panel open ${opened} ms incl. an 800 ms wait)`);
   await win.evaluate(async () => { const p = pageOf(S.activeModuleNode.id, null); const last = p.blocks.at(-1); await api.block.remove(last.id); runCommand('page.arrange'); await reloadModulePage(S.activeModuleNode.id, null); });
 });
+
+// APP src/design/no-modal #05: a Chronicler event has no modal — "+ event"
+// makes one at once with its name selected, and a dot opens its page.
+test('no-modal 05: a new event is made at once and named in place; a Compare dot opens its page', async () => {
+  const mid = await win.evaluate(async () => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'chronicler'); await openModuleNode(m.id); await setChroniclerView('downline'); return m.id; });
+  await sleep(700);
+  const tl = await win.evaluate(() => S.chroniclerData.activeId);
+  const count = () => win.evaluate((id) => api.timeline.getEvents(id).then((e) => e.length), tl);
+  const n0 = await count();
+  await win.evaluate((id) => runCommand('chronicler.addEvent', { moduleId: id }), mid); await sleep(800);
+  assert.equal(await count(), n0 + 1, 'made at once');
+  assert.equal(await win.locator('#modal-overlay.open').count(), 0, 'no modal');
+  assert.equal(await win.evaluate(() => document.activeElement?.id), 'chr-insp-n', 'its name is ready to type');
+  await win.keyboard.type('Smoke event'); await win.keyboard.press('Tab'); await sleep(500);
+  const made = (await win.evaluate((id) => api.timeline.getEvents(id), tl)).find((e) => e.event_name === 'Smoke event');
+  assert.ok(made, 'the name saved');
+  // the Compare view's dots (they opened the modal) open the event's page
+  await win.evaluate((id) => openChroniclerEventPage(id), made.id); await sleep(800);
+  assert.equal(await win.evaluate(() => S.activeItemNode?.itemKey), `tlev_${made.id}`, 'the dot opens the event page');
+  assert.equal(await win.locator('#modal-overlay.open').count(), 0);
+  await win.evaluate((id) => api.timeline.deleteEvent(id), made.id);
+});
+
+// #13: a Designer node has no modal — a new node's text is typed on the
+// board; double-click opens its page, which saves as each field changes.
+test('no-modal 13: a new node is typed on the board; its page saves by itself', async () => {
+  const mid = await win.evaluate(async () => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'designer'); await openModuleNode(m.id); await setDesignerView('canvas'); return m.id; });
+  await sleep(700);
+  await win.evaluate(() => addDesignNode('box')); await sleep(800);
+  assert.equal(await win.locator('#modal-overlay.open').count(), 0, 'no modal');
+  assert.equal(await win.evaluate(() => document.activeElement?.classList.contains('dg-label')), true, 'its text is ready to type');
+  await win.keyboard.type('Smoke node'); await win.keyboard.press('Enter'); await sleep(700);
+  const node = (await win.evaluate((m) => api.designer.getNodes(m), mid)).find((n) => n.node_text === 'Smoke node');
+  assert.ok(node, 'the text saved');
+  await win.locator(`.dg-node[data-node="${node.id}"]`).dblclick(); await sleep(900);
+  assert.equal(await win.evaluate(() => S.activeItemNode?.itemKind), 'designer', 'double-click opens its page');
+  assert.equal(await win.locator('#modal-overlay.open').count(), 0);
+  await win.locator('#item-dn-shape').selectOption('circle'); await sleep(900);
+  assert.equal((await win.evaluate((m) => api.designer.getNodes(m), mid)).find((n) => n.id === node.id).shape, 'circle', 'saved without a Save button');
+  const sw = win.locator('#item-dn-colors .sk-swatch').nth(2);
+  assert.ok((await sw.boundingBox())?.width > 10, 'the colours are there to pick');
+  await sw.click(); await sleep(700);
+  assert.equal((await win.evaluate((m) => api.designer.getNodes(m), mid)).find((n) => n.id === node.id).color, await sw.getAttribute('data-color'), 'a colour saves on the click');
+  await win.evaluate((id) => api.designer.deleteNode(id), node.id);
+});

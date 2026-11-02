@@ -12,7 +12,7 @@
 // reused by the Nest tree's lazy expand (hub.js's ensureNestItemsLoaded),
 // this file's own openItemNode, and fetchOneItem below — the same "fetch
 // the parent-scoped list, find by id" convention src/renderer/mod/
-// chronicler.js's openChroniclerEventModal already established, generalized
+// chronicler.js's event editor established, generalized
 // instead of hand-copied per kind. Both the item's own page and the owning
 // module's inline view always re-fetch fresh through this same path, so
 // neither ever renders a stale hand-copied object.
@@ -178,9 +178,18 @@ const ITEM_KIND = {
     // design_node has no dedicated name column — best-effort label from its
     // own short text, else a shape glyph + id (Plan part4 #6).
     nameOf: (n) => n.node_text ? (n.node_text.length > 24 ? n.node_text.slice(0, 24) + '…' : n.node_text) : `${DG_SHAPE_GLYPH[n.shape] || '□'} #${n.id}`,
+    // No modal (APP src/design/no-modal #13): the node's page is where all of
+    // it is edited — saved as each field changes, comic fields included.
     async renderBody(n) {
-      return `${buildDesignNodeFieldsHtml(n, { prefix: 'item-dn' })}
-        <div class="mfoot"><button class="btn btn-p" onclick="saveItemDesignNode(${n.id})">${t('save')}</button></div>`;
+      return `<div id="item-dn-body">${buildDesignNodeFieldsHtml(n, { prefix: 'item-dn' })}${await dgComicFieldsHtml(n)}</div>
+        <div class="mfoot"><button class="btn btn-d" onclick="deleteItemDesignNode(${n.id})">${I.delete} ${t('delete')}</button></div>`;
+    },
+    mount(node) {
+      const body = fq('#item-dn-body');
+      if (!body) return;
+      const save = (e) => saveItemDesignNode(node.item.id, e?.target?.id === 'item-dn-shape');
+      body.addEventListener('change', save);
+      body.querySelector('#item-dn-colors')?.addEventListener('click', (e) => { if (e.target.closest('.sk-swatch')) save(); });
     },
   },
 };
@@ -269,18 +278,29 @@ async function sendItemChatMessage(sessionId) {
   await openItemNode('scribe', S.activeItemNode.moduleId, sessionId);
 }
 
-// ── Designer item page: save handler mirroring submitDesignNode, but
-// reading the id-prefixed fields (buildDesignNodeFieldsHtml({prefix:
-// 'item-dn'})) and refreshing via openItemNode instead of openModuleNode. ──
-async function saveItemDesignNode(id) {
-  const n = S.activeItemNode.item;
+// ── Designer item page: saves the node as a field changes. A new shape can
+// add or drop the comic fields, so that one redraws the page. ──
+async function saveItemDesignNode(id, redraw = false) {
+  const n = S.activeItemNode?.item;
+  if (!n || n.id !== id) return;
   const text = fq('#item-dn-text')?.value ?? n.node_text;
   const shape = fq('#item-dn-shape')?.value || n.shape;
   const colorEl = document.querySelector('#item-dn-colors .sk-swatch.act');
   const color = colorEl ? colorEl.dataset.color : n.color;
   const moduleId = S.activeItemNode.moduleId;
   await api.designer.updateNode(id, shape, text, color);
+  if (dgIsComic(shape)) await dgComicSubmit(id);
+  Object.assign(n, { node_text: text, shape, color });
   invalidateNestItems(moduleId);
-  await openItemNode('designer', moduleId, id);
-  toast(t('saved'), 'ok');
+  if (redraw) await openItemNode('designer', moduleId, id);
+  updateStatusBar({ saveState: t('saved') });
+}
+
+async function deleteItemDesignNode(id) {
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
+  const moduleId = S.activeItemNode.moduleId;
+  await api.designer.deleteNode(id);
+  invalidateNestItems(moduleId, -1); // closes this page's tab
+  await openModuleNode(moduleId);
+  toast(t('deleted'), 'ok');
 }
