@@ -1941,3 +1941,50 @@ test('no-modal 09/11/15: dialogue, table and session are named and edited on the
   const s = await stripNew('scribe', 'scribe.newSession', (m) => api.chatscribe.getSessions(m));
   await win.evaluate((id) => api.chatscribe.deleteSession(id), s.made.id);
 });
+
+// #10 / #14 / #16: a line's label and a chat message are typed where they are.
+test('no-modal 10/14/16: edge labels typed on the board; a chat bubble edits in place', async () => {
+  const open = (k, setView) => win.evaluate(async ([k, v]) => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === k); await openModuleNode(m.id); await window[v.fn](v.view); return m.id; }, [k, setView]);
+  const noModal = async (what) => assert.equal(await win.locator('#modal-overlay.open').count(), 0, `${what}: no modal`);
+
+  // 10 — Narrator: click the line's label spot
+  const nm = await open('narrator', { fn: 'setNarratorView', view: 'board' }); await sleep(700);
+  const ne = (await win.evaluate((m) => api.narrator.getEdges(m), nm))[0];
+  await win.locator('#nar-edges g').first().click(); await sleep(300);
+  await noModal('narrator edge');
+  await win.locator('.lbl-edit-pop .rename-input').fill('Smoke route'); await win.keyboard.press('Enter'); await sleep(700);
+  assert.equal((await win.evaluate((m) => api.narrator.getEdges(m), nm)).find((e) => e.id === ne.id).label, 'Smoke route', 'narrator label saved');
+  await win.locator('#nar-edges g').first().click(); await sleep(300);
+  await win.locator('.lbl-edit-pop .rename-input').fill('thrown away'); await win.keyboard.press('Escape'); await sleep(500);
+  assert.equal((await win.evaluate((m) => api.narrator.getEdges(m), nm)).find((e) => e.id === ne.id).label, 'Smoke route', 'Esc leaves it');
+  await win.evaluate((e) => api.narrator.updateEdgeLabel(e.id, e.label || null), ne);
+
+  // 14 — Designer: the edge tool makes the line at once, then its label
+  const dm = await open('designer', { fn: 'setDesignerView', view: 'canvas' }); await sleep(700);
+  const ids = await win.evaluate(() => S.designerData.nodes.slice(0, 2).map((n) => n.id));
+  const e0 = (await win.evaluate((m) => api.designer.getEdges(m), dm)).length;
+  await win.evaluate(() => startDesignEdge());
+  await win.locator(`.dg-node[data-node="${ids[1]}"]`).click(); await sleep(150);
+  await win.locator(`.dg-node[data-node="${ids[0]}"]`).click(); await sleep(900);
+  await noModal('designer edge');
+  assert.equal((await win.evaluate((m) => api.designer.getEdges(m), dm)).length, e0 + 1, 'the line is made at once');
+  await win.locator('.lbl-edit-pop .rename-input').fill('Smoke line'); await win.keyboard.press('Enter'); await sleep(700);
+  const de = (await win.evaluate((m) => api.designer.getEdges(m), dm)).find((e) => e.label === 'Smoke line');
+  assert.ok(de, 'designer label saved');
+  await win.locator(`.dg-edge-label[data-edge="${de.id}"]`).dblclick(); await sleep(300);
+  await win.locator('.lbl-edit-pop [data-del]').click(); await sleep(700);
+  assert.equal((await win.evaluate((m) => api.designer.getEdges(m), dm)).length, e0, 'and deleted from the same box');
+
+  // 16 — Scribe: double-click a bubble
+  const sm = await open('scribe', { fn: 'setChatScribeView', view: 'chat' }); await sleep(700);
+  const sid = await win.evaluate(() => S.chatScribeData.selectedId);
+  const msg = (await win.evaluate((s) => api.chatscribe.getMessages(s), sid))[0];
+  await win.locator(`.chs-bubble[data-msg-id="${msg.id}"]`).dblclick(); await sleep(400);
+  await noModal('chat message');
+  const ta = win.locator(`.chs-bubble[data-msg-id="${msg.id}"] .chs-edit`);
+  assert.equal(await ta.inputValue(), msg.message, 'the raw text, links and all');
+  await ta.fill('Smoke message'); await win.keyboard.press('Enter'); await sleep(800);
+  assert.equal((await win.evaluate((s) => api.chatscribe.getMessages(s), sid)).find((g) => g.id === msg.id).message, 'Smoke message', 'message saved');
+  await win.evaluate((g) => api.chatscribe.updateMessage(g.id, g.message), msg);
+  void sm;
+});

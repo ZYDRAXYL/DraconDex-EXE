@@ -162,7 +162,7 @@ function mountDesignerBoard() {
   // edge label double-click -> edit
   svg.addEventListener('dblclick', (ev) => {
     const el = ev.target.closest('.dg-edge-label');
-    if (el) openDesignEdgeModal(Number(el.dataset.edge));
+    if (el) editDesignEdgeLabel(Number(el.dataset.edge), el);
   });
 
   stage.querySelectorAll('.dg-node').forEach(el => el.remove());
@@ -202,7 +202,7 @@ function mountDesignerBoard() {
       if (dgState.edgeFrom !== null && dgState.edgeFrom !== n.id) {
         const from = dgState.edgeFrom;
         dgState.edgeFrom = null;
-        openDesignEdgeModal(null, from, n.id);
+        newDesignEdge(from, n.id);
         return;
       }
       try { el.setPointerCapture(ev.pointerId); } catch (_) {}
@@ -400,34 +400,26 @@ function buildDesignNodeFieldsHtml(n, opts = {}) {
       </div></div>`;
 }
 
-function openDesignEdgeModal(edgeId, fromId = null, toId = null) {
+// No modal (APP src/design/no-modal #14): the edge tool's second click makes
+// the line at once, then its label is typed where it will sit — between the
+// two nodes. An existing label: double-click it.
+async function newDesignEdge(fromId, toId) {
   const d = S.designerData;
-  const e2 = edgeId ? d.edges.find(ee => ee.id === edgeId) : null;
-  openModal(e2 ? t('moduleEdit') : t('edgeTool'), `
-    <div class="fg"><label>${t('edgeLabel')}</label><input id="de-label" value="${x(e2?.label || '')}"></div>
-    <div class="mfoot">
-      ${e2 ? `<button class="btn btn-d" onclick="deleteDesignEdgeRow(${e2.id})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitDesignEdge(${edgeId ?? 'null'},${fromId ?? 'null'},${toId ?? 'null'})">${e2 ? t('save') : t('create')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#de-label').focus(), 60);
-}
-
-async function submitDesignEdge(edgeId, fromId, toId) {
-  const d = S.designerData;
-  const label = pbQOr('#de-label').value.trim();
-  if (edgeId) await api.designer.updateEdge(edgeId, label);
-  else if (fromId && toId) await api.designer.createEdge(d.moduleId, fromId, toId, label);
-  closeModal();
+  await api.designer.createEdge(d.moduleId, fromId, toId, '');
   await reloadSource(d.moduleId);
-  toast(edgeId ? t('saved') : t('created'), 'ok');
+  const e2 = S.designerData.edges.find((ee) => ee.from_ref === fromId && ee.to_ref === toId);
+  const a = pbQOr(`.dg-node[data-node="${fromId}"]`)?.getBoundingClientRect(), b = pbQOr(`.dg-node[data-node="${toId}"]`)?.getBoundingClientRect();
+  if (e2 && a && b) editDesignEdgeLabel(e2.id, pointAnchor((a.left + a.right + b.left + b.right) / 4, (a.top + a.bottom + b.top + b.bottom) / 4));
 }
 
-async function deleteDesignEdgeRow(id) {
-  await api.designer.deleteEdge(id);
-  closeModal();
-  await reloadSource(S.designerData.moduleId);
-  toast(t('deleted'), 'ok');
+function editDesignEdgeLabel(id, anchor) {
+  const e2 = S.designerData?.edges.find((ee) => ee.id === id);
+  if (!e2) return;
+  labelEditPopover(anchor, e2.label, {
+    placeholder: t('edgeLabel'),
+    onSave: async (v) => { await api.designer.updateEdge(id, v); await reloadSource(S.designerData.moduleId); },
+    onDelete: async () => { await api.designer.deleteEdge(id); await reloadSource(S.designerData.moduleId); toast(t('deleted'), 'ok'); },
+  });
 }
 
 // Plan part5 Designer #1: type-allowlist filter over the quickIndex picker,

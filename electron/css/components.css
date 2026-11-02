@@ -542,3 +542,8 @@ html.reorder-active,html.reorder-active *{cursor:grabbing!important;user-select:
 .btn.fstrip-color:hover{border-color:var(--border)}
 .fstrip-dot{width:14px;height:14px;border-radius:50%;background:var(--fc,var(--accent))}
 .fstrip-swatches{display:grid;grid-template-columns:repeat(8,auto);gap:6px;padding:4px}
+/* the label typed on a board's line (core/fields.js labelEditPopover) */
+.lbl-edit{display:flex;align-items:center;gap:4px;padding:2px}
+.lbl-edit .rename-input{width:200px}
+/* a chat bubble being edited in place (mod/chatscribe.js editChatMessageInPlace) */
+.chs-edit{display:block;width:100%;min-width:220px;field-sizing:content;max-height:12lh;resize:none;font:inherit}

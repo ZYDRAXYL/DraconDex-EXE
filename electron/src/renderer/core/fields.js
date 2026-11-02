@@ -90,3 +90,33 @@ async function fieldsFocus(key, select = true) {
     await new Promise((r) => setTimeout(r, 50));
   }
 }
+
+// A one-line label typed where it is shown — the label on a board's line
+// (APP src/design/no-modal #10, #14), in place of a modal with one box.
+// Enter or clicking away saves; Esc leaves it as it was. onDelete adds a
+// delete button (it confirms, if it wants to).
+//   labelEditPopover(anchor, value, { onSave(text), onDelete, placeholder })
+function labelEditPopover(anchor, value, { onSave, onDelete = null, placeholder = '' } = {}) {
+  const pop = openPopover(anchor, `<div class="lbl-edit"><input class="rename-input" value="${x(value || '')}" placeholder="${x(placeholder)}" aria-label="${x(placeholder)}" data-no-i18n>
+    ${onDelete ? `<button type="button" class="btn btn-g btn-i" data-del title="${x(t('delete'))}" aria-label="${x(t('delete'))}">${I.delete}</button>` : ''}</div>`,
+  { cls: 'lbl-edit-pop', placement: 'bottom-center', focus: '.rename-input', onClose: () => window.removeEventListener('keydown', esc, true) });
+  if (!pop) return;
+  const inp = pop.querySelector('.rename-input');
+  let done = false;
+  // Esc: the popover engine closes it (and moves focus away, which would read
+  // as "clicked away"); window capture runs before it, so mark it cancelled
+  function esc(e) { if (e.key === 'Escape' && pop.contains(document.activeElement)) done = true; }
+  window.addEventListener('keydown', esc, true);
+  const commit = async () => {
+    if (done) return;
+    done = true;
+    const v = inp.value.trim();
+    closeAllPopups();
+    if (v !== (value || '')) await onSave(v);
+  };
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
+  // clicking away saves
+  inp.addEventListener('focusout', (e) => { if (pop.isConnected && !pop.contains(e.relatedTarget)) commit(); });
+  pop.querySelector("[data-del]")?.addEventListener('click', () => { done = true; closeAllPopups(); onDelete(); });
+  setTimeout(() => inp.select(), 0);
+}

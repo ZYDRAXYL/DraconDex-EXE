@@ -117,12 +117,12 @@ function buildChatBubblesHtml(session, messages, opts = {}) {
     }
     const bg = g.color_code ? ` style="background:${x(g.color_code)}"` : '';
     html += `<div class="chs-row${g.side === 'l' ? ' left' : ''}">
-      <div class="chs-bubble" data-msg-id="${g.id}"${bg}>
+      <div class="chs-bubble" data-msg-id="${g.id}"${bg} ondblclick="editChatMessageInPlace(${g.id},this)">
         <span class="chs-text">${_mdInline(g.message, resolve)}</span>
         <span class="chs-time" data-no-i18n>${chsTime(g.create_at)}</span>
         <span class="chs-acts">
           <button class="btn btn-g btn-i" onclick="event.stopPropagation();openChatBubbleColorPopup(${g.id},this)" title="${t('color')}">${I.layer}</button>
-          <button class="btn btn-g btn-i" onclick="event.stopPropagation();openChatMessageModal(${g.id})" title="${t('edit')}">${I.edit}</button>
+          <button class="btn btn-g btn-i" onclick="event.stopPropagation();editChatMessageInPlace(${g.id},this)" title="${t('edit')}">${I.edit}</button>
           <button class="btn btn-g btn-i" onclick="event.stopPropagation();deleteChatMessageRow(${g.id})" title="${t('delete')}">${I.delete}</button>
         </span>
       </div>
@@ -322,27 +322,42 @@ async function refreshChatScribeMessages() {
   renderNexusHome();
 }
 
-async function openChatMessageModal(id) {
+// No modal (APP src/design/no-modal #16): double-click a bubble (or its ✎)
+// and the bubble itself becomes the box — [[ links autocomplete as in the
+// send box (data-wiki). Enter or clicking away saves, Shift+Enter is a new
+// line, Esc leaves it.
+async function editChatMessageInPlace(id, from) {
+  const bubble = from?.closest('.chs-bubble');
+  const span = bubble?.querySelector('.chs-text');
+  if (!span || bubble.querySelector('.chs-edit')) return;
   const sessionId = chatScribeActiveSessionId();
-  const messages = sessionId ? await api.chatscribe.getMessages(sessionId) : [];
-  const g = messages.find(v => v.id === id);
+  const g = (sessionId ? await api.chatscribe.getMessages(sessionId) : []).find((v) => v.id === id);
   if (!g) return;
-  openModal(t('moduleEdit'), `
-    <div class="fg"><label>${t('content')}</label><textarea id="cm-text" data-wiki rows="3">${x(g.message)}</textarea></div>
-    <div class="mfoot">
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitChatMessage(${id})">${t('save')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#cm-text').focus(), 60);
-}
-
-async function submitChatMessage(id) {
-  const text = pbQOr('#cm-text').value.trim();
-  if (!text) return;
-  await api.chatscribe.updateMessage(id, text);
-  closeModal();
-  await refreshChatScribeMessages();
-  toast(t('saved'), 'ok');
+  const ta = document.createElement('textarea');
+  ta.className = 'chs-edit';
+  ta.dataset.wiki = '';
+  ta.value = g.message;
+  ta.setAttribute('aria-label', t('content'));
+  span.hidden = true;
+  span.after(ta);
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    const v = ta.value.trim();
+    if (save && v && v !== g.message) { await api.chatscribe.updateMessage(id, v); await refreshChatScribeMessages(); updateStatusBar({ saveState: t('saved') }); }
+    else { ta.remove(); span.hidden = false; }
+  };
+  ta.addEventListener('pointerdown', (e) => e.stopPropagation()); // not a bubble drag
+  ta.addEventListener('dblclick', (e) => e.stopPropagation());
+  ta.addEventListener('keydown', (e) => {
+    if (document.querySelector('.wiki-field-ac')) return; // the [[ list takes Enter / Esc (core/wiki-field.js)
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  ta.addEventListener('blur', () => finish(true));
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
 }
 
 async function deleteChatMessageRow(id) {
