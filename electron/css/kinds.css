@@ -214,7 +214,7 @@
 .mded-title.au-title:hover{border-color:var(--border)}
 .mded-title.au-title:focus{border-color:var(--accent);outline:none;background:var(--surface)}
 .au-meta{display:flex;gap:8px;align-items:flex-start;margin:0 0 8px}
-.au-meta-status{flex:0 0 auto;width:auto}
+.au-meta-status,.au-meta-povsel{flex:0 0 auto;width:auto}
 .au-meta-side{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
 .au-meta-pov{display:flex;align-items:center;gap:4px}
 .mded-title.au-title.au-no{flex:0 0 auto;width:4.5ch;text-align:right;margin-left:0;font-variant-numeric:tabular-nums}

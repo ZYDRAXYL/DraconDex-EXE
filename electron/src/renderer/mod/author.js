@@ -160,7 +160,7 @@ function mountAuthorRichEditor(el, ch) {
     </div>
     <div class="au-meta">
       <div class="au-meta-side">
-      <div class="au-meta-pov">${authorPovSelectHtml(d, ch, 'au-meta-status')}${d.pov?.linked ? '' : `<button type="button" class="btn btn-g btn-i" title="${x(t('auPovNoLink'))}" aria-label="${x(t('auPovNoLink'))}" onclick="openPageLinksPopup(${d.moduleId},document.querySelector('.ph-links-open'))">${I.relation}</button>`}</div>
+      <div class="au-meta-pov">${authorPovSelectHtml(d, ch, 'au-meta-povsel')}${d.pov?.linked ? '' : `<button type="button" class="btn btn-g btn-i" title="${x(t('auPovNoLink'))}" aria-label="${x(t('auPovNoLink'))}" onclick="openPageLinksPopup(${d.moduleId},document.querySelector('.ph-links-open'))">${I.relation}</button>`}</div>
       <select class="au-meta-status" aria-label="${x(t('auStatus'))}" onchange="saveAuthorChapterMeta(${ch.id},{status:this.value})">
         <option value="">${t('auStatus')} —</option>
         ${AUTHOR_STATUSES.map((s) => `<option value="${s}"${ch.status === s ? ' selected' : ''}>${t(AUTHOR_STATUS_KEY[s])}</option>`).join('')}
