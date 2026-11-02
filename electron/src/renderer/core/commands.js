@@ -299,7 +299,7 @@ const COMMANDS = {
   'designer.linkFilter': { label: 'narratorLinkFilter', icon: 'options', scope: 'kind:designer', run: (c) => openDesignerLinkFilterModal(c.moduleId), surfaces: ['canvas.ctx'] },
 
   // ── Exhibitor ────────────────────────────────────────────────────────
-  'exhibitor.addRelation': { label: 'addRelation', icon: 'plus', scope: 'kind:exhibitor', run: () => openExhibitorRelationModal(), surfaces: ['exhibitor.toolbar', 'canvas.ctx'] },
+  'exhibitor.addRelation': { label: 'addRelation', icon: 'plus', scope: 'kind:exhibitor', run: () => newExhibitorRelation(), surfaces: ['exhibitor.toolbar', 'canvas.ctx'] },
   'exhibitor.editFilter': { label: 'editFilter', icon: 'edit', scope: 'kind:exhibitor', run: (c, el) => openSavedFilterPopup(el || paletteAnchor(), c.moduleId, S.exhibitorData?.def), surfaces: ['exhibitor.toolbar'] },
   'exhibitor.treeLayout': { label: 'exhTreeLayout', icon: 'projects', scope: 'kind:exhibitor', when: () => S.exhibitorData?.view !== 'scene' && !!S.exhibitorData?.relations?.length, run: () => openExhibitorTreeModal(), surfaces: ['exhibitor.toolbar', 'canvas.ctx'] },
   'exhibitor.openScene': { label: 'exhibitorOpenScene', icon: 'relation', scope: 'kind:exhibitor', when: () => S.exhibitorData?.view !== 'scene', run: () => setExhibitorView('scene'), surfaces: ['canvas.ctx'] },

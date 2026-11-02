@@ -9,6 +9,8 @@
 //     type 'text'    value, placeholder, hint
 //     type 'select'  value, options: [{ value, text }]
 //     type 'color'   value = a use_color id, hex = its colour (S.colors)
+//     type 'check'   value = true/false (saved as '1' / '0')
+//     any: disabled (shown, not edited); text: list = suggestions (datalist)
 //   fieldsStripMount(root, onSave)  onSave(key, value) → true, or a message
 //                                   to toast (the old value is put back)
 //   fieldsFocus(key)               focus + select a field once it is drawn
@@ -24,10 +26,15 @@ function fieldsStripHtml(rows) {
     if (r.type === 'select') {
       return `<select ${a} data-orig="${x(r.value ?? '')}">${r.options.map((o) => `<option value="${x(o.value)}"${String(o.value) === String(r.value ?? '') ? ' selected' : ''}>${x(o.text)}</option>`).join('')}</select>`;
     }
+    if (r.type === 'check') {
+      return `<input type="checkbox" ${a} data-orig="${r.value ? '1' : '0'}"${r.value ? ' checked' : ''}${r.disabled ? ' disabled' : ''}>`;
+    }
     if (r.type === 'color') {
       return `<button type="button" class="btn fstrip-color" ${a} data-orig="${x(r.value ?? '')}" data-hex="${x(r.hex || '')}"><span class="fstrip-dot"></span><span data-no-i18n>${x(r.hex || '—')}</span></button>`;
     }
-    return `<input ${a} value="${x(r.value ?? '')}" data-orig="${x(r.value ?? '')}"${r.placeholder ? ` placeholder="${x(r.placeholder)}"` : ''} data-no-i18n>`;
+    const list = r.list ? `fstrip-list-${x(r.key)}` : '';
+    return `<input ${a} value="${x(r.value ?? '')}" data-orig="${x(r.value ?? '')}"${r.placeholder ? ` placeholder="${x(r.placeholder)}"` : ''}${r.disabled ? ' disabled' : ''}${list ? ` list="${list}" autocomplete="off"` : ''} data-no-i18n>${list
+      ? `<datalist id="${list}">${r.list.map((v) => `<option value="${x(v)}">`).join('')}</datalist>` : ''}`;
   };
   return `<div class="fstrip">${rows.filter((r) => !r.hidden).map((r) => `<label class="fstrip-pair">
       <span class="fstrip-k">${x(r.title)}</span>
@@ -47,7 +54,8 @@ function fieldsStripMount(root, onSave) {
     const r = await onSave(el.dataset.fkey, value);
     if (r !== true) {
       if (r) toast(r, 'err');
-      if (el.isConnected && el.tagName !== 'BUTTON') el.value = el.dataset.orig;
+      if (el.isConnected && el.type === 'checkbox') el.checked = el.dataset.orig === '1';
+      else if (el.isConnected && el.tagName !== 'BUTTON') el.value = el.dataset.orig;
       return;
     }
     el.dataset.orig = String(value);
@@ -56,13 +64,16 @@ function fieldsStripMount(root, onSave) {
   };
   strip.addEventListener('keydown', (e) => {
     const el = e.target;
-    if (el.tagName !== 'INPUT') return;
+    if (el.tagName !== 'INPUT' || el.type === 'checkbox') return;
     e.stopPropagation(); // the page's shortcuts are not for this box
     if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
     else if (e.key === 'Escape') { e.preventDefault(); el.value = el.dataset.orig; el.blur(); }
   });
-  strip.addEventListener('focusout', (e) => { if (e.target.tagName === 'INPUT') save(e.target, e.target.value.trim(), e.relatedTarget); });
-  strip.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT') save(e.target, e.target.value); });
+  strip.addEventListener('focusout', (e) => { if (e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') save(e.target, e.target.value.trim(), e.relatedTarget); });
+  strip.addEventListener('change', (e) => {
+    if (e.target.tagName === 'SELECT') save(e.target, e.target.value);
+    else if (e.target.type === 'checkbox') save(e.target, e.target.checked ? '1' : '0');
+  });
   strip.addEventListener('click', (e) => {
     const btn = e.target.closest('.fstrip-color');
     if (!btn) return;
@@ -84,9 +95,13 @@ const fieldsFocusables = () => [...document.querySelectorAll('#main-inner :is(in
 // Wait for the field to be drawn (a new thing's page opens asynchronously),
 // then focus it — selecting its text, ready to type over.
 async function fieldsFocus(key, select = true) {
-  for (let i = 0; i < 40; i++) {
+  // a save can be followed by one more redraw (the Nest's, a module reload),
+  // so keep the focus on it until the page has been still for a moment
+  let still = 0;
+  for (let i = 0; i < 50 && still < 4; i++) {
     const el = document.querySelector(`#main-inner .fstrip [data-fkey="${CSS.escape(key)}"]`);
-    if (el) { el.focus(); if (select) el.select?.(); return; }
+    if (el && document.activeElement !== el) { el.focus(); if (select) el.select?.(); still = 0; }
+    else if (el) still++;
     await new Promise((r) => setTimeout(r, 50));
   }
 }

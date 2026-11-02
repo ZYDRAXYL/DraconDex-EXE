@@ -547,3 +547,9 @@ html.reorder-active,html.reorder-active *{cursor:grabbing!important;user-select:
 .lbl-edit .rename-input{width:200px}
 /* a chat bubble being edited in place (mod/chatscribe.js editChatMessageInPlace) */
 .chs-edit{display:block;width:100%;min-width:220px;field-sizing:content;max-height:12lh;resize:none;font:inherit}
+/* the selected thing's fields under a module's toolbar — an Exhibitor
+   relation, a Wanderer pin (no-modal #07, #08) */
+.sel-panel{margin:0 0 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
+.sel-panel-h{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);font-weight:600}
+.sel-panel .fstrip{margin:0;padding:6px 10px;border-bottom:0}
+.sel-panel .cls-adv{margin:0 10px 8px}

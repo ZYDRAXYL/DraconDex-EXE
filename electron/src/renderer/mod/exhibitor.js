@@ -86,6 +86,7 @@ async function loadExhibitorData(m) {
     nodes, camera: scene.view,
     sel: focusNode ? focusNode.id : (prev?.sel ?? null),
     linkFrom: null,
+    selRel: prev?.selRel ?? null, newRel: prev?.newRel ?? null, // the relation panel (below)
   });
 }
 
@@ -158,7 +159,7 @@ function buildExhibitorMainHtml(m, c) {
     ${cmdBtn('exhibitor.editFilter', { moduleId: d.moduleId }, { iconOnly: true })}
     ${cmdBtn('exhibitor.treeLayout', { moduleId: d.moduleId }, { iconOnly: true })}
     ${viewBar}
-  </div>`;
+  </div>${buildExhibitorRelationPanelHtml(d)}`;
   if (d.view === 'scene') return toolbar + buildExhibitorSceneHtml(d);
   if (!d.items.length) {
     return toolbar + kindEmptyStateHtml(m, { note: t('noFilterResults') });
@@ -174,6 +175,7 @@ function buildExhibitorMainHtml(m, c) {
 function mountExhibitor() {
   const d = S.exhibitorData;
   if (!d) return;
+  mountExhibitorRelationPanel();
   if (d.view === 'scene') mountExhibitorScene();
   else if (d.view === 'graph') mountExhibitorGraph();
 }
@@ -235,56 +237,110 @@ function exhibitorRelationTargets() {
   return [...keys].map(k => ({ key: k, name: exhNameOf(k) })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function openExhibitorRelationModal(relId = null, fromKey = null, toKey = null) {
+// ── The relation panel (no modal — APP src/design/no-modal #07) ─────────
+// Under the toolbar, in every view: the selected relation's label, type,
+// direction and time span, each saved as it changes (core/fields.js).
+// "+ Relation" opens it with From / To to pick; the relation is made the
+// moment both are set, and the label is ready to type. The scene's link
+// tool, which already has both ends, makes it at once.
+function selectExhibitorRelation(id) {
   const d = S.exhibitorData;
   if (!d) return;
-  const rel = relId ? d.relations.find(r => r.id === relId) : null;
-  const from = rel?.from_key ?? fromKey, to = rel?.to_key ?? toKey;
-  const opts = (sel) => exhibitorRelationTargets()
-    .map(o => `<option value="${x(o.key)}" ${o.key === sel ? 'selected' : ''}>${x(o.name)}</option>`).join('');
-  openModal(rel ? t('moduleEdit') : t('addRelation'), `
-    <div class="fg cls-rel-endpoints">
-      <div><label>${t('relFrom')}</label><select id="xr-from" ${rel ? 'disabled' : ''}>${opts(from)}</select></div>
-      <div><label>${t('relTo')}</label><select id="xr-to" ${rel ? 'disabled' : ''}>${opts(to)}</select></div>
-    </div>
-    <div class="fg"><label>${t('relationLabel')}</label><input id="xr-label" value="${x(rel?.label || '')}" autocomplete="off"></div>
-    ${exhIsFieldRel(rel?.rel_type)
-      // A field's row keeps its type (mod/exhibitor-time.js) — shown, not editable.
-      ? `<div class="fg"><label>${t('relationType')}</label><input value="${x(exhRelTypeText(rel.rel_type))}" disabled data-no-i18n></div>`
-      : `<div class="fg"><label>${t('relationType')}</label><input id="xr-type" list="xr-types" value="${x(rel?.rel_type || '')}" autocomplete="off">
-      <datalist id="xr-types">${d.relTypes.filter(v => !exhIsFieldRel(v)).map(v => `<option value="${x(v)}">`).join('')}</datalist></div>`}
-    <label class="fv-useimg"><input type="checkbox" id="xr-dir" ${!rel || rel.directed !== 0 ? 'checked' : ''}> ${t('relationDirected')}</label>
-    ${exhSpanFieldsHtml(rel)}
-    <div class="mfoot">
-      ${rel ? `<button class="btn btn-d" onclick="deleteExhibitorRelation(${rel.id})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitExhibitorRelation(${relId ?? 'null'})">${rel ? t('save') : t('create')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#xr-label')?.focus(), 0);
+  d.selRel = id;
+  d.newRel = null;
+  renderNexusHome();
+  fieldsFocus('label', false);
 }
 
-async function submitExhibitorRelation(relId) {
+function newExhibitorRelation(fromKey = null, toKey = null) {
   const d = S.exhibitorData;
-  const label = pbQOr('#xr-label').value.trim();
-  const opts = { directed: pbQOr('#xr-dir').checked, validFrom: readExhSpan('xr-vf'), validTo: readExhSpan('xr-vt') };
-  if (pbQOr('#xr-type')) opts.relType = pbQOr('#xr-type').value.trim() || null; // a field's row keeps its type
-  if (relId) {
-    await api.viewer.updateRelation(relId, label, undefined, opts);
-  } else {
-    const from = pbQOr('#xr-from').value, to = pbQOr('#xr-to').value;
-    // §7.5 bug #8 applies here too: same-endpoint used to be a silent no-op.
-    if (!from || !to || from === to) { toast(t('relationSameEnds'), 'err'); return; }
-    await api.viewer.createRelation(S.nexus.id, from, to, label, null, { ...opts, moduleRef: d.moduleId });
-  }
-  closeModal();
+  if (!d) return;
+  if (fromKey && toKey) { createExhibitorRelation(fromKey, toKey); return; }
+  const selNode = d.sel != null ? exhNodeById(d.sel) : null;
+  d.selRel = null;
+  d.newRel = { from: fromKey || selNode?.linker_key || '', to: '' };
+  renderNexusHome();
+  fieldsFocus(d.newRel.from ? 'to' : 'from', false);
+}
+
+async function createExhibitorRelation(fromKey, toKey) {
+  const d = S.exhibitorData;
+  if (fromKey === toKey) { toast(t('relationSameEnds'), 'err'); return false; }
+  const id = await api.viewer.createRelation(S.nexus.id, fromKey, toKey, '', null, { directed: true, moduleRef: d.moduleId });
+  d.newRel = null;
+  d.selRel = id;
   await refreshExhibitor();
-  toast(relId ? t('saved') : t('created'), 'ok');
+  fieldsFocus('label');
+  return true;
+}
+
+function closeExhibitorRelationPanel() {
+  const d = S.exhibitorData;
+  if (!d) return;
+  d.selRel = null;
+  d.newRel = null;
+  renderNexusHome();
+}
+
+function buildExhibitorRelationPanelHtml(d) {
+  const close = `<button class="btn btn-g btn-i" onclick="closeExhibitorRelationPanel()" title="${x(t('cancel'))}" aria-label="${x(t('cancel'))}">${I.close}</button>`;
+  if (d.newRel) {
+    const opts = [{ value: '', text: '—' }, ...exhibitorRelationTargets().map((o) => ({ value: o.key, text: o.name }))];
+    return `<section class="sel-panel" id="exh-relpanel">
+      <div class="sel-panel-h"><span>${t('addRelation')}</span>${close}</div>
+      ${fieldsStripHtml([
+        { key: 'from', title: t('relFrom'), type: 'select', value: d.newRel.from, options: opts },
+        { key: 'to', title: t('relTo'), type: 'select', value: d.newRel.to, options: opts },
+      ])}</section>`;
+  }
+  const rel = d.selRel != null ? d.relations.find((r) => r.id === d.selRel) : null;
+  if (!rel) return '';
+  const field = exhIsFieldRel(rel.rel_type); // a field's row keeps its type (mod/exhibitor-time.js)
+  return `<section class="sel-panel" id="exh-relpanel">
+    <div class="sel-panel-h"><span data-no-i18n>${x(exhNameOf(rel.from_key))} ${rel.directed === 0 ? '—' : '→'} ${x(exhNameOf(rel.to_key))}</span>
+      <span><button class="btn btn-g btn-i" onclick="deleteExhibitorRelation(${rel.id})" title="${x(t('delete'))}" aria-label="${x(t('delete'))}">${I.delete}</button>${close}</span></div>
+    ${fieldsStripHtml([
+      { key: 'label', title: t('relationLabel'), value: rel.label || '' },
+      field ? { key: 'relType', title: t('relationType'), value: exhRelTypeText(rel.rel_type), disabled: true }
+        : { key: 'relType', title: t('relationType'), value: rel.rel_type || '', list: d.relTypes.filter((v) => !exhIsFieldRel(v)) },
+      { key: 'directed', title: t('relationDirected'), type: 'check', value: rel.directed !== 0 },
+    ])}
+    ${exhSpanFieldsHtml(rel)}
+  </section>`;
+}
+
+function mountExhibitorRelationPanel() {
+  const d = S.exhibitorData;
+  const panel = pbQOr('#exh-relpanel');
+  if (!d || !panel) return;
+  if (d.newRel) {
+    fieldsStripMount(panel, async (key, v) => {
+      d.newRel[key] = v;
+      if (d.newRel.from && d.newRel.to) return createExhibitorRelation(d.newRel.from, d.newRel.to).then((ok) => ok || t('relationSameEnds'));
+      return true;
+    });
+    return;
+  }
+  const rel = d.relations.find((r) => r.id === d.selRel);
+  if (!rel) return;
+  fieldsStripMount(panel, async (key, v) => {
+    const opts = key === 'relType' ? { relType: v || null } : key === 'directed' ? { directed: v === '1' } : {};
+    await api.viewer.updateRelation(rel.id, key === 'label' ? v : rel.label, undefined, opts);
+    await refreshExhibitor();
+    return true;
+  });
+  panel.querySelector('.cls-adv')?.addEventListener('change', async (e) => {
+    if (!e.target.closest('.exh-span')) return;
+    await api.viewer.updateRelation(rel.id, rel.label, undefined, { validFrom: readExhSpan('xr-vf'), validTo: readExhSpan('xr-vt') });
+    await refreshExhibitor();
+    updateStatusBar({ saveState: t('saved') });
+  });
 }
 
 async function deleteExhibitorRelation(id) {
   if (!await uiConfirm(t('relationDeleteConfirm'))) return;
   await api.viewer.deleteRelation(id);
-  closeModal();
+  if (S.exhibitorData?.selRel === id) S.exhibitorData.selRel = null;
   await refreshExhibitor();
   toast(t('deleted'), 'ok');
 }

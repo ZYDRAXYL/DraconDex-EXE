@@ -1988,3 +1988,52 @@ test('no-modal 10/14/16: edge labels typed on the board; a chat bubble edits in 
   await win.evaluate((g) => api.chatscribe.updateMessage(g.id, g.message), msg);
   void sm;
 });
+
+// #07 / #08: the selected relation / pin has a panel under the toolbar.
+test('no-modal 07/08: a relation and a map pin are edited in a panel; made at once', async () => {
+  const open = (k, fn, view) => win.evaluate(async ([k, fn, view]) => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === k); await openModuleNode(m.id); await window[fn](view); return m.id; }, [k, fn, view]);
+  const noModal = async (what) => assert.equal(await win.locator('#modal-overlay.open').count(), 0, `${what}: no modal`);
+  const panel = '#main-inner .sel-panel';
+
+  // 07 — Exhibitor: the Lines view's pencil selects the relation
+  await open('exhibitor', 'setExhibitorView', 'edges'); await sleep(800);
+  const rels = () => win.evaluate(() => api.viewer.getRelations(S.nexus.id));
+  // + Relation: pick both ends and it exists
+  const n0 = (await rels()).length;
+  await win.evaluate(() => runCommand('exhibitor.addRelation', {})); await sleep(500);
+  await noModal('new relation');
+  const keys = await win.evaluate(() => exhibitorRelationTargets().slice(-2).map((o) => o.key));
+  await win.locator(`${panel} [data-fkey="from"]`).selectOption(keys[0]); await sleep(300);
+  await win.locator(`${panel} [data-fkey="to"]`).selectOption(keys[1]); await sleep(1000);
+  assert.equal((await rels()).length, n0 + 1, 'made the moment both ends are set');
+  assert.equal(await win.evaluate(() => document.activeElement?.dataset?.fkey), 'label', 'its label is ready to type');
+  const made = await win.evaluate(() => S.exhibitorData.selRel);
+  await win.keyboard.type('Smoke rel'); await win.keyboard.press('Enter'); await sleep(900);
+  assert.equal((await rels()).find((r) => r.id === made).label, 'Smoke rel', 'the label saves');
+  await win.locator(`${panel} [data-fkey="directed"]`).click(); await sleep(900);
+  assert.equal((await rels()).find((r) => r.id === made).directed, 0, 'the tick saves');
+  // the Lines view's pencil selects a relation
+  await win.evaluate(() => closeExhibitorRelationPanel()); await sleep(300);
+  await win.locator(`#main-inner .vw-table button[onclick="selectExhibitorRelation(${made})"]`).click(); await sleep(500);
+  assert.equal(await win.locator(`${panel} [data-fkey="label"]`).inputValue(), 'Smoke rel', 'the pencil opens it in the panel');
+  await win.evaluate((id) => api.viewer.deleteRelation(id), made);
+
+  // 08 — Wanderer: a placed pin exists at once; its panel picks what it links to
+  await open('wanderer', 'setWandererView', 'map'); await sleep(900);
+  const pins = (m) => win.evaluate((m) => api.wanderer.list(m), m);
+  const wm = await win.evaluate(() => S.wandererData.moduleId);
+  await win.evaluate(async (m) => { // the sample Wanderer has no map / timeline picked yet
+    const id = (k) => String(flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === k).id);
+    await setWandererRef(m, 'mapModule', id('locator')); await setWandererRef(m, 'timelineModule', id('chronicler'));
+  }, wm); await sleep(1200);
+  const p0 = (await pins(wm)).length;
+  await win.evaluate(() => createWandererPin(120, 90, null)); await sleep(1000);
+  await noModal('pin');
+  const made2 = (await pins(wm)).length === p0 + 1 ? await win.evaluate(() => S.wandererData.selPin) : null;
+  assert.ok(made2, 'a placed pin exists at once');
+  const opt = await win.locator(`${panel} [data-fkey="key"] option`).nth(1).getAttribute('value');
+  await win.locator(`${panel} [data-fkey="key"]`).selectOption(opt); await sleep(1000);
+  assert.equal((await pins(wm)).find((p) => p.id === made2).linker_key, opt, 'its link saves');
+  assert.equal(await win.locator(`${panel} [data-fkey="key"]`).inputValue(), opt, 'and the panel stays with it');
+  await win.evaluate((id) => api.wanderer.delete(id), made2);
+});
