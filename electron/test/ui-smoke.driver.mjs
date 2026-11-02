@@ -65,6 +65,21 @@ test('Nest: empty space right-click is the Nexus root menu', async () => {
   await win.keyboard.press('Escape');
 });
 
+// The Nest menu's Handle edits the @handle in the row itself; nothing opens.
+test('Nest: Handle from the row menu edits it in the row', async () => {
+  const id = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Who knows whom').id);
+  const before = await win.evaluate(() => S.activeModuleNode?.id ?? null);
+  await row('Who knows whom').click({ button: 'right' }); await sleep(200);
+  await win.locator('.context-menu-popup .kind-list-item:has-text("Handle")').first().click(); await sleep(300);
+  const inp = win.locator(`#nest-tree-body #handle-nest-${id}`);
+  assert.equal(await inp.count(), 1, 'the box is in the Nest row');
+  assert.equal(await win.evaluate(() => S.activeModuleNode?.id ?? null), before, 'nothing opened');
+  await inp.fill('whowho'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.equal(await win.evaluate((m) => api.module.get(m).then((r) => r.handle), id), 'whowho');
+  assert.equal(await win.locator(`#nest-tree-body #handle-nest-${id}`).count(), 0, 'and closes after saving');
+  await win.evaluate((m) => api.module.update(m, { handle: '' }).then(() => reloadModuleTree()), id);
+});
+
 // B4 + Procress 17 I2: Create opens the searchable kind picker on a click (it
 // was a hover flyout that opened by itself); the hover flyouts that remain
 // survive moving through them and a diagonal across a sibling with its own.

@@ -85,7 +85,9 @@ function buildNestRow(m, depth, parentId) {
   // name / handle modes stay a choice in the Nest options.
   const sigMode = S.settings.nestSignatureMode || 'icon';
   const kindTip = ` title="${x(kindLabel(m.kind))}"`;
-  const kindBadge = sigMode === 'icon'
+  // the Nest menu's "Handle" edits it right here, in the signature slot
+  const kindBadge = S.editingHandleId === m.id && S.editingHandleWhere === 'nest' ? moduleHandleHtml(m, 'nest')
+    : sigMode === 'icon'
     ? `<span class="kind kind-icon"${kindTip} data-no-i18n>${I[KIND_ICON[m.kind]] || I.layer}</span>`
     : sigMode === 'handle' && m.handle
       ? `<span class="kind kind-handle"${kindTip} data-no-i18n>@${x(m.handle)}</span>`
