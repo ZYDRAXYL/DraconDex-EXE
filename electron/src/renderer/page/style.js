@@ -57,9 +57,10 @@ function blockStyleClasses(style) {
 // the contents or an anchor: link scrolls to.
 const pbAnchorOf = (b) => blockStyleOf(b?.config).anchor || `b${b?.id}`;
 
-// hideOn never hides a page's main text (item.body) — a style must not
-// hide content (§6.4).
-const pbHideOf = (b, st) => (b?.component === 'item.body' ? 'none' : st.hideOn);
+// hideOn never hides a page's main text (item.body) or its fields
+// (item.fields) — a style must not hide content (§6.4).
+const pbNeverHidden = (comp) => comp === 'item.body' || comp === 'item.fields';
+const pbHideOf = (b, st) => (pbNeverHidden(b?.component) ? 'none' : st.hideOn);
 
 // An icon reference as the page draws it — the shapes the app stores
 // everywhere (svg:<key>, sym:<glyph>, img:<data URI>; a bare key is an

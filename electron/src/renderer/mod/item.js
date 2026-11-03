@@ -89,17 +89,18 @@ const ITEM_KIND = {
     nameOf: (s) => s.name,
     async renderBody(s) {
       const messages = await api.chatscribe.getMessages(s.id);
-      return `<div id="item-fields">${fieldsStripHtml([{ key: 'name', title: t('name'), value: s.name }])}</div>` + buildChatBubblesHtml(s, messages, {
+      return buildChatBubblesHtml(s, messages, {
         streamId: 'item-chs-stream', inputId: 'item-chs-input', onSend: `sendItemChatMessage(${s.id})`,
       });
     },
+    // No modal (#15): the session's name on the page
+    fields: (ses) => [{ key: 'name', title: t('name'), value: ses.name }],
+    async saveField(ses, key, v) {
+      if (!v) return t('nameRequired');
+      await api.chatscribe.renameSession(ses.id, v);
+      return true;
+    },
     mount() {
-      // No modal (#15): the session's name on the page
-      itemFieldsMount(async (ses, key, v) => {
-        if (!v) return t('nameRequired');
-        await api.chatscribe.renameSession(ses.id, v);
-        return true;
-      });
       const el = fq('#item-chs-stream');
       if (el) el.scrollTop = el.scrollHeight;
       bindChatBubbleDrag('item-chs-stream');
@@ -121,23 +122,21 @@ const ITEM_KIND = {
         ? `<li class="item-choice"><ul>${options.filter((o) => o.talk_ref === tk.id)
           .map((o) => `<li>${x(o.option_text || '…')}</li>`).join('')}</ul></li>`
         : `<li>${tk.speaker ? `<b>${x(tk.speaker)}</b> ` : ''}${x(tk.talk_sentence || '')}</li>`)).join('');
-      return `<div id="item-fields">${fieldsStripHtml([
-          { key: 'name', title: t('name'), value: dl.name },
-          { key: 'color', title: t('color'), type: 'color', value: dl.color, hex: dl.color_code },
-        ])}</div>
-        ${dl.description ? `<div class="md-preview">${mdRender(dl.description)}</div>` : ''}
+      return `${dl.description ? `<div class="md-preview">${mdRender(dl.description)}</div>` : ''}
         <ol class="item-lines" data-no-i18n>${rows || ''}</ol>
         ${rows ? '' : `<div class="empty"><p>${t('nestEmpty')}</p></div>`}
         ${itemOpenInModuleHtml(`sdlg_${dl.id}`)}
         ${itemDeleteHtml('(id)=>api.narrator.deleteDialogue(id)')}`;
     },
     // No modal (APP src/design/no-modal #09): name and colour on the page
-    mount() {
-      itemFieldsMount(async (dl, key, v) => {
-        if (key === 'name' && !v) return t('nameRequired');
-        await api.narrator.updateDialogue(dl.id, key === 'name' ? v : dl.name, key === 'color' ? Number(v) : dl.color);
-        return true;
-      });
+    fields: (dl) => [
+      { key: 'name', title: t('name'), value: dl.name },
+      { key: 'color', title: t('color'), type: 'color', value: dl.color, hex: dl.color_code },
+    ],
+    async saveField(dl, key, v) {
+      if (key === 'name' && !v) return t('nameRequired');
+      await api.narrator.updateDialogue(dl.id, key === 'name' ? v : dl.name, key === 'color' ? Number(v) : dl.color);
+      return true;
     },
   },
   diviner: {
@@ -149,13 +148,7 @@ const ITEM_KIND = {
     async renderBody(tb) {
       const entries = await api.diviner.getEntries(tb.id);
       const rows = entries.map((e) => `<li>${x(e.entry_text || e.linker_key || '…')}</li>`).join('');
-      const mode = tb.mode || 'pick';
-      return `<div id="item-fields">${fieldsStripHtml([
-          { key: 'name', title: t('name'), value: tb.name },
-          { key: 'mode', title: t('divMode'), type: 'select', value: mode, options: [{ value: 'pick', text: t('divModePick') }, { value: 'join', text: t('divModeJoin') }] },
-          { key: 'dice', title: t('divDice'), value: tb.dice || '', placeholder: '1d20', hint: t('divDiceHint'), hidden: mode === 'join' },
-        ])}</div>
-        ${rows ? `<ol class="item-lines" data-no-i18n>${rows}</ol>` : `<div class="empty"><p>${t('divNoEntries')}</p></div>`}
+      return `${rows ? `<ol class="item-lines" data-no-i18n>${rows}</ol>` : `<div class="empty"><p>${t('divNoEntries')}</p></div>`}
         <div class="mfoot">
           <span id="item-div-result" class="item-roll" data-no-i18n></span>
           <button class="btn btn-p" onclick="rollItemDivinerTable(${tb.id})">${t('divRoll')}</button>
@@ -164,13 +157,16 @@ const ITEM_KIND = {
         ${itemDeleteHtml('(id)=>api.diviner.deleteTable(id)')}`;
     },
     // No modal (#11): name, mode and dice on the page
-    mount() {
-      itemFieldsMount(async (tb, key, v) => {
-        if (key === 'name' && !v) return t('nameRequired');
-        const next = { name: tb.name, dice: tb.dice || '', mode: tb.mode || 'pick', [key]: v };
-        const r = await api.diviner.updateTable(tb.id, next.name, next.mode === 'join' ? '' : next.dice, next.mode);
-        return r?.ok ? true : t(r?.code === 'bad_dice' ? 'divBadDice' : 'driveErrServer');
-      });
+    fields: (tb) => [
+      { key: 'name', title: t('name'), value: tb.name },
+      { key: 'mode', title: t('divMode'), type: 'select', value: tb.mode || 'pick', options: [{ value: 'pick', text: t('divModePick') }, { value: 'join', text: t('divModeJoin') }] },
+      { key: 'dice', title: t('divDice'), value: tb.dice || '', placeholder: '1d20', hint: t('divDiceHint'), hidden: (tb.mode || 'pick') === 'join' },
+    ],
+    async saveField(tb, key, v) {
+      if (key === 'name' && !v) return t('nameRequired');
+      const next = { name: tb.name, dice: tb.dice || '', mode: tb.mode || 'pick', [key]: v };
+      const r = await api.diviner.updateTable(tb.id, next.name, next.mode === 'join' ? '' : next.dice, next.mode);
+      return r?.ok ? true : t(r?.code === 'bad_dice' ? 'divBadDice' : 'driveErrServer');
     },
   },
   sketcher: {
@@ -270,7 +266,8 @@ async function openItemNode(itemKind, moduleId, id) {
   // (item.body, page/item-page.js).
   const itemKey = reg.keyOf ? reg.keyOf(item) : null;
   if (itemKey && m) await loadModulePage(m, itemKey);
-  S.activeItemNode = { itemKind, moduleId, id, item, m, bodyHtml, itemKey };
+  const fieldsHtml = reg.fields ? `<div id="item-fields">${fieldsStripHtml(reg.fields(item))}</div>` : ''; // item.fields (page/item-page.js)
+  S.activeItemNode = { itemKind, moduleId, id, item, m, bodyHtml, fieldsHtml, itemKey };
   trackRecentEntity(itemKey);
   S.activeModuleNode = null;
   S.filePreview = null;
@@ -334,11 +331,12 @@ async function saveItemDesignNode(id, redraw = false) {
 // ── The fields strip on an element's page (core/fields.js, no-modal rule 1):
 // save one field, then redraw the page — its name is in the head, the tab
 // and the Nest row too. ──
-function itemFieldsMount(save) {
+function itemFieldsMount() {
   const node = S.activeItemNode;
-  if (!node) return;
+  const reg = node && ITEM_KIND[node.itemKind];
+  if (!reg?.saveField) return;
   fieldsStripMount(fq('#item-fields'), async (key, value) => {
-    const r = await save(node.item, key, value);
+    const r = await reg.saveField(node.item, key, value);
     if (r !== true) return r;
     invalidateNestItems(node.moduleId);
     await openItemNode(node.itemKind, node.moduleId, node.id);

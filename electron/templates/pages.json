@@ -44,6 +44,13 @@
       "once": true
     },
     {
+      "id": "item.fields",
+      "kind": "item",
+      "since": "exe",
+      "borrowable": false,
+      "once": true
+    },
+    {
       "id": "manager.view",
       "kind": "manager",
       "since": "exe",

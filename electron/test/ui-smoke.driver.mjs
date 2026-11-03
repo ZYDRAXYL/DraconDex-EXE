@@ -2155,3 +2155,24 @@ test('no-modal pickers: each opens as a popover beside its button; Close / Esc /
   await win.evaluate(() => closeModal()); await sleep(200);
   assert.equal(await win.locator('.picker-pop').count(), 0, 'closeModal() closes a picker');
 });
+
+// no-modal rule 2: an element's fields are a block of its page — moved or
+// folded in Page edit, never hidden; removed, they go back above the editor.
+test('no-modal rule 2: the fields are an item.fields block; removed, they still show once', async () => {
+  const mid = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'diviner').id);
+  const tb = await win.evaluate((m) => api.diviner.getTables(m).then((r) => r[0].id), mid);
+  await win.evaluate(([m, id]) => openItemNode('diviner', m, id), [mid, tb]); await sleep(900);
+  const fieldsBlock = () => win.evaluate(([m, id]) => pageOf(m, `divt_${id}`)?.blocks.find((b) => b.component === 'item.fields') || null, [mid, tb]);
+  const b = await fieldsBlock();
+  assert.ok(b, 'a new layout starts with the fields block');
+  assert.equal(await win.evaluate(([m, id]) => pageOf(m, `divt_${id}`).blocks[0].component, [mid, tb]), 'item.fields', 'first, above the editor');
+  assert.equal(await win.locator('#main-inner .fstrip').count(), 1, 'one strip');
+  assert.deepEqual(await win.evaluate(() => pbHideOf({ component: 'item.fields' }, { hideOn: 'phone' })), 'none', 'a style never hides it');
+  // removed: the strip comes back at the top of the editor, still one
+  await win.evaluate(async ([m, id, blockId]) => { await api.block.remove(blockId); await reloadModulePage(m, `divt_${id}`); await openItemNode('diviner', m, id); }, [mid, tb, b.id]); await sleep(900);
+  assert.equal(await fieldsBlock(), null);
+  assert.equal(await win.locator('#main-inner .fstrip').count(), 1, 'still one strip, in item.body');
+  await win.locator('#main-inner .fstrip [data-fkey="name"]').fill('Smoke rule 2'); await win.keyboard.press('Enter'); await sleep(900);
+  assert.equal(await win.evaluate(([m, id]) => api.diviner.getTables(m).then((r) => r.find((x) => x.id === id).name), [mid, tb]), 'Smoke rule 2', 'and it still saves');
+  await win.evaluate(async ([m, id]) => { const t0 = (await api.diviner.getTables(m)).find((x) => x.id === id); await api.diviner.updateTable(id, 'Harbor rumor', t0.dice || '', t0.mode || 'pick'); await api.block.add(m, '*', { type: 'component', component: 'item.fields' }); }, [mid, tb]);
+});
