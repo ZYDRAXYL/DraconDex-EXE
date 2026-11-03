@@ -81,7 +81,7 @@ async function importDatabaseFile(){
 // ambient current one — see import-merge.js's own comment on why that's safe.
 function openImportTargetChoiceModal(filePath, kind){
   const fileName = filePath.split(/[\\/]/).pop();
-  openModal(t('importChooseTargetTitle'), `
+  openPicker(t('importChooseTargetTitle'), `
     <p class="modal-hint" data-no-i18n style="word-break:break-all">${x(fileName)}</p>
     <p class="modal-hint">${t(kind === 'module' ? 'importChooseTargetHintModule' : kind === 'pack' ? 'importChooseTargetHintPack' : 'importChooseTargetHintNexus')}</p>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">

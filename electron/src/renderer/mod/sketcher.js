@@ -429,7 +429,7 @@ async function openSketchPinModal() {
   const d = S.sketcherData;
   if (!d?.pageId) return;
   const ix = await api.wiki.quickIndex(S.nexus.id);
-  openModal(t('pinModuleLink'), `
+  openPicker(t('pinModuleLink'), `
     <div class="fg"><label>${t('moduleLink')}</label>
       <select id="skp-key">${ix.map(e2 =>
         `<option value="${x(e2.key)}">${x(e2.name)} (${x(e2.type)})</option>`).join('')}

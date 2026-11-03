@@ -103,7 +103,7 @@ function fileViewerZoom(dz) {
 async function openImportLinkerModal(id) {
   const f = (S.importFiles || []).find(v => v.id === id);
   const ix = await api.wiki.quickIndex(S.nexus.id);
-  openModal(t('changeLinker'), `
+  openPicker(t('changeLinker'), `
     <div class="fg"><label>${t('moduleLink')}</label>
       <select id="il-key">
         <option value="">${t('notLinked')}</option>

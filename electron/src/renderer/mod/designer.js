@@ -436,7 +436,7 @@ async function openDesignPinModal() {
   const d = S.designerData;
   const [ix, allow] = await Promise.all([api.wiki.quickIndex(S.nexus.id), designerLinkFilterTypes(d.moduleId)]);
   const filtered = allow ? ix.filter(e2 => allow.includes(e2.type)) : ix;
-  openModal(t('pinModuleLink'), `
+  openPicker(t('pinModuleLink'), `
     <div class="fg"><label>${t('moduleLink')}</label>
       <select id="dgp-key">${filtered.map(e2 =>
         `<option value="${x(e2.key)}">${x(e2.name)} (${x(e2.type)})</option>`).join('')}
@@ -453,7 +453,7 @@ async function openDesignerLinkFilterModal(moduleId) {
     <div class="togglerow" onclick="toggleDesignerLinkFilterType(this)" data-type="${ty}">
       <span class="tg${allow.includes(ty) ? ' on' : ''}"></span><span data-no-i18n>${ty}</span>
     </div>`).join('');
-  openModal(t('narratorLinkFilter'), `
+  openPicker(t('narratorLinkFilter'), `
     <div id="dg-link-filter-rows">${rows}</div>
     <div class="mfoot">
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>

@@ -37,7 +37,7 @@ let _pbImg = null; // { cls, multi, sel: [], onPick, query, module, files, modul
 async function openPbImagePicker(opts = {}) {
   if (!S.nexus) return;
   _pbImg = { cls: opts.cls || 'image', multi: !!opts.multi, sel: [...(opts.selected || [])], onPick: opts.onPick, query: '', module: '', files: null, moduleId: opts.moduleId ?? null };
-  openModal(t(_pbImg.cls === 'image' ? 'pbChooseImage' : 'pbChooseFile'), `<div id="pb-imgpick" class="pb-imgpick"><p class="drafter-hint">${t('loading')}</p></div>`);
+  openPicker(t(_pbImg.cls === 'image' ? 'pbChooseImage' : 'pbChooseFile'), `<div id="pb-imgpick" class="pb-imgpick"><p class="drafter-hint">${t('loading')}</p></div>`);
   await pbImgLoad();
   pbImgRender();
 }
@@ -122,7 +122,7 @@ const pbFocusCss = (v) => { const f = pbFocusOf(v); return `${f.x}% ${f.y}%`; };
 let _pbFocus = null;
 function pbFocusPicker(fileId, cur, onSet) {
   _pbFocus = { onSet, f: pbFocusOf(cur) };
-  openModal(t('pbFocusTitle'), `<p class="drafter-hint">${t('pbFocusHint')}</p>
+  openPicker(t('pbFocusTitle'), `<p class="drafter-hint">${t('pbFocusHint')}</p>
     <div class="pb-focus" onclick="pbFocusClick(event)">
       <img src="${displayImageUrl(fileId)}" alt="" onerror="queueDisplayImageFallback(this,${fileId})">
       <span class="pb-focus-dot" style="left:${_pbFocus.f.x}%;top:${_pbFocus.f.y}%"></span></div>

@@ -202,7 +202,7 @@ document.addEventListener('dragend', () => { _pbDrag = null; });
 function pbPickSource(blockId, component) {
   const kind = String(component).split('.')[0];
   const list = flattenModuleTree(S.moduleTree, 0).map((r) => r.m).filter((o) => o.kind === kind);
-  openModal(t('pbPickSource'), list.length
+  openPicker(t('pbPickSource'), list.length
     ? `<div class="fg"><select id="pb-src">${list.map((o) => `<option value="${o.id}">${x(o.name)}</option>`).join('')}</select></div>
        <div class="mfoot"><button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
        <button class="btn btn-p" onclick="pbSetSource(${blockId})">${t('pbPickSource')}</button></div>`

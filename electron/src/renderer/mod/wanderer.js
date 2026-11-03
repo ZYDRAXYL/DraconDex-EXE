@@ -169,7 +169,7 @@ function openWandererAreaAddPicker(areaId) {
   const d = S.wandererData;
   if (!d.links.length) { toast(t('wandererNeedsRefs'), 'err'); return; }
   const opts = d.links.map(l => `<option value="${l.id}">${x(l.entity?.name || '—')}</option>`).join('');
-  openModal(t('moduleLink'), `
+  openPicker(t('moduleLink'), `
     <div class="fg"><label>${t('moduleLink')}</label><select id="wnd-area-add-link">${opts}</select></div>
     <div class="mfoot">
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>

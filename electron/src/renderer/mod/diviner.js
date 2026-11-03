@@ -211,7 +211,7 @@ async function openDivinerLinkModal(entryId) {
   const blocked = new Set();
   await Promise.all(tables.map(async tb => { if (tb.id === d.selectedId || await api.diviner.wouldCycle(d.selectedId, tb.id)) blocked.add(tb.id); }));
   const cur = e.linker_key || '';
-  openModal(t('divLinkTo'), `
+  openPicker(t('divLinkTo'), `
     <div class="fg"><label>${t('divRollTable')}</label>
       <select id="dvl-table"><option value="">—</option>
         ${tables.map(tb => `<option value="divt_${tb.id}"${cur === `divt_${tb.id}` ? ' selected' : ''}${blocked.has(tb.id) ? ' disabled' : ''}>${x(tb.module_name)} › ${x(tb.name)}${blocked.has(tb.id) ? ' ⟲' : ''}</option>`).join('')}

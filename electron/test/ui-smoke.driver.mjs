@@ -2126,3 +2126,32 @@ test('no-modal 01/04/06/12: This Nexus on Home, the line over the graph, a sessi
   await win.evaluate((id) => api.sketcher.deletePage(id), pg.id);
   await win.evaluate(() => setSketcherView('canvas'));
 });
+
+// no-modal rule 5: a picker opens beside what was clicked, not over the window.
+test('no-modal pickers: each opens as a popover beside its button; Close / Esc / its own buttons close it', async () => {
+  const mod = (k) => win.evaluate((k) => flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === k).id, k);
+  const cases = [
+    ['designer', 'setDesignerView', 'canvas', () => openDesignPinModal()],
+    ['designer', 'setDesignerView', 'canvas', () => openDesignerLinkFilterModal(S.designerData.moduleId)],
+    ['sketcher', 'setSketcherView', 'canvas', () => openSketchPinModal()],
+    ['scribe', 'setChatScribeView', 'chat', () => openChatLinkPicker('chs-input')],
+    ['narrator', 'setNarratorView', 'board', () => openNarratorLinkFilterModal(S.narratorData.moduleId)],
+    ['exhibitor', 'setExhibitorView', 'scene', () => openExhibitorTreeModal()],
+    ['classifier', null, null, () => openAddAssetUrlModal(null)],
+  ];
+  for (const [kind, fn, view, open] of cases) {
+    const id = await mod(kind);
+    await win.evaluate(async ([id, fn, view]) => { showLeftDest('nest'); await openModuleNode(id); if (fn) await window[fn](view); }, [id, fn, view]); await sleep(500);
+    await win.evaluate(`(${open})()`); await sleep(500);
+    const st = await win.evaluate(() => { const p = document.querySelector('.picker-pop'); const r = p?.getBoundingClientRect(); return { n: document.querySelectorAll('.picker-pop').length, modal: !document.querySelector('#modal-overlay').classList.contains('hidden'), w: r?.width, inView: !!r && r.left >= 0 && r.right <= innerWidth && r.top >= 0 }; });
+    assert.equal(st.n, 1, `${kind}: a picker popover ${open}`);
+    assert.equal(st.modal, false, `${kind}: no modal ${open}`);
+    assert.ok(st.w < 700 && st.inView, `${kind}: small and on screen ${JSON.stringify(st)}`);
+    await win.keyboard.press('Escape'); await sleep(200);
+    assert.equal(await win.locator('.picker-pop').count(), 0, `${kind}: Esc closes it`);
+  }
+  // its own Cancel-style buttons (closeModal) close it too
+  await win.evaluate(() => openAddAssetUrlModal(null)); await sleep(300);
+  await win.evaluate(() => closeModal()); await sleep(200);
+  assert.equal(await win.locator('.picker-pop').count(), 0, 'closeModal() closes a picker');
+});

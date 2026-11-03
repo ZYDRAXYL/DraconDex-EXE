@@ -176,7 +176,7 @@ async function openClsRelationPicker(moduleId, oid, tid) {
   const pool = (await api.viewer.index(S.nexus.id))
     .filter(it => (!allow || allow.has(it.kind)) && (!inModule || it.moduleId === inModule) && it.key !== `cobj_${oid}` && !have.has(it.key));
   window._clsRelPick = { moduleId, oid, tid, pool };
-  openModal(t('clsRelationAdd'), `
+  openPicker(t('clsRelationAdd'), `
     <input id="cls-rel-q" placeholder="${x(t('kindSearch'))}" oninput="paintClsRelationPicker()" autocomplete="off">
     <div class="objlist cls-rel-list" id="cls-rel-list"></div>
     <div class="mfoot"><button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button></div>`);

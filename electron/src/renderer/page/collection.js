@@ -191,7 +191,7 @@ function openPbcPopup(where = null) {
   const page = pbcPage();
   if (!page) return;
   _pbcQuery = '';
-  openModal(t('pbAddBlock'), `<div class="pbc-search"><input type="search" id="pbc-q" placeholder="${x(t('search'))}" aria-label="${x(t('search'))}" oninput="pbcFilter(this)"></div>
+  openPicker(t('pbAddBlock'), `<div class="pbc-search"><input type="search" id="pbc-q" placeholder="${x(t('search'))}" aria-label="${x(t('search'))}" oninput="pbcFilter(this)"></div>
     <div class="pbc-body pbc-pop" id="pbc-pop-body">${pbcBodyHtml(page, where)}</div>`);
   const body = q('#pbc-pop-body');
   if (body) body._where = where;

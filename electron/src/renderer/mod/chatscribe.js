@@ -151,7 +151,7 @@ function openChatLinkPicker(inputId) {
   if (!S.nexus) return;
   api.wiki.quickIndex(S.nexus.id).then(ix => {
     const opts = ix.map(e => `<option value="${x(e.name)}">${x(e.name)} (${x(e.type)})</option>`).join('');
-    openModal(t('moduleLink'), `
+    openPicker(t('moduleLink'), `
       <div class="fg"><label>${t('moduleLink')}</label><select id="chs-link-pick">${opts}</select></div>
       <div class="mfoot">
         <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
