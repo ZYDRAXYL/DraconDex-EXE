@@ -78,7 +78,7 @@ async function syncNexusLocate(id, quiet = false, reason = 'manual') {
   return r;
 }
 
-// "Move folder…" — from the Nexus modal (reopened after), the Nest notice
+// "Move folder…" — from This Nexus (Home / Settings, redrawn after), the Nest notice
 // or Problems. Main asks where, moves the folder with everything in it.
 async function moveNexusLocate(id, fromModal = false) {
   const r = await api.nexus.locateMove(id);
@@ -87,7 +87,8 @@ async function moveNexusLocate(id, fromModal = false) {
   toast(t('nexusLocalFolderMoved').replace('{dir}', r.dir || ''), 'ok');
   await reloadNexuses();
   if (r.imported && (r.imported.collectors || r.imported.added)) await reloadModuleTree({ skipMirror: true });
-  if (fromModal) openNexusModal(id);
+  if (fromModal && q('#home-nexus-fields')) renderNexusHome(); // Home's This Nexus shows the new folder
+  else if (fromModal && q('#setting-thisnexus')) mountNexusEditFields(q('#setting-thisnexus'), id);
   else if (S.nexus?.id === id && leftDest() === 'nest') renderLeftPanel();
   if (S.leftTool === 'problems' && typeof loadProblemsPanel === 'function') loadProblemsPanel();
 }

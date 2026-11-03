@@ -1075,6 +1075,8 @@ function builderEmptyPaneHtml() {
       ? listHtml({ list: 'home-pinned', aria: t('homePinned'), body: pinned.map((m) => listRowHtml({ icon: moduleIconHtml(m), title: m.name,
         meta: kindLabel(m.kind), onclick: `openModuleNode(${m.id})`, attrs: 'data-no-i18n' })).join('') })
       : `<p class="drafter-hint">${t('homePinHint')}</p>`}</section>
+    <details class="home-sec home-nexus"${S.homeNexusOpen ? ' open' : ''} ontoggle="S.homeNexusOpen=this.open;if(this.open)mountNexusEditFields(q('#home-nexus-fields'),S.nexus.id)">
+      <summary><h3>${t('nexusSettingsThis').replace('…', '')}</h3></summary><div id="home-nexus-fields"></div></details>
     <button class="btn btn-g home-organise" onclick="homeOrganise()">${I.folder || ''} ${t('homeOrganise')}</button>
     <div id="home-templates" class="home-portal"></div>
     <div id="home-portal" class="home-portal"></div>

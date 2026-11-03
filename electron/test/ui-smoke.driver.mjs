@@ -280,7 +280,8 @@ test('20: a new Nexus is a folder from the start; its modal offers where · open
   assert.equal(n.missing, 0);
   assert.match(n.dir, /[\\/]DraconDex[\\/]Smoke$/, '<root>/DraconDex/<name>');
   assert.ok(n.dir.startsWith(n.data.replace(/[\\/]vaults$/, '')), 'a test run keeps it under its data dir, never in the real Documents');
-  const row = await win.evaluate(async () => { await openNexusModal(S.nexus.id); const fg = [...document.querySelectorAll('#modal .fg')].find((e) => e.querySelector('input')?.value === S.nexus.locate_dir); const out = fg ? [...fg.querySelectorAll('button')].map((b) => b.getAttribute('onclick')) : null; closeModal(); return out; });
+  // no-modal #01: This Nexus is a section of Home now
+  const row = await win.evaluate(async () => { await openNexusModal(S.nexus.id); await new Promise((r) => setTimeout(r, 600)); const fg = [...document.querySelectorAll('#home-nexus-fields .fg')].find((e) => e.querySelector('input')?.value === S.nexus.locate_dir); const out = fg ? [...fg.querySelectorAll('button')].map((b) => b.getAttribute('onclick')) : null; S.homeNexusOpen = false; renderNexusHome(); return out; });
   assert.ok(row, 'the Local folder row shows the folder');
   assert.ok(row.some((c) => /moveNexusLocate/.test(c)) && row.some((c) => /locateOpen/.test(c)));
   assert.ok(!row.some((c) => /pick|forget/i.test(c)), 'no Choose / Forget');
@@ -773,10 +774,12 @@ test('16 part 7: the game line — a play session logged against the world\'s ow
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
     const hist = flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'History');
     await openModuleNode(hist.id); await wait(500);
-    runCommand('chronicler.logSession', { moduleId: hist.id }); await wait(300);
-    q('#chr-ps-d').value = '3'; q('#chr-ps-m').value = '4'; q('#chr-ps-y').value = '1050';
-    q('#chr-ps-min').value = '90'; q('#chr-ps-note').value = 'The crew reached the reef.';
-    await savePlaySession(hist.id); await wait(600);
+    // no-modal #06: logged at once; its date and text are edited on its page
+    runCommand('chronicler.logSession', { moduleId: hist.id }); await wait(1200);
+    const set = (sel, v) => { const el = q(sel); el.value = v; el.dispatchEvent(new Event('change', { bubbles: true })); };
+    q('#item-chr-insp #chr-insp-s-d').value = '3'; q('#item-chr-insp #chr-insp-s-m').value = '4'; set('#item-chr-insp #chr-insp-s-y', '1050'); await wait(500);
+    const story = q('#item-chr-insp #chr-insp-story');
+    set('#item-chr-insp #chr-insp-story', `${story.value.replace(/60 min/, '90 min')}\n\nThe crew reached the reef.`); await wait(600);
     const line = (await api.timeline.getModuleTimelines(hist.id)).find((l) => l.line_name === 'Play log');
     const evs = line ? await api.timeline.getEvents(line.id) : [];
     return { line: !!line, ev: evs[0] && { name: evs[0].event_name, y: evs[0].s_years, story: evs[0].story } };
@@ -2070,4 +2073,56 @@ test('no-modal 02/03: fields edited in Structure; a private field typed in place
   assert.ok(priv && priv.object_ref === oid, 'a field of this object only');
   assert.equal(await win.evaluate(() => document.activeElement?.dataset?.r), 'addprivfield', 'ready for the next');
   await win.evaluate((id) => api.classifier.deleteTemplate(id), priv.id);
+});
+
+// #01 / #04 / #06 / #12: the last four modals.
+test('no-modal 01/04/06/12: This Nexus on Home, the line over the graph, a session logged at once, a page named in place', async () => {
+  const noModal = async (what) => assert.equal(await win.locator('#modal-overlay.open').count(), 0, `${what}: no modal`);
+  const was = await win.evaluate(() => ({ name: S.nexus.name, memo: S.nexus.memo || '' }));
+  // 01 — This Nexus is a section of Home
+  await win.evaluate(() => openNexusModal(S.nexus.id)); await sleep(900);
+  await noModal('nexus');
+  assert.equal(await win.evaluate(() => document.activeElement?.dataset?.fkey), 'name', 'its name is ready to type');
+  await win.locator('#home-nexus-fields [data-fkey="memo"]').fill('Smoke memo'); await win.locator('#home-nexus-fields [data-fkey="name"]').focus(); await sleep(900);
+  assert.equal(await win.evaluate(async () => { await reloadNexuses(); return S.nexuses.find((n) => n.id === S.nexus.id).memo; }), 'Smoke memo', 'the memo saves on leaving it');
+  await win.evaluate(async (w) => { const n = S.nexus; await api.nexus.update(n.id, w.name, w.memo, n.color ?? null); await reloadNexuses(); S.nexus = S.nexuses.find((v) => v.id === n.id); S.homeNexusOpen = false; renderNexusHome(); }, was);
+
+  // 04 — the line's name and colour over the graph
+  const cm = await win.evaluate(async () => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'chronicler'); await openModuleNode(m.id); return m.id; });
+  await sleep(700);
+  const tl = await win.evaluate(() => S.chroniclerData.timelines.find((l) => l.id === S.chroniclerData.activeId));
+  await win.evaluate((m) => runCommand('chronicler.editLine', { moduleId: m }), cm); await sleep(700);
+  await noModal('line');
+  await win.keyboard.type('Smoke line'); await win.keyboard.press('Enter'); await sleep(900);
+  assert.equal((await win.evaluate((m) => api.timeline.getModuleTimelines(m), cm)).find((l) => l.id === tl.id).line_name, 'Smoke line', 'the line name saves');
+  await win.evaluate((l) => api.timeline.update(l.id, l.line_name, l.color ?? null), tl);
+  await win.evaluate(() => toggleChroniclerLinePanel(false)); await sleep(300);
+
+  // 06 — a play session is logged at once and opens on its page
+  await win.evaluate((m) => runCommand('chronicler.logSession', { moduleId: m }), cm); await sleep(1200);
+  await noModal('session');
+  const ev = await win.evaluate(() => S.activeItemNode?.item);
+  assert.ok(ev && /60 min/.test(ev.story || ''), `logged, 60 minutes: ${ev?.story}`);
+  assert.equal(await win.evaluate(() => document.activeElement?.id), 'chr-insp-story', 'its story is ready to type');
+  await win.evaluate((id) => api.timeline.deleteEvent(id), ev.id);
+
+  // 12 — a Sketcher page is named in place
+  const sm = await win.evaluate(async () => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'sketcher'); await openModuleNode(m.id); await setSketcherView('canvas'); return m.id; });
+  await sleep(700);
+  const p0 = (await win.evaluate((m) => api.sketcher.getPages(m), sm)).length;
+  await win.evaluate((m) => runCommand('sketcher.newPage', { moduleId: m }), sm); await sleep(1000);
+  await noModal('page');
+  assert.equal((await win.evaluate((m) => api.sketcher.getPages(m), sm)).length, p0 + 1, 'made at once');
+  assert.equal(await win.evaluate(() => document.activeElement?.dataset?.r), 'sk-page-name', 'its name is ready to type');
+  await win.keyboard.type('Smoke page'); await win.keyboard.press('Enter'); await sleep(900);
+  const pg = (await win.evaluate((m) => api.sketcher.getPages(m), sm)).find((p) => p.name === 'Smoke page');
+  assert.ok(pg, 'named');
+  // the Pages view: F2 renames the row in place
+  await win.evaluate(() => setSketcherView('pages')); await sleep(600);
+  await win.locator(`.sk-pages [data-sk-page="${pg.id}"] .ls-act`).first().evaluate((b) => b); // the row is there
+  await win.evaluate((id) => renameSketchPageRow(id), pg.id); await sleep(200);
+  await win.keyboard.type('Smoke page 2'); await win.keyboard.press('Enter'); await sleep(900);
+  assert.equal((await win.evaluate((m) => api.sketcher.getPages(m), sm)).find((p) => p.id === pg.id).name, 'Smoke page 2', 'renamed in its row');
+  await win.evaluate((id) => api.sketcher.deletePage(id), pg.id);
+  await win.evaluate(() => setSketcherView('canvas'));
 });

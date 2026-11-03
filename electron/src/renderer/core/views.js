@@ -305,6 +305,7 @@ function runBuilderMounts() {
   if (S.activeModuleNode || S.activeItemNode) mountPageBlocks(builderState().focused);
   if (typeof hydrateDisplayImages === 'function') hydrateDisplayImages();
   if (q('#home-continue')) fillHomeContinue(); // Home phase A (builder.js)
+  if (S.homeNexusOpen && q('#home-nexus-fields') && S.nexus) mountNexusEditFields(q('#home-nexus-fields'), S.nexus.id); // core/nexus.js
   syncSidePanel();
 }
 

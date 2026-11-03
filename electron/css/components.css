@@ -449,6 +449,10 @@ html.reorder-active,html.reorder-active *{cursor:grabbing!important;user-select:
 .home-start h2{font-size:calc(22px * var(--fsc,1));font-weight:650;margin:0}
 .home-actions{display:flex;gap:8px;flex-wrap:wrap}
 .home-sec h3{font-size:calc(var(--fs-body) * var(--fsc,1));font-weight:600;color:var(--t2);margin:0 0 6px;text-transform:none}
+/* Home's "This Nexus" (no-modal #01): folded until asked for */
+.home-nexus summary{cursor:pointer}
+.home-nexus summary h3{display:inline;margin:0}
+.home-nexus[open] summary{margin-bottom:6px}
 .home-organise{align-self:flex-start}
 /* Procress 18 part 1: identity row = icon · name · kind · save state · primary · ⋯ */
 .page-title .navbar-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}

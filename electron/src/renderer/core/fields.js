@@ -10,6 +10,7 @@
 //     type 'select'  value, options: [{ value, text }]
 //     type 'color'   value = a use_color id, hex = its colour (S.colors)
 //     type 'check'   value = true/false (saved as '1' / '0')
+//     type 'area'    several lines (Enter is a new line; saves on blur)
 //     any: disabled (shown, not edited); text: list = suggestions (datalist)
 //   fieldsStripMount(root, onSave)  onSave(key, value) → true, or a message
 //                                   to toast (the old value is put back)
@@ -25,6 +26,9 @@ function fieldsStripHtml(rows) {
     const a = `data-fkey="${x(r.key)}" aria-label="${x(r.title)}"`;
     if (r.type === 'select') {
       return `<select ${a} data-orig="${x(r.value ?? '')}">${r.options.map((o) => `<option value="${x(o.value)}"${String(o.value) === String(r.value ?? '') ? ' selected' : ''}>${x(o.text)}</option>`).join('')}</select>`;
+    }
+    if (r.type === 'area') {
+      return `<textarea ${a} rows="2" data-orig="${x(r.value ?? '')}"${r.placeholder ? ` placeholder="${x(r.placeholder)}"` : ''} data-no-i18n>${x(r.value ?? '')}</textarea>`;
     }
     if (r.type === 'check') {
       return `<input type="checkbox" ${a} data-orig="${r.value ? '1' : '0'}"${r.value ? ' checked' : ''}${r.disabled ? ' disabled' : ''}>`;
@@ -64,12 +68,13 @@ function fieldsStripMount(root, onSave) {
   };
   strip.addEventListener('keydown', (e) => {
     const el = e.target;
-    if (el.tagName !== 'INPUT' || el.type === 'checkbox') return;
+    const area = el.tagName === 'TEXTAREA';
+    if ((el.tagName !== 'INPUT' && !area) || el.type === 'checkbox') return;
     e.stopPropagation(); // the page's shortcuts are not for this box
-    if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+    if (e.key === 'Enter' && !area) { e.preventDefault(); el.blur(); }
     else if (e.key === 'Escape') { e.preventDefault(); el.value = el.dataset.orig; el.blur(); }
   });
-  strip.addEventListener('focusout', (e) => { if (e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') save(e.target, e.target.value.trim(), e.relatedTarget); });
+  strip.addEventListener('focusout', (e) => { if ((e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') || e.target.tagName === 'TEXTAREA') save(e.target, e.target.value.trim(), e.relatedTarget); });
   strip.addEventListener('change', (e) => {
     if (e.target.tagName === 'SELECT') save(e.target, e.target.value);
     else if (e.target.type === 'checkbox') save(e.target, e.target.checked ? '1' : '0');
@@ -139,4 +144,35 @@ function labelEditPopover(anchor, value, { onSave, onDelete = null, placeholder 
   inp.addEventListener('focusout', (e) => { if (pop.isConnected && !pop.contains(e.relatedTarget)) commit(); });
   pop.querySelector("[data-del]")?.addEventListener('click', () => { done = true; closeAllPopups(); onDelete(); });
   setTimeout(() => inp.select(), 0);
+}
+
+// Rename in place: `el`'s text becomes a box with `value` selected. Enter or
+// clicking away saves (onSave(text) — only when it changed and is not
+// empty), Esc leaves it; onDone() runs either way (redraw the row back).
+//   inlineRename(el, value, { onSave, onDone })
+function inlineRename(el, value, { onSave, onDone }) {
+  if (!el || el.querySelector('input')) return;
+  const inp = document.createElement('input');
+  inp.className = 'rename-input';
+  inp.value = value || '';
+  inp.setAttribute('aria-label', t('name'));
+  el.textContent = '';
+  el.appendChild(inp);
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    const v = inp.value.trim();
+    if (save && v && v !== (value || '')) await onSave(v);
+    onDone();
+  };
+  for (const ev of ['pointerdown', 'click', 'dblclick']) inp.addEventListener(ev, (e) => e.stopPropagation()); // not the row's open / drag
+  inp.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  inp.addEventListener('blur', () => finish(true));
+  inp.focus();
+  inp.select();
 }

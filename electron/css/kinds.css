@@ -680,3 +680,7 @@ td.lk{cursor:pointer}
 .cls-fe>.prop.open{background:var(--raised)}
 .cls-fe-more{padding:8px 12px 10px 34px;border-left:2px solid var(--accent);margin:0 0 6px}
 .cls-fe-add{margin-top:6px}
+/* the open page's name, typed in place (no-modal #12) */
+.sk-page-name{width:150px;border-color:transparent;background:transparent;font-weight:600}
+.sk-page-name:hover{border-color:var(--border)}
+.sk-page-name:focus{border-color:var(--accent);background:var(--surface)}

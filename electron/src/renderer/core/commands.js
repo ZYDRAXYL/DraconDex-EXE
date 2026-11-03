@@ -258,9 +258,9 @@ const COMMANDS = {
 
   // ── Chronicler (§10.6 measures the floating strip on it) ─────────────
   'chronicler.addEvent': { label: 'addEvent', icon: 'plus', scope: 'kind:chronicler', when: () => !!S.chroniclerData?.activeId, run: () => newChroniclerEvent(S.chroniclerData.activeId), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
-  'chronicler.logSession': { label: 'chrLogSession', icon: 'timeline', scope: 'kind:chronicler', when: () => !!S.chroniclerData, run: (c) => openPlaySessionModal(c.moduleId ?? S.chroniclerData.moduleId), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
-  'chronicler.addLine': { label: 'addTimelineLine', icon: 'plus', scope: 'kind:chronicler', when: () => !!S.chroniclerData && !S.chroniclerData.timelines.length, run: (c) => openChroniclerTimelineModal(c.moduleId), surfaces: ['empty.state'] },
-  'chronicler.editLine': { label: 'chrEditLine', icon: 'edit', scope: 'kind:chronicler', when: () => !!S.chroniclerData?.activeId, run: (c) => openChroniclerTimelineModal(c.moduleId, S.chroniclerData.activeId), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
+  'chronicler.logSession': { label: 'chrLogSession', icon: 'timeline', scope: 'kind:chronicler', when: () => !!S.chroniclerData, run: (c) => logPlaySession(c.moduleId ?? S.chroniclerData.moduleId), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
+  'chronicler.addLine': { label: 'addTimelineLine', icon: 'plus', scope: 'kind:chronicler', when: () => !!S.chroniclerData && !S.chroniclerData.timelines.length, run: (c) => newChroniclerTimeline(c.moduleId), surfaces: ['empty.state'] },
+  'chronicler.editLine': { label: 'chrEditLine', icon: 'edit', scope: 'kind:chronicler', when: () => !!S.chroniclerData?.activeId, run: () => toggleChroniclerLinePanel(), checked: () => !!S.chroniclerData?.lineEdit, surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
   'chronicler.switchLine': {
     label: 'chrSwitchLine', icon: 'timeline', scope: 'kind:chronicler', when: () => (S.chroniclerData?.timelines.length || 0) > 1,
     sub: (c) => S.chroniclerData.timelines.map(tl => ({ label: tl.line_name || '—', checked: tl.id === S.chroniclerData.activeId, onClick: () => selectChroniclerTimeline(c.moduleId, tl.id) })),
@@ -281,7 +281,7 @@ const COMMANDS = {
   'scribe.newSession': { label: 'chatNewSession', icon: 'plus', scope: 'kind:scribe', run: (c) => newChatSession(c.moduleId), surfaces: ['scribe.toolbar'] },
 
   // ── Sketcher / Designer ──────────────────────────────────────────────
-  'sketcher.newPage': { label: 'newPage', icon: 'plus', scope: 'kind:sketcher', run: (c) => openSketchPageModal(c.moduleId), surfaces: ['sketcher.toolbar', 'canvas.ctx'] },
+  'sketcher.newPage': { label: 'newPage', icon: 'plus', scope: 'kind:sketcher', run: (c) => newSketchPage(c.moduleId), surfaces: ['sketcher.toolbar', 'canvas.ctx'] },
   'sketcher.exportPng': { label: 'exportPng', icon: 'export', scope: 'kind:sketcher', when: () => !!S.sketcherData?.pageId, run: () => exportSketchPng(), surfaces: ['sketcher.board', 'canvas.ctx'] },
   'sketcher.pen': { label: 'penTool', scope: 'kind:sketcher', checked: () => skTool.mode === 'pen', run: () => setSketchTool('pen'), surfaces: ['sketcher.board', 'canvas.ctx'] },
   'sketcher.eraser': { label: 'eraserTool', scope: 'kind:sketcher', checked: () => skTool.mode === 'eraser', run: () => setSketchTool('eraser'), surfaces: ['sketcher.board', 'canvas.ctx'] },

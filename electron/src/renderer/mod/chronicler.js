@@ -190,7 +190,7 @@ function buildChroniclerMainHtml(m, c) {
     </div>`;
   }
 
-  return `${toolbar}${compareBar}
+  return `${toolbar}${compareBar}${chroniclerLinePanelHtml(data, m.id)}
     <div class="chr-stage">
       ${tools ? `<div class="chr-tools">${tools}</div>` : ''}
       <div data-r="graph-host"></div>
@@ -205,6 +205,7 @@ function buildChroniclerMainHtml(m, c) {
 async function mountChroniclerGraph() {
   const data = S.chroniclerData;
   const iid = data?.iid;
+  mountChroniclerLinePanel(); // mod/chronicler-crud.js
   const host = iid ? pbRoot(iid)?.querySelector('[data-r="graph-host"]') : null;
   if (!data || !host || !data.activeId) return;
   const activeTl = data.timelines.find(t => t.id === data.activeId);

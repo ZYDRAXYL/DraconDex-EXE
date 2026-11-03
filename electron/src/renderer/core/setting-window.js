@@ -440,17 +440,13 @@ registerSettingPage('workspace', 'textsize', settingTextSizePageHtml);
 
 // ═══ Workspace → This Nexus (Procress 24) ═══════════════════════════════
 // The open vault's name, memo, colour, file and Locate folder — the same
-// fields as its Edit modal (nexusEditFieldsHtml, core/nexus.js), and the same
-// saveNexus(). Async (the colour picker reads the palette), so it patches its
-// own box once ready, like the plugin and package pages.
+// fields as its Home's "This Nexus" (mountNexusEditFields, core/nexus.js),
+// each saved as it changes. Async (it reloads the vault list), so it fills
+// its own box once drawn, like the plugin and package pages.
 function settingThisNexusPageHtml(){
   const n = S.nexus;
   if (!n) return `<div class="settings-label">${t('settingPageThisNexus')}</div><p class="drafter-hint">${t('nexusEmpty')}</p>`;
-  nexusEditFieldsHtml(n.id).then((html) => {
-    const el = q('#setting-thisnexus');
-    if (!el || S.settingPage !== 'thisnexus') return;
-    el.innerHTML = `${html}<div class="mfoot"><button class="btn btn-p" onclick="saveNexus(${n.id})">${t('save')}</button></div>`;
-  }).catch(() => {});
+  setTimeout(() => { if (S.settingPage === 'thisnexus') mountNexusEditFields(q('#setting-thisnexus'), n.id).catch(() => {}); }, 0);
   return `<div class="settings-label">${t('settingPageThisNexus')}</div><div id="setting-thisnexus">${t('syncWorking')}</div>`;
 }
 registerSettingPage('workspace', 'thisnexus', settingThisNexusPageHtml);

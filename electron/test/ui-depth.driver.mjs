@@ -62,8 +62,8 @@ const TASKS = [
   { task: 'Block look', budget: 3, path: [nestRow('Start here'), '#main-inner [data-cmd="page.arrange"]', '#main-inner .pb-gear'], target: '#pb-pop' },
   { task: 'Publish as website (Nexus menu)', budget: 2, path: ['#hub-body .nexus-switch', '.nexus-switcher-publish'], target: '#modal-overlay:not(.hidden) #hx-index' },
   { task: 'Publish as website (page ⋯)', budget: 3, path: [nestRow('Characters'), PAGE_MENU, menuItem('Publish as website')], target: '#modal-overlay:not(.hidden) #hx-index' },
-  { task: 'This Nexus: name · colour · Locate (menu)', budget: 2, path: ['#hub-body .nexus-switch', '.nexus-switcher-edit'], target: '#modal-overlay:not(.hidden) #nx-name' },
-  { task: 'This Nexus (status bar → Settings)', budget: 1, path: ['#status-bar .sb-nexus'], target: '#setting-thisnexus #nx-name' },
+  { task: 'This Nexus: name · colour · Locate (menu)', budget: 2, path: ['#hub-body .nexus-switch', '.nexus-switcher-edit'], target: '#home-nexus-fields [data-fkey="name"]' }, // no-modal #01: Home's This Nexus
+  { task: 'This Nexus (status bar → Settings)', budget: 1, path: ['#status-bar .sb-nexus'], target: '#setting-thisnexus [data-fkey="name"]' },
   { task: 'Label colour', budget: 2, path: ['#nav-sidebar [data-cmd="app.labels"]', '#main-inner .cat-page .ls-row button.btn-i'], target: '.tag-color-pop .cswatch' },
 ];
 
