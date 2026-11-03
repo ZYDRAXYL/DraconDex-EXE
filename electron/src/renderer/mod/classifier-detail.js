@@ -283,10 +283,14 @@ function renderClassifierObjectDetail(m, o, templates = clsData(m.id).templates)
       <span class="pv" contenteditable="true" ${wikiViewAttrs(pt.value)} data-oid="${o.id}" data-tid="${pt.id}" onblur="saveClassifierAttrCell(this)">${wikiViewHtml(pt.value)}</span>
       <button class="btn btn-g btn-i" onclick="deleteClassifierPrivateField(${pt.id})" title="${t('delete')}">${I.delete}</button>
     </div>`).join('');
-  html += `<details class="cls-priv"${priv.length ? '' : ' open'}>
+  html += `<details class="cls-priv"${!priv.length || CLS_PRIV_OPEN.has(o.id) ? ' open' : ''} ontoggle="clsPrivToggle(${o.id},this.open)">
     <summary class="insp-label">${t('customAttribute')}${priv.length ? ` <span class="cnt" data-no-i18n>${priv.length}</span>` : ''}</summary>
     ${privRows}
-    <button class="btn btn-g" style="margin:4px 14px" onclick="openClassifierCustomAttrModal(${m.id},${o.id})">${I.plus} ${t('customAttribute')}</button>
+    <div class="cls-addfield">
+      <input class="cls-addfield-inp" data-r="addprivfield" placeholder="${x(t('name'))}" aria-label="${x(t('customAttribute'))}"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();addClassifierPrivateFieldInline(${m.id},${o.id},this)}">
+      <button class="btn btn-g btn-sm" onclick="addClassifierPrivateFieldInline(${m.id},${o.id},this)">${I.plus} ${t('customAttribute')}</button>
+    </div>
   </details>`;
   html += renderClassifierLinksHtml(o);
   return html;

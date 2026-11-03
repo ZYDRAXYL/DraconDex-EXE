@@ -46,6 +46,40 @@ test('B1: every rail button does something, with no page error', async () => {
   await win.click('#nav-sidebar [data-cmd="app.nest"]');
 });
 
+// Right-clicking the Nest's empty space opens the Nexus root's menu; a row
+// keeps its own.
+test('Nest: empty space right-click is the Nexus root menu', async () => {
+  // the sample tree fills the panel, so the right-click lands on the panel itself
+  await win.evaluate(() => { const el = document.querySelector('#left-panel-inner .acc-body[data-key="nest"]'); const b = el.getBoundingClientRect();
+    el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: b.left + 40, clientY: b.bottom - 8 })); });
+  await sleep(250);
+  const items = () => win.locator('.context-menu-popup .kind-list-item').allTextContents().then((a) => a.map((s) => s.trim()));
+  const root = await items();
+  assert.ok(root.some((s) => /^Create/.test(s)), `root menu: ${root}`);
+  assert.ok(!root.some((s) => /Rename|Delete/.test(s)), 'nothing to rename or delete at the root');
+  await win.locator('.context-menu-popup .kind-list-item:has-text("Create")').first().click();
+  await win.waitForSelector('.popover-menu .kind-search');
+  await win.keyboard.press('Escape'); await sleep(150);
+  await row('Guide').click({ button: 'right' }); await sleep(200);
+  assert.ok((await items()).some((s) => /Rename/.test(s)), 'a row still opens its own menu');
+  await win.keyboard.press('Escape');
+});
+
+// The Nest menu's Handle edits the @handle in the row itself; nothing opens.
+test('Nest: Handle from the row menu edits it in the row', async () => {
+  const id = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'Who knows whom').id);
+  const before = await win.evaluate(() => S.activeModuleNode?.id ?? null);
+  await row('Who knows whom').click({ button: 'right' }); await sleep(200);
+  await win.locator('.context-menu-popup .kind-list-item:has-text("Handle")').first().click(); await sleep(300);
+  const inp = win.locator(`#nest-tree-body #handle-nest-${id}`);
+  assert.equal(await inp.count(), 1, 'the box is in the Nest row');
+  assert.equal(await win.evaluate(() => S.activeModuleNode?.id ?? null), before, 'nothing opened');
+  await inp.fill('whowho'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.equal(await win.evaluate((m) => api.module.get(m).then((r) => r.handle), id), 'whowho');
+  assert.equal(await win.locator(`#nest-tree-body #handle-nest-${id}`).count(), 0, 'and closes after saving');
+  await win.evaluate((m) => api.module.update(m, { handle: '' }).then(() => reloadModuleTree()), id);
+});
+
 // B4 + Procress 17 I2: Create opens the searchable kind picker on a click (it
 // was a hover flyout that opened by itself); the hover flyouts that remain
 // survive moving through them and a diagonal across a sibling with its own.
@@ -246,7 +280,8 @@ test('20: a new Nexus is a folder from the start; its modal offers where · open
   assert.equal(n.missing, 0);
   assert.match(n.dir, /[\\/]DraconDex[\\/]Smoke$/, '<root>/DraconDex/<name>');
   assert.ok(n.dir.startsWith(n.data.replace(/[\\/]vaults$/, '')), 'a test run keeps it under its data dir, never in the real Documents');
-  const row = await win.evaluate(async () => { await openNexusModal(S.nexus.id); const fg = [...document.querySelectorAll('#modal .fg')].find((e) => e.querySelector('input')?.value === S.nexus.locate_dir); const out = fg ? [...fg.querySelectorAll('button')].map((b) => b.getAttribute('onclick')) : null; closeModal(); return out; });
+  // no-modal #01: This Nexus is a section of Home now
+  const row = await win.evaluate(async () => { await openNexusModal(S.nexus.id); await new Promise((r) => setTimeout(r, 600)); const fg = [...document.querySelectorAll('#home-nexus-fields .fg')].find((e) => e.querySelector('input')?.value === S.nexus.locate_dir); const out = fg ? [...fg.querySelectorAll('button')].map((b) => b.getAttribute('onclick')) : null; S.homeNexusOpen = false; renderNexusHome(); return out; });
   assert.ok(row, 'the Local folder row shows the folder');
   assert.ok(row.some((c) => /moveNexusLocate/.test(c)) && row.some((c) => /locateOpen/.test(c)));
   assert.ok(!row.some((c) => /pick|forget/i.test(c)), 'no Choose / Forget');
@@ -739,10 +774,12 @@ test('16 part 7: the game line — a play session logged against the world\'s ow
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
     const hist = flattenModulesByKind(S.moduleTree, []).find((m) => m.name === 'History');
     await openModuleNode(hist.id); await wait(500);
-    runCommand('chronicler.logSession', { moduleId: hist.id }); await wait(300);
-    q('#chr-ps-d').value = '3'; q('#chr-ps-m').value = '4'; q('#chr-ps-y').value = '1050';
-    q('#chr-ps-min').value = '90'; q('#chr-ps-note').value = 'The crew reached the reef.';
-    await savePlaySession(hist.id); await wait(600);
+    // no-modal #06: logged at once; its date and text are edited on its page
+    runCommand('chronicler.logSession', { moduleId: hist.id }); await wait(1200);
+    const set = (sel, v) => { const el = q(sel); el.value = v; el.dispatchEvent(new Event('change', { bubbles: true })); };
+    q('#item-chr-insp #chr-insp-s-d').value = '3'; q('#item-chr-insp #chr-insp-s-m').value = '4'; set('#item-chr-insp #chr-insp-s-y', '1050'); await wait(500);
+    const story = q('#item-chr-insp #chr-insp-story');
+    set('#item-chr-insp #chr-insp-story', `${story.value.replace(/60 min/, '90 min')}\n\nThe crew reached the reef.`); await wait(600);
     const line = (await api.timeline.getModuleTimelines(hist.id)).find((l) => l.line_name === 'Play log');
     const evs = line ? await api.timeline.getEvents(line.id) : [];
     return { line: !!line, ev: evs[0] && { name: evs[0].event_name, y: evs[0].s_years, story: evs[0].story } };
@@ -1034,21 +1071,21 @@ test('27 part 2 + 3: "Fields of this category" reorders by its = grip; the table
   const mid = await openCharactersTable();
   const tpls = await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.map((x) => x.id)), mid);
   assert.ok(tpls.length >= 2, 'needs two fields');
-  await win.evaluate((m) => openClassifierFieldsModal(m), mid); await sleep(400);
-  const grips = win.locator('#modal-overlay [data-cls-tid] .nar-grip');
+  // no-modal #02: the fields are listed (and edited) in the Structure tab
+  await win.evaluate((m) => openClassifierFields(m), mid); await sleep(600);
+  const list = '#main-inner .cls-fe';
+  const grips = win.locator(`${list} [data-cls-tid] .nar-grip`);
   assert.equal(await grips.first().locator('svg line').count(), 2, 'the grip is the two-bar icon (28 part 4)');
-  await win.locator('#modal-overlay #ct-name').fill('half-typed');
-  const target = win.locator('#modal-overlay [data-cls-tid]').first();
+  const target = win.locator(`${list} [data-cls-tid]`).first();
   await grips.last().dragTo(target, { targetPosition: { x: 40, y: 2 } }); await sleep(600);
   const want = [tpls.at(-1), ...tpls.slice(0, -1)];
   assert.deepEqual(await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.map((x) => x.id)), mid), want, 'saved');
-  assert.deepEqual(await win.locator('#modal-overlay [data-cls-tid]').evaluateAll((els) => els.map((e) => Number(e.dataset.clsTid))), want, 'the modal shows it');
-  assert.equal(await win.locator('#modal-overlay #ct-name').inputValue(), 'half-typed', 'the form was not reset');
+  assert.deepEqual(await win.locator(`${list} [data-cls-tid]`).evaluateAll((els) => els.map((e) => Number(e.dataset.clsTid))), want, 'the list shows it');
   // Alt+↓ on a focused row moves it back one
-  await win.locator('#modal-overlay [data-cls-tid]').first().focus();
+  await win.locator(`${list} [data-cls-tid]`).first().focus();
   await win.keyboard.press('Alt+ArrowDown'); await sleep(500);
   assert.deepEqual((await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.map((x) => x.id)), mid)).slice(0, 2), [want[1], want[0]]);
-  await win.keyboard.press('Escape'); await sleep(300);
+  await win.evaluate((m) => setPageTab(m, 'overview'), mid); await sleep(500);
   assert.deepEqual(await win.locator('.cls-table th[data-cls-tid]').evaluateAll((els) => els.map((e) => Number(e.dataset.clsTid))).then((r) => r.slice(0, 2)), [want[1], want[0]], 'the columns follow');
   await win.evaluate(async ([m, t]) => { await api.classifier.moveTemplates(m, t); await refreshClassifier(); }, [mid, tpls]);
 });
@@ -1340,19 +1377,18 @@ test('28 part 3: a linked module\'s elements join the relation view by its check
   await win.evaluate(async ([m, h]) => { const r = (await api.module.linked(m)).find((e) => e.id === h); if (r?.relationId) await api.viewer.deleteRelation(r.relationId); await api.module.setUi(m, 'clsRelInclude', '[]'); }, [mid, hist]);
 });
 
-test('28 part 3: the field form\'s Level & Condition is always open, two checkboxes that save', async () => {
+test('28 part 3: a field\'s Level & Condition are two checkboxes that save', async () => {
   const mid = await openCharactersTable();
-  await win.evaluate((m) => openClassifierFieldsModal(m), mid); await sleep(400);
-  assert.equal(await win.locator('#modal-overlay details.cls-adv').count(), 0, 'not folded away');
-  assert.equal(await win.locator('#modal-overlay .cls-flags input[type="checkbox"]').count(), 2);
-  assert.equal(await win.locator('#modal-overlay .cls-flags .cls-flag-hint').count(), 2, 'each says what it does');
-  await win.locator('#modal-overlay #ct-name').fill('Smoke levels');
-  await win.locator('#modal-overlay #ct-lv').check();
-  await win.locator('#modal-overlay .mfoot .btn-p').click(); await sleep(500);
-  const tpl = await win.evaluate((m) => api.classifier.getTemplates(m).then((r) => r.find((x) => x.description === 'Smoke levels')), mid);
-  assert.ok(tpl && tpl.levelable && !tpl.has_condition, 'levelable saved, condition not');
-  await win.keyboard.press('Escape');
-  await win.evaluate(async ([m, id]) => { await api.classifier.deleteTemplate(id); await refreshClassifier(); }, [mid, tpl.id]);
+  const tpl = await win.evaluate(async (m) => { await api.classifier.createTemplate(m, 'Smoke levels', 'text', false, false, null); await refreshClassifier(); return (await api.classifier.getTemplates(m)).find((x) => x.description === 'Smoke levels'); }, mid);
+  // no-modal #02: the field's row in the Structure tab, its settings unfolded (⚙)
+  await win.evaluate(([m, id]) => openClassifierFields(m, id), [mid, tpl.id]); await sleep(600);
+  const more = '#main-inner .cls-fe-more';
+  assert.equal(await win.locator(`${more} input[type="checkbox"]#ct-lv, ${more} input[type="checkbox"]#ct-cond`).count(), 2);
+  assert.equal(await win.locator(`${more} .cls-flag-hint`).count(), 2, 'each says what it does');
+  await win.locator(`${more} #ct-lv`).check(); await sleep(800);
+  const saved = await win.evaluate(([m, id]) => api.classifier.getTemplates(m).then((r) => r.find((x) => x.id === id)), [mid, tpl.id]);
+  assert.ok(saved.levelable && !saved.has_condition, 'levelable saved, condition not');
+  await win.evaluate(async ([m, id]) => { await api.classifier.deleteTemplate(id); await refreshClassifier(); setPageTab(m, 'overview'); }, [mid, tpl.id]);
 });
 
 const openBook = async () => {
@@ -1364,19 +1400,24 @@ const openBook = async () => {
 test('28 part 5: the chapter name is typed in place; synopsis and status sit above the text and save', async () => {
   const mid = await openBook();
   const ch = await win.evaluate(() => S.authorData.chapters.find((c) => c.id === S.authorData.selectedId));
-  const title = win.locator('#author-editor .au-title');
+  const title = win.locator('#author-editor .au-title:not(.au-no)');
   await title.fill('Renamed in place'); await win.keyboard.press('Enter'); await sleep(400);
   const fresh = () => win.evaluate((m) => api.author.getChapters(m), mid);
   assert.equal((await fresh()).find((c) => c.id === ch.id).name, 'Renamed in place');
   assert.match(await win.locator(`.author-chapters [data-chid="${ch.id}"]`).textContent(), /Renamed in place/, 'the column follows');
   await title.fill('thrown away'); await win.keyboard.press('Escape'); await sleep(200);
   assert.equal(await title.inputValue(), 'Renamed in place', 'Esc puts it back');
+  // the chapter number sits before the name and edits the same way
+  await win.locator('#author-editor .au-no').fill('7'); await win.keyboard.press('Enter'); await sleep(400);
+  assert.equal((await fresh()).find((c) => c.id === ch.id).chapter_label, '7');
+  assert.match(await win.locator(`.author-chapters [data-chid="${ch.id}"]`).textContent(), /7\. Renamed in place/, 'the column follows the number');
+  assert.match(await win.locator('#au-stats').textContent(), /\d/, 'words / characters / pages are shown');
   await win.locator('#author-editor .au-meta-syn').fill('Smoke synopsis');
   await win.locator('#author-editor .au-meta-status').selectOption('revised'); await sleep(900); // the synopsis saves as it is typed (debounced)
   const after = (await fresh()).find((c) => c.id === ch.id);
   assert.equal(after.synopsis, 'Smoke synopsis');
   assert.equal(after.status, 'revised');
-  await win.evaluate(async ([c]) => { await api.author.renameChapter(c.id, c.name); await api.author.setChapterMeta(c.id, { synopsis: c.synopsis || '', status: c.status || '' }); }, [ch]);
+  await win.evaluate(async ([c]) => { await api.author.renameChapter(c.id, c.name); await api.author.setChapterLabel(c.id, c.chapter_label || ''); await api.author.setChapterMeta(c.id, { synopsis: c.synopsis || '', status: c.status || '' }); }, [ch]);
 });
 
 test('28 part 5: the point of view lists only objects of a Classifier linked to the book', async () => {
@@ -1385,10 +1426,10 @@ test('28 part 5: the point of view lists only objects of a Classifier linked to 
   const unlinkAll = () => win.evaluate(async (m) => { for (const e of await api.module.linked(m)) if (e.relationId) await api.viewer.deleteRelation(e.relationId); }, mid);
   const was = await win.evaluate((m) => api.module.linked(m), mid);
   const options = async () => {
-    await win.evaluate(() => openAuthorChapterModal(S.authorData.moduleId, S.authorData.selectedId)); await sleep(500);
-    const r = await win.locator('#modal-overlay #ac-pov option').evaluateAll((os) => os.map((o) => o.textContent).filter((s) => s !== '—'));
-    const hint = await win.locator('#modal-overlay .drafter-hint:has(button)').count();
-    await win.keyboard.press('Escape'); await sleep(200);
+    // the choices load with the book, so reload it after the links change
+    await win.evaluate(() => reloadSource(S.authorData.moduleId)); await sleep(500);
+    const r = await win.locator('#author-editor .au-meta-pov select option').evaluateAll((os) => os.filter((o) => o.value).map((o) => o.textContent));
+    const hint = await win.locator('#author-editor .au-meta-pov button').count();
     return { r, hint };
   };
   const pov = await win.evaluate(() => S.authorData.chapters.find((c) => c.id === S.authorData.selectedId).pov_key);
@@ -1812,4 +1853,326 @@ test('31 part 6: the component collection shows each component drawn from the pa
   });
   console.log(`# 31 part 6: every card drawn once: ${JSON.stringify(cost)} (panel open ${opened} ms incl. an 800 ms wait)`);
   await win.evaluate(async () => { const p = pageOf(S.activeModuleNode.id, null); const last = p.blocks.at(-1); await api.block.remove(last.id); runCommand('page.arrange'); await reloadModulePage(S.activeModuleNode.id, null); });
+});
+
+// APP src/design/no-modal #05: a Chronicler event has no modal — "+ event"
+// makes one at once with its name selected, and a dot opens its page.
+test('no-modal 05: a new event is made at once and named in place; a Compare dot opens its page', async () => {
+  const mid = await win.evaluate(async () => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'chronicler'); await openModuleNode(m.id); await setChroniclerView('downline'); return m.id; });
+  await sleep(700);
+  const tl = await win.evaluate(() => S.chroniclerData.activeId);
+  const count = () => win.evaluate((id) => api.timeline.getEvents(id).then((e) => e.length), tl);
+  const n0 = await count();
+  await win.evaluate((id) => runCommand('chronicler.addEvent', { moduleId: id }), mid); await sleep(800);
+  assert.equal(await count(), n0 + 1, 'made at once');
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, 'no modal');
+  assert.equal(await win.evaluate(() => document.activeElement?.id), 'chr-insp-n', 'its name is ready to type');
+  await win.keyboard.type('Smoke event'); await win.keyboard.press('Tab'); await sleep(500);
+  const made = (await win.evaluate((id) => api.timeline.getEvents(id), tl)).find((e) => e.event_name === 'Smoke event');
+  assert.ok(made, 'the name saved');
+  // the Compare view's dots (they opened the modal) open the event's page
+  await win.evaluate((id) => openChroniclerEventPage(id), made.id); await sleep(800);
+  assert.equal(await win.evaluate(() => S.activeItemNode?.itemKey), `tlev_${made.id}`, 'the dot opens the event page');
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0);
+  await win.evaluate((id) => api.timeline.deleteEvent(id), made.id);
+});
+
+// #13: a Designer node has no modal — a new node's text is typed on the
+// board; double-click opens its page, which saves as each field changes.
+test('no-modal 13: a new node is typed on the board; its page saves by itself', async () => {
+  const mid = await win.evaluate(async () => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'designer'); await openModuleNode(m.id); await setDesignerView('canvas'); return m.id; });
+  await sleep(700);
+  await win.evaluate(() => addDesignNode('box')); await sleep(800);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, 'no modal');
+  assert.equal(await win.evaluate(() => document.activeElement?.classList.contains('dg-label')), true, 'its text is ready to type');
+  await win.keyboard.type('Smoke node'); await win.keyboard.press('Enter'); await sleep(700);
+  const node = (await win.evaluate((m) => api.designer.getNodes(m), mid)).find((n) => n.node_text === 'Smoke node');
+  assert.ok(node, 'the text saved');
+  await win.locator(`.dg-node[data-node="${node.id}"]`).dblclick(); await sleep(900);
+  assert.equal(await win.evaluate(() => S.activeItemNode?.itemKind), 'designer', 'double-click opens its page');
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0);
+  await win.locator('#item-dn-shape').selectOption('circle'); await sleep(900);
+  assert.equal((await win.evaluate((m) => api.designer.getNodes(m), mid)).find((n) => n.id === node.id).shape, 'circle', 'saved without a Save button');
+  const sw = win.locator('#item-dn-colors .sk-swatch').nth(2);
+  assert.ok((await sw.boundingBox())?.width > 10, 'the colours are there to pick');
+  await sw.click(); await sleep(700);
+  assert.equal((await win.evaluate((m) => api.designer.getNodes(m), mid)).find((n) => n.id === node.id).color, await sw.getAttribute('data-color'), 'a colour saves on the click');
+  await win.evaluate((id) => api.designer.deleteNode(id), node.id);
+});
+
+// #09 / #11 / #15: the fields strip (core/fields.js) — new = made at once on
+// its page with the name selected; each field saves by itself; Esc puts it back.
+async function stripNew(kind, cmd, list) {
+  const mid = await win.evaluate(async (k) => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === k); await openModuleNode(m.id); return m.id; }, kind);
+  await sleep(600);
+  const n0 = (await win.evaluate(list, mid)).length;
+  await win.evaluate(([c, m]) => runCommand(c, { moduleId: m }), [cmd, mid]); await sleep(1200);
+  assert.equal((await win.evaluate(list, mid)).length, n0 + 1, `${kind}: made at once`);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, `${kind}: no modal`);
+  assert.equal(await win.evaluate(() => document.activeElement?.dataset?.fkey), 'name', `${kind}: its name is ready to type`);
+  await win.keyboard.type(`Smoke ${kind}`); await win.keyboard.press('Enter'); await sleep(900);
+  const made = (await win.evaluate(list, mid)).find((r) => r.name === `Smoke ${kind}`);
+  assert.ok(made, `${kind}: the name saved`);
+  assert.match(await win.locator('#main-inner .page-title').innerText(), new RegExp(`Smoke ${kind}`), `${kind}: the page head follows`);
+  const name = win.locator('#main-inner .fstrip [data-fkey="name"]');
+  await name.fill('thrown away'); await win.keyboard.press('Escape'); await sleep(300);
+  assert.equal(await name.inputValue(), `Smoke ${kind}`, `${kind}: Esc puts it back`);
+  return { mid, made };
+}
+
+test('no-modal 09/11/15: dialogue, table and session are named and edited on their page', async () => {
+  const d = await stripNew('narrator', 'narrator.addDialogue', (m) => api.narrator.getDialogues(m));
+  await win.locator('#main-inner .fstrip .fstrip-color').click(); await sleep(300);
+  const cid = await win.locator('.fstrip-color-pop .cswatch').nth(3).getAttribute('data-cid');
+  await win.locator('.fstrip-color-pop .cswatch').nth(3).click(); await sleep(900);
+  assert.equal(String((await win.evaluate((m) => api.narrator.getDialogues(m), d.mid)).find((r) => r.id === d.made.id).color), cid, 'a colour saves on its pick');
+  await win.evaluate((id) => api.narrator.deleteDialogue(id), d.made.id);
+
+  const tb = await stripNew('diviner', 'diviner.newTable', (m) => api.diviner.getTables(m));
+  const dice = win.locator('#main-inner .fstrip [data-fkey="dice"]');
+  await dice.fill('2d6'); await win.keyboard.press('Tab'); await sleep(900);
+  assert.equal((await win.evaluate((m) => api.diviner.getTables(m), tb.mid)).find((r) => r.id === tb.made.id).dice, '2d6', 'dice saves on leaving it');
+  await win.locator('#main-inner .fstrip [data-fkey="dice"]').fill('nonsense'); await win.keyboard.press('Enter'); await sleep(700);
+  assert.equal((await win.evaluate((m) => api.diviner.getTables(m), tb.mid)).find((r) => r.id === tb.made.id).dice, '2d6', 'bad dice is refused');
+  await win.locator('#main-inner .fstrip [data-fkey="mode"]').selectOption('join'); await sleep(900);
+  assert.equal((await win.evaluate((m) => api.diviner.getTables(m), tb.mid)).find((r) => r.id === tb.made.id).mode, 'join', 'a select saves on change');
+  assert.equal(await win.locator('#main-inner .fstrip [data-fkey="dice"]').count(), 0, 'join has no dice');
+
+  await win.evaluate((id) => api.diviner.deleteTable(id), tb.made.id);
+
+  const s = await stripNew('scribe', 'scribe.newSession', (m) => api.chatscribe.getSessions(m));
+  await win.evaluate((id) => api.chatscribe.deleteSession(id), s.made.id);
+});
+
+// #10 / #14 / #16: a line's label and a chat message are typed where they are.
+test('no-modal 10/14/16: edge labels typed on the board; a chat bubble edits in place', async () => {
+  const open = (k, setView) => win.evaluate(async ([k, v]) => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === k); await openModuleNode(m.id); await window[v.fn](v.view); return m.id; }, [k, setView]);
+  const noModal = async (what) => assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, `${what}: no modal`);
+
+  // 10 — Narrator: click the line's label spot
+  const nm = await open('narrator', { fn: 'setNarratorView', view: 'board' }); await sleep(700);
+  const ne = (await win.evaluate((m) => api.narrator.getEdges(m), nm))[0];
+  await win.locator('#nar-edges g').first().click(); await sleep(300);
+  await noModal('narrator edge');
+  await win.locator('.lbl-edit-pop .rename-input').fill('Smoke route'); await win.keyboard.press('Enter'); await sleep(700);
+  assert.equal((await win.evaluate((m) => api.narrator.getEdges(m), nm)).find((e) => e.id === ne.id).label, 'Smoke route', 'narrator label saved');
+  await win.locator('#nar-edges g').first().click(); await sleep(300);
+  await win.locator('.lbl-edit-pop .rename-input').fill('thrown away'); await win.keyboard.press('Escape'); await sleep(500);
+  assert.equal((await win.evaluate((m) => api.narrator.getEdges(m), nm)).find((e) => e.id === ne.id).label, 'Smoke route', 'Esc leaves it');
+  await win.evaluate((e) => api.narrator.updateEdgeLabel(e.id, e.label || null), ne);
+
+  // 14 — Designer: the edge tool makes the line at once, then its label
+  const dm = await open('designer', { fn: 'setDesignerView', view: 'canvas' }); await sleep(700);
+  const ids = await win.evaluate(() => S.designerData.nodes.slice(0, 2).map((n) => n.id));
+  const e0 = (await win.evaluate((m) => api.designer.getEdges(m), dm)).length;
+  await win.evaluate(() => startDesignEdge());
+  await win.locator(`.dg-node[data-node="${ids[1]}"]`).click(); await sleep(150);
+  await win.locator(`.dg-node[data-node="${ids[0]}"]`).click(); await sleep(900);
+  await noModal('designer edge');
+  assert.equal((await win.evaluate((m) => api.designer.getEdges(m), dm)).length, e0 + 1, 'the line is made at once');
+  await win.locator('.lbl-edit-pop .rename-input').fill('Smoke line'); await win.keyboard.press('Enter'); await sleep(700);
+  const de = (await win.evaluate((m) => api.designer.getEdges(m), dm)).find((e) => e.label === 'Smoke line');
+  assert.ok(de, 'designer label saved');
+  await win.locator(`.dg-edge-label[data-edge="${de.id}"]`).dblclick(); await sleep(300);
+  await win.locator('.lbl-edit-pop [data-del]').click(); await sleep(700);
+  assert.equal((await win.evaluate((m) => api.designer.getEdges(m), dm)).length, e0, 'and deleted from the same box');
+
+  // 16 — Scribe: double-click a bubble
+  const sm = await open('scribe', { fn: 'setChatScribeView', view: 'chat' }); await sleep(700);
+  const sid = await win.evaluate(() => S.chatScribeData.selectedId);
+  const msg = (await win.evaluate((s) => api.chatscribe.getMessages(s), sid))[0];
+  await win.locator(`.chs-bubble[data-msg-id="${msg.id}"]`).dblclick(); await sleep(400);
+  await noModal('chat message');
+  const ta = win.locator(`.chs-bubble[data-msg-id="${msg.id}"] .chs-edit`);
+  assert.equal(await ta.inputValue(), msg.message, 'the raw text, links and all');
+  await ta.fill('Smoke message'); await win.keyboard.press('Enter'); await sleep(800);
+  assert.equal((await win.evaluate((s) => api.chatscribe.getMessages(s), sid)).find((g) => g.id === msg.id).message, 'Smoke message', 'message saved');
+  await win.evaluate((g) => api.chatscribe.updateMessage(g.id, g.message), msg);
+  void sm;
+});
+
+// #07 / #08: the selected relation / pin has a panel under the toolbar.
+test('no-modal 07/08: a relation and a map pin are edited in a panel; made at once', async () => {
+  const open = (k, fn, view) => win.evaluate(async ([k, fn, view]) => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === k); await openModuleNode(m.id); await window[fn](view); return m.id; }, [k, fn, view]);
+  const noModal = async (what) => assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, `${what}: no modal`);
+  const panel = '#main-inner .sel-panel';
+
+  // 07 — Exhibitor: the Lines view's pencil selects the relation
+  await open('exhibitor', 'setExhibitorView', 'edges'); await sleep(800);
+  const rels = () => win.evaluate(() => api.viewer.getRelations(S.nexus.id));
+  // + Relation: pick both ends and it exists
+  const n0 = (await rels()).length;
+  await win.evaluate(() => runCommand('exhibitor.addRelation', {})); await sleep(500);
+  await noModal('new relation');
+  const keys = await win.evaluate(() => exhibitorRelationTargets().slice(-2).map((o) => o.key));
+  await win.locator(`${panel} [data-fkey="from"]`).selectOption(keys[0]); await sleep(300);
+  await win.locator(`${panel} [data-fkey="to"]`).selectOption(keys[1]); await sleep(1000);
+  assert.equal((await rels()).length, n0 + 1, 'made the moment both ends are set');
+  assert.equal(await win.evaluate(() => document.activeElement?.dataset?.fkey), 'label', 'its label is ready to type');
+  const made = await win.evaluate(() => S.exhibitorData.selRel);
+  await win.keyboard.type('Smoke rel'); await win.keyboard.press('Enter'); await sleep(900);
+  assert.equal((await rels()).find((r) => r.id === made).label, 'Smoke rel', 'the label saves');
+  await win.locator(`${panel} [data-fkey="directed"]`).click(); await sleep(900);
+  assert.equal((await rels()).find((r) => r.id === made).directed, 0, 'the tick saves');
+  // the Lines view's pencil selects a relation
+  await win.evaluate(() => closeExhibitorRelationPanel()); await sleep(300);
+  await win.locator(`#main-inner .vw-table button[onclick="selectExhibitorRelation(${made})"]`).click(); await sleep(500);
+  assert.equal(await win.locator(`${panel} [data-fkey="label"]`).inputValue(), 'Smoke rel', 'the pencil opens it in the panel');
+  await win.evaluate((id) => api.viewer.deleteRelation(id), made);
+
+  // 08 — Wanderer: a placed pin exists at once; its panel picks what it links to
+  await open('wanderer', 'setWandererView', 'map'); await sleep(900);
+  const pins = (m) => win.evaluate((m) => api.wanderer.list(m), m);
+  const wm = await win.evaluate(() => S.wandererData.moduleId);
+  await win.evaluate(async (m) => { // the sample Wanderer has no map / timeline picked yet
+    const id = (k) => String(flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === k).id);
+    await setWandererRef(m, 'mapModule', id('locator')); await setWandererRef(m, 'timelineModule', id('chronicler'));
+  }, wm); await sleep(1200);
+  const p0 = (await pins(wm)).length;
+  await win.evaluate(() => createWandererPin(120, 90, null)); await sleep(1000);
+  await noModal('pin');
+  const made2 = (await pins(wm)).length === p0 + 1 ? await win.evaluate(() => S.wandererData.selPin) : null;
+  assert.ok(made2, 'a placed pin exists at once');
+  const opt = await win.locator(`${panel} [data-fkey="key"] option`).nth(1).getAttribute('value');
+  await win.locator(`${panel} [data-fkey="key"]`).selectOption(opt); await sleep(1000);
+  assert.equal((await pins(wm)).find((p) => p.id === made2).linker_key, opt, 'its link saves');
+  assert.equal(await win.locator(`${panel} [data-fkey="key"]`).inputValue(), opt, 'and the panel stays with it');
+  await win.evaluate((id) => api.wanderer.delete(id), made2);
+});
+
+// #02 / #03: a category's fields are edited in its Structure tab; an
+// object's own field is typed in at the end of its fields.
+test('no-modal 02/03: fields edited in Structure; a private field typed in place', async () => {
+  const mid = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'classifier').id);
+  const tpls = () => win.evaluate((m) => api.classifier.getTemplates(m), mid);
+  await win.evaluate((m) => runCommand('classifier.fields', { moduleId: m }), mid); await sleep(900);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, 'no modal');
+  assert.equal(await win.evaluate(() => document.activeElement?.dataset?.r), 'addfield', 'the + field box is ready');
+  await win.keyboard.type('Smoke field'); await win.keyboard.press('Enter'); await sleep(900);
+  const f = (await tpls()).find((tp) => tp.description === 'Smoke field');
+  assert.ok(f, 'added');
+  const row = `#main-inner .cls-fe [data-cls-tid="${f.id}"]`;
+  await win.locator(`${row} [data-f="name"]`).fill('Smoke field 2'); await win.keyboard.press('Enter'); await sleep(900);
+  assert.equal((await tpls()).find((tp) => tp.id === f.id).description, 'Smoke field 2', 'renamed in place');
+  await win.locator(`${row} [data-f="type"]`).selectOption('select'); await sleep(900);
+  assert.equal((await tpls()).find((tp) => tp.id === f.id).attribute_type, 'select', 'its type saves on change');
+  await win.locator(`${row} .acts button`).first().click(); await sleep(500);
+  await win.locator('#main-inner .cls-fe-more #ct-choices').fill('Red\nBlue'); await win.locator('#main-inner .cls-fe-more #ct-choices').blur(); await sleep(900);
+  assert.deepEqual(JSON.parse((await tpls()).find((tp) => tp.id === f.id).options || '{}').choices, ['Red', 'Blue'], 'its settings save as they change');
+  await win.evaluate((id) => api.classifier.deleteTemplate(id), f.id);
+
+  // 03 — an object's own field
+  const oid = await win.evaluate((m) => api.classifier.getObjects(m).then((o) => o[0].id), mid);
+  // the list view's detail (an object's page can be arranged without it)
+  await win.evaluate(async ([m, o]) => { await openModuleNode(m); setPageTab(m, 'overview'); const iid = Object.values(PB_INST).find((i) => i.component === 'classifier.view' && i.sourceId === m).iid; await setClassifierView(iid, 'list'); selectClassifierObject(iid, o); }, [mid, oid]); await sleep(900);
+  await win.evaluate(() => { const d = document.querySelector('#main-inner details.cls-priv'); if (d && !d.open) d.querySelector('summary').click(); }); await sleep(200);
+  const box = win.locator('#main-inner [data-r="addprivfield"]').first();
+  await box.fill('Smoke secret'); await win.keyboard.press('Enter'); await sleep(900);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, 'no modal');
+  const priv = (await win.evaluate(([m, o]) => api.classifier.getObjectTemplates(m, o), [mid, oid])).find((tp) => tp.description === 'Smoke secret');
+  assert.ok(priv && priv.object_ref === oid, 'a field of this object only');
+  assert.equal(await win.evaluate(() => document.activeElement?.dataset?.r), 'addprivfield', 'ready for the next');
+  await win.evaluate((id) => api.classifier.deleteTemplate(id), priv.id);
+});
+
+// #01 / #04 / #06 / #12: the last four modals.
+test('no-modal 01/04/06/12: This Nexus on Home, the line over the graph, a session logged at once, a page named in place', async () => {
+  const noModal = async (what) => assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, `${what}: no modal`);
+  const was = await win.evaluate(() => ({ name: S.nexus.name, memo: S.nexus.memo || '' }));
+  // 01 — This Nexus is a section of Home
+  await win.evaluate(() => openNexusModal(S.nexus.id)); await sleep(900);
+  await noModal('nexus');
+  assert.equal(await win.evaluate(() => document.activeElement?.dataset?.fkey), 'name', 'its name is ready to type');
+  await win.locator('#home-nexus-fields [data-fkey="memo"]').fill('Smoke memo'); await win.locator('#home-nexus-fields [data-fkey="name"]').focus(); await sleep(900);
+  assert.equal(await win.evaluate(async () => { await reloadNexuses(); return S.nexuses.find((n) => n.id === S.nexus.id).memo; }), 'Smoke memo', 'the memo saves on leaving it');
+  await win.evaluate(async (w) => { const n = S.nexus; await api.nexus.update(n.id, w.name, w.memo, n.color ?? null); await reloadNexuses(); S.nexus = S.nexuses.find((v) => v.id === n.id); S.homeNexusOpen = false; renderNexusHome(); }, was);
+
+  // 04 — the line's name and colour over the graph
+  const cm = await win.evaluate(async () => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'chronicler'); await openModuleNode(m.id); return m.id; });
+  await sleep(700);
+  const tl = await win.evaluate(() => S.chroniclerData.timelines.find((l) => l.id === S.chroniclerData.activeId));
+  await win.evaluate((m) => runCommand('chronicler.editLine', { moduleId: m }), cm); await sleep(700);
+  await noModal('line');
+  await win.keyboard.type('Smoke line'); await win.keyboard.press('Enter'); await sleep(900);
+  assert.equal((await win.evaluate((m) => api.timeline.getModuleTimelines(m), cm)).find((l) => l.id === tl.id).line_name, 'Smoke line', 'the line name saves');
+  await win.evaluate((l) => api.timeline.update(l.id, l.line_name, l.color ?? null), tl);
+  await win.evaluate(() => toggleChroniclerLinePanel(false)); await sleep(300);
+
+  // 06 — a play session is logged at once and opens on its page
+  await win.evaluate((m) => runCommand('chronicler.logSession', { moduleId: m }), cm); await sleep(1200);
+  await noModal('session');
+  const ev = await win.evaluate(() => S.activeItemNode?.item);
+  assert.ok(ev && /60 min/.test(ev.story || ''), `logged, 60 minutes: ${ev?.story}`);
+  assert.equal(await win.evaluate(() => document.activeElement?.id), 'chr-insp-story', 'its story is ready to type');
+  await win.evaluate((id) => api.timeline.deleteEvent(id), ev.id);
+
+  // 12 — a Sketcher page is named in place
+  const sm = await win.evaluate(async () => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'sketcher'); await openModuleNode(m.id); await setSketcherView('canvas'); return m.id; });
+  await sleep(700);
+  const p0 = (await win.evaluate((m) => api.sketcher.getPages(m), sm)).length;
+  await win.evaluate((m) => runCommand('sketcher.newPage', { moduleId: m }), sm); await sleep(1000);
+  await noModal('page');
+  assert.equal((await win.evaluate((m) => api.sketcher.getPages(m), sm)).length, p0 + 1, 'made at once');
+  assert.equal(await win.evaluate(() => document.activeElement?.dataset?.r), 'sk-page-name', 'its name is ready to type');
+  await win.keyboard.type('Smoke page'); await win.keyboard.press('Enter'); await sleep(900);
+  const pg = (await win.evaluate((m) => api.sketcher.getPages(m), sm)).find((p) => p.name === 'Smoke page');
+  assert.ok(pg, 'named');
+  // the Pages view: F2 renames the row in place
+  await win.evaluate(() => setSketcherView('pages')); await sleep(600);
+  await win.locator(`.sk-pages [data-sk-page="${pg.id}"] .ls-act`).first().evaluate((b) => b); // the row is there
+  await win.evaluate((id) => renameSketchPageRow(id), pg.id); await sleep(200);
+  await win.keyboard.type('Smoke page 2'); await win.keyboard.press('Enter'); await sleep(900);
+  assert.equal((await win.evaluate((m) => api.sketcher.getPages(m), sm)).find((p) => p.id === pg.id).name, 'Smoke page 2', 'renamed in its row');
+  await win.evaluate((id) => api.sketcher.deletePage(id), pg.id);
+  await win.evaluate(() => setSketcherView('canvas'));
+});
+
+// no-modal rule 5: a picker opens beside what was clicked, not over the window.
+test('no-modal pickers: each opens as a popover beside its button; Close / Esc / its own buttons close it', async () => {
+  const mod = (k) => win.evaluate((k) => flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === k).id, k);
+  const cases = [
+    ['designer', 'setDesignerView', 'canvas', () => openDesignPinModal()],
+    ['designer', 'setDesignerView', 'canvas', () => openDesignerLinkFilterModal(S.designerData.moduleId)],
+    ['sketcher', 'setSketcherView', 'canvas', () => openSketchPinModal()],
+    ['scribe', 'setChatScribeView', 'chat', () => openChatLinkPicker('chs-input')],
+    ['narrator', 'setNarratorView', 'board', () => openNarratorLinkFilterModal(S.narratorData.moduleId)],
+    ['exhibitor', 'setExhibitorView', 'scene', () => openExhibitorTreeModal()],
+    ['classifier', null, null, () => openAddAssetUrlModal(null)],
+  ];
+  for (const [kind, fn, view, open] of cases) {
+    const id = await mod(kind);
+    await win.evaluate(async ([id, fn, view]) => { showLeftDest('nest'); await openModuleNode(id); if (fn) await window[fn](view); }, [id, fn, view]); await sleep(500);
+    await win.evaluate(`(${open})()`); await sleep(500);
+    const st = await win.evaluate(() => { const p = document.querySelector('.picker-pop'); const r = p?.getBoundingClientRect(); return { n: document.querySelectorAll('.picker-pop').length, modal: !document.querySelector('#modal-overlay').classList.contains('hidden'), w: r?.width, inView: !!r && r.left >= 0 && r.right <= innerWidth && r.top >= 0 }; });
+    assert.equal(st.n, 1, `${kind}: a picker popover ${open}`);
+    assert.equal(st.modal, false, `${kind}: no modal ${open}`);
+    assert.ok(st.w < 700 && st.inView, `${kind}: small and on screen ${JSON.stringify(st)}`);
+    await win.keyboard.press('Escape'); await sleep(200);
+    assert.equal(await win.locator('.picker-pop').count(), 0, `${kind}: Esc closes it`);
+  }
+  // its own Cancel-style buttons (closeModal) close it too
+  await win.evaluate(() => openAddAssetUrlModal(null)); await sleep(300);
+  await win.evaluate(() => closeModal()); await sleep(200);
+  assert.equal(await win.locator('.picker-pop').count(), 0, 'closeModal() closes a picker');
+});
+
+// no-modal rule 2: an element's fields are a block of its page — moved or
+// folded in Page edit, never hidden; removed, they go back above the editor.
+test('no-modal rule 2: the fields are an item.fields block; removed, they still show once', async () => {
+  const mid = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'diviner').id);
+  const tb = await win.evaluate((m) => api.diviner.getTables(m).then((r) => r[0].id), mid);
+  await win.evaluate(([m, id]) => openItemNode('diviner', m, id), [mid, tb]); await sleep(900);
+  const fieldsBlock = () => win.evaluate(([m, id]) => pageOf(m, `divt_${id}`)?.blocks.find((b) => b.component === 'item.fields') || null, [mid, tb]);
+  const b = await fieldsBlock();
+  assert.ok(b, 'a new layout starts with the fields block');
+  assert.equal(await win.evaluate(([m, id]) => pageOf(m, `divt_${id}`).blocks[0].component, [mid, tb]), 'item.fields', 'first, above the editor');
+  assert.equal(await win.locator('#main-inner .fstrip').count(), 1, 'one strip');
+  assert.deepEqual(await win.evaluate(() => pbHideOf({ component: 'item.fields' }, { hideOn: 'phone' })), 'none', 'a style never hides it');
+  // removed: the strip comes back at the top of the editor, still one
+  await win.evaluate(async ([m, id, blockId]) => { await api.block.remove(blockId); await reloadModulePage(m, `divt_${id}`); await openItemNode('diviner', m, id); }, [mid, tb, b.id]); await sleep(900);
+  assert.equal(await fieldsBlock(), null);
+  assert.equal(await win.locator('#main-inner .fstrip').count(), 1, 'still one strip, in item.body');
+  await win.locator('#main-inner .fstrip [data-fkey="name"]').fill('Smoke rule 2'); await win.keyboard.press('Enter'); await sleep(900);
+  assert.equal(await win.evaluate(([m, id]) => api.diviner.getTables(m).then((r) => r.find((x) => x.id === id).name), [mid, tb]), 'Smoke rule 2', 'and it still saves');
+  await win.evaluate(async ([m, id]) => { const t0 = (await api.diviner.getTables(m)).find((x) => x.id === id); await api.diviner.updateTable(id, 'Harbor rumor', t0.dice || '', t0.mode || 'pick'); await api.block.add(m, '*', { type: 'component', component: 'item.fields' }); }, [mid, tb]);
 });

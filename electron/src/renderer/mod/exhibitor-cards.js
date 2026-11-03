@@ -281,7 +281,7 @@ function openExhibitorFieldsModal(nodeId) {
   const rows = [...byModule.entries()].map(([mid, tpls]) => `
     ${many ? `<div class="insp-label" data-no-i18n>${x(findModuleNode(mid)?.name || '')}</div>` : ''}
     ${tpls.map(tp => `<label class="fv-useimg"><input type="checkbox" class="exh-fld" value="${tp.id}" ${current.has(tp.id) ? 'checked' : ''}> <span data-no-i18n>${x(tp.description)}</span></label>`).join('')}`).join('');
-  openModal(t(table ? 'exhCustomizeColumns' : 'exhCustomizeFields'), `
+  openPicker(t(table ? 'exhCustomizeColumns' : 'exhCustomizeFields'), `
     <div class="exh-fld-list">${rows || `<p class="cls-lv-empty">${t('clsFieldsEmpty')}</p>`}</div>
     <div class="mfoot">
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>

@@ -79,6 +79,9 @@ function buildSketcherMainHtml(m, c) {
         </div>
       </div>
       <div class="sk-tools" data-no-i18n>
+        <input class="sk-page-name" data-r="sk-page-name" value="${x(d.pages.find((p) => p.id === d.pageId)?.name || '')}" aria-label="${x(t('name'))}"
+          onkeydown="event.stopPropagation();if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur()}" onchange="renameSketchPage(${d.pageId},this.value)">
+        <span class="zsep"></span>
         <button class="btn btn-g btn-i${skTool.mode === 'pen' ? ' act' : ''}" data-cmd="sketcher.pen" onclick="runCommand('sketcher.pen')" title="${t('penTool')}">${I.edit}</button>
         <button class="btn btn-g btn-i${skTool.mode === 'eraser' ? ' act' : ''}" data-cmd="sketcher.eraser" onclick="runCommand('sketcher.eraser')" title="${t('eraserTool')}">${I.eraser}</button>
         <span class="zsep"></span>
@@ -302,11 +305,13 @@ function buildSketchPagesHtml(d) {
   // Procress 21: the shared list (core/list.js); ↑ ↓ stay this list's way to
   // reorder, F2 = Edit.
   return listHtml({ list: 'sketch-pages', aria: SKETCHER_VIEW_LABEL.pages, cls: 'sk-pages', body: d.pages.map((p, i) => listRowHtml({
-    icon: I.sketcher, title: `${i + 1}. ${p.name}`, count: p.stroke_count, state: { selected: p.id === d.pageId }, attrs: 'data-no-i18n',
+    icon: I.sketcher, title: `${i + 1}. ${p.name}`, count: p.stroke_count, state: { selected: p.id === d.pageId },
     onclick: `selectSketchPage(${p.id}).then(()=>setSketcherView('canvas'))`,
     actions: listActHtml({ icon: I.chevronUp, name: '↑', onclick: `moveSketchPageRow(${p.id},-1)` })
       + listActHtml({ icon: I.chevronDown, name: '↓', onclick: `moveSketchPageRow(${p.id},1)` })
-      + listActHtml({ icon: I.edit, name: t('edit'), key: 'F2', onclick: `openSketchPageModal(${d.moduleId},${p.id})` }) })).join('') });
+      + listActHtml({ icon: I.edit, name: t('rename'), key: 'F2', onclick: `renameSketchPageRow(${p.id},this)` })
+      + listActHtml({ icon: I.delete, name: t('delete'), key: 'Delete', danger: true, onclick: `deleteSketchPageRow(${p.id})` }),
+    attrs: `data-no-i18n data-sk-page="${p.id}"` })).join('') });
 }
 
 async function moveSketchPageRow(id, dir) {
@@ -376,36 +381,44 @@ async function exportSketchPng() {
 }
 
 // ── Page CRUD + pin picker ──────────────────────────────────────────────
-function openSketchPageModal(moduleId, id = null) {
-  const p = id ? S.sketcherData?.pages.find(pp => pp.id === id) : null;
-  openModal(p ? t('moduleEdit') : t('newPage'), `
-    <div class="fg"><label>${t('name')} *</label><input id="sp-name" value="${x(p?.name || '')}"></div>
-    <div class="mfoot">
-      ${p ? `<button class="btn btn-d" onclick="deleteSketchPageRow(${p.id})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitSketchPage(${moduleId},${p ? p.id : 'null'})">${p ? t('save') : t('create')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#sp-name').focus(), 60);
+// No modal (APP src/design/no-modal #12): a page is named where it shows —
+// the box at the start of the canvas tools (the open page), or its row in the
+// Pages view (F2). A new page is made at once and its name selected to type.
+async function renameSketchPage(id, name) {
+  const v = String(name || '').trim();
+  const p = S.sketcherData?.pages.find((pp) => pp.id === id);
+  if (!p || !v || v === p.name) { if (p) renderNexusHome(); return; }
+  await api.sketcher.renamePage(id, v);
+  await reloadSource(S.sketcherData.moduleId);
+  invalidateNestItems(S.sketcherData.moduleId);
+  updateStatusBar({ saveState: t('saved') });
 }
 
-async function submitSketchPage(moduleId, id) {
-  const name = pbQOr('#sp-name').value.trim();
-  if (!name) return;
-  if (id) await api.sketcher.renamePage(id, name);
-  else {
-    const newId = await api.sketcher.createPage(moduleId, name);
-    await api.module.setUi(moduleId, 'activePage', String(newId));
-    S.sketcherData.pageId = newId;
+function renameSketchPageRow(id, from) {
+  const p = S.sketcherData?.pages.find((pp) => pp.id === id);
+  const title = (from?.closest('[data-sk-page]') || pbQOr(`.sk-pages [data-sk-page="${id}"]`))?.querySelector('.ls-title');
+  if (p && title) inlineRename(title, p.name, { onSave: (v) => renameSketchPage(id, v), onDone: () => renderNexusHome() }); // core/fields.js
+}
+
+async function newSketchPage(moduleId) {
+  const newId = await api.sketcher.createPage(moduleId, t('skNewPageName'));
+  await api.module.setUi(moduleId, 'activePage', String(newId));
+  S.sketcherData.pageId = newId;
+  invalidateNestItems(moduleId, 1);
+  if (S.sketcherData.view === 'pages') {
+    await reloadSource(moduleId);
+    for (let i = 0; i < 20 && !pbQOr(`.sk-pages [data-sk-page="${newId}"]`); i++) await new Promise((r) => setTimeout(r, 50));
+    renameSketchPageRow(newId);
+    return;
   }
-  closeModal();
+  if (S.sketcherData.view !== 'canvas') await setSketcherView('canvas');
   await reloadSource(moduleId);
-  toast(id ? t('saved') : t('created'), 'ok');
+  focusWhenSettled('#main-inner [data-r="sk-page-name"]');
 }
 
 async function deleteSketchPageRow(id) {
   if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.sketcher.deletePage(id);
-  closeModal();
   const d = S.sketcherData;
   if (d.pageId === id) d.pageId = null;
   await reloadSource(d.moduleId);
@@ -416,7 +429,7 @@ async function openSketchPinModal() {
   const d = S.sketcherData;
   if (!d?.pageId) return;
   const ix = await api.wiki.quickIndex(S.nexus.id);
-  openModal(t('pinModuleLink'), `
+  openPicker(t('pinModuleLink'), `
     <div class="fg"><label>${t('moduleLink')}</label>
       <select id="skp-key">${ix.map(e2 =>
         `<option value="${x(e2.key)}">${x(e2.name)} (${x(e2.type)})</option>`).join('')}

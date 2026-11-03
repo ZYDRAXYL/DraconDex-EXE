@@ -266,11 +266,11 @@ function buildChroniclerCompareHtml(evsA, evsB, key, colA, colB) {
   }
   for (const ev of evsA) {
     const ts = tsOf(ev), ec = ev.color_code || colA, sTxt = fmtDate(ev.s_day, ev.s_month, ev.s_years, ev.s_hour, ev.s_minute);
-    svg += `<circle data-event-dot="${ev.id}" data-start-ts="${ts || ''}" cx="${xFromTs(ts)}" cy="${LINE_Y_A}" r="7" fill="${ec}" style="cursor:pointer" onclick="openChroniclerEventModal(${ev.timeline_id},${ev.id})"><title>${x(ev.event_name || '')} — ${x(sTxt)}</title></circle>`;
+    svg += `<circle data-event-dot="${ev.id}" data-start-ts="${ts || ''}" cx="${xFromTs(ts)}" cy="${LINE_Y_A}" r="7" fill="${ec}" style="cursor:pointer" onclick="openChroniclerEventPage(${ev.id})"><title>${x(ev.event_name || '')} — ${x(sTxt)}</title></circle>`;
   }
   for (const ev of evsB) {
     const ts = tsOf(ev), ec = ev.color_code || colB, sTxt = fmtDate(ev.s_day, ev.s_month, ev.s_years, ev.s_hour, ev.s_minute);
-    svg += `<circle data-event-dot="${ev.id}" data-start-ts="${ts || ''}" cx="${xFromTs(ts)}" cy="${LINE_Y_B}" r="7" fill="${ec}" style="cursor:pointer" onclick="openChroniclerEventModal(${ev.timeline_id},${ev.id})"><title>${x(ev.event_name || '')} — ${x(sTxt)}</title></circle>`;
+    svg += `<circle data-event-dot="${ev.id}" data-start-ts="${ts || ''}" cx="${xFromTs(ts)}" cy="${LINE_Y_B}" r="7" fill="${ec}" style="cursor:pointer" onclick="openChroniclerEventPage(${ev.id})"><title>${x(ev.event_name || '')} — ${x(sTxt)}</title></circle>`;
   }
   svg += `</g></svg>`;
   return `<div class="timeline-graph-board" id="timeline-graph-board" style="height:${SVG_H}px">${svg}<div id="timeline-axis-tip" class="timeline-axis-tip hidden"></div></div>`;

@@ -126,7 +126,7 @@ function buildNarratorBoardHtml(m, d) {
       <div class="nar-node-head">
         <span class="nn-name">${x(dl.name)}</span>
         <button class="btn btn-g btn-i" onclick="event.stopPropagation();startNarratorEdge(${dl.id})" title="${t('edgeTool')}">${I.relation}</button>
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();openNarratorDialogueModal(${m.id},${dl.id})" title="${t('edit')}">${I.edit}</button>
+        <button class="btn btn-g btn-i" onclick="event.stopPropagation();openItemNode('narrator',${m.id},${dl.id})" title="${t('edit')}">${I.edit}</button>
       </div>
       ${dl.snippet ? `<div class="nn-snippet">${x(dl.snippet)}</div>` : `<div class="nn-snippet ghost">${t('conversation')} · 0</div>`}
       ${dl.talk_count ? `<div class="nn-count">${dl.talk_count} ${t('conversation')}</div>` : ''}
@@ -172,7 +172,7 @@ function drawNarratorEdges() {
     const x2 = tn.offsetLeft + tn.offsetWidth / 2, y2 = tn.offsetTop + tn.offsetHeight / 2;
     const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
     body += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--t3)" stroke-width="1.6" marker-end="url(#nar-arrow)"/>
-      <g style="pointer-events:auto;cursor:pointer" onclick="openNarratorEdgeModal(${e.id})">
+      <g style="pointer-events:auto;cursor:pointer" onclick="editNarratorEdgeLabel(${e.id},pointAnchor(event.clientX,event.clientY))">
         ${e.label
           ? `<text x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="central" font-size="10" fill="var(--t2)" paint-order="stroke" stroke="var(--bg)" stroke-width="5">${x(e.label)}</text>`
           : `<circle cx="${mx}" cy="${my}" r="7" fill="var(--surface)" stroke="var(--t3)" stroke-width="1.3"/>
@@ -318,72 +318,33 @@ function startNarratorEdge(dialId) {
 
 
 // ── Dialogue CRUD ───────────────────────────────────────────────────────
-async function openNarratorDialogueModal(moduleId, id = null) {
-  const d = S.narratorData;
-  const dl = id ? d.dialogues.find(dd => dd.id === id) : null;
-  openModal(dl ? t('moduleEdit') : t('addDialogue'), `
-    <div class="fg"><label>${t('name')} *</label><input id="nd-name" value="${x(dl?.name || '')}"></div>
-    <div class="fg"><label>${t('color')}</label>${await colorPicker(dl?.color || null)}</div>
-    <div class="mfoot">
-      ${dl ? `<button class="btn btn-d" onclick="deleteNarratorDialogue(${dl.id})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitNarratorDialogue(${moduleId},${dl ? dl.id : 'null'})">${dl ? t('save') : t('create')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#nd-name').focus(), 60);
-}
-
-async function submitNarratorDialogue(moduleId, id) {
-  const name = pbQOr('#nd-name').value.trim();
-  if (!name) return;
-  const colorId = pbQOr('#sel-color').value || null;
-  if (id) await api.narrator.updateDialogue(id, name, colorId);
-  else {
-    // Stagger fresh nodes diagonally so they never stack on one spot.
-    const n = S.narratorData?.dialogues.length || 0;
-    await api.narrator.createDialogue(moduleId, name, colorId, 40 + (n % 8) * 60, 40 + n * 40);
-  }
-  closeModal();
-  await reloadSource(moduleId);
-  toast(id ? t('saved') : t('created'), 'ok');
-}
-
-async function deleteNarratorDialogue(id) {
-  if (!await uiConfirm(t('confirmDeleteItem'))) return;
-  await api.narrator.deleteDialogue(id);
-  closeModal();
-  const d = S.narratorData;
-  if (d.selectedId === id) d.selectedId = null;
-  await reloadSource(d.moduleId);
-  toast(t('deleted'), 'ok');
+// No modal (APP src/design/no-modal #09): a new dialogue is made at once and
+// opens on its page with its name selected; that page edits name and colour.
+async function newNarratorDialogue(moduleId) {
+  const n = S.narratorData?.moduleId === moduleId ? S.narratorData.dialogues.length : 0;
+  // staggered diagonally so fresh nodes never stack on one spot
+  const id = await api.narrator.createDialogue(moduleId, t('narNewDialogue'), null, 40 + (n % 8) * 60, 40 + n * 40);
+  invalidateNestItems(moduleId, 1);
+  await openItemNode('narrator', moduleId, Number(id));
+  fieldsFocus('name');
 }
 
 // ── Edge modal ──────────────────────────────────────────────────────────
-async function openNarratorEdgeModal(id) {
-  const d = S.narratorData;
-  const e = d.edges.find(ed => ed.id === id);
+// No modal (APP src/design/no-modal #10): the label is typed where it sits on
+// the line (or beside the route list's row), Enter / clicking away saves.
+function editNarratorEdgeLabel(id, anchor) {
+  const e = S.narratorData?.edges.find((ed) => ed.id === id);
   if (!e) return;
-  const nameOf = (nid) => x(d.dialogues.find(dd => dd.id === nid)?.name || '—');
-  openModal(t('edgeLabel'), `
-    <p style="font-size:calc(12.5px * var(--fsc,1));color:var(--t2);margin-bottom:10px" data-no-i18n>${nameOf(e.from_ref)} → ${nameOf(e.to_ref)}</p>
-    <div class="fg"><label>${t('edgeLabel')}</label><input id="ne-label" value="${x(e.label || '')}"></div>
-    <div class="mfoot">
-      <button class="btn btn-d" onclick="deleteNarratorEdge(${e.id})">${t('delete')}</button>
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="saveNarratorEdgeLabel(${e.id})">${t('save')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#ne-label').focus(), 60);
-}
-
-async function saveNarratorEdgeLabel(id) {
-  await api.narrator.updateEdgeLabel(id, pbQOr('#ne-label').value.trim() || null);
-  closeModal();
-  await reloadSource(S.narratorData.moduleId);
+  labelEditPopover(anchor, e.label, {
+    placeholder: t('edgeLabel'),
+    onSave: async (v) => { await api.narrator.updateEdgeLabel(id, v || null); await reloadSource(S.narratorData.moduleId); },
+    onDelete: () => deleteNarratorEdge(id),
+  });
 }
 
 async function deleteNarratorEdge(id) {
   if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.narrator.deleteEdge(id);
-  closeModal();
   await reloadSource(S.narratorData.moduleId);
 }
 
@@ -398,7 +359,7 @@ function buildNarratorRoutesHtml(d) {
       <td>${x(nameOf(e.from_ref))}</td><td data-no-i18n>→</td><td>${x(nameOf(e.to_ref))}</td>
       <td>${x(e.label || '')}</td>
       <td class="cls-rowacts">
-        <button class="btn btn-g btn-i" onclick="openNarratorEdgeModal(${e.id})" title="${t('edit')}">${I.edit}</button>
+        <button class="btn btn-g btn-i" onclick="editNarratorEdgeLabel(${e.id},this)" title="${t('edit')}">${I.edit}</button>
         <button class="btn btn-g btn-i" onclick="deleteNarratorEdge(${e.id})" title="${t('delete')}">${I.delete}</button>
       </td></tr>`;
   }

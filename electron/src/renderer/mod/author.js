@@ -34,7 +34,8 @@ async function loadAuthorData(m) {
   // POV names for the corkboard (v5 Part 7, §11.6) — one round trip.
   const povKeys = [...new Set(chapters.map(c => c.pov_key).filter(Boolean))];
   const povNames = new Map(povKeys.length ? (await api.wiki.resolveKeys(povKeys)).map(r => [r.key, r.name]) : []);
-  AUT.setModule(m.id, { moduleId: m.id, ui, chapters, selectedId, povNames, parts: authorPartsOf(ui) }); // mod/author-parts.js
+  const pov = await authorPovPeople(m.id, chapters); // mod/author-board.js
+  AUT.setModule(m.id, { moduleId: m.id, ui, chapters, selectedId, povNames, pov, parts: authorPartsOf(ui) }); // mod/author-parts.js
 }
 
 async function setAuthorView(view) {
@@ -82,10 +83,10 @@ function buildAuthorMainHtml(m, c) {
   const rows = authorPartRows(d.chapters, d.parts || []).map(({ ch: c, i, part }) => (part ? authorPartHtml(m.id, part) : listRowHtml({ density: 'compact', drag: true, state: { selected: c.id === d.selectedId },
     title: `${c.chapter_label || String(i + 1)}. ${c.name}`, onclick: `selectAuthorChapter(${c.id})`,
     attrs: `data-chid="${c.id}" onpointerdown="onAuthorChapterDown(event,this,${m.id},${c.id})"`,
-    actions: listActHtml({ icon: I.edit, name: t('edit'), key: 'F2', onclick: `openAuthorChapterModal(${m.id},${c.id})` }) }))).join('');
+    actions: listActHtml({ icon: I.delete, name: t('delete'), key: 'Delete', danger: true, onclick: `deleteAuthorChapter(${c.id})` }) }))).join('');
   const column = `<div class="author-chapters">
     <div class="au-col-label" data-no-i18n>CHAPTERS · ${x(m.name)}</div>
-    ${listHtml({ list: 'author-chapters', aria: m.name, body: rows + listRowHtml({ density: 'compact', icon: I.plus, title: t('writeChapterNew'), cls: 'ls-add', onclick: `openAuthorChapterModal(${m.id})` })
+    ${listHtml({ list: 'author-chapters', aria: m.name, body: rows + listRowHtml({ density: 'compact', icon: I.plus, title: t('writeChapterNew'), cls: 'ls-add', onclick: `newAuthorChapter(${m.id})` })
       + listRowHtml({ density: 'compact', icon: I.plus, title: t('auPartAdd'), cls: 'ls-add', onclick: `addAuthorPart(${m.id})` }) })}
   </div>`;
   // 'book': its own layout (a jump-to-chapter nav, not the select/switch
@@ -145,17 +146,26 @@ function mountAuthorRichEditor(el, ch) {
   // Procress 28 part 5: the name is typed into where it is shown (Enter /
   // blur saves, Esc puts it back), and the chapter's synopsis and status
   // sit between it and the text — the corkboard's facts, where you write.
+  // The chapter number sits before the name and edits the same way.
+  const d = S.authorData;
+  const no = d.chapters.indexOf(ch) + 1;
   el.innerHTML = `
     <div class="mded-head">
+      <input class="mded-title au-title au-no" value="${x(ch.chapter_label || '')}" placeholder="${no}" aria-label="${x(t('chapterLabel'))}" data-no-i18n
+        onkeydown="authorTitleKey(event,this,${ch.id},'chapter_label')" onblur="saveAuthorChapterLabel(this,${ch.id})">
       <input class="mded-title au-title" value="${x(ch.name)}" aria-label="${x(t('name'))}" data-no-i18n
         onkeydown="authorTitleKey(event,this,${ch.id})" onblur="saveAuthorTitle(this,${ch.id})">
+      <span class="au-stats" id="au-stats" data-no-i18n></span>
       <span class="mded-save-state" id="au-save-state"></span>
     </div>
     <div class="au-meta">
+      <div class="au-meta-side">
+      <div class="au-meta-pov">${authorPovSelectHtml(d, ch, 'au-meta-povsel')}${d.pov?.linked ? '' : `<button type="button" class="btn btn-g btn-i" title="${x(t('auPovNoLink'))}" aria-label="${x(t('auPovNoLink'))}" onclick="openPageLinksPopup(${d.moduleId},document.querySelector('.ph-links-open'))">${I.relation}</button>`}</div>
       <select class="au-meta-status" aria-label="${x(t('auStatus'))}" onchange="saveAuthorChapterMeta(${ch.id},{status:this.value})">
         <option value="">${t('auStatus')} —</option>
         ${AUTHOR_STATUSES.map((s) => `<option value="${s}"${ch.status === s ? ' selected' : ''}>${t(AUTHOR_STATUS_KEY[s])}</option>`).join('')}
       </select>
+      </div>
       <textarea class="au-meta-syn" rows="1" placeholder="${x(t('auSynopsis'))}" aria-label="${x(t('auSynopsis'))}"
         oninput="clearTimeout(this._t);this._t=setTimeout(()=>saveAuthorChapterMeta(${ch.id},{synopsis:this.value}),600)"
         onchange="clearTimeout(this._t);saveAuthorChapterMeta(${ch.id},{synopsis:this.value})">${x(ch.synopsis || '')}</textarea>
@@ -169,6 +179,15 @@ function mountAuthorRichEditor(el, ch) {
   const body = el.querySelector('.au-rich-body');
   const saveState = el.querySelector('#au-save-state');
   body.innerHTML = authorContentAsHtml(ch.chapter_content);
+  // Words / characters / pages: this chapter, and the whole book in words.
+  const statsEl = el.querySelector('#au-stats');
+  const others = d.chapters.reduce((n, c) => n + (c === ch ? 0 : authorTextStats(authorPlainText(c.chapter_content)).words), 0);
+  const showStats = () => {
+    const s = authorTextStats(authorPlainText(body.innerHTML));
+    const f = (n) => n.toLocaleString();
+    statsEl.textContent = `${f(s.words)} ${t('auWords')} · ${f(s.chars)} ${t('auChars')} · ${f(s.pages)} ${t('auPages')} · ${t('auBookTotal')} ${f(others + s.words)} ${t('auWords')}`;
+  };
+  showStats();
 
   el.querySelector('.au-rich-toolbar').addEventListener('mousedown', (e) => {
     const btn = e.target.closest('[data-cmd]');
@@ -193,6 +212,7 @@ function mountAuthorRichEditor(el, ch) {
     await api.author.updateContent(ch.id, clean);
     ch.chapter_content = clean;
     if (saveState) saveState.textContent = t('saved');
+    showStats(); // with the save, not per keystroke — segmenting is the slow part
   };
   const scheduleSave = () => {
     if (saveState) saveState.textContent = '…';
@@ -202,13 +222,28 @@ function mountAuthorRichEditor(el, ch) {
   body.addEventListener('input', scheduleSave);
 }
 
-function authorTitleKey(ev, inp, id) {
+function authorTitleKey(ev, inp, id, field = 'name') {
   if (ev.key === 'Enter') { ev.preventDefault(); inp.blur(); }
   else if (ev.key === 'Escape') {
     ev.preventDefault();
-    inp.value = S.authorData?.chapters.find((c) => c.id === id)?.name || inp.value;
+    const ch = S.authorData?.chapters.find((c) => c.id === id);
+    if (ch) inp.value = ch[field] || '';
     inp.blur();
   }
+}
+// The chapter column shows "<number>. <name>" — redraw that row, not the editor.
+function authorRefreshRow(ch) {
+  const row = pbQOr(`.author-chapters [data-chid="${ch.id}"] .ls-title`);
+  if (row) row.textContent = `${ch.chapter_label || String(S.authorData.chapters.indexOf(ch) + 1)}. ${ch.name}`;
+}
+async function saveAuthorChapterLabel(inp, id) {
+  const ch = S.authorData?.chapters.find((c) => c.id === id);
+  const label = inp.value.trim();
+  if (!ch || label === (ch.chapter_label || '')) return;
+  ch.chapter_label = label;
+  await api.author.setChapterLabel(id, label);
+  invalidateNestItems(S.authorData.moduleId, 0);
+  authorRefreshRow(ch);
 }
 async function saveAuthorTitle(inp, id) {
   const ch = S.authorData?.chapters.find((c) => c.id === id);
@@ -217,9 +252,19 @@ async function saveAuthorTitle(inp, id) {
   ch.name = name;
   await api.author.renameChapter(id, name);
   invalidateNestItems(S.authorData.moduleId, 0);
-  // the chapter column shows the name too — redraw it, not the editor
-  const row = pbQOr(`.author-chapters [data-chid="${id}"] .ls-title`);
-  if (row) { const i = S.authorData.chapters.indexOf(ch); row.textContent = `${ch.chapter_label || String(i + 1)}. ${name}`; }
+  authorRefreshRow(ch);
+}
+
+// Plain text of a chapter (HTML or legacy Markdown) for counting.
+const authorPlainText = (s) => String(s || '').replace(/<[^>]*>/g, ' ').replace(/&[a-z0-9#]+;/gi, ' ');
+// Intl.Segmenter splits Thai (no spaces) into words too.
+// ponytail: a page = 250 words, the usual manuscript estimate; a setting if writers ask for their own.
+const AUTHOR_WORDS_PER_PAGE = 250;
+const _authorSeg = new Intl.Segmenter(undefined, { granularity: 'word' });
+function authorTextStats(text) {
+  let words = 0;
+  for (const seg of _authorSeg.segment(text)) if (seg.isWordLike) words++;
+  return { words, chars: text.replace(/\s/g, '').length, pages: Math.ceil(words / AUTHOR_WORDS_PER_PAGE) };
 }
 
 // ── Outline view: markdown headings across every chapter ────────────────
@@ -337,46 +382,32 @@ async function mountAuthorBook() {
 }
 
 // ── Chapter CRUD ────────────────────────────────────────────────────────
-async function openAuthorChapterModal(moduleId, id = null) {
-  const ch = id ? S.authorData?.chapters.find(c => c.id === id) : null;
-  openModal(ch ? t('moduleEdit') : t('writeChapterNew'), `
-    <div class="fg"><label>${t('name')} *</label><input id="ac-name" value="${x(ch?.name || '')}"></div>
-    ${ch ? `<div class="fg"><label>${t('chapterLabel')}</label><input id="ac-label" value="${x(ch?.chapter_label || '')}"></div>` : ''}
-    ${ch ? await authorChapterMetaFieldsHtml(ch) : ''}
-    <div class="mfoot">
-      ${ch ? `<button class="btn btn-d" onclick="deleteAuthorChapter(${ch.id})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitAuthorChapter(${moduleId},${ch ? ch.id : 'null'})">${ch ? t('save') : t('create')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#ac-name').focus(), 60);
+// No modal: a new chapter is made at once and its name opens for typing —
+// on the board in its card, everywhere else in the editor.
+async function newAuthorChapter(moduleId) {
+  const id = await api.author.createChapter(moduleId, t('auUntitled'));
+  await api.module.setUi(moduleId, 'activeChapter', String(id));
+  const d = S.authorData?.moduleId === moduleId ? S.authorData : null;
+  if (d) {
+    d.selectedId = id;
+    if (d.view !== 'editor' && d.view !== 'board') await setAuthorView('editor');
+  }
+  invalidateNestItems(moduleId, 1); // queues a render — before ours, or it re-renders past the focus below
+  await reloadSource(moduleId);
+  const inp = pbQOr(`.au-card[data-chid="${id}"] .au-card-name`) || pbQOr('#author-editor .au-title:not(.au-no)');
+  inp?.focus();
+  inp?.select();
 }
 
-async function submitAuthorChapter(moduleId, id) {
-  const name = pbQOr('#ac-name').value.trim();
-  if (!name) return;
-  if (id) {
-    await api.author.renameChapter(id, name);
-    const label = pbQOr('#ac-label')?.value.trim() || '';
-    const ch = S.authorData?.chapters.find(c => c.id === id);
-    if (label !== (ch?.chapter_label || '')) {
-      await api.author.setChapterLabel(id, label);
-      if (ch) ch.chapter_label = label;
-    }
-    await submitAuthorChapterMeta(id);
-  } else {
-    const newId = await api.author.createChapter(moduleId, name);
-    S.authorData.selectedId = newId;
-  }
-  closeModal();
-  await reloadSource(moduleId);
-  invalidateNestItems(moduleId, id ? 0 : 1);
-  toast(id ? t('saved') : t('created'), 'ok');
+// The board's open button: that chapter, in the editor.
+async function openAuthorChapterInEditor(id) {
+  await selectAuthorChapter(id);
+  await setAuthorView('editor');
 }
 
 async function deleteAuthorChapter(id) {
   if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.author.deleteChapter(id);
-  closeModal();
   const d = S.authorData;
   const at = d.chapters.findIndex((c) => c.id === id);
   if (at >= 0 && d.parts?.length) await saveAuthorParts(d.moduleId, authorPartsAfterDelete(d.parts, at));

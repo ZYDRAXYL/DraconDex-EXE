@@ -12,13 +12,14 @@ const AUTHOR_STATUS_KEY = { idea: 'auStatusIdea', draft: 'auStatusDraft', revise
 
 function buildAuthorBoardHtml(m, d) {
   const cards = d.chapters.map((c, i) => {
-    const pov = c.pov_key ? d.povNames?.get(c.pov_key) : null;
     return `<div class="au-card${c.id === d.selectedId ? ' sel' : ''}" data-status="${x(c.status || '')}"
       data-chid="${c.id}" onpointerdown="onAuthorChapterDown(event,this,${m.id},${c.id},'xy')">
       <div class="au-card-head">
-        <span class="au-card-no" data-no-i18n>${x(c.chapter_label || String(i + 1))}</span>
-        <span class="au-card-name" onclick="selectAuthorChapter(${c.id}).then(()=>setAuthorView('editor'))">${x(c.name)}</span>
-        <button class="btn btn-g btn-i" onclick="openAuthorChapterModal(${m.id},${c.id})" title="${t('edit')}">${I.edit}</button>
+        <input class="au-card-no" value="${x(c.chapter_label || '')}" placeholder="${i + 1}" aria-label="${x(t('chapterLabel'))}" data-no-i18n
+          onkeydown="authorTitleKey(event,this,${c.id},'chapter_label')" onblur="saveAuthorChapterLabel(this,${c.id})">
+        <input class="au-card-name" value="${x(c.name)}" aria-label="${x(t('name'))}" data-no-i18n
+          onkeydown="authorTitleKey(event,this,${c.id})" onblur="saveAuthorTitle(this,${c.id})">
+        <button class="btn btn-g btn-i" onclick="openAuthorChapterInEditor(${c.id})" title="${x(t('open'))}" aria-label="${x(t('open'))}">${I.edit}</button>
       </div>
       <textarea class="au-card-syn" rows="4" placeholder="${x(t('auSynopsis'))}" onchange="saveAuthorChapterMeta(${c.id},{synopsis:this.value})">${x(c.synopsis || '')}</textarea>
       <div class="au-card-foot">
@@ -26,14 +27,14 @@ function buildAuthorBoardHtml(m, d) {
           <option value="">—</option>
           ${AUTHOR_STATUSES.map(s => `<option value="${s}"${c.status === s ? ' selected' : ''}>${t(AUTHOR_STATUS_KEY[s])}</option>`).join('')}
         </select>
-        ${pov ? `<span class="au-card-pov" title="${x(t('auPov'))}">${I.person} ${x(pov)}</span>` : ''}
+        ${authorPovSelectHtml(d, c, 'au-card-status au-card-pov')}
       </div>
     </div>`;
   }).join('');
   const counts = AUTHOR_STATUSES.map(s => [s, d.chapters.filter(c => c.status === s).length]).filter(([, n]) => n);
   return `${counts.length ? `<div class="au-board-sum">${counts.map(([s, n]) => `<span class="au-status-pill" data-status="${s}">${t(AUTHOR_STATUS_KEY[s])} <b data-no-i18n>${n}</b></span>`).join('')}</div>` : ''}
     <div class="au-board">${cards}
-      <div class="au-card au-card-add" onclick="openAuthorChapterModal(${m.id})">${I.plus}<span>${t('writeChapterNew')}</span></div>
+      <div class="au-card au-card-add" onclick="newAuthorChapter(${m.id})">${I.plus}<span>${t('writeChapterNew')}</span></div>
     </div>`;
 }
 
@@ -44,34 +45,28 @@ async function saveAuthorChapterMeta(id, meta, repaint = false) {
   if (c) {
     if ('synopsis' in meta) c.synopsis = meta.synopsis;
     if ('status' in meta) c.status = meta.status || null;
+    if ('povKey' in meta) c.pov_key = meta.povKey || null;
   }
   if (repaint) renderNexusHome();
 }
 
-// The chapter modal's part: synopsis, status, point of view.
+// Point-of-view choices, loaded with the Author (mod/author.js).
 // Procress 28 part 5: the point of view is an object of a Classifier this
 // Author is linked to (api.module.linked — the page head's 🔗, or a
 // [[link]]), not any object in the Nexus. One already set elsewhere stays
-// listed, so saving the form never drops it silently.
-async function authorChapterMetaFieldsHtml(ch) {
-  const mid = S.authorData?.moduleId;
-  const [idx, linked] = await Promise.all([S.nexus ? api.viewer.index(S.nexus.id) : [], mid ? api.module.linked(mid) : []]);
+// listed, so a chapter's choice never drops silently.
+async function authorPovPeople(moduleId, chapters) {
+  const [idx, linked] = await Promise.all([S.nexus ? api.viewer.index(S.nexus.id) : [], api.module.linked(moduleId)]);
   const from = new Set(linked.map((e) => e.id).filter((id) => findModuleNode(id)?.kind === 'classifier'));
-  const people = idx.filter(e => e.kind === 'object' && (from.has(e.moduleId) || e.key === ch.pov_key));
-  const none = !from.size
-    ? `<p class="drafter-hint">${t('auPovNoLink')} <button type="button" class="btn btn-s btn-sm" onclick="closeModal();openPageLinksPopup(${mid},document.querySelector('.ph-links-open'))">${I.relation} ${t('pageLinksTitle')}</button></p>` : '';
-  return `<div class="fg"><label>${t('auSynopsis')}</label><textarea id="ac-syn" rows="3">${x(ch.synopsis || '')}</textarea></div>
-    <div class="fg"><label>${t('auStatus')}</label>
-      <select id="ac-status"><option value="">—</option>
-        ${AUTHOR_STATUSES.map(s => `<option value="${s}"${ch.status === s ? ' selected' : ''}>${t(AUTHOR_STATUS_KEY[s])}</option>`).join('')}
-      </select></div>
-    <div class="fg"><label>${t('auPov')}</label>
-      <select id="ac-pov"><option value="">—</option>
-        ${people.map(e => `<option value="${x(e.key)}"${e.key === ch.pov_key ? ' selected' : ''}>${x(e.name)}${e.moduleName ? ` — ${x(e.moduleName)}` : ''}</option>`).join('')}
-      </select>${none}</div>`;
+  const used = new Set(chapters.map((c) => c.pov_key).filter(Boolean));
+  return { linked: from.size > 0, people: idx.filter((e) => e.kind === 'object' && (from.has(e.moduleId) || used.has(e.key))) };
 }
 
-async function submitAuthorChapterMeta(id) {
-  if (!q('#ac-syn')) return;
-  await api.author.setChapterMeta(id, { synopsis: q('#ac-syn').value, status: q('#ac-status').value, povKey: q('#ac-pov').value });
+function authorPovSelectHtml(d, ch, cls) {
+  const people = d.pov?.people || [];
+  return `<select class="${cls}" aria-label="${x(t('auPov'))}" title="${x(d.pov?.linked ? t('auPov') : t('auPovNoLink'))}"
+    onchange="saveAuthorChapterMeta(${ch.id},{povKey:this.value})">
+    <option value="">${t('auPov')} —</option>
+    ${people.map((e) => `<option value="${x(e.key)}"${e.key === ch.pov_key ? ' selected' : ''}>${x(e.name)}${e.moduleName ? ` — ${x(e.moduleName)}` : ''}</option>`).join('')}
+  </select>`;
 }

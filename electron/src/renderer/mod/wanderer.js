@@ -169,7 +169,7 @@ function openWandererAreaAddPicker(areaId) {
   const d = S.wandererData;
   if (!d.links.length) { toast(t('wandererNeedsRefs'), 'err'); return; }
   const opts = d.links.map(l => `<option value="${l.id}">${x(l.entity?.name || '—')}</option>`).join('');
-  openModal(t('moduleLink'), `
+  openPicker(t('moduleLink'), `
     <div class="fg"><label>${t('moduleLink')}</label><select id="wnd-area-add-link">${opts}</select></div>
     <div class="mfoot">
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
@@ -210,11 +210,12 @@ function buildWandererMainHtml(m, c) {
   // The map board is map.js's, per instance (v5 Part 8).
   const mapPane = mapBoardHtml(c, { tools: false, cls: 'wnd-map-pane', height: 380 });
   const tlPane = `<div class="wnd-tl-pane" data-r="tl-host"></div>`;
-  if (d.view === 'map') return `${toolbar}${refLine}<div class="wanderer-split">${mapPane}</div>`;
+  const pinPanel = '<div data-r="pin-panel"></div>'; // the selected pin (renderWandererPinPanel)
+  if (d.view === 'map') return `${toolbar}${refLine}${pinPanel}<div class="wanderer-split">${mapPane}</div>`;
   if (d.view === 'timeline') return `${toolbar}${refLine}<div class="wanderer-split">${tlPane}</div>`;
   // 'area': map + Area List side by side, oneline timeline strip below —
   // replaces the old 'dual' (Map & Timeline) view.
-  return `${toolbar}${refLine}<div class="wanderer-split">
+  return `${toolbar}${refLine}${pinPanel}<div class="wanderer-split">
     <div class="wnd-area-top">${mapPane}${buildWandererAreaListHtml(d)}</div>
     ${tlPane}
   </div>`;
@@ -258,6 +259,7 @@ async function mountWandererBoard(m, c) {
       decorateWandererTimeline(host);
     }
   }
+  if (d === S.wandererData) await renderWandererPinPanel(); // a full redraw empties its slot
 }
 
 // Ring the dots of events that have a Link pin; clicking a dot highlights
@@ -300,7 +302,7 @@ function addWandererPins(mi) {
       wandererPin: true, draggable: true,
     });
     pin.on('click tap', (e) => {
-      if (e.evt.button === 0) { e.cancelBubble = true; openMapEventModal(link.id); }
+      if (e.evt.button === 0) { e.cancelBubble = true; selectWandererPin(link.id); }
     });
     pin.on('dragend', async () => {
       const pos = pin.position();
@@ -338,7 +340,7 @@ function bindWandererStageClick(mi) {
     const wy = (pointer.y - stage.y()) / stage.scaleY();
     const areaId = e.target?.attrs?.areaId ?? null;
     d.placing = false;
-    openMapEventModal(null, { x: wx, y: wy, areaId });
+    createWandererPin(wx, wy, areaId);
   });
 }
 
@@ -347,49 +349,58 @@ function bindWandererStageClick(mi) {
 // character, chapter, note, …) via the same quickIndex picker designer.js
 // uses for its pin modal, tied to a Chronicler event for its date — not a
 // free-text label anymore.
-async function openMapEventModal(id, pos = null) {
-  const d = S.wandererData;
-  const link = id ? d.links.find(l => l.id === id) : null;
-  const px = link ? link.x : (pos?.x ?? 0);
-  const py = link ? link.y : (pos?.y ?? 0);
-  const areaId = link ? (link.area_ref ?? null) : (pos?.areaId ?? null);
-  const evOptions = d.events.map(ev => {
-    const when = fmtDate(ev.s_day, ev.s_month, ev.s_years, ev.s_hour, ev.s_minute);
-    return `<option value="${ev.id}" ${link?.event_ref === ev.id ? 'selected' : ''}>${x(ev.event_name || '—')} — ${x(when)}</option>`;
-  }).join('');
-  const ix = await api.wiki.quickIndex(S.nexus.id);
-  const keyOptions = `<option value="">--</option>` + ix.map(e =>
-    `<option value="${x(e.key)}" ${link?.linker_key === e.key ? 'selected' : ''}>${x(e.name)} (${x(e.type)})</option>`).join('');
-  openModal(link ? t('mapEventEdit') : t('addMapEvent'), `
-    <div class="fg"><label>${t('moduleLink')}</label><select id="wnd-key">${keyOptions}</select></div>
-    <div class="fg"><label>${t('wandererPickTime')}</label><select id="wnd-ev">${evOptions}</select></div>
-    <div class="fg"><label data-no-i18n>x · y</label><span class="pv ghost" data-no-i18n>${Math.round(px)} · ${Math.round(py)}</span></div>
-    <div class="mfoot">
-      ${link ? `<button class="btn btn-d" onclick="deleteMapEventRow(${link.id})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitMapEventForm(${id ?? 'null'},${px},${py},${areaId ?? 'null'})">${link ? t('save') : t('create')}</button>
-    </div>`);
-}
-
-async function submitMapEventForm(id, px, py, areaId) {
+// No modal (APP src/design/no-modal #08): a pin is made the moment it is
+// placed, and the selected pin's fields sit in a panel under the toolbar —
+// what it links to and which event sets its time, each saved as it changes.
+// The panel is drawn into its own slot, so picking a pin never redraws the map.
+async function createWandererPin(px, py, areaId) {
   const d = S.wandererData;
   if (!d) return;
-  const key = q('#wnd-key').value || null;
-  const eventRef = Number(q('#wnd-ev').value) || null;
-  if (id) await api.wanderer.update(id, eventRef, key, px, py, areaId ?? null);
-  else await api.wanderer.create(d.moduleId, eventRef, key, px, py, areaId ?? null);
-  closeModal();
+  const id = await api.wanderer.create(d.moduleId, null, null, px, py, areaId ?? null);
   d.links = await resolveWandererLinks(await api.wanderer.list(d.moduleId));
+  d.selPin = Number(id);
   pbUse(d.iid);
   await mountWandererBoard();
-  toast(id ? t('saved') : t('created'), 'ok');
+  fieldsFocus('key', false);
+}
+
+function selectWandererPin(id) {
+  const d = S.wandererData;
+  if (!d) return;
+  d.selPin = id;
+  renderWandererPinPanel();
+}
+
+async function renderWandererPinPanel() {
+  const d = S.wandererData;
+  const host = d && pbRoot(d.iid)?.querySelector('[data-r="pin-panel"]');
+  if (!host) return;
+  const link = d.selPin != null ? d.links.find((l) => l.id === d.selPin) : null;
+  if (!link) { host.innerHTML = ''; return; }
+  const ix = await api.wiki.quickIndex(S.nexus.id);
+  host.innerHTML = `<section class="sel-panel">
+    <div class="sel-panel-h"><span data-no-i18n>${x(link.entity?.name || t('addMapEvent'))} · ${Math.round(link.x)} · ${Math.round(link.y)}</span>
+      <span><button class="btn btn-g btn-i" onclick="deleteMapEventRow(${link.id})" title="${x(t('delete'))}" aria-label="${x(t('delete'))}">${I.delete}</button><button class="btn btn-g btn-i" onclick="selectWandererPin(null)" title="${x(t('cancel'))}" aria-label="${x(t('cancel'))}">${I.close}</button></span></div>
+    ${fieldsStripHtml([
+      { key: 'key', title: t('moduleLink'), type: 'select', value: link.linker_key || '',
+        options: [{ value: '', text: '—' }, ...ix.map((e) => ({ value: e.key, text: `${e.name} (${e.type})` }))] },
+      { key: 'event', title: t('wandererPickTime'), type: 'select', value: link.event_ref ?? '',
+        options: [{ value: '', text: '—' }, ...d.events.map((ev) => ({ value: ev.id, text: `${ev.event_name || '—'} — ${fmtDate(ev.s_day, ev.s_month, ev.s_years, ev.s_hour, ev.s_minute)}` }))] },
+    ])}</section>`;
+  fieldsStripMount(host, async (key, v) => {
+    await api.wanderer.update(link.id, key === 'event' ? Number(v) || null : link.event_ref, key === 'key' ? v || null : link.linker_key, link.x, link.y, link.area_ref ?? null);
+    d.links = await resolveWandererLinks(await api.wanderer.list(d.moduleId));
+    pbUse(d.iid);
+    await mountWandererBoard(); // redraws the pin, and this panel with it
+    return true;
+  });
 }
 
 async function deleteMapEventRow(id) {
   if (!await uiConfirm(t('confirmDeleteItem'))) return;
   await api.wanderer.delete(id);
-  closeModal();
   const d = S.wandererData;
+  if (d.selPin === id) d.selPin = null;
   d.links = await resolveWandererLinks(await api.wanderer.list(d.moduleId));
   pbUse(d.iid);
   await mountWandererBoard();

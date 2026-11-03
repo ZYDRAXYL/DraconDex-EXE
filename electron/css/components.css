@@ -449,6 +449,10 @@ html.reorder-active,html.reorder-active *{cursor:grabbing!important;user-select:
 .home-start h2{font-size:calc(22px * var(--fsc,1));font-weight:650;margin:0}
 .home-actions{display:flex;gap:8px;flex-wrap:wrap}
 .home-sec h3{font-size:calc(var(--fs-body) * var(--fsc,1));font-weight:600;color:var(--t2);margin:0 0 6px;text-transform:none}
+/* Home's "This Nexus" (no-modal #01): folded until asked for */
+.home-nexus summary{cursor:pointer}
+.home-nexus summary h3{display:inline;margin:0}
+.home-nexus[open] summary{margin-bottom:6px}
 .home-organise{align-self:flex-start}
 /* Procress 18 part 1: identity row = icon · name · kind · save state · primary · ⋯ */
 .page-title .navbar-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -526,3 +530,30 @@ html.reorder-active,html.reorder-active *{cursor:grabbing!important;user-select:
 /* Procress 22: an icon inline with text (a lock after a name) */
 .inline-ico{display:inline-flex;vertical-align:-2px}
 .inline-ico .icon{width:var(--icon-sm);height:var(--icon-sm)}
+
+/* ── Fields strip (core/fields.js — APP src/design/no-modal rule 1) ──
+   A thing's fields on its own page: label left, value right; a box shows
+   its border only on hover / focus, so the strip reads as text, not a form. */
+.fstrip{display:grid;gap:2px;margin:0 0 14px;padding:6px 0;border-bottom:1px solid var(--border)}
+.fstrip-pair{display:grid;grid-template-columns:minmax(90px,150px) 1fr;align-items:center;gap:10px;margin:0;min-height:var(--row-compact,30px)}
+.fstrip-k{font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2)}
+.fstrip-v{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.fstrip-v input,.fstrip-v select{width:auto;min-width:0;max-width:420px;flex:1 1 200px;border-color:transparent;background:transparent}
+.fstrip-v input:hover,.fstrip-v select:hover{border-color:var(--border)}
+.fstrip-v input:focus,.fstrip-v select:focus{border-color:var(--accent);background:var(--surface)}
+.fstrip-hint{flex-basis:100%;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2))}
+.btn.fstrip-color{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;background:transparent;border:1px solid transparent}
+.btn.fstrip-color:hover{border-color:var(--border)}
+.fstrip-dot{width:14px;height:14px;border-radius:50%;background:var(--fc,var(--accent))}
+.fstrip-swatches{display:grid;grid-template-columns:repeat(8,auto);gap:6px;padding:4px}
+/* the label typed on a board's line (core/fields.js labelEditPopover) */
+.lbl-edit{display:flex;align-items:center;gap:4px;padding:2px}
+.lbl-edit .rename-input{width:200px}
+/* a chat bubble being edited in place (mod/chatscribe.js editChatMessageInPlace) */
+.chs-edit{display:block;width:100%;min-width:220px;field-sizing:content;max-height:12lh;resize:none;font:inherit}
+/* the selected thing's fields under a module's toolbar — an Exhibitor
+   relation, a Wanderer pin (no-modal #07, #08) */
+.sel-panel{margin:0 0 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
+.sel-panel-h{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);font-weight:600}
+.sel-panel .fstrip{margin:0;padding:6px 10px;border-bottom:0}
+.sel-panel .cls-adv{margin:0 10px 8px}

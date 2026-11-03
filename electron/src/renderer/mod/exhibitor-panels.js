@@ -31,7 +31,7 @@ function buildExhibitorInspectorHtml(d, n) {
     const out = r.from_key === n.linker_key;
     const other = out ? r.to_key : r.from_key;
     const arrow = r.directed === 0 ? '—' : out ? '→' : '←';
-    return listLinkRowHtml({ arrow, name: exhNameOf(other), onclick: `openExhibitorRelationModal(${r.id})`,
+    return listLinkRowHtml({ arrow, name: exhNameOf(other), onclick: `selectExhibitorRelation(${r.id})`,
       label: r.label || r.rel_type ? [r.label, r.rel_type && `(${exhRelTypeText(r.rel_type)})`, exhSpanText(r)].filter(Boolean).join(' ') : '' });
   }).join('');
   return `<aside class="exh-insp">

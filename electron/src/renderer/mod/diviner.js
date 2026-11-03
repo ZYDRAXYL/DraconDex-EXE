@@ -71,7 +71,7 @@ function buildDivinerMainHtml(m, ic) {
   const rows = d.tables.map(tb => listRowHtml({ density: 'compact', state: { selected: tb.id === d.selectedId }, onclick: `selectDivinerTable(${tb.id})`,
     title: tb.name, meta: tb.mode === 'join' ? t('divModeJoin') : tb.dice || t('divWeighted'), count: tb.entry_count, attrs: 'data-no-i18n' })).join('');
   const column = `<div class="author-chapters">
-    ${listHtml({ list: 'diviner-tables', aria: m.name, body: rows + listRowHtml({ density: 'compact', icon: I.plus, title: t('divNewTable'), cls: 'ls-add', onclick: `openDivinerTableModal(${m.id})` }) })}
+    ${listHtml({ list: 'diviner-tables', aria: m.name, body: rows + listRowHtml({ density: 'compact', icon: I.plus, title: t('divNewTable'), cls: 'ls-add', onclick: `newDivinerTable(${m.id})` }) })}
   </div>`;
   const tb = divTable();
   return `${toolbar}<div class="author-layout">${column}<div class="author-main div-main">${tb ? divinerTableHtml(tb, d) : ''}</div></div>`;
@@ -162,52 +162,19 @@ async function clearDivinerHistory() {
   await refreshDiviner();
 }
 
-// ── tables ──────────────────────────────────────────────────────────────
-function openDivinerTableModal(moduleId, id = null) {
-  const tb = id ? S.divinerData?.tables.find(r => r.id === id) : null;
-  const mode = tb?.mode || 'pick';
-  openModal(tb ? t('divEditTable') : t('divNewTable'), `
-    <div class="fg"><label>${t('name')} *</label><input id="dvt-name" value="${x(tb?.name || '')}"></div>
-    <div class="fg"><label>${t('divMode')}</label>
-      <select id="dvt-mode" onchange="q('#dvt-dice-row').style.display=this.value==='join'?'none':''">
-        <option value="pick"${mode === 'pick' ? ' selected' : ''}>${t('divModePick')}</option>
-        <option value="join"${mode === 'join' ? ' selected' : ''}>${t('divModeJoin')}</option>
-      </select>
-    </div>
-    <div class="fg" id="dvt-dice-row"${mode === 'join' ? ' style="display:none"' : ''}><label>${t('divDice')}</label>
-      <input id="dvt-dice" value="${x(tb?.dice || '')}" placeholder="1d20" data-no-i18n>
-      <p class="drafter-hint">${t('divDiceHint')}</p>
-    </div>
-    <div class="mfoot">
-      ${tb ? `<button class="btn btn-d" onclick="deleteDivinerTableRow(${tb.id})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitDivinerTable(${moduleId},${tb ? tb.id : 'null'})">${tb ? t('save') : t('create')}</button>
-    </div>`);
-  setTimeout(() => q('#dvt-name')?.focus(), 60);
+// ── tables ──
+// No modal (APP src/design/no-modal #11): a new table is made at once and
+// opens on its page with its name selected; that page edits name, mode, dice.
+async function newDivinerTable(moduleId) {
+  const r = await api.diviner.createTable(moduleId, t('divNewTableName'), '', 'pick');
+  if (!r?.ok) { toast(t('driveErrServer'), 'error'); return; }
+  await api.module.setUi(moduleId, 'activeTable', String(r.id));
+  invalidateNestItems(moduleId, 1);
+  await openItemNode('diviner', moduleId, r.id);
+  fieldsFocus('name');
 }
 
-async function submitDivinerTable(moduleId, id) {
-  const name = q('#dvt-name').value.trim();
-  if (!name) { toast(t('nameRequired'), 'err'); q('#dvt-name')?.focus(); return; }
-  const mode = q('#dvt-mode').value;
-  const dice = mode === 'join' ? '' : q('#dvt-dice').value;
-  const r = id ? await api.diviner.updateTable(id, name, dice, mode) : await api.diviner.createTable(moduleId, name, dice, mode);
-  if (!r?.ok) { toast(t(r?.code === 'bad_dice' ? 'divBadDice' : 'driveErrServer'), 'error'); return; }
-  closeModal();
-  if (!id) await api.module.setUi(moduleId, 'activeTable', String(r.id));
-  await refreshDiviner();
-  toast(t(id ? 'saved' : 'created'), 'ok');
-}
-
-async function deleteDivinerTableRow(id) {
-  const tb = S.divinerData?.tables.find(r => r.id === id);
-  if (!await uiConfirm(`${t('delete')} "${tb?.name || ''}"?`)) return;
-  await api.diviner.deleteTable(id);
-  closeModal();
-  await refreshDiviner();
-  toast(t('deleted'), 'ok');
-}
-
+// ──────────────────────────────────────────────────────────────
 // ── entries ─────────────────────────────────────────────────────────────
 async function addDivinerEntry() {
   const tb = divTable();
@@ -244,7 +211,7 @@ async function openDivinerLinkModal(entryId) {
   const blocked = new Set();
   await Promise.all(tables.map(async tb => { if (tb.id === d.selectedId || await api.diviner.wouldCycle(d.selectedId, tb.id)) blocked.add(tb.id); }));
   const cur = e.linker_key || '';
-  openModal(t('divLinkTo'), `
+  openPicker(t('divLinkTo'), `
     <div class="fg"><label>${t('divRollTable')}</label>
       <select id="dvl-table"><option value="">—</option>
         ${tables.map(tb => `<option value="divt_${tb.id}"${cur === `divt_${tb.id}` ? ' selected' : ''}${blocked.has(tb.id) ? ' disabled' : ''}>${x(tb.module_name)} › ${x(tb.name)}${blocked.has(tb.id) ? ' ⟲' : ''}</option>`).join('')}

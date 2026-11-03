@@ -148,7 +148,7 @@ async function mountExhibitorScene() {
         dash: e2.wiki ? [6, 5] : undefined, hitStrokeWidth: 10, opacity: 0.85,
       });
       if (e2.id) {
-        arrow.on('click', () => openExhibitorRelationModal(e2.id));
+        arrow.on('click', () => selectExhibitorRelation(e2.id));
         arrow.on('mouseenter', () => { stage.container().style.cursor = 'pointer'; });
         arrow.on('mouseleave', () => { stage.container().style.cursor = ''; });
       }
@@ -457,6 +457,5 @@ function finishExhibitorLink(targetId) {
   const from = exhNodeById(d.linkFrom), to = exhNodeById(targetId);
   d.linkFrom = null;
   if (!from?.linker_key || !to?.linker_key || from.id === to.id) { renderNexusHome(); return; }
-  renderNexusHome();
-  openExhibitorRelationModal(null, from.linker_key, to.linker_key);
+  newExhibitorRelation(from.linker_key, to.linker_key);
 }

@@ -312,14 +312,14 @@ async function openNarratorTalkLinkModal(talkId) {
     ? narratorEntityByKey(d, tk.linker_key) : null;
   const offered = cur ? [cur, ...list] : list;
   if (!offered.length) {
-    openModal(t('addLinkedElement'), `
+    openPicker(t('addLinkedElement'), `
       <div class="empty" style="padding:18px"><p>${t('narratorLinkNoModule')}</p></div>
       <div class="mfoot"><button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button></div>`);
     return;
   }
   const opts = `<option value="">--</option>` + offered.map(e =>
     `<option value="${x(e.key)}" ${tk.linker_key === e.key ? 'selected' : ''}>${x(e.name)} — ${x(narratorEntityModuleLabel(e))}</option>`).join('');
-  openModal(t('addLinkedElement'), `
+  openPicker(t('addLinkedElement'), `
     <div class="fg"><label>${t('element')}</label><select id="nt-link-key">${opts}</select></div>
     <div class="mfoot">
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
@@ -354,7 +354,7 @@ async function openNarratorLinkFilterModal(moduleId) {
     <div class="togglerow" onclick="toggleNarratorLinkFilterType(this)" data-type="${ty}">
       <span class="tg${allow.includes(ty) ? ' on' : ''}"></span><span data-no-i18n>${ty}</span>
     </div>`).join('');
-  openModal(t('narratorLinkFilter'), `
+  openPicker(t('narratorLinkFilter'), `
     <div id="nar-link-filter-rows">${rows}</div>
     <div class="mfoot">
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>

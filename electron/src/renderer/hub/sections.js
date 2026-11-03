@@ -214,7 +214,7 @@ function buildHubHtml() {
     </span></div>
     ${nestLocateWarnHtml()}
     ${nestFilterHtml()}
-    <div class="acc-body" data-key="nest"><div id="nest-tree-body" role="tree" aria-label="${x(S.nexus.name)}">${nestTreeBodyHtml()}</div></div>
+    <div class="acc-body" data-key="nest" oncontextmenu="openNestRootContextMenu(event)"><div id="nest-tree-body" role="tree" aria-label="${x(S.nexus.name)}">${nestTreeBodyHtml()}</div></div>
   </div>`;
 }
 

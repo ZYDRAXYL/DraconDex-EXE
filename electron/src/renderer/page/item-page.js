@@ -11,22 +11,39 @@
 // block, item.body. Its HTML is built by openItemNode (mod/item.js) the way
 // it always was, so this component only places it.
 
+const itemNodeOf = (c) => { const node = S.activeItemNode; return node && node.moduleId === c.page.moduleId && node.itemKey === c.itemKey ? node : null; };
+// A page laid out before item.fields existed has no such block: its fields
+// then lead item.body, so they are never missing from the page (rule 2 —
+// the fields can be moved and folded, not hidden).
+const itemPageHasFields = (c) => (c.page?.blocks || []).some((b) => b.component === 'item.fields');
+
 registerComponent('item.body', {
   kind: 'item', labelKey: 'pbItemBody', once: true,
-  render: (c) => {
-    const node = S.activeItemNode;
-    return node && node.moduleId === c.page.moduleId && node.itemKey === c.itemKey ? node.bodyHtml : '';
-  },
+  render: (c) => { const node = itemNodeOf(c); return node ? (itemPageHasFields(c) ? '' : node.fieldsHtml || '') + node.bodyHtml : ''; },
   mount: (c) => {
-    const node = S.activeItemNode;
-    if (node && node.moduleId === c.page.moduleId && node.itemKey === c.itemKey) ITEM_KIND[node.itemKind]?.mount?.(node);
+    const node = itemNodeOf(c);
+    if (!node) return;
+    if (!itemPageHasFields(c)) itemFieldsMount(); // mod/item.js
+    ITEM_KIND[node.itemKind]?.mount?.(node);
   },
 });
 
-// A new module's element pages start as the element's editor, then what
-// used to be in the dock for it: its properties and links.
-function itemPageLayout() {
-  return [{ component: 'item.body' }, { component: 'core.properties' }, { component: 'core.related' }];
+// The element's own fields (APP src/design/no-modal, rule 2): the fields
+// strip (core/fields.js) as a block of the page, so Page edit can move it
+// or fold it (the collapsible style) like any other. It cannot be hidden:
+// a style never hides it (page/style.js pbHideOf), and removed, the fields
+// go back to the top of item.body.
+registerComponent('item.fields', {
+  kind: 'item', labelKey: 'pbItemFields', once: true,
+  render: (c) => itemNodeOf(c)?.fieldsHtml || '',
+  mount: (c) => { if (itemNodeOf(c)) itemFieldsMount(); },
+});
+
+// A new module's element pages start as the element's fields and editor,
+// then what used to be in the dock for it: its properties and links.
+function itemPageLayout(m) {
+  const fields = ITEM_KIND[m?.kind]?.fields ? [{ component: 'item.fields' }] : [];
+  return [...fields, { component: 'item.body' }, { component: 'core.properties' }, { component: 'core.related' }];
 }
 
 const pbItemKeyOf = (node) => node?.itemKey ?? null;

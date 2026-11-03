@@ -102,7 +102,7 @@ function pbPopStyleHtml(iid, b) {
     const name = t(`pbAcc${pbCap(a)}`);
     return `<button class="btn ${pbAccClass(a)}${on ? ' on' : ''}" role="radio" aria-checked="${on}" title="${x(name)}" aria-label="${x(name)}" onclick="pbStyleSet(${xj(iid)},'accent',${xj(a)})"></button>`;
   }).join('');
-  const hideVals = b.component === 'item.body' ? ['none'] : PB_STYLE.hideOn;
+  const hideVals = pbNeverHidden(b.component) ? ['none'] : PB_STYLE.hideOn;
   return `<h6>${t('pbStyleVariant')}</h6>${pbSegHtml(iid, 'variant', PB_STYLE.variant, st.variant, k('pbVariant'))}
     <h6>${t('pbStyleAccent')}</h6><div class="pb-sw" role="radiogroup">${sw}</div>
     <h6>${t('pbStyleWidth')}</h6>${pbSegHtml(iid, 'width', PB_STYLE.width, st.width, k('pbWidth'))}
@@ -372,7 +372,7 @@ function pbStyleOnto(o, style) {
   const own = o.config?.style || {};
   if (own.anchor) s.anchor = own.anchor;
   if (own.header?.title) s.header = { ...(s.header || {}), title: own.header.title };
-  if (o.component === 'item.body') delete s.hideOn;
+  if (pbNeverHidden(o.component)) delete s.hideOn;
   return s;
 }
 

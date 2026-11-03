@@ -94,6 +94,11 @@ const COMMANDS = {
   'app.importFolder': { label: 'importFolder', icon: 'import', scope: 'app', when: () => !!S.nexus, run: () => importDockPickFolder(null), surfaces: ['nest.head'] },
   'app.newModule': { label: 'createMajorModule', icon: 'plus', scope: 'app', run: (c, el) => openKindPopup(null, el || paletteAnchor()), surfaces: ['nest.head'] },
   'app.settings': { label: 'settingOpenWindow', icon: 'settings', scope: 'app', run: () => openSettingWindow(), surfaces: ['settings.menu'] },
+  // The Nest's empty space is the Nexus root (hub/menus.js 'nest.root')
+  'root.create': { label: 'create', icon: 'plus', scope: 'app', when: () => !!S.nexus, run: () => openKindPopup(null, ctxAnchor(null)), palette: () => openKindPopup(null, paletteAnchor()), surfaces: ['nest.ctx'] },
+  'root.importModule': { label: 'settingDbImportModule', icon: 'import', scope: 'app', when: () => !!S.nexus, run: () => ctxImportModule(null), surfaces: ['nest.ctx'] },
+  'root.importMenu': { label: 'menuImport', icon: 'import', scope: 'app', when: () => !!S.nexus, sub: () => nestRootImportItems(), surfaces: ['nest.ctx'] },
+  'root.settings': { label: 'nexusSettingsThis', icon: 'settings', scope: 'app', when: () => !!S.nexus, run: () => openNexusModal(S.nexus.id), surfaces: ['nest.ctx'] },
   'dock.addLink': { label: 'addAssetLink', icon: 'plus', scope: 'app', run: () => openAddAssetUrlModal(null), surfaces: ['nest.head'] },
   'dock.relinkFolder': { label: 'assetRelinkFolder', icon: 'folder', scope: 'app', when: () => (S.importFiles || []).some(f => f.missing), run: () => relinkMissingFromFolder(), surfaces: ['problems'] },
   // v5 Part 8 (§12.5/§12.8): the page's own buttons.
@@ -163,7 +168,7 @@ const COMMANDS = {
     surfaces: ['nest.ctx'],
   },
   'module.rename': { label: 'rename', icon: 'edit', scope: 'module', run: (c) => startRenameModule(c.moduleId, 'nest'), surfaces: ['nest.ctx'] },
-  'module.handle': { label: 'moduleHandle', icon: 'hashtag', scope: 'module', run: (c) => startEditModuleHandle(c.moduleId, 'head'), surfaces: ['nest.ctx'] },
+  'module.handle': { label: 'moduleHandle', icon: 'hashtag', scope: 'module', run: (c) => startEditModuleHandle(c.moduleId, 'nest'), palette: (c) => startEditModuleHandle(c.moduleId, 'head'), surfaces: ['nest.ctx'] },
   'module.icon': { label: 'clsColorIcon', icon: 'colors', scope: 'module', run: (c, el) => openModuleIconPopup(c.moduleId, el || ctxAnchor()), surfaces: ['nest.ctx', 'classifier.ctx'] },
   'module.duplicate': { label: 'duplicate', icon: 'copy', scope: 'module', run: (c) => duplicateModuleNode(c.moduleId), surfaces: ['nest.ctx'] },
   'module.moveTo': {
@@ -219,9 +224,9 @@ const COMMANDS = {
   // ── Classifier ───────────────────────────────────────────────────────
   'classifier.quickStart': { label: 'clsQuickStart', icon: 'plus', scope: 'kind:classifier', when: (c) => !clsData(c?.moduleId).objects.length || c.always, run: (c) => classifierQuickStart(c.moduleId), surfaces: ['empty.state'] },
   'classifier.addObject': { label: 'addObject', icon: 'plus', scope: 'kind:classifier', run: (c) => createClassifierObjectQuick(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
-  'classifier.fields': { label: 'clsFieldsOfCategory', icon: 'edit', scope: 'kind:classifier', run: (c) => openClassifierFieldsModal(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
-  'classifier.fieldType': { label: 'clsFieldChangeType', icon: 'fields', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFieldsModal(c.moduleId, c.tplId), surfaces: ['classifier.ctx'] },
-  'classifier.fieldRename': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFieldsModal(c.moduleId, c.tplId), surfaces: ['classifier.ctx'] },
+  'classifier.fields': { label: 'clsFieldsOfCategory', icon: 'edit', scope: 'kind:classifier', run: (c) => openClassifierFields(c.moduleId), surfaces: ['classifier.toolbar', 'classifier.ctx'] },
+  'classifier.fieldType': { label: 'clsFieldChangeType', icon: 'fields', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFields(c.moduleId, c.tplId, 'type'), surfaces: ['classifier.ctx'] },
+  'classifier.fieldRename': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => openClassifierFields(c.moduleId, c.tplId, 'name'), surfaces: ['classifier.ctx'] },
   'classifier.fieldDelete': { label: 'delete', icon: 'delete', danger: true, scope: 'kind:classifier', when: (c) => c?.tplId != null, run: (c) => deleteClassifierFieldUndoable(c.tplId), surfaces: ['classifier.ctx'] },
   'classifier.openObject': { label: 'open', icon: 'eye', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => openItemNode('classifier', c.moduleId, c.objectId), surfaces: ['classifier.ctx'] },
   'classifier.renameObject': { label: 'rename', icon: 'edit', scope: 'kind:classifier', when: (c) => c.objectId != null, run: (c) => startRenameClsObject(c.objectId), surfaces: ['classifier.ctx'] },
@@ -252,10 +257,10 @@ const COMMANDS = {
   'wanderer.place': { label: 'addMapEvent', icon: 'pin', scope: 'kind:wanderer', when: () => !!(S.wandererData?.map && S.wandererData?.timeline), run: () => toggleWandererPlacing(), surfaces: ['wanderer.toolbar'] },
 
   // ── Chronicler (§10.6 measures the floating strip on it) ─────────────
-  'chronicler.addEvent': { label: 'addEvent', icon: 'plus', scope: 'kind:chronicler', when: () => !!S.chroniclerData?.activeId, run: () => openChroniclerEventModal(S.chroniclerData.activeId), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
-  'chronicler.logSession': { label: 'chrLogSession', icon: 'timeline', scope: 'kind:chronicler', when: () => !!S.chroniclerData, run: (c) => openPlaySessionModal(c.moduleId ?? S.chroniclerData.moduleId), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
-  'chronicler.addLine': { label: 'addTimelineLine', icon: 'plus', scope: 'kind:chronicler', when: () => !!S.chroniclerData && !S.chroniclerData.timelines.length, run: (c) => openChroniclerTimelineModal(c.moduleId), surfaces: ['empty.state'] },
-  'chronicler.editLine': { label: 'chrEditLine', icon: 'edit', scope: 'kind:chronicler', when: () => !!S.chroniclerData?.activeId, run: (c) => openChroniclerTimelineModal(c.moduleId, S.chroniclerData.activeId), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
+  'chronicler.addEvent': { label: 'addEvent', icon: 'plus', scope: 'kind:chronicler', when: () => !!S.chroniclerData?.activeId, run: () => newChroniclerEvent(S.chroniclerData.activeId), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
+  'chronicler.logSession': { label: 'chrLogSession', icon: 'timeline', scope: 'kind:chronicler', when: () => !!S.chroniclerData, run: (c) => logPlaySession(c.moduleId ?? S.chroniclerData.moduleId), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
+  'chronicler.addLine': { label: 'addTimelineLine', icon: 'plus', scope: 'kind:chronicler', when: () => !!S.chroniclerData && !S.chroniclerData.timelines.length, run: (c) => newChroniclerTimeline(c.moduleId), surfaces: ['empty.state'] },
+  'chronicler.editLine': { label: 'chrEditLine', icon: 'edit', scope: 'kind:chronicler', when: () => !!S.chroniclerData?.activeId, run: () => toggleChroniclerLinePanel(), checked: () => !!S.chroniclerData?.lineEdit, surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
   'chronicler.switchLine': {
     label: 'chrSwitchLine', icon: 'timeline', scope: 'kind:chronicler', when: () => (S.chroniclerData?.timelines.length || 0) > 1,
     sub: (c) => S.chroniclerData.timelines.map(tl => ({ label: tl.line_name || '—', checked: tl.id === S.chroniclerData.activeId, onClick: () => selectChroniclerTimeline(c.moduleId, tl.id) })),
@@ -265,18 +270,18 @@ const COMMANDS = {
   'chronicler.resetView': { label: 'chrResetView', icon: 'return', scope: 'kind:chronicler', when: () => S.chroniclerData?.view === 'downline', run: () => resetChroniclerDownlineView(), surfaces: ['chronicler.toolbar', 'canvas.ctx'] },
 
   // ── Narrator / Author / Scribe ───────────────────────────────────────
-  'narrator.addDialogue': { label: 'addDialogue', icon: 'plus', scope: 'kind:narrator', run: (c) => openNarratorDialogueModal(c.moduleId), surfaces: ['narrator.toolbar', 'canvas.ctx'] },
-  'author.newChapter': { label: 'writeChapterNew', icon: 'plus', scope: 'kind:author', run: (c) => openAuthorChapterModal(c.moduleId), surfaces: ['author.toolbar'] },
+  'narrator.addDialogue': { label: 'addDialogue', icon: 'plus', scope: 'kind:narrator', run: (c) => newNarratorDialogue(c.moduleId), surfaces: ['narrator.toolbar', 'canvas.ctx'] },
+  'author.newChapter': { label: 'writeChapterNew', icon: 'plus', scope: 'kind:author', run: (c) => newAuthorChapter(c.moduleId), surfaces: ['author.toolbar'] },
   // v5 Part 7 (§11.5) — Diviner.
-  'diviner.newTable': { label: 'divNewTable', icon: 'plus', scope: 'kind:diviner', run: (c) => openDivinerTableModal(c.moduleId), surfaces: ['diviner.toolbar', 'empty.state'] },
+  'diviner.newTable': { label: 'divNewTable', icon: 'plus', scope: 'kind:diviner', run: (c) => newDivinerTable(c.moduleId), surfaces: ['diviner.toolbar', 'empty.state'] },
   'diviner.roll': { label: 'divRoll', icon: 'dice', scope: 'kind:diviner', when: () => !!divTable(), run: () => rollDiviner(), surfaces: ['diviner.toolbar'] },
   'diviner.newEntry': { label: 'divNewEntry', icon: 'plus', scope: 'kind:diviner', when: () => !!divTable(), run: () => addDivinerEntry(), surfaces: ['diviner.toolbar'] },
-  'diviner.editTable': { label: 'divEditTable', icon: 'edit', scope: 'kind:diviner', when: () => !!divTable(), run: (c) => openDivinerTableModal(c.moduleId, S.divinerData.selectedId), surfaces: ['diviner.toolbar'] },
+  'diviner.editTable': { label: 'divEditTable', icon: 'edit', scope: 'kind:diviner', when: () => !!divTable(), run: (c) => openItemNode('diviner', c.moduleId, S.divinerData.selectedId), surfaces: ['diviner.toolbar'] },
   'diviner.rollDice': { label: 'divRollDice', icon: 'dice', scope: 'kind:diviner', run: () => rollDivinerDiceOnly(), surfaces: ['diviner.toolbar'] },
-  'scribe.newSession': { label: 'chatNewSession', icon: 'plus', scope: 'kind:scribe', run: (c) => openChatSessionModal(c.moduleId), surfaces: ['scribe.toolbar'] },
+  'scribe.newSession': { label: 'chatNewSession', icon: 'plus', scope: 'kind:scribe', run: (c) => newChatSession(c.moduleId), surfaces: ['scribe.toolbar'] },
 
   // ── Sketcher / Designer ──────────────────────────────────────────────
-  'sketcher.newPage': { label: 'newPage', icon: 'plus', scope: 'kind:sketcher', run: (c) => openSketchPageModal(c.moduleId), surfaces: ['sketcher.toolbar', 'canvas.ctx'] },
+  'sketcher.newPage': { label: 'newPage', icon: 'plus', scope: 'kind:sketcher', run: (c) => newSketchPage(c.moduleId), surfaces: ['sketcher.toolbar', 'canvas.ctx'] },
   'sketcher.exportPng': { label: 'exportPng', icon: 'export', scope: 'kind:sketcher', when: () => !!S.sketcherData?.pageId, run: () => exportSketchPng(), surfaces: ['sketcher.board', 'canvas.ctx'] },
   'sketcher.pen': { label: 'penTool', scope: 'kind:sketcher', checked: () => skTool.mode === 'pen', run: () => setSketchTool('pen'), surfaces: ['sketcher.board', 'canvas.ctx'] },
   'sketcher.eraser': { label: 'eraserTool', scope: 'kind:sketcher', checked: () => skTool.mode === 'eraser', run: () => setSketchTool('eraser'), surfaces: ['sketcher.board', 'canvas.ctx'] },
@@ -294,7 +299,7 @@ const COMMANDS = {
   'designer.linkFilter': { label: 'narratorLinkFilter', icon: 'options', scope: 'kind:designer', run: (c) => openDesignerLinkFilterModal(c.moduleId), surfaces: ['canvas.ctx'] },
 
   // ── Exhibitor ────────────────────────────────────────────────────────
-  'exhibitor.addRelation': { label: 'addRelation', icon: 'plus', scope: 'kind:exhibitor', run: () => openExhibitorRelationModal(), surfaces: ['exhibitor.toolbar', 'canvas.ctx'] },
+  'exhibitor.addRelation': { label: 'addRelation', icon: 'plus', scope: 'kind:exhibitor', run: () => newExhibitorRelation(), surfaces: ['exhibitor.toolbar', 'canvas.ctx'] },
   'exhibitor.editFilter': { label: 'editFilter', icon: 'edit', scope: 'kind:exhibitor', run: (c, el) => openSavedFilterPopup(el || paletteAnchor(), c.moduleId, S.exhibitorData?.def), surfaces: ['exhibitor.toolbar'] },
   'exhibitor.treeLayout': { label: 'exhTreeLayout', icon: 'projects', scope: 'kind:exhibitor', when: () => S.exhibitorData?.view !== 'scene' && !!S.exhibitorData?.relations?.length, run: () => openExhibitorTreeModal(), surfaces: ['exhibitor.toolbar', 'canvas.ctx'] },
   'exhibitor.openScene': { label: 'exhibitorOpenScene', icon: 'relation', scope: 'kind:exhibitor', when: () => S.exhibitorData?.view !== 'scene', run: () => setExhibitorView('scene'), surfaces: ['canvas.ctx'] },

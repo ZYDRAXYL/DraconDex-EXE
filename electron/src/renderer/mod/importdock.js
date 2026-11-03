@@ -215,7 +215,7 @@ async function importDockPickFolder(parentModuleId) {
 // URL asset (§2.2): metadata only; opening is shell.openExternal in main.
 function openAddAssetUrlModal(moduleId) {
   closeAllPopups();
-  openModal(t('addAssetLink'), `
+  openPicker(t('addAssetLink'), `
     <div class="fg"><label>${t('assetUrl')}</label><input id="au-url" type="url" placeholder="https://"></div>
     <div class="fg"><label>${t('assetNameOptional')}</label><input id="au-name"></div>
     <div class="mfoot">

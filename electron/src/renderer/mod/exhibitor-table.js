@@ -72,7 +72,7 @@ function buildExhibitorEdgesHtml(d) {
       <td data-no-i18n>${e2.wiki ? '┄' : e2.directed ? '→' : '—'}</td>
       <td>${x(exhNameOf(e2.to))}</td>
       <td>${e2.id ? `<span class="acts">
-        <button class="btn btn-g btn-i" onclick="openExhibitorRelationModal(${e2.id})" title="${t('edit')}">${I.edit}</button>
+        <button class="btn btn-g btn-i" onclick="selectExhibitorRelation(${e2.id})" title="${t('edit')}">${I.edit}</button>
         <button class="btn btn-g btn-i" onclick="deleteExhibitorRelation(${e2.id})" title="${t('delete')}">${I.delete}</button>
       </span>` : ''}</td>
     </tr>`).join('');

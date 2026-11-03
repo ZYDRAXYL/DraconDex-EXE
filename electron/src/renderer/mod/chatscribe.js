@@ -81,7 +81,7 @@ function buildChatScribeMainHtml(m, c) {
       <span class="name">${x(s.name)}<small class="chs-snippet">${x(String(s.last_message || '').slice(0, 40))}</small></span>
       <span class="cnt" data-no-i18n>${s.message_count}</span>
       <span class="acts">
-        <button class="btn btn-g btn-i" onclick="event.stopPropagation();openChatSessionModal(${m.id},${s.id})" title="${t('edit')}">${I.edit}</button>
+        <button class="btn btn-g btn-i" onclick="event.stopPropagation();openItemNode('scribe',${m.id},${s.id})" title="${t('edit')}">${I.edit}</button>
       </span>
     </div>`).join('');
   const column = `<div class="author-chapters chs-sessions">
@@ -117,12 +117,12 @@ function buildChatBubblesHtml(session, messages, opts = {}) {
     }
     const bg = g.color_code ? ` style="background:${x(g.color_code)}"` : '';
     html += `<div class="chs-row${g.side === 'l' ? ' left' : ''}">
-      <div class="chs-bubble" data-msg-id="${g.id}"${bg}>
+      <div class="chs-bubble" data-msg-id="${g.id}"${bg} ondblclick="editChatMessageInPlace(${g.id},this)">
         <span class="chs-text">${_mdInline(g.message, resolve)}</span>
         <span class="chs-time" data-no-i18n>${chsTime(g.create_at)}</span>
         <span class="chs-acts">
           <button class="btn btn-g btn-i" onclick="event.stopPropagation();openChatBubbleColorPopup(${g.id},this)" title="${t('color')}">${I.layer}</button>
-          <button class="btn btn-g btn-i" onclick="event.stopPropagation();openChatMessageModal(${g.id})" title="${t('edit')}">${I.edit}</button>
+          <button class="btn btn-g btn-i" onclick="event.stopPropagation();editChatMessageInPlace(${g.id},this)" title="${t('edit')}">${I.edit}</button>
           <button class="btn btn-g btn-i" onclick="event.stopPropagation();deleteChatMessageRow(${g.id})" title="${t('delete')}">${I.delete}</button>
         </span>
       </div>
@@ -151,7 +151,7 @@ function openChatLinkPicker(inputId) {
   if (!S.nexus) return;
   api.wiki.quickIndex(S.nexus.id).then(ix => {
     const opts = ix.map(e => `<option value="${x(e.name)}">${x(e.name)} (${x(e.type)})</option>`).join('');
-    openModal(t('moduleLink'), `
+    openPicker(t('moduleLink'), `
       <div class="fg"><label>${t('moduleLink')}</label><select id="chs-link-pick">${opts}</select></div>
       <div class="mfoot">
         <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
@@ -290,41 +290,14 @@ function buildChatTranscriptHtml(d) {
 }
 
 // ── Session + message CRUD ──────────────────────────────────────────────
-function openChatSessionModal(moduleId, id = null) {
-  const ses = id ? S.chatScribeData?.sessions.find(s => s.id === id) : null;
-  openModal(ses ? t('moduleEdit') : t('chatNewSession'), `
-    <div class="fg"><label>${t('name')} *</label><input id="cs-name" value="${x(ses?.name || '')}"></div>
-    <div class="mfoot">
-      ${ses ? `<button class="btn btn-d" onclick="deleteChatSessionRow(${ses.id})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitChatSession(${moduleId},${ses ? ses.id : 'null'})">${ses ? t('save') : t('create')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#cs-name').focus(), 60);
-}
-
-async function submitChatSession(moduleId, id) {
-  const name = pbQOr('#cs-name').value.trim();
-  if (!name) return;
-  if (id) await api.chatscribe.renameSession(id, name);
-  else {
-    const newId = await api.chatscribe.createSession(moduleId, name);
-    S.chatScribeData.selectedId = newId;
-  }
-  closeModal();
-  await reloadSource(moduleId);
-  invalidateNestItems(moduleId, id ? 0 : 1);
-  toast(id ? t('saved') : t('created'), 'ok');
-}
-
-async function deleteChatSessionRow(id) {
-  if (!await uiConfirm(t('confirmDeleteItem'))) return;
-  await api.chatscribe.deleteSession(id);
-  closeModal();
-  const d = S.chatScribeData;
-  if (d.selectedId === id) d.selectedId = null;
-  await reloadSource(d.moduleId);
-  invalidateNestItems(d.moduleId, -1);
-  toast(t('deleted'), 'ok');
+// No modal (APP src/design/no-modal #15): a new session is made at once and
+// opens on its page with its name selected.
+async function newChatSession(moduleId) {
+  const id = await api.chatscribe.createSession(moduleId, t('chatNewSessionName'));
+  if (S.chatScribeData?.moduleId === moduleId) S.chatScribeData.selectedId = id;
+  invalidateNestItems(moduleId, 1);
+  await openItemNode('scribe', moduleId, Number(id));
+  fieldsFocus('name');
 }
 
 // Current session id regardless of which of the two contexts (Plan part4)
@@ -349,27 +322,42 @@ async function refreshChatScribeMessages() {
   renderNexusHome();
 }
 
-async function openChatMessageModal(id) {
+// No modal (APP src/design/no-modal #16): double-click a bubble (or its ✎)
+// and the bubble itself becomes the box — [[ links autocomplete as in the
+// send box (data-wiki). Enter or clicking away saves, Shift+Enter is a new
+// line, Esc leaves it.
+async function editChatMessageInPlace(id, from) {
+  const bubble = from?.closest('.chs-bubble');
+  const span = bubble?.querySelector('.chs-text');
+  if (!span || bubble.querySelector('.chs-edit')) return;
   const sessionId = chatScribeActiveSessionId();
-  const messages = sessionId ? await api.chatscribe.getMessages(sessionId) : [];
-  const g = messages.find(v => v.id === id);
+  const g = (sessionId ? await api.chatscribe.getMessages(sessionId) : []).find((v) => v.id === id);
   if (!g) return;
-  openModal(t('moduleEdit'), `
-    <div class="fg"><label>${t('content')}</label><textarea id="cm-text" data-wiki rows="3">${x(g.message)}</textarea></div>
-    <div class="mfoot">
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitChatMessage(${id})">${t('save')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#cm-text').focus(), 60);
-}
-
-async function submitChatMessage(id) {
-  const text = pbQOr('#cm-text').value.trim();
-  if (!text) return;
-  await api.chatscribe.updateMessage(id, text);
-  closeModal();
-  await refreshChatScribeMessages();
-  toast(t('saved'), 'ok');
+  const ta = document.createElement('textarea');
+  ta.className = 'chs-edit';
+  ta.dataset.wiki = '';
+  ta.value = g.message;
+  ta.setAttribute('aria-label', t('content'));
+  span.hidden = true;
+  span.after(ta);
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    const v = ta.value.trim();
+    if (save && v && v !== g.message) { await api.chatscribe.updateMessage(id, v); await refreshChatScribeMessages(); updateStatusBar({ saveState: t('saved') }); }
+    else { ta.remove(); span.hidden = false; }
+  };
+  ta.addEventListener('pointerdown', (e) => e.stopPropagation()); // not a bubble drag
+  ta.addEventListener('dblclick', (e) => e.stopPropagation());
+  ta.addEventListener('keydown', (e) => {
+    if (document.querySelector('.wiki-field-ac')) return; // the [[ list takes Enter / Esc (core/wiki-field.js)
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  ta.addEventListener('blur', () => finish(true));
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
 }
 
 async function deleteChatMessageRow(id) {

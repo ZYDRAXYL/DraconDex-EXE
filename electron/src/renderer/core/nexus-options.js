@@ -123,3 +123,20 @@ async function nexusShareEmail(vaultName) {
     `${t('nexusShareEmailBody')}\n\n${S._sharePath || ''}\n`,
   );
 }
+
+// No modal (APP src/design/no-modal #01): a Nexus that is not the open one —
+// the Welcome list, the no-vault picker — is renamed in its own row (its
+// Edit / F2). Enter or clicking away saves, Esc leaves it. Memo, colour and
+// its folder are edited on its Home once it is open.
+function startNexusRowRename(id) {
+  const n = (S.nexuses || []).find((v) => v.id === id);
+  if (!n) return;
+  inlineRename(document.querySelector(`[data-nxid="${id}"] .ls-title`), n.name, { // core/fields.js
+    onSave: async (v) => {
+      try { await api.nexus.update(id, v, n.memo || '', n.color ?? null); }
+      catch (_) { toast(t('nexusNameTaken'), 'error'); }
+      await reloadNexuses();
+    },
+    onDone: () => (typeof renderWelcomeWindow === 'function' && S.isWelcome ? renderWelcomeWindow() : renderNexusHome()),
+  });
+}

@@ -104,7 +104,7 @@ function pbLinkCreate(name) {
   const folder = here ? (here.kind === 'collector' ? here.id : here.parent_id) : null;
   const folders = flattenModulesByKind(S.moduleTree, []).filter((m) => m.kind === 'collector');
   const kinds = MODULE_KINDS.filter((k) => k !== 'collector');
-  openModal(t('wlCreate').replace('{name}', name), `
+  openPicker(t('wlCreate').replace('{name}', name), `
     <div class="fg"><label for="wl-name">${t('name')}</label><input id="wl-name" value="${x(name)}"></div>
     <div class="fg"><label for="wl-kind">${t('wlKind')}</label><select id="wl-kind">${kinds.map((k) =>
       `<option value="${k}"${k === 'drafter' ? ' selected' : ''}>${x(kindLabel(k))}</option>`).join('')}</select></div>

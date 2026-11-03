@@ -189,7 +189,7 @@ function openManagerPickModal(managerId) {
       <span data-no-i18n>${x(it.name)}</span>
       <span class="ghost" data-no-i18n>${x(kindLabel(it.ownKind))}${it.handle ? ` · @${x(it.handle)}` : ''} · ${x(managerFolderName(it.id))}</span>
     </label>`).join('');
-  openModal(t('managerPick'), `
+  openPicker(t('managerPick'), `
     <p class="drafter-hint">${t('managerPickHint')}</p>
     <input class="kind-search" placeholder="${x(t('kindSearch'))}" oninput="filterManagerPickRows(this.value)">
     <div class="mgr-pick-list">${rows || `<p class="cls-lv-empty">${t('managerEmpty')}</p>`}</div>

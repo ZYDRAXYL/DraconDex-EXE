@@ -235,3 +235,34 @@ new MutationObserver((muts) => {
     if (n.nodeType === 1 && n._onClose) { const f = n._onClose; n._onClose = null; try { f(); } catch (e) { console.error(e); } }
   }
 }).observe(document.body || document.documentElement, { childList: true });
+
+// ═══ Pickers (APP src/design/no-modal, rule 5) ══════════════════════════════
+// Picking one thing — a link, a source, a file, a filter, which fields show —
+// opens beside what was clicked instead of over the whole window. Same
+// arguments as openModal() (title, body, { hint, footer, size, focus }), so a
+// picker moves over by its name; its own buttons' closeModal() closes it too
+// (core/ui.js). A picker that redraws itself (a filter list) reopens where it
+// was, not at its own button.
+let _pickerAnchor = null;
+let _lastPointer = null;
+document.addEventListener('pointerdown', (e) => { _lastPointer = { x: e.clientX, y: e.clientY }; }, true);
+
+function pickerAnchorNow() {
+  const ae = document.activeElement;
+  if (ae && ae !== document.body && !ae.closest('#modal-overlay')) {
+    const r = ae.getBoundingClientRect();
+    if (r.width || r.height) return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; // a snapshot: the button may be redrawn
+  }
+  return _lastPointer ? pointAnchor(_lastPointer.x, _lastPointer.y) : paletteAnchor();
+}
+
+function openPicker(title, body, opts = {}) {
+  const again = !!document.activeElement?.closest?.('.picker-pop') && _pickerAnchor;
+  _pickerAnchor = again ? _pickerAnchor : pickerAnchorNow();
+  const wide = opts.size === 'lg' || opts.size === 'xl';
+  const pop = openPopover(_pickerAnchor, `<div class="popover-head picker-head"><span>${x(tr(title))}</span>
+      <button type="button" class="btn btn-g btn-i" onclick="closeModal()" title="${x(t('close'))}" aria-label="${x(t('close'))}">${I.close}</button></div>
+    ${opts.hint ? modalHintHtml(opts.hint) : ''}<div class="picker-body">${body}</div>${opts.footer ? `<div class="mfoot">${opts.footer}</div>` : ''}`,
+  { cls: `picker-pop${wide ? ' picker-wide' : ''}`, aria: tr(title), focus: opts.focus || 'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])' });
+  return pop;
+}

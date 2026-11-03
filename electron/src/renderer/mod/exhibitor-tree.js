@@ -67,7 +67,7 @@ function openExhibitorTreeModal() {
   const types = [...new Set(d.relations.map(r => r.rel_type).filter(Boolean))];
   if (!types.length) { toast(t('exhTreeNoTypes'), 'warn'); return; }
   const cur = d.treeRel && types.includes(d.treeRel) ? d.treeRel : types[0];
-  openModal(t('exhTreeLayout'), `
+  openPicker(t('exhTreeLayout'), `
     <p class="drafter-hint">${t('exhTreeHint')}</p>
     <div class="fg"><label>${t('exhTreeRelation')}</label>
       <select id="ext-rel">${types.map(rt => `<option value="${x(rt)}"${rt === cur ? ' selected' : ''}>${x(exhRelTypeText(rt))}</option>`).join('')}</select></div>

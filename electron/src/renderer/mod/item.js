@@ -12,7 +12,7 @@
 // reused by the Nest tree's lazy expand (hub.js's ensureNestItemsLoaded),
 // this file's own openItemNode, and fetchOneItem below — the same "fetch
 // the parent-scoped list, find by id" convention src/renderer/mod/
-// chronicler.js's openChroniclerEventModal already established, generalized
+// chronicler.js's event editor established, generalized
 // instead of hand-copied per kind. Both the item's own page and the owning
 // module's inline view always re-fetch fresh through this same path, so
 // neither ever renders a stale hand-copied object.
@@ -93,6 +93,13 @@ const ITEM_KIND = {
         streamId: 'item-chs-stream', inputId: 'item-chs-input', onSend: `sendItemChatMessage(${s.id})`,
       });
     },
+    // No modal (#15): the session's name on the page
+    fields: (ses) => [{ key: 'name', title: t('name'), value: ses.name }],
+    async saveField(ses, key, v) {
+      if (!v) return t('nameRequired');
+      await api.chatscribe.renameSession(ses.id, v);
+      return true;
+    },
     mount() {
       const el = fq('#item-chs-stream');
       if (el) el.scrollTop = el.scrollHeight;
@@ -118,7 +125,18 @@ const ITEM_KIND = {
       return `${dl.description ? `<div class="md-preview">${mdRender(dl.description)}</div>` : ''}
         <ol class="item-lines" data-no-i18n>${rows || ''}</ol>
         ${rows ? '' : `<div class="empty"><p>${t('nestEmpty')}</p></div>`}
-        ${itemOpenInModuleHtml(`sdlg_${dl.id}`)}`;
+        ${itemOpenInModuleHtml(`sdlg_${dl.id}`)}
+        ${itemDeleteHtml('(id)=>api.narrator.deleteDialogue(id)')}`;
+    },
+    // No modal (APP src/design/no-modal #09): name and colour on the page
+    fields: (dl) => [
+      { key: 'name', title: t('name'), value: dl.name },
+      { key: 'color', title: t('color'), type: 'color', value: dl.color, hex: dl.color_code },
+    ],
+    async saveField(dl, key, v) {
+      if (key === 'name' && !v) return t('nameRequired');
+      await api.narrator.updateDialogue(dl.id, key === 'name' ? v : dl.name, key === 'color' ? Number(v) : dl.color);
+      return true;
     },
   },
   diviner: {
@@ -130,13 +148,25 @@ const ITEM_KIND = {
     async renderBody(tb) {
       const entries = await api.diviner.getEntries(tb.id);
       const rows = entries.map((e) => `<li>${x(e.entry_text || e.linker_key || '…')}</li>`).join('');
-      return `${tb.dice ? `<p class="drafter-hint" data-no-i18n>${x(tb.dice)}</p>` : ''}
-        ${rows ? `<ol class="item-lines" data-no-i18n>${rows}</ol>` : `<div class="empty"><p>${t('divNoEntries')}</p></div>`}
+      return `${rows ? `<ol class="item-lines" data-no-i18n>${rows}</ol>` : `<div class="empty"><p>${t('divNoEntries')}</p></div>`}
         <div class="mfoot">
           <span id="item-div-result" class="item-roll" data-no-i18n></span>
           <button class="btn btn-p" onclick="rollItemDivinerTable(${tb.id})">${t('divRoll')}</button>
         </div>
-        ${itemOpenInModuleHtml(`divt_${tb.id}`)}`;
+        ${itemOpenInModuleHtml(`divt_${tb.id}`)}
+        ${itemDeleteHtml('(id)=>api.diviner.deleteTable(id)')}`;
+    },
+    // No modal (#11): name, mode and dice on the page
+    fields: (tb) => [
+      { key: 'name', title: t('name'), value: tb.name },
+      { key: 'mode', title: t('divMode'), type: 'select', value: tb.mode || 'pick', options: [{ value: 'pick', text: t('divModePick') }, { value: 'join', text: t('divModeJoin') }] },
+      { key: 'dice', title: t('divDice'), value: tb.dice || '', placeholder: '1d20', hint: t('divDiceHint'), hidden: (tb.mode || 'pick') === 'join' },
+    ],
+    async saveField(tb, key, v) {
+      if (key === 'name' && !v) return t('nameRequired');
+      const next = { name: tb.name, dice: tb.dice || '', mode: tb.mode || 'pick', [key]: v };
+      const r = await api.diviner.updateTable(tb.id, next.name, next.mode === 'join' ? '' : next.dice, next.mode);
+      return r?.ok ? true : t(r?.code === 'bad_dice' ? 'divBadDice' : 'driveErrServer');
     },
   },
   sketcher: {
@@ -178,9 +208,18 @@ const ITEM_KIND = {
     // design_node has no dedicated name column — best-effort label from its
     // own short text, else a shape glyph + id (Plan part4 #6).
     nameOf: (n) => n.node_text ? (n.node_text.length > 24 ? n.node_text.slice(0, 24) + '…' : n.node_text) : `${DG_SHAPE_GLYPH[n.shape] || '□'} #${n.id}`,
+    // No modal (APP src/design/no-modal #13): the node's page is where all of
+    // it is edited — saved as each field changes, comic fields included.
     async renderBody(n) {
-      return `${buildDesignNodeFieldsHtml(n, { prefix: 'item-dn' })}
-        <div class="mfoot"><button class="btn btn-p" onclick="saveItemDesignNode(${n.id})">${t('save')}</button></div>`;
+      return `<div id="item-dn-body">${buildDesignNodeFieldsHtml(n, { prefix: 'item-dn' })}${await dgComicFieldsHtml(n)}</div>
+        ${itemDeleteHtml('(id)=>api.designer.deleteNode(id)')}`;
+    },
+    mount(node) {
+      const body = fq('#item-dn-body');
+      if (!body) return;
+      const save = (e) => saveItemDesignNode(node.item.id, e?.target?.id === 'item-dn-shape');
+      body.addEventListener('change', save);
+      body.querySelector('#item-dn-colors')?.addEventListener('click', (e) => { if (e.target.closest('.sk-swatch')) save(); });
     },
   },
 };
@@ -227,7 +266,8 @@ async function openItemNode(itemKind, moduleId, id) {
   // (item.body, page/item-page.js).
   const itemKey = reg.keyOf ? reg.keyOf(item) : null;
   if (itemKey && m) await loadModulePage(m, itemKey);
-  S.activeItemNode = { itemKind, moduleId, id, item, m, bodyHtml, itemKey };
+  const fieldsHtml = reg.fields ? `<div id="item-fields">${fieldsStripHtml(reg.fields(item))}</div>` : ''; // item.fields (page/item-page.js)
+  S.activeItemNode = { itemKind, moduleId, id, item, m, bodyHtml, fieldsHtml, itemKey };
   trackRecentEntity(itemKey);
   S.activeModuleNode = null;
   S.filePreview = null;
@@ -269,18 +309,48 @@ async function sendItemChatMessage(sessionId) {
   await openItemNode('scribe', S.activeItemNode.moduleId, sessionId);
 }
 
-// ── Designer item page: save handler mirroring submitDesignNode, but
-// reading the id-prefixed fields (buildDesignNodeFieldsHtml({prefix:
-// 'item-dn'})) and refreshing via openItemNode instead of openModuleNode. ──
-async function saveItemDesignNode(id) {
-  const n = S.activeItemNode.item;
+// ── Designer item page: saves the node as a field changes. A new shape can
+// add or drop the comic fields, so that one redraws the page. ──
+async function saveItemDesignNode(id, redraw = false) {
+  const n = S.activeItemNode?.item;
+  if (!n || n.id !== id) return;
   const text = fq('#item-dn-text')?.value ?? n.node_text;
   const shape = fq('#item-dn-shape')?.value || n.shape;
   const colorEl = document.querySelector('#item-dn-colors .sk-swatch.act');
   const color = colorEl ? colorEl.dataset.color : n.color;
   const moduleId = S.activeItemNode.moduleId;
   await api.designer.updateNode(id, shape, text, color);
+  if (dgIsComic(shape)) await dgComicSubmit(id);
+  Object.assign(n, { node_text: text, shape, color });
   invalidateNestItems(moduleId);
-  await openItemNode('designer', moduleId, id);
-  toast(t('saved'), 'ok');
+  if (redraw) await openItemNode('designer', moduleId, id);
+  updateStatusBar({ saveState: t('saved') });
+}
+
+
+// ── The fields strip on an element's page (core/fields.js, no-modal rule 1):
+// save one field, then redraw the page — its name is in the head, the tab
+// and the Nest row too. ──
+function itemFieldsMount() {
+  const node = S.activeItemNode;
+  const reg = node && ITEM_KIND[node.itemKind];
+  if (!reg?.saveField) return;
+  fieldsStripMount(fq('#item-fields'), async (key, value) => {
+    const r = await reg.saveField(node.item, key, value);
+    if (r !== true) return r;
+    invalidateNestItems(node.moduleId);
+    await openItemNode(node.itemKind, node.moduleId, node.id);
+    return true;
+  });
+}
+
+// Delete from the element's own page (the modal used to hold this button).
+const itemDeleteHtml = (delJs) => `<div class="mfoot"><button class="btn btn-d" onclick="deleteItemPage(${x(delJs)})">${I.delete} ${t('delete')}</button></div>`;
+async function deleteItemPage(del) {
+  if (!await uiConfirm(t('confirmDeleteItem'))) return;
+  const { moduleId, id } = S.activeItemNode;
+  await del(id);
+  invalidateNestItems(moduleId, -1); // closes this page's tab
+  await openModuleNode(moduleId);
+  toast(t('deleted'), 'ok');
 }

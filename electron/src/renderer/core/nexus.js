@@ -187,32 +187,50 @@ async function reportParentNormalize() {
 // Editing a Nexus. Creating one is the Create Nexus window's job (Procress
 // 25, core/nexus-create.js) — one way in, looked after in one place — so a
 // call with no id opens that window instead.
+// No modal (APP src/design/no-modal #01): the open Nexus is edited on its
+// Home, in a "This Nexus" section — name, memo and colour saved as each one
+// changes (core/fields.js), its file and folder below. Any other Nexus (the
+// Welcome list, the no-vault picker) is renamed in its own row; the rest of
+// it is edited on its Home once it is open.
 async function openNexusModal(id = null) {
   if (!id) return openCreateNexusWindow();
-  const fields = await nexusEditFieldsHtml(id);
-  if (!fields) return;
-  openModal(t('nexusEdit'), `
-    ${fields}
-    <div class="mfoot">
-      <button class="btn btn-d" onclick="delNexus(${id})">${t('delete')}</button>
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="saveNexus(${id})">${t('save')}</button>
-    </div>`);
-  setTimeout(() => q('#nx-name').focus(), 60);
+  if (id !== S.nexus?.id) { startNexusRowRename(id); return; } // core/nexus-options.js
+  S.homeNexusOpen = true;
+  if (S.activeModuleNode || S.activeItemNode || S.filePreview || S.sageHut) await builderOpenPage(null);
+  else renderNexusHome();
+  focusWhenSettled('#home-nexus-fields .fstrip [data-fkey="name"]');
 }
 
-// The edit fields, shared by the modal above and Settings → This Nexus
-// (Procress 24). saveNexus() reads them by id.
+// The fields — Home's "This Nexus" and Settings → This Nexus share them.
 async function nexusEditFieldsHtml(id) {
   await reloadNexuses();
   const n = S.nexuses.find(v => v.id === id);
   if (!n) return '';
-  return `
-    <div class="fg"><label for="nx-name">${t('name')} *</label><input id="nx-name" value="${x(n.name || '')}"></div>
-    <div class="fg"><label for="nx-memo">${t('memo')}</label><textarea id="nx-memo">${x(n.memo || '')}</textarea></div>
-    <div class="fg"><label>${t('color')}</label>${await colorPicker(n.color)}</div>
+  return `${fieldsStripHtml([
+      { key: 'name', title: t('name'), value: n.name || '' },
+      { key: 'memo', title: t('memo'), type: 'area', value: n.memo || '' },
+      { key: 'color', title: t('color'), type: 'color', value: n.color ?? '', hex: n.color_code },
+    ])}
     ${nexusFileRowHtml(n)}
     ${nexusLocateRowHtml(n)}`;
+}
+
+// Draws the fields into `host` and saves each change.
+async function mountNexusEditFields(host, id) {
+  if (!host) return;
+  host.innerHTML = await nexusEditFieldsHtml(id);
+  fieldsStripMount(host, async (key, v) => {
+    const n = S.nexuses.find((x0) => x0.id === id);
+    if (!n) return false;
+    if (key === 'name' && !v) return t('nameRequired');
+    try {
+      await api.nexus.update(id, key === 'name' ? v : n.name, key === 'memo' ? v : (n.memo || ''), key === 'color' ? Number(v) || null : n.color ?? null);
+    } catch (_) { return t('nexusNameTaken'); }
+    await reloadNexuses();
+    if (S.nexus?.id === id) S.nexus = S.nexuses.find((x0) => x0.id === id) || S.nexus;
+    if (typeof renderNexusHome === 'function' && q('#home-nexus-fields')) renderNexusHome();
+    return true;
+  });
 }
 
 // Where the vault file goes (the Create Nexus window's form). Shown in every build, dev included, with the
@@ -264,28 +282,15 @@ async function relinkNexusLocation(id) {
   const r = await api.nexus.relink(id);
   if (r?.canceled) return;
   if (!r?.ok) return toast(t('nexusRelinkFailed'), 'error');
-  closeModal();
   await reloadNexuses();
   toast(t('saved'), 'ok');
   renderNexusHome();
-}
-
-async function saveNexus(id) {
-  const name = q('#nx-name').value.trim(); if (!name) return;
-  try {
-    await api.nexus.update(id, name, q('#nx-memo').value.trim(), q('#sel-color').value || null);
-    closeModal();
-    await reloadNexuses();
-    toast(t('saved'), 'ok');
-    renderNexusHome();
-  } catch (e) { toast(t('nexusNameTaken'), 'error'); }
 }
 
 async function delNexus(id) {
   if (!await uiConfirm(t('nexusDeleteConfirm'))) return;
   const r = await api.nexus.delete(id);
   if (r?.blocked) { toast(t('nexusDeleteBlocked'), 'error'); return; }
-  closeModal();
   await offerTrashNexusFolder(r?.locateDir); // Procress 20: its folder stays unless the user says so
   if (S.nexus?.id === id) { S.nexus = null; localStorage.removeItem(NEXUS_ACTIVE_KEY); clearWorkspaceTabs(); }
   dropRecentNexus(id);

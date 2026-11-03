@@ -130,7 +130,7 @@ function openModal(title,body,opts={}) {
     }, 30);
   }
 }
-function closeModal() { q('#modal-overlay').classList.add('hidden'); }
+function closeModal() { q('#modal-overlay').classList.add('hidden'); document.querySelectorAll('.picker-pop').forEach((p) => p.remove()); } // + a picker (core/popover.js)
 
 // The main modal was the only overlay in the app with no Escape handler
 // (uiConfirm, the quick switcher and the guide all have one). Bound in the

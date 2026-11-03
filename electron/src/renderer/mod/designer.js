@@ -162,7 +162,7 @@ function mountDesignerBoard() {
   // edge label double-click -> edit
   svg.addEventListener('dblclick', (ev) => {
     const el = ev.target.closest('.dg-edge-label');
-    if (el) openDesignEdgeModal(Number(el.dataset.edge));
+    if (el) editDesignEdgeLabel(Number(el.dataset.edge), el);
   });
 
   stage.querySelectorAll('.dg-node').forEach(el => el.remove());
@@ -191,7 +191,8 @@ function mountDesignerBoard() {
     }
     el.addEventListener('dblclick', (ev) => {
       ev.stopPropagation();
-      openDesignNodeModal(n.id);
+      if (el.querySelector('.dg-label[contenteditable]')) return; // typing its text
+      openItemNode('designer', d.moduleId, n.id);
     });
     el.addEventListener('pointerdown', (ev) => {
       if (ev.button !== 0) return;
@@ -201,7 +202,7 @@ function mountDesignerBoard() {
       if (dgState.edgeFrom !== null && dgState.edgeFrom !== n.id) {
         const from = dgState.edgeFrom;
         dgState.edgeFrom = null;
-        openDesignEdgeModal(null, from, n.id);
+        newDesignEdge(from, n.id);
         return;
       }
       try { el.setPointerCapture(ev.pointerId); } catch (_) {}
@@ -292,9 +293,43 @@ async function addDesignNode(shape) {
   const jitter = () => (Math.random() - 0.5) * 60;
   const color = DG_COLORS[(d.nodes.length) % (DG_COLORS.length - 1)];
   const id = await api.designer.createNode(d.moduleId, shape, c.x + jitter(), c.y + jitter(), '', color, null);
+  invalidateNestItems(d.moduleId, 1); // queues a render — before ours (see newAuthorChapter)
   await reloadSource(d.moduleId);
-  invalidateNestItems(d.moduleId, 1);
-  openDesignNodeModal(id);
+  startDesignNodeText(id);
+}
+
+// A new node's text is typed on the board, where it was put (no modal —
+// APP src/design/no-modal #13). Enter / clicking away saves, Shift+Enter is
+// a new line, Esc leaves it as it was. A shape with no text label (a comic
+// panel or balloon) opens its page instead.
+function startDesignNodeText(id) {
+  const d = S.designerData;
+  const n = d?.nodes.find((nn) => nn.id === id);
+  const label = pbQOr(`.dg-node[data-node="${id}"] .dg-label`);
+  if (!n || !label || n.linker_key) { if (n) openItemNode('designer', d.moduleId, id); return; }
+  const before = n.node_text || '';
+  label.contentEditable = 'plaintext-only';
+  label.addEventListener('pointerdown', (e) => e.stopPropagation()); // not a drag while typing
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    label.removeAttribute('contenteditable');
+    const text = label.innerText.trim();
+    if (!save || text === before) { label.textContent = dgNodeName(n); return; }
+    await api.designer.updateNode(id, n.shape, text, n.color);
+    n.node_text = text;
+    invalidateNestItems(d.moduleId);
+    await reloadSource(d.moduleId);
+  };
+  label.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  label.addEventListener('blur', () => finish(true));
+  label.focus();
+  getSelection().selectAllChildren(label);
 }
 
 function startDesignEdge() {
@@ -361,80 +396,30 @@ function buildDesignNodeFieldsHtml(n, opts = {}) {
         `<option value="${s}" ${n.shape === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
     <div class="fg"><label data-no-i18n>Color</label>
       <div class="vw-kindchecks" id="${prefix}-colors">${DG_COLORS.map(c =>
-        `<span class="sk-swatch${(n.color || '') === c ? ' act' : ''}" style="background:${c}" onclick="document.querySelectorAll('#${prefix}-colors .sk-swatch').forEach(e=>e.classList.remove('act'));this.classList.add('act')" data-color="${c}"></span>`).join('')}
+        `<button type="button" class="btn sk-swatch${(n.color || '') === c ? ' act' : ''}" style="background:${c}" aria-label="${c}" onclick="document.querySelectorAll('#${prefix}-colors .sk-swatch').forEach(e=>e.classList.remove('act'));this.classList.add('act')" data-color="${c}"></button>`).join('')}
       </div></div>`;
 }
 
-async function openDesignNodeModal(id) {
+// No modal (APP src/design/no-modal #14): the edge tool's second click makes
+// the line at once, then its label is typed where it will sit — between the
+// two nodes. An existing label: double-click it.
+async function newDesignEdge(fromId, toId) {
   const d = S.designerData;
-  const n = d.nodes.find(nn => nn.id === id);
-  if (!n) return;
-  const comic = await dgComicFieldsHtml(n);
-  openModal(t('moduleEdit'), `
-    ${buildDesignNodeFieldsHtml(n, { prefix: 'dn' })}
-    ${comic}
-    <div class="mfoot">
-      <button class="btn btn-d" onclick="deleteDesignNodeRow(${n.id})">${t('delete')}</button>
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitDesignNode(${n.id})">${t('save')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#dn-text')?.focus(), 60);
-}
-
-async function submitDesignNode(id) {
-  const d = S.designerData;
-  const n = d.nodes.find(nn => nn.id === id);
-  if (!n) return;
-  const text = pbQOr('#dn-text')?.value ?? n.node_text;
-  const shape = pbQOr('#dn-shape')?.value || n.shape;
-  const colorEl = document.querySelector('#dn-colors .sk-swatch.act');
-  const color = colorEl ? colorEl.dataset.color : n.color;
-  await api.designer.updateNode(id, shape, text, color);
-  if (dgIsComic(shape)) await dgComicSubmit(id);
-  closeModal();
+  await api.designer.createEdge(d.moduleId, fromId, toId, '');
   await reloadSource(d.moduleId);
-  invalidateNestItems(d.moduleId);
-  toast(t('saved'), 'ok');
+  const e2 = S.designerData.edges.find((ee) => ee.from_ref === fromId && ee.to_ref === toId);
+  const a = pbQOr(`.dg-node[data-node="${fromId}"]`)?.getBoundingClientRect(), b = pbQOr(`.dg-node[data-node="${toId}"]`)?.getBoundingClientRect();
+  if (e2 && a && b) editDesignEdgeLabel(e2.id, pointAnchor((a.left + a.right + b.left + b.right) / 4, (a.top + a.bottom + b.top + b.bottom) / 4));
 }
 
-async function deleteDesignNodeRow(id) {
-  if (!await uiConfirm(t('confirmDeleteItem'))) return;
-  const moduleId = S.designerData.moduleId;
-  await api.designer.deleteNode(id);
-  closeModal();
-  await reloadSource(moduleId);
-  invalidateNestItems(moduleId, -1);
-  toast(t('deleted'), 'ok');
-}
-
-function openDesignEdgeModal(edgeId, fromId = null, toId = null) {
-  const d = S.designerData;
-  const e2 = edgeId ? d.edges.find(ee => ee.id === edgeId) : null;
-  openModal(e2 ? t('moduleEdit') : t('edgeTool'), `
-    <div class="fg"><label>${t('edgeLabel')}</label><input id="de-label" value="${x(e2?.label || '')}"></div>
-    <div class="mfoot">
-      ${e2 ? `<button class="btn btn-d" onclick="deleteDesignEdgeRow(${e2.id})">${t('delete')}</button>` : ''}
-      <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
-      <button class="btn btn-p" onclick="submitDesignEdge(${edgeId ?? 'null'},${fromId ?? 'null'},${toId ?? 'null'})">${e2 ? t('save') : t('create')}</button>
-    </div>`);
-  setTimeout(() => pbQOr('#de-label').focus(), 60);
-}
-
-async function submitDesignEdge(edgeId, fromId, toId) {
-  const d = S.designerData;
-  const label = pbQOr('#de-label').value.trim();
-  if (edgeId) await api.designer.updateEdge(edgeId, label);
-  else if (fromId && toId) await api.designer.createEdge(d.moduleId, fromId, toId, label);
-  closeModal();
-  await reloadSource(d.moduleId);
-  toast(edgeId ? t('saved') : t('created'), 'ok');
-}
-
-async function deleteDesignEdgeRow(id) {
-  await api.designer.deleteEdge(id);
-  closeModal();
-  await reloadSource(S.designerData.moduleId);
-  toast(t('deleted'), 'ok');
+function editDesignEdgeLabel(id, anchor) {
+  const e2 = S.designerData?.edges.find((ee) => ee.id === id);
+  if (!e2) return;
+  labelEditPopover(anchor, e2.label, {
+    placeholder: t('edgeLabel'),
+    onSave: async (v) => { await api.designer.updateEdge(id, v); await reloadSource(S.designerData.moduleId); },
+    onDelete: async () => { await api.designer.deleteEdge(id); await reloadSource(S.designerData.moduleId); toast(t('deleted'), 'ok'); },
+  });
 }
 
 // Plan part5 Designer #1: type-allowlist filter over the quickIndex picker,
@@ -451,7 +436,7 @@ async function openDesignPinModal() {
   const d = S.designerData;
   const [ix, allow] = await Promise.all([api.wiki.quickIndex(S.nexus.id), designerLinkFilterTypes(d.moduleId)]);
   const filtered = allow ? ix.filter(e2 => allow.includes(e2.type)) : ix;
-  openModal(t('pinModuleLink'), `
+  openPicker(t('pinModuleLink'), `
     <div class="fg"><label>${t('moduleLink')}</label>
       <select id="dgp-key">${filtered.map(e2 =>
         `<option value="${x(e2.key)}">${x(e2.name)} (${x(e2.type)})</option>`).join('')}
@@ -468,7 +453,7 @@ async function openDesignerLinkFilterModal(moduleId) {
     <div class="togglerow" onclick="toggleDesignerLinkFilterType(this)" data-type="${ty}">
       <span class="tg${allow.includes(ty) ? ' on' : ''}"></span><span data-no-i18n>${ty}</span>
     </div>`).join('');
-  openModal(t('narratorLinkFilter'), `
+  openPicker(t('narratorLinkFilter'), `
     <div id="dg-link-filter-rows">${rows}</div>
     <div class="mfoot">
       <button class="btn btn-s" onclick="closeModal()">${t('cancel')}</button>
