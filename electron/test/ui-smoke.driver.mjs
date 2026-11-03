@@ -1865,7 +1865,7 @@ test('no-modal 05: a new event is made at once and named in place; a Compare dot
   const n0 = await count();
   await win.evaluate((id) => runCommand('chronicler.addEvent', { moduleId: id }), mid); await sleep(800);
   assert.equal(await count(), n0 + 1, 'made at once');
-  assert.equal(await win.locator('#modal-overlay.open').count(), 0, 'no modal');
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, 'no modal');
   assert.equal(await win.evaluate(() => document.activeElement?.id), 'chr-insp-n', 'its name is ready to type');
   await win.keyboard.type('Smoke event'); await win.keyboard.press('Tab'); await sleep(500);
   const made = (await win.evaluate((id) => api.timeline.getEvents(id), tl)).find((e) => e.event_name === 'Smoke event');
@@ -1873,7 +1873,7 @@ test('no-modal 05: a new event is made at once and named in place; a Compare dot
   // the Compare view's dots (they opened the modal) open the event's page
   await win.evaluate((id) => openChroniclerEventPage(id), made.id); await sleep(800);
   assert.equal(await win.evaluate(() => S.activeItemNode?.itemKey), `tlev_${made.id}`, 'the dot opens the event page');
-  assert.equal(await win.locator('#modal-overlay.open').count(), 0);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0);
   await win.evaluate((id) => api.timeline.deleteEvent(id), made.id);
 });
 
@@ -1883,14 +1883,14 @@ test('no-modal 13: a new node is typed on the board; its page saves by itself', 
   const mid = await win.evaluate(async () => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'designer'); await openModuleNode(m.id); await setDesignerView('canvas'); return m.id; });
   await sleep(700);
   await win.evaluate(() => addDesignNode('box')); await sleep(800);
-  assert.equal(await win.locator('#modal-overlay.open').count(), 0, 'no modal');
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, 'no modal');
   assert.equal(await win.evaluate(() => document.activeElement?.classList.contains('dg-label')), true, 'its text is ready to type');
   await win.keyboard.type('Smoke node'); await win.keyboard.press('Enter'); await sleep(700);
   const node = (await win.evaluate((m) => api.designer.getNodes(m), mid)).find((n) => n.node_text === 'Smoke node');
   assert.ok(node, 'the text saved');
   await win.locator(`.dg-node[data-node="${node.id}"]`).dblclick(); await sleep(900);
   assert.equal(await win.evaluate(() => S.activeItemNode?.itemKind), 'designer', 'double-click opens its page');
-  assert.equal(await win.locator('#modal-overlay.open').count(), 0);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0);
   await win.locator('#item-dn-shape').selectOption('circle'); await sleep(900);
   assert.equal((await win.evaluate((m) => api.designer.getNodes(m), mid)).find((n) => n.id === node.id).shape, 'circle', 'saved without a Save button');
   const sw = win.locator('#item-dn-colors .sk-swatch').nth(2);
@@ -1908,7 +1908,7 @@ async function stripNew(kind, cmd, list) {
   const n0 = (await win.evaluate(list, mid)).length;
   await win.evaluate(([c, m]) => runCommand(c, { moduleId: m }), [cmd, mid]); await sleep(1200);
   assert.equal((await win.evaluate(list, mid)).length, n0 + 1, `${kind}: made at once`);
-  assert.equal(await win.locator('#modal-overlay.open').count(), 0, `${kind}: no modal`);
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, `${kind}: no modal`);
   assert.equal(await win.evaluate(() => document.activeElement?.dataset?.fkey), 'name', `${kind}: its name is ready to type`);
   await win.keyboard.type(`Smoke ${kind}`); await win.keyboard.press('Enter'); await sleep(900);
   const made = (await win.evaluate(list, mid)).find((r) => r.name === `Smoke ${kind}`);
@@ -1947,7 +1947,7 @@ test('no-modal 09/11/15: dialogue, table and session are named and edited on the
 // #10 / #14 / #16: a line's label and a chat message are typed where they are.
 test('no-modal 10/14/16: edge labels typed on the board; a chat bubble edits in place', async () => {
   const open = (k, setView) => win.evaluate(async ([k, v]) => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === k); await openModuleNode(m.id); await window[v.fn](v.view); return m.id; }, [k, setView]);
-  const noModal = async (what) => assert.equal(await win.locator('#modal-overlay.open').count(), 0, `${what}: no modal`);
+  const noModal = async (what) => assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, `${what}: no modal`);
 
   // 10 — Narrator: click the line's label spot
   const nm = await open('narrator', { fn: 'setNarratorView', view: 'board' }); await sleep(700);
@@ -1994,7 +1994,7 @@ test('no-modal 10/14/16: edge labels typed on the board; a chat bubble edits in 
 // #07 / #08: the selected relation / pin has a panel under the toolbar.
 test('no-modal 07/08: a relation and a map pin are edited in a panel; made at once', async () => {
   const open = (k, fn, view) => win.evaluate(async ([k, fn, view]) => { showLeftDest('nest'); const m = flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === k); await openModuleNode(m.id); await window[fn](view); return m.id; }, [k, fn, view]);
-  const noModal = async (what) => assert.equal(await win.locator('#modal-overlay.open').count(), 0, `${what}: no modal`);
+  const noModal = async (what) => assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, `${what}: no modal`);
   const panel = '#main-inner .sel-panel';
 
   // 07 — Exhibitor: the Lines view's pencil selects the relation
@@ -2046,7 +2046,7 @@ test('no-modal 02/03: fields edited in Structure; a private field typed in place
   const mid = await win.evaluate(() => flattenModulesByKind(S.moduleTree, []).find((x) => x.kind === 'classifier').id);
   const tpls = () => win.evaluate((m) => api.classifier.getTemplates(m), mid);
   await win.evaluate((m) => runCommand('classifier.fields', { moduleId: m }), mid); await sleep(900);
-  assert.equal(await win.locator('#modal-overlay.open').count(), 0, 'no modal');
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, 'no modal');
   assert.equal(await win.evaluate(() => document.activeElement?.dataset?.r), 'addfield', 'the + field box is ready');
   await win.keyboard.type('Smoke field'); await win.keyboard.press('Enter'); await sleep(900);
   const f = (await tpls()).find((tp) => tp.description === 'Smoke field');
@@ -2068,7 +2068,7 @@ test('no-modal 02/03: fields edited in Structure; a private field typed in place
   await win.evaluate(() => { const d = document.querySelector('#main-inner details.cls-priv'); if (d && !d.open) d.querySelector('summary').click(); }); await sleep(200);
   const box = win.locator('#main-inner [data-r="addprivfield"]').first();
   await box.fill('Smoke secret'); await win.keyboard.press('Enter'); await sleep(900);
-  assert.equal(await win.locator('#modal-overlay.open').count(), 0, 'no modal');
+  assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, 'no modal');
   const priv = (await win.evaluate(([m, o]) => api.classifier.getObjectTemplates(m, o), [mid, oid])).find((tp) => tp.description === 'Smoke secret');
   assert.ok(priv && priv.object_ref === oid, 'a field of this object only');
   assert.equal(await win.evaluate(() => document.activeElement?.dataset?.r), 'addprivfield', 'ready for the next');
@@ -2077,7 +2077,7 @@ test('no-modal 02/03: fields edited in Structure; a private field typed in place
 
 // #01 / #04 / #06 / #12: the last four modals.
 test('no-modal 01/04/06/12: This Nexus on Home, the line over the graph, a session logged at once, a page named in place', async () => {
-  const noModal = async (what) => assert.equal(await win.locator('#modal-overlay.open').count(), 0, `${what}: no modal`);
+  const noModal = async (what) => assert.equal(await win.locator('#modal-overlay:not(.hidden)').count(), 0, `${what}: no modal`);
   const was = await win.evaluate(() => ({ name: S.nexus.name, memo: S.nexus.memo || '' }));
   // 01 — This Nexus is a section of Home
   await win.evaluate(() => openNexusModal(S.nexus.id)); await sleep(900);
