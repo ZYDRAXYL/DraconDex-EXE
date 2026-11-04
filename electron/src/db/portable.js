@@ -18,6 +18,7 @@ const crypto = require('crypto');
 
 const ROOT_KEY = 'portableRoot';
 const MARKER = 'dracondex-portable.json';
+const RUNNING = '.dracondex-running.json';
 
 let _root = null;
 // main.js decides (PORTABLE_EXECUTABLE_DIR or portable.flag) and tells us once.
@@ -91,4 +92,20 @@ function writePortableMarker(appVersion = null) {
   return marker;
 }
 
-module.exports = { MARKER, setPortableRoot, portableRoot, rebase, rebasePortable, writePortableMarker };
+// While the portable copy runs it says so at its root, so an installed copy
+// on the same machine does not sync a drive that is mid-edit (part 1).
+// Removed on quit; a lock left by a crash, or by another machine the drive
+// was pulled out of, is told apart by host + pid (portlink-drives.js).
+function writeRunningLock() {
+  if (!_root) return;
+  try { fs.writeFileSync(path.join(_root, RUNNING), JSON.stringify({ pid: process.pid, host: require('os').hostname(), at: new Date().toISOString() })); } catch (_) {}
+}
+function clearRunningLock() {
+  if (!_root) return;
+  try {
+    const f = path.join(_root, RUNNING);
+    if (JSON.parse(fs.readFileSync(f, 'utf8')).pid === process.pid) fs.rmSync(f, { force: true });
+  } catch (_) {}
+}
+
+module.exports = { MARKER, RUNNING, writeRunningLock, clearRunningLock, setPortableRoot, portableRoot, rebase, rebasePortable, writePortableMarker };

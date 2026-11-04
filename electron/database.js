@@ -56,6 +56,8 @@ const pkg       = require('./src/db/pkg');
 const dbTransfer = require('./src/db/db-transfer');
 const mirror    = require('./src/db/mirror');
 const locate    = require('./src/db/locate');
+const portable  = require('./src/db/portable');
+const portlink  = require('./src/db/portlink-drives');
 const assetPack = require('./src/db/asset-pack');
 const vaults    = require('./src/db/vaults');
 const transfer  = require('./src/db/transfer');
@@ -123,6 +125,7 @@ module.exports = {
   importAssetPack: assetPack.importAssetPack,
   setVaultLocateDir: vaults.setVaultLocateDir,
   locate, // Procress 20: every Nexus is a folder — db.locate.*
+  portable, portlink, // Procress 32: portable copy paths + drive marker · drives plugged in — db.portable.* / db.portlink.*
   ...transfer,
   ...cloud,
 };

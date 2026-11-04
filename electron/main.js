@@ -32,7 +32,7 @@ const tempDataPath = isPackaged
 if (!fs.existsSync(tempDataPath)) fs.mkdirSync(tempDataPath, { recursive: true });
 // Procress 32 part 0: only a packaged portable copy rebases its paths and
 // writes the drive marker (src/db/portable.js).
-require('./src/db/portable').setPortableRoot(isPackaged ? portableRoot : null);
+db.portable.setPortableRoot(isPackaged ? portableRoot : null);
 const electronUserDataPath = path.join(tempDataPath, 'electron-user-data');
 app.setPath('userData', electronUserDataPath);
 app.commandLine.appendSwitch('no-sandbox');
@@ -455,8 +455,19 @@ app.whenReady().then(() => {
   registerDisplayImageProtocol();
   // Procress 32 part 0: before anything reads a path — the drive may have
   // another letter on this machine.
-  try { require('./src/db/portable').rebasePortable(); } catch (e) { console.error('[portable] rebase failed', e); }
-  require('./src/db/portable').writePortableMarker(app.getVersion());
+  try { db.portable.rebasePortable(); } catch (e) { console.error('[portable] rebase failed', e); }
+  db.portable.writePortableMarker(app.getVersion());
+  // Procress 32 part 1: a portable copy says it is running (so an installed
+  // copy on this machine leaves its drive alone); an installed copy watches
+  // for portable drives being plugged in.
+  if (db.portable.portableRoot()) {
+    db.portable.writeRunningLock();
+    app.on('will-quit', () => db.portable.clearRunningLock());
+  } else {
+    db.portlink.startWatching((list) => {
+      for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('portlink:drives', list);
+    });
+  }
   db.cleanupUpdateLeftovers(); // Procress 28 part 7: the Setup / old portable an update left behind
   db.scheduleUpdateChecks();   // Procress 29 part 9: check, download and get ready in the background
   // On-disk half of the v4.2.0 extensions -> plugins rename (the DB half is
@@ -1779,6 +1790,9 @@ h('cloud:disconnect',      (id)      => db.cloudDisconnect(id));
 h('cloud:status',          (id)      => db.cloudStatus(id));
 
 // GitHub Releases — app-update notice + user-initiated in-app install
+// Procress 32 part 1: portable drives plugged in right now (read-only)
+h('portlink:listDrives', () => db.portlink.listDrives());
+h('portlink:rescan',     () => db.portlink.rescan());
 h('update:check',        ()    => db.checkForUpdate());
 h('update:install',      ()    => db.installUpdate());
 h('update:dismiss',      (v)   => db.dismissUpdate(v));

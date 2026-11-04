@@ -363,6 +363,12 @@ contextBridge.exposeInMainWorld('api', {
     disconnect:    (id)     => inv('cloud:disconnect', id),
     status:        (id)     => inv('cloud:status', id),
   },
+  // Procress 32 part 1 — portable drives (Port Link)
+  portlink: {
+    listDrives: ()   => inv('portlink:listDrives'),
+    rescan:     ()   => inv('portlink:rescan'),
+    onDrives:   (cb) => { const f = (_, l) => cb(l); ipcRenderer.on('portlink:drives', f); return () => ipcRenderer.removeListener('portlink:drives', f); },
+  },
   update: {
     check:        ()    => inv('update:check'),
     dismiss:      (v)   => inv('update:dismiss', v),

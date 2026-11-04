@@ -102,3 +102,14 @@ test('an installed copy (no portable root) does nothing', () => {
   assert.equal(portable.writePortableMarker('x'), null);
   portable.setPortableRoot(root);
 });
+
+test('the running lock: written at the root, cleared on quit — but only this process\'s own', () => {
+  const f = join(root, portable.RUNNING);
+  portable.writeRunningLock();
+  assert.equal(JSON.parse(readFileSync(f, 'utf8')).pid, process.pid);
+  portable.clearRunningLock();
+  assert.ok(!existsSync(f));
+  writeFileSync(f, JSON.stringify({ pid: process.pid + 1, host: 'x' }));
+  portable.clearRunningLock();
+  assert.ok(existsSync(f), 'another copy\'s lock is left alone');
+});
