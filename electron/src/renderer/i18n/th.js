@@ -4,6 +4,14 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('th', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'ไดร์ฟพกพา', portRescan:'ค้นหาไดร์ฟอีกครั้ง', portRunning:'แอป portable บนไดร์ฟนี้เปิดอยู่ — ปิดที่นั่นก่อน', portEmpty:'ไดร์ฟนี้ยังไม่มี Nexus', portOnDrive:'อยู่บน {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'ตรงกับ {d}', portStatusLocal:'เครื่องนี้มีการแก้ตั้งแต่ sync ครั้งล่าสุด', portStatusDrive:'ไดร์ฟมีการแก้ตั้งแต่ sync ครั้งล่าสุด', portStatusBoth:'แก้ทั้งสองฝั่ง — ต้อง merge', portStatusAway:'ไม่ได้เสียบไดร์ฟที่ link ไว้', portCloneTo:'Clone ไปที่ {d}', portCloneHere:'Clone มาเครื่องนี้', portCloning:'กำลัง clone…', portCloned:'Clone แล้ว — link กับ {d}', portCloneFailed:'Clone ไม่สำเร็จ — ไม่มีอะไรถูกเปลี่ยน',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'เปิดจาก {d} — ทุกการบันทึกกลับไปที่ไดร์ฟ', portMountPending:'ยังไม่ได้เขียนกลับลง {d} — เสียบไดร์ฟอีกครั้ง', portMountConflict:'{d} ถูกแก้ที่อื่น — เก็บสำเนานี้ไว้บนเครื่อง ไม่เขียนทับ', portOpenFailed:'เปิดจากไดร์ฟไม่ได้',
+  // Procress 32 part 5: sync, eject, conflicts
+  portSyncNow:'Sync ตอนนี้', portUnlink:'เลิก sync กับไดร์ฟ', portUnlinked:'เลิก link แล้ว — สำเนาทั้งสองยังอยู่ แยกกัน', portEject:'Sync แล้วถอดไดร์ฟ', portEjectReady:'ทุกอย่างอยู่บน {d} แล้ว — ถอดได้', portEjectPending:'ยังไม่ได้ลงไดร์ฟ : {n}', portSynced:'Sync {name} แล้ว — เพิ่ม {a} · แก้ {u} · ลบ {r}', portSyncFailed:'Sync ไม่สำเร็จ — ไม่มีอะไรถูกเปลี่ยน', portSyncOpen:'ปิดหน้าต่างของมันก่อน — จะ sync เองตอนปิด', portChooseTitle:'แก้ทั้งสองฝั่ง', portChooseHint:'{n} ถูกแก้ต่างกันบนเครื่องนี้และบนไดร์ฟ เลือกค่าที่จะเก็บทีละข้อ — จะไม่เขียนอะไรจนกว่าจะกดใช้', portUseLocalAll:'ใช้ของเครื่องนี้ทั้งหมด', portUseDriveAll:'ใช้ของไดร์ฟทั้งหมด', portThisMachine:'เครื่องนี้', portTheDrive:'ไดร์ฟ',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'อัปเดตพร้อมติดตั้ง', updateReadyHint:'ดาวน์โหลดและตรวจเวอร์ชัน {v} แล้ว — ติดตั้งตอนนี้ แล้ว DraconDex จะเปิดใหม่เอง', updateInstallRestart:'ติดตั้งและรีสตาร์ท', updateLater:'ภายหลัง', updateMode:'เมื่อมีเวอร์ชันใหม่', updateModeAsk:'ดาวน์โหลดเอง แล้วถามก่อนติดตั้ง', updateModeQuit:'ติดตั้งเงียบตอนปิดแอป', updateModeNotify:'แจ้งเตือนอย่างเดียว', updateModeOff:'ไม่ต้องตรวจ', updateModeQuitUnsigned:'release ยังไม่มีลายเซ็น — จึงยังถามก่อนติดตั้งเหมือนเดิม', updateDone:'อัปเดตเป็น {v} แล้ว', updateWhatsNew:'ดูว่ามีอะไรใหม่',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

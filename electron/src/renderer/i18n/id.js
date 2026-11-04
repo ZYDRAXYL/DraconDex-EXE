@@ -4,6 +4,14 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('id', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'Drive portabel', portRescan:'Cari drive lagi', portRunning:'Aplikasi portabel di drive ini sedang terbuka — tutup dulu di sana', portEmpty:'Tidak ada Nexus di drive ini', portOnDrive:'Di {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'Selaras dengan {d}', portStatusLocal:'Berubah di komputer ini sejak sinkron terakhir', portStatusDrive:'Berubah di drive sejak sinkron terakhir', portStatusBoth:'Berubah di kedua sisi — perlu digabung', portStatusAway:'Drive tertaut tidak terpasang', portCloneTo:'Klon ke {d}', portCloneHere:'Klon ke komputer ini', portCloning:'Mengklon…', portCloned:'Terklon — tertaut dengan {d}', portCloneFailed:'Klon gagal — tidak ada yang berubah',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'Dibuka dari {d} — setiap simpan kembali ke drive', portMountPending:'Belum ditulis kembali ke {d} — pasang drive lagi', portMountConflict:'{d} diubah di tempat lain — salinan ini disimpan di sini, tidak menimpa', portOpenFailed:'Tidak dapat dibuka dari drive',
+  // Procress 32 part 5: sync, eject, conflicts
+  portSyncNow:'Sinkronkan sekarang', portUnlink:'Berhenti sinkron dengan drive', portUnlinked:'Tautan dilepas — kedua salinan tetap ada, terpisah', portEject:'Sinkronkan lalu lepas', portEjectReady:'Semua sudah di {d} — aman dicabut', portEjectPending:'Belum ada di drive: {n}', portSynced:'{name} tersinkron — tambah {a} · ubah {u} · hapus {r}', portSyncFailed:'Sinkron gagal — tidak ada yang berubah', portSyncOpen:'Tutup jendelanya dulu — sinkron saat ditutup', portChooseTitle:'Berubah di kedua sisi', portChooseHint:'{n} diubah berbeda di komputer ini dan di drive. Pilih yang disimpan untuk masing-masing — tidak ada yang ditulis sebelum diterapkan.', portUseLocalAll:'Pakai milik komputer ini semua', portUseDriveAll:'Pakai milik drive semua', portThisMachine:'Komputer ini', portTheDrive:'Drive',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Pembaruan siap', updateReadyHint:'Versi {v} sudah diunduh dan diperiksa — pasang sekarang, DraconDex akan terbuka lagi sendiri.', updateInstallRestart:'Pasang dan mulai ulang', updateLater:'Nanti', updateMode:'Saat ada versi baru', updateModeAsk:'Unduh, lalu tanya', updateModeQuit:'Pasang saat ditutup', updateModeNotify:'Hanya beri tahu', updateModeOff:'Jangan periksa', updateModeQuitUnsigned:'Rilis belum ditandatangani, jadi tetap ditanya sebelum dipasang.', updateDone:'Diperbarui ke {v}', updateWhatsNew:'Yang baru',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

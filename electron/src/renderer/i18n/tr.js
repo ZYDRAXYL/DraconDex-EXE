@@ -4,6 +4,14 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('tr', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'Taşınabilir sürücüler', portRescan:'Sürücüleri yeniden ara', portRunning:'Bu sürücüdeki taşınabilir uygulama açık — önce onu kapat', portEmpty:'Bu sürücüde Nexus yok', portOnDrive:'{d} üzerinde',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'{d} ile eşit', portStatusLocal:'Son eşitlemeden beri bu bilgisayarda değişti', portStatusDrive:'Son eşitlemeden beri sürücüde değişti', portStatusBoth:'İki tarafta da değişti — birleştirme gerekli', portStatusAway:'Bağlı sürücü takılı değil', portCloneTo:'{d} sürücüsüne klonla', portCloneHere:'Bu bilgisayara klonla', portCloning:'Klonlanıyor…', portCloned:'Klonlandı — {d} ile bağlandı', portCloneFailed:'Klonlama başarısız — hiçbir şey değişmedi',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'{d} üzerinden açıldı — her kayıt sürücüye geri yazılır', portMountPending:'Henüz {d} sürücüsüne yazılmadı — sürücüyü yeniden tak', portMountConflict:'{d} başka yerde değişti — bu kopya üzerine yazılmadan burada tutuldu', portOpenFailed:'Sürücüden açılamadı',
+  // Procress 32 part 5: sync, eject, conflicts
+  portSyncNow:'Şimdi eşitle', portUnlink:'Sürücüyle eşitlemeyi bırak', portUnlinked:'Bağ kaldırıldı — iki kopya da ayrı ayrı kalır', portEject:'Eşitle ve çıkar', portEjectReady:'Her şey {d} üzerinde — çıkarabilirsin', portEjectPending:'Henüz sürücüde değil: {n}', portSynced:'{name} eşitlendi — {a} eklendi · {u} değişti · {r} silindi', portSyncFailed:'Eşitleme başarısız — hiçbir şey değişmedi', portSyncOpen:'Önce penceresini kapat — kapanınca eşitlenir', portChooseTitle:'İki tarafta da değişti', portChooseHint:'{n} bu bilgisayarda ve sürücüde farklı değiştirildi. Her biri için saklanacak olanı seç — uygulayana kadar hiçbir şey yazılmaz.', portUseLocalAll:'Hepsinde bu bilgisayarınki', portUseDriveAll:'Hepsinde sürücününki', portThisMachine:'Bu bilgisayar', portTheDrive:'Sürücü',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Güncelleme hazır', updateReadyHint:'{v} sürümü indirildi ve doğrulandı — şimdi kurun, DraconDex kendiliğinden yeniden açılır.', updateInstallRestart:'Kur ve yeniden başlat', updateLater:'Sonra', updateMode:'Yeni sürüm çıktığında', updateModeAsk:'İndir, sonra sor', updateModeQuit:'Kapanırken kur', updateModeNotify:'Sadece bildir', updateModeOff:'Denetleme', updateModeQuitUnsigned:'Sürümler henüz imzalı değil, bu yüzden kurulumdan önce yine sorulur.', updateDone:'{v} sürümüne güncellendi', updateWhatsNew:'Yenilikler',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

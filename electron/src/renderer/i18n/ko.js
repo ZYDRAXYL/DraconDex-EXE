@@ -4,6 +4,14 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('ko', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'휴대용 드라이브', portRescan:'드라이브 다시 찾기', portRunning:'이 드라이브의 휴대용 앱이 열려 있습니다 — 먼저 그쪽을 닫으세요', portEmpty:'이 드라이브에 Nexus가 없습니다', portOnDrive:'{d}에 있음',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'{d}와 동기화됨', portStatusLocal:'마지막 동기화 후 이 컴퓨터에서 변경됨', portStatusDrive:'마지막 동기화 후 드라이브에서 변경됨', portStatusBoth:'양쪽 모두 변경됨 — 병합 필요', portStatusAway:'연결된 드라이브가 꽂혀 있지 않음', portCloneTo:'{d}에 복제', portCloneHere:'이 컴퓨터로 복제', portCloning:'복제 중…', portCloned:'복제됨 — {d}와 연결', portCloneFailed:'복제 실패 — 아무것도 변경되지 않음',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'{d}에서 열림 — 저장할 때마다 드라이브로 돌아갑니다', portMountPending:'아직 {d}에 다시 쓰지 않음 — 드라이브를 다시 꽂으세요', portMountConflict:'{d}가 다른 곳에서 변경됨 — 덮어쓰지 않고 이 사본을 여기에 보관함', portOpenFailed:'드라이브에서 열 수 없습니다',
+  // Procress 32 part 5: sync, eject, conflicts
+  portSyncNow:'지금 동기화', portUnlink:'드라이브와 동기화 중지', portUnlinked:'연결 해제 — 두 사본이 따로 남습니다', portEject:'동기화 후 꺼내기', portEjectReady:'모두 {d}에 있음 — 뽑아도 됩니다', portEjectPending:'아직 드라이브에 없음: {n}', portSynced:'{name} 동기화됨 — 추가 {a} · 변경 {u} · 삭제 {r}', portSyncFailed:'동기화 실패 — 아무것도 변경되지 않음', portSyncOpen:'먼저 창을 닫으세요 — 닫으면 동기화됩니다', portChooseTitle:'양쪽에서 변경됨', portChooseHint:'{n}개가 이 컴퓨터와 드라이브에서 다르게 변경되었습니다. 각각 남길 값을 고르세요 — 적용하기 전까지 아무것도 쓰지 않습니다.', portUseLocalAll:'모두 이 컴퓨터 것으로', portUseDriveAll:'모두 드라이브 것으로', portThisMachine:'이 컴퓨터', portTheDrive:'드라이브',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'업데이트 준비됨', updateReadyHint:'버전 {v}을(를) 다운로드하고 확인했습니다 — 지금 설치하면 DraconDex가 저절로 다시 열립니다.', updateInstallRestart:'설치하고 다시 시작', updateLater:'나중에', updateMode:'새 버전이 나오면', updateModeAsk:'다운로드 후 확인', updateModeQuit:'종료 시 설치', updateModeNotify:'알림만', updateModeOff:'확인 안 함', updateModeQuitUnsigned:'릴리스가 아직 서명되지 않아 설치 전에 계속 묻습니다.', updateDone:'{v}(으)로 업데이트됨', updateWhatsNew:'새로운 기능',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

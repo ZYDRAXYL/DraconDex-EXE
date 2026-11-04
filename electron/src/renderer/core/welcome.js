@@ -23,7 +23,7 @@ function renderWelcomeWindow() {
   document.body.classList.toggle('welcome-wizard-mode', S.welcomeStep != null);
   if (S.welcomeStep != null) return renderWelcomeWizard();
   const recent = recentNexuses(3, null);
-  const hasVaults = S.nexuses.length > 0;
+  const hasVaults = recentNexuses(1, null).length > 0; // Procress 32: not counting drive Nexuses opened from the drive
   // Left panel: every vault, most-recently-opened first so the list matches
   // the order of the cards on the right, then the rest in the alphabetical
   // order getNexuses() returns — until the user drags it into an order of
@@ -34,7 +34,8 @@ function renderWelcomeWindow() {
       <button class="btn btn-p btn-sm" onclick="welcomeCreateNexus()">+ ${t('nexusNew')}</button>
     </div>
     ${hasVaults ? listHtml({ list: 'nexuses', aria: t('nexus'), body: ordered.map(n => nexusRowHtml(n, `welcomeOpenNexus(${n.id})`, t('wmOpenNexus'))).join('') }) : ''}
-    ${hasVaults ? '' : `<div class="welcome-side-empty">${t('nexusEmpty')}</div>`}`;
+    ${hasVaults ? '' : `<div class="welcome-side-empty">${t('nexusEmpty')}</div>`}
+    ${portlinkSectionHtml()}`;
   q('#left-panel-foot').innerHTML = '';
   q('#main-inner').innerHTML = `
     <div class="welcome-hero">

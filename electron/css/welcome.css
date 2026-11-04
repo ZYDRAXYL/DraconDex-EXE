@@ -45,6 +45,25 @@ body.welcome-mode #main-inner{display:flex;align-items:center;justify-content:ce
 /* the rows are the shared list's (core/list.js, Procress 21) */
 .welcome-recent-list .ls-row{background:var(--raised)}
 
+/* Procress 32 part 2: a portable drive's heading in the left panel
+   (core/portlink.js) — one line, the path cut with … (full path is the tooltip) */
+.port-drive-label{
+	display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-4) var(--sp-1);
+	text-transform:none;letter-spacing:0;min-width:0;
+}
+.port-drive-label>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.port-drive-label .icon{flex:none}
+/* a local Nexus linked to a drive: the link mark after its name, coloured by status (away = grey) */
+.port-mark{display:inline-flex;align-items:center;color:var(--t3-aa,var(--t2));margin-left:var(--sp-1)}
+.port-mark .icon{width:14px;height:14px}
+/* inside the Nest header's switch button, whose .icon rule (nav-hub.css) would grey it */
+.btn.nexus-switch .port-mark .icon{width:14px;height:14px;color:inherit}
+.port-slot{display:inline-flex}
+.port-slot:empty{display:none}
+.port-mark.port-synced{color:var(--success)}
+.port-mark.port-changed{color:var(--info)}
+.port-mark.port-both{color:var(--warn)}
+
 /* ── First-run setup wizard ─────────────────────────────────────────── */
 /* The wizard has no left panel — it is one centered column, so the step lists
    below are sized in rows to keep every step the same height in a 760x560
@@ -216,3 +235,9 @@ body.create-nexus-mode #main-inner{padding:0;display:flex;overflow:hidden}
 	.cn[data-step="form"] .cn-back{display:inline-flex}
 	.cn[data-step="form"] .cn-form{max-width:560px;width:100%;justify-self:center}
 }
+/* a Nexus that is on a plugged-in drive only (core/portlink.js): grey name */
+.ls-row.port-on-drive .ls-title{color:var(--t3-aa,var(--t2))}
+/* Procress 32 part 5: the "changed on both sides" chooser (core/portlink.js) */
+.port-choices{display:flex;flex-direction:column;gap:var(--sp-4);max-height:60vh;overflow:auto}
+.port-choice-head{font-size:var(--fs-sm);color:var(--t2);margin-bottom:var(--sp-2)}
+.port-choice .seg-opt{white-space:normal;text-align:left;justify-content:flex-start}

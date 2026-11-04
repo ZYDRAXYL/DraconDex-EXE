@@ -4,6 +4,14 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('ja', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'ポータブルドライブ', portRescan:'ドライブを再検索', portRunning:'このドライブのポータブル版が起動中です — 先にそちらを閉じてください', portEmpty:'このドライブにNexusはありません', portOnDrive:'{d} 上',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'{d} と同期済み', portStatusLocal:'前回の同期後にこのPCで変更あり', portStatusDrive:'前回の同期後にドライブで変更あり', portStatusBoth:'両方で変更あり — マージが必要', portStatusAway:'リンクしたドライブが接続されていません', portCloneTo:'{d} にクローン', portCloneHere:'このPCにクローン', portCloning:'クローン中…', portCloned:'クローン完了 — {d} とリンク', portCloneFailed:'クローン失敗 — 何も変更されていません',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'{d} から開いています — 保存はすべてドライブに戻ります', portMountPending:'まだ {d} に書き戻していません — ドライブを再接続してください', portMountConflict:'{d} が別の場所で変更されました — このコピーは上書きせずこのPCに残しました', portOpenFailed:'ドライブから開けませんでした',
+  // Procress 32 part 5: sync, eject, conflicts
+  portSyncNow:'今すぐ同期', portUnlink:'ドライブとの同期をやめる', portUnlinked:'リンク解除 — 両方のコピーは別々に残ります', portEject:'同期して取り外す', portEjectReady:'すべて {d} にあります — 取り外せます', portEjectPending:'まだドライブにありません: {n}', portSynced:'{name} を同期 — 追加 {a} · 変更 {u} · 削除 {r}', portSyncFailed:'同期失敗 — 何も変更されていません', portSyncOpen:'先にウィンドウを閉じてください — 閉じると同期されます', portChooseTitle:'両方で変更あり', portChooseHint:'{n} 件がこのPCとドライブで異なる変更をされています。残す方をそれぞれ選んでください — 適用するまで何も書き込まれません。', portUseLocalAll:'すべてこのPCの方', portUseDriveAll:'すべてドライブの方', portThisMachine:'このPC', portTheDrive:'ドライブ',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'アップデートの準備ができました', updateReadyHint:'バージョン {v} をダウンロードして確認しました — 今インストールすると DraconDex は自動で再起動します。', updateInstallRestart:'インストールして再起動', updateLater:'後で', updateMode:'新しいバージョンが出たら', updateModeAsk:'ダウンロードしてから確認', updateModeQuit:'終了時にインストール', updateModeNotify:'通知のみ', updateModeOff:'確認しない', updateModeQuitUnsigned:'リリースはまだ署名されていないため、インストール前に確認します。', updateDone:'{v} に更新しました', updateWhatsNew:'新機能',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

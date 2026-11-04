@@ -4,6 +4,14 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('ru', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'Переносные диски', portRescan:'Искать диски снова', portRunning:'Портативное приложение на этом диске открыто — сначала закройте его', portEmpty:'На этом диске нет Nexus', portOnDrive:'На {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'Синхронизировано с {d}', portStatusLocal:'Изменено на этом компьютере после последней синхронизации', portStatusDrive:'Изменено на диске после последней синхронизации', portStatusBoth:'Изменено с обеих сторон — нужно слияние', portStatusAway:'Связанный диск не подключён', portCloneTo:'Клонировать на {d}', portCloneHere:'Клонировать на этот компьютер', portCloning:'Клонирование…', portCloned:'Клонировано — связано с {d}', portCloneFailed:'Не удалось клонировать — ничего не изменено',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'Открыто с {d} — каждое сохранение уходит обратно на диск', portMountPending:'Ещё не записано на {d} — подключите диск снова', portMountConflict:'{d} изменён в другом месте — эта копия оставлена здесь, без перезаписи', portOpenFailed:'Не удалось открыть с диска',
+  // Procress 32 part 5: sync, eject, conflicts
+  portSyncNow:'Синхронизировать', portUnlink:'Прекратить синхронизацию с диском', portUnlinked:'Связь снята — обе копии остаются, раздельно', portEject:'Синхронизировать и извлечь', portEjectReady:'Всё на {d} — можно отключать', portEjectPending:'Ещё не на диске: {n}', portSynced:'{name} синхронизирован — добавлено {a} · изменено {u} · удалено {r}', portSyncFailed:'Сбой синхронизации — ничего не изменено', portSyncOpen:'Сначала закройте его окно — синхронизация при закрытии', portChooseTitle:'Изменено с обеих сторон', portChooseHint:'{n} изменены по-разному на этом компьютере и на диске. Выберите, что оставить в каждом случае — ничего не записывается, пока вы не примените.', portUseLocalAll:'Везде оставить с этого компьютера', portUseDriveAll:'Везде оставить с диска', portThisMachine:'Этот компьютер', portTheDrive:'Диск',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Обновление готово', updateReadyHint:'Версия {v} загружена и проверена — установите сейчас, и DraconDex откроется сам.', updateInstallRestart:'Установить и перезапустить', updateLater:'Позже', updateMode:'Когда выходит новая версия', updateModeAsk:'Скачать и спросить', updateModeQuit:'При закрытии', updateModeNotify:'Только сообщить', updateModeOff:'Не проверять', updateModeQuitUnsigned:'Релизы пока не подписаны, поэтому перед установкой по-прежнему будет вопрос.', updateDone:'Обновлено до {v}', updateWhatsNew:'Что нового',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

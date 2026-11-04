@@ -334,10 +334,15 @@ test('calendar_template is wired into every hand-maintained table list', () => {
   // 3. and applySnapshotCore must write them back.
   assert.match(core, /INSERT OR IGNORE INTO calendar_template/, 'apply must restore templates');
 
-  // 4. duplicateNexus renumbers nexus_ref only for the tables it lists.
+  // 4. duplicateNexus renumbers nexus_ref in every table that has one, read
+  //    from the file (Procress 32: the hand-kept list it replaced had missed
+  //    module_preset, nexus_history and trash) — so calendar_template is
+  //    covered without being named. Behaviour: portlink-clone.test.mjs.
   const nexus = readSource('../src/db/nexus.js');
-  assert.match(nexus, /NEXUS_REF_TABLES = \[[^\]]*'calendar_template'/,
-    'calendar_template must be in NEXUS_REF_TABLES or a duplicated vault keeps the source nexus id');
+  assert.match(nexus, /function renumberNexusIn[\s\S]*?sqlite_master[\s\S]*?c\.name === 'nexus_ref'/,
+    'renumberNexusIn must find nexus_ref columns from the schema, not a list');
+  assert.match(nexus, /function duplicateNexus[\s\S]*?renumberNexusIn\(copy, id, newId, name\)/,
+    'duplicateNexus must renumber through renumberNexusIn');
 });
 
 test('the calendar db layer is reachable from database.js', () => {

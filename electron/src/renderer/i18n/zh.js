@@ -4,6 +4,14 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('zh', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'便携驱动器', portRescan:'重新查找驱动器', portRunning:'此驱动器上的便携版正在运行 — 请先在那里关闭', portEmpty:'此驱动器上没有 Nexus', portOnDrive:'位于 {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'与 {d} 同步', portStatusLocal:'上次同步后此电脑有更改', portStatusDrive:'上次同步后驱动器有更改', portStatusBoth:'两边都有更改 — 需要合并', portStatusAway:'已链接的驱动器未插入', portCloneTo:'克隆到 {d}', portCloneHere:'克隆到此电脑', portCloning:'正在克隆…', portCloned:'已克隆 — 已与 {d} 链接', portCloneFailed:'克隆失败 — 未做任何更改',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'从 {d} 打开 — 每次保存都会写回驱动器', portMountPending:'尚未写回 {d} — 请重新插入驱动器', portMountConflict:'{d} 已在别处被修改 — 此副本保留在本机，未覆盖', portOpenFailed:'无法从驱动器打开',
+  // Procress 32 part 5: sync, eject, conflicts
+  portSyncNow:'立即同步', portUnlink:'停止与驱动器同步', portUnlinked:'已取消链接 — 两份副本分别保留', portEject:'同步并弹出', portEjectReady:'全部已在 {d} 上 — 可以拔出', portEjectPending:'尚未写入驱动器：{n}', portSynced:'已同步 {name} — 新增 {a} · 修改 {u} · 删除 {r}', portSyncFailed:'同步失败 — 未做任何更改', portSyncOpen:'请先关闭其窗口 — 关闭时会同步', portChooseTitle:'两边都有更改', portChooseHint:'{n} 处在此电脑和驱动器上被改成不同的值。请为每项选择保留哪个 — 应用前不会写入任何内容。', portUseLocalAll:'全部保留此电脑的', portUseDriveAll:'全部保留驱动器的', portThisMachine:'此电脑', portTheDrive:'驱动器',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'更新已就绪', updateReadyHint:'版本 {v} 已下载并校验——现在安装，DraconDex 会自动重新打开。', updateInstallRestart:'安装并重启', updateLater:'稍后', updateMode:'有新版本时', updateModeAsk:'下载后询问', updateModeQuit:'关闭时安装', updateModeNotify:'仅通知', updateModeOff:'不检查', updateModeQuitUnsigned:'发行版尚未签名，因此安装前仍会询问。', updateDone:'已更新到 {v}', updateWhatsNew:'新功能',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

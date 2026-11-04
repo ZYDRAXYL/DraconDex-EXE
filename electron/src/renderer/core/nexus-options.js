@@ -30,6 +30,7 @@ function openNexusOptionsPopup(anchor, nexusId) {
     ${row(`nexusShare(${n.id})`, t('nexusShare'))}
     ${row(`nexusRevealFile(${n.id})`, t('nexusRevealFile'))}
     <div class="ctx-sep"></div>
+    ${typeof portlinkMenuRowsHtml === 'function' ? portlinkMenuRowsHtml(n.id) : ''}
     ${row(`delNexus(${n.id})`, t('delete'), 'kli-danger')}`, { cls: 'nexus-options-popup', role: 'menu', keep: true, focus: false });
 }
 
@@ -42,6 +43,7 @@ function nexusRowHtml(n, open, tip = '') {
   return listRowHtml({
     icon: `<span class="nexus-vault-dot" style="${n.color_code ? `background:${x(n.color_code)}` : ''}"></span>`,
     title: n.name, count: n.project_count, onclick: open, tip: tip || n.name, drag: true,
+    trailing: typeof portlinkBadgeHtml === 'function' ? portlinkBadgeHtml(n.id) : '', // Procress 32: linked to a drive
     attrs: `data-no-i18n data-nxid="${n.id}" onpointerdown="nexusRowDown(event,this)"`,
     actions: listActHtml({ icon: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
       name: t('edit'), key: 'F2', onclick: `openNexusModal(${n.id})` }),

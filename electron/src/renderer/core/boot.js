@@ -101,6 +101,7 @@ async function init() {
     // old welcome modal used — there is still no persisted first-run flag.
     S.welcomeStep = S.nexuses.length ? null : 0;
     renderWelcomeWindow();
+    if (!S.isCreateNexus) portlinkWatch(); // Procress 32 part 2: portable drives under the local list
     window.__splash?.finish();
     return;
   }
@@ -116,6 +117,7 @@ async function init() {
   const bootstrapNexusId = Number(new URLSearchParams(location.search).get('nexus')) || null;
   S.nexus        = S.nexuses.find(n => n.id === bootstrapNexusId) || null;
   if (S.nexus) pushRecentNexus(S.nexus.id);
+  if (S.nexus) portlinkWatch(); // Procress 32: the link mark beside this Nexus's name (title + status bar)
   // getNestItems rides along in the same wave (Plan part2 #2.5) — without it
   // the first Nest render would fall back to one lazy list fetch (and one
   // full re-render) per content module, which is the boot path that storm

@@ -363,6 +363,23 @@ contextBridge.exposeInMainWorld('api', {
     disconnect:    (id)     => inv('cloud:disconnect', id),
     status:        (id)     => inv('cloud:status', id),
   },
+  // Procress 32 part 1 — portable drives (Port Link)
+  portlink: {
+    listDrives: ()   => inv('portlink:listDrives'),
+    rescan:     ()   => inv('portlink:rescan'),
+    reveal:     (uid,id) => inv('portlink:reveal', uid, id),
+    links:          ()        => inv('portlink:links'),
+    cloneToDrive:   (id,uid)  => inv('portlink:cloneToDrive', id, uid),
+    cloneFromDrive: (uid,dId) => inv('portlink:cloneFromDrive', uid, dId),
+    mounts:         ()        => inv('portlink:mounts'),
+    openFromDrive:  (uid,dId) => inv('portlink:openFromDrive', uid, dId),
+    merge:          (id,ch)   => inv('portlink:merge', id, ch),
+    mountToLink:    (id)      => inv('portlink:mountToLink', id),
+    unlink:         (id)      => inv('portlink:unlink', id),
+    eject:          (uid)     => inv('portlink:eject', uid),
+    onSynced:       (cb)      => { const f = (_, r) => cb(r); ipcRenderer.on('portlink:synced', f); return () => ipcRenderer.removeListener('portlink:synced', f); },
+    onDrives:   (cb) => { const f = (_, l) => cb(l); ipcRenderer.on('portlink:drives', f); return () => ipcRenderer.removeListener('portlink:drives', f); },
+  },
   update: {
     check:        ()    => inv('update:check'),
     dismiss:      (v)   => inv('update:dismiss', v),

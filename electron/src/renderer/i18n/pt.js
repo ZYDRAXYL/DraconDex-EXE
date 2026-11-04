@@ -4,6 +4,14 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('pt', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'Unidades portáteis', portRescan:'Procurar unidades de novo', portRunning:'O app portátil desta unidade está aberto — feche-o primeiro', portEmpty:'Nenhum Nexus nesta unidade', portOnDrive:'Em {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'Sincronizado com {d}', portStatusLocal:'Alterado neste computador desde a última sincronização', portStatusDrive:'Alterado na unidade desde a última sincronização', portStatusBoth:'Alterado nos dois — precisa mesclar', portStatusAway:'A unidade vinculada não está conectada', portCloneTo:'Clonar para {d}', portCloneHere:'Clonar para este computador', portCloning:'Clonando…', portCloned:'Clonado — vinculado a {d}', portCloneFailed:'Falha ao clonar — nada foi alterado',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'Aberto de {d} — cada salvamento volta para a unidade', portMountPending:'Ainda não gravado em {d} — conecte a unidade de novo', portMountConflict:'{d} foi alterado em outro lugar — esta cópia ficou aqui, sem sobrescrever', portOpenFailed:'Não foi possível abrir pela unidade',
+  // Procress 32 part 5: sync, eject, conflicts
+  portSyncNow:'Sincronizar agora', portUnlink:'Parar de sincronizar com a unidade', portUnlinked:'Desvinculado — as duas cópias ficam, separadas', portEject:'Sincronizar e ejetar', portEjectReady:'Tudo está em {d} — pode desconectar', portEjectPending:'Ainda não está na unidade: {n}', portSynced:'{name} sincronizado — {a} adicionados · {u} alterados · {r} removidos', portSyncFailed:'Falha ao sincronizar — nada foi alterado', portSyncOpen:'Feche a janela primeiro — sincroniza ao fechar', portChooseTitle:'Alterado nos dois lados', portChooseHint:'{n} foram alterados de forma diferente neste computador e na unidade. Escolha o que manter em cada um — nada é gravado até aplicar.', portUseLocalAll:'Manter os deste computador em todos', portUseDriveAll:'Manter os da unidade em todos', portThisMachine:'Este computador', portTheDrive:'A unidade',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Atualização pronta', updateReadyHint:'A versão {v} foi baixada e verificada — instale agora e o DraconDex reabre sozinho.', updateInstallRestart:'Instalar e reiniciar', updateLater:'Mais tarde', updateMode:'Quando houver uma nova versão', updateModeAsk:'Baixar e perguntar', updateModeQuit:'Ao fechar', updateModeNotify:'Só avisar', updateModeOff:'Não verificar', updateModeQuitUnsigned:'As versões ainda não são assinadas, então ainda perguntamos antes de instalar.', updateDone:'Atualizado para {v}', updateWhatsNew:'Novidades',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

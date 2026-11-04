@@ -4,6 +4,14 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('pl', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'Dyski przenośne', portRescan:'Szukaj dysków ponownie', portRunning:'Aplikacja przenośna na tym dysku jest otwarta — najpierw ją zamknij', portEmpty:'Brak Nexusa na tym dysku', portOnDrive:'Na {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'Zsynchronizowano z {d}', portStatusLocal:'Zmieniono na tym komputerze od ostatniej synchronizacji', portStatusDrive:'Zmieniono na dysku od ostatniej synchronizacji', portStatusBoth:'Zmieniono po obu stronach — potrzebne scalenie', portStatusAway:'Połączony dysk nie jest podłączony', portCloneTo:'Klonuj na {d}', portCloneHere:'Klonuj na ten komputer', portCloning:'Klonowanie…', portCloned:'Sklonowano — połączono z {d}', portCloneFailed:'Klonowanie nie powiodło się — nic nie zmieniono',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'Otwarto z {d} — każdy zapis wraca na dysk', portMountPending:'Jeszcze nie zapisano na {d} — podłącz dysk ponownie', portMountConflict:'{d} zmieniono gdzie indziej — ta kopia została tutaj, bez nadpisywania', portOpenFailed:'Nie można otworzyć z dysku',
+  // Procress 32 part 5: sync, eject, conflicts
+  portSyncNow:'Synchronizuj teraz', portUnlink:'Przestań synchronizować z dyskiem', portUnlinked:'Rozłączono — obie kopie zostają, osobno', portEject:'Synchronizuj i wysuń', portEjectReady:'Wszystko jest na {d} — można odłączyć', portEjectPending:'Jeszcze nie na dysku: {n}', portSynced:'Zsynchronizowano {name} — dodano {a} · zmieniono {u} · usunięto {r}', portSyncFailed:'Synchronizacja nie powiodła się — nic nie zmieniono', portSyncOpen:'Najpierw zamknij jego okno — zsynchronizuje się przy zamknięciu', portChooseTitle:'Zmieniono po obu stronach', portChooseHint:'{n} zmieniono inaczej na tym komputerze i na dysku. Wybierz, co zachować w każdym przypadku — nic nie zostanie zapisane, dopóki nie zastosujesz.', portUseLocalAll:'Wszędzie ten komputer', portUseDriveAll:'Wszędzie dysk', portThisMachine:'Ten komputer', portTheDrive:'Dysk',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Aktualizacja gotowa', updateReadyHint:'Wersja {v} jest pobrana i sprawdzona — zainstaluj teraz, a DraconDex sam się ponownie otworzy.', updateInstallRestart:'Zainstaluj i uruchom ponownie', updateLater:'Później', updateMode:'Gdy pojawi się nowa wersja', updateModeAsk:'Pobierz, potem zapytaj', updateModeQuit:'Przy zamknięciu', updateModeNotify:'Tylko powiadom', updateModeOff:'Nie sprawdzaj', updateModeQuitUnsigned:'Wydania nie są jeszcze podpisane, więc przed instalacją nadal pojawi się pytanie.', updateDone:'Zaktualizowano do {v}', updateWhatsNew:'Co nowego',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

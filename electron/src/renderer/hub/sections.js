@@ -204,7 +204,7 @@ function buildHubHtml() {
   return `<div id="hub-body">
     <div class="nest-head">
       <button class="btn btn-g nexus-switch" onclick="toggleNexusSwitcher(event)" title="${t('nexusSwitch')}" aria-haspopup="menu">
-        <span class="nexus-vault-dot"${nx.color_code ? ` style="background:${x(nx.color_code)}"` : ''}></span><span class="name" data-no-i18n>${x(nx.name)}</span>${I.chevronDown}
+        <span class="nexus-vault-dot"${nx.color_code ? ` style="background:${x(nx.color_code)}"` : ''}></span><span class="name" data-no-i18n>${x(nx.name)}</span><span class="port-slot" data-port-nexus="${Number(nx.id)}">${typeof portlinkBadgeHtml === 'function' ? portlinkBadgeHtml(nx.id) : ''}</span>${I.chevronDown}
       </button>
       ${cloudSyncAvailable() ? `<button class="btn btn-g btn-i" onclick="openSyncModal()" title="${t('syncTitle')}" aria-label="${t('syncTitle')}">${I.cloud}</button>` : ''}
       <button class="btn btn-g btn-i" onclick="event.stopPropagation();openNestOptionsPopup(this)" title="${t('nestOptionsTitle')}" aria-label="${t('nestOptionsTitle')}" aria-haspopup="dialog">${I.sliders}</button>

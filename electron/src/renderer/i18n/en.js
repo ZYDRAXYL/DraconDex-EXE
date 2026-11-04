@@ -4,6 +4,14 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('en', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'Portable drives', portRescan:'Look for drives again', portRunning:'The portable app on this drive is open — close it there first', portEmpty:'No Nexus on this drive', portOnDrive:'On {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'In sync with {d}', portStatusLocal:'Changed on this machine since the last sync', portStatusDrive:'Changed on the drive since the last sync', portStatusBoth:'Changed on both — needs a merge', portStatusAway:'Linked drive not plugged in', portCloneTo:'Clone to {d}', portCloneHere:'Clone to this machine', portCloning:'Cloning…', portCloned:'Cloned — linked with {d}', portCloneFailed:'Clone failed — nothing was changed',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'Opened from {d} — every save goes back to the drive', portMountPending:'Not written back to {d} yet — plug the drive in again', portMountConflict:'{d} was changed elsewhere — this copy was kept here, not written over it', portOpenFailed:'Could not open it from the drive',
+  // Procress 32 part 5: sync, eject, conflicts
+  portSyncNow:'Sync now', portUnlink:'Stop syncing with the drive', portUnlinked:'Unlinked — both copies stay, separately', portEject:'Sync and eject', portEjectReady:'Everything is on {d} — safe to unplug', portEjectPending:'Not on the drive yet: {n}', portSynced:'Synced {name} — {a} added, {u} changed, {r} removed', portSyncFailed:'Sync failed — nothing was changed', portSyncOpen:'Close its window first — it syncs when the window closes', portChooseTitle:'Changed on both sides', portChooseHint:'{n} changed differently on this machine and on the drive. Pick the one to keep for each — nothing is written until you apply.', portUseLocalAll:'Keep this machine\'s for all', portUseDriveAll:'Keep the drive\'s for all', portThisMachine:'This machine', portTheDrive:'The drive',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Update ready', updateReadyHint:'Version {v} is downloaded and checked — install it now and DraconDex reopens by itself.', updateInstallRestart:'Install and restart', updateLater:'Later', updateMode:'When a new version is out', updateModeAsk:'Download, then ask', updateModeQuit:'Install on close', updateModeNotify:'Only tell me', updateModeOff:'Don\'t check', updateModeQuitUnsigned:'Releases are not signed yet, so an update still asks before it installs.', updateDone:'Updated to {v}', updateWhatsNew:'What\'s new',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

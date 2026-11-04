@@ -73,6 +73,49 @@ const APP_DDL_SQL = `
       update_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- Port Link (Procress 32 part 3): a local Nexus and its clone on a
+    -- portable drive. The drive is the hub (APP Plan.md Procress 32), so the
+    -- drive side is named by the drive's own identity — its marker's driveUid
+    -- and the id in the DRIVE's registry — never by a path (the letter
+    -- changes). base_path is this machine's copy of the drive file as of the
+    -- last sync: the "B" of the 3-way merge. *_sig = size:mtime of each file
+    -- (and its -wal) at that moment — a cheap "has it changed since?" for the
+    -- list; the merge itself compares rows, not this. EXE-only, like
+    -- nexus_file: APK has no app.ddx (Plan part 9).
+    CREATE TABLE IF NOT EXISTS port_link (
+      link_uid TEXT PRIMARY KEY,
+      nexus_ref INTEGER NOT NULL UNIQUE REFERENCES nexus_file(id) ON DELETE CASCADE,
+      drive_uid TEXT NOT NULL,
+      drive_nexus_id INTEGER NOT NULL,
+      base_path TEXT NOT NULL,
+      local_sig TEXT,
+      drive_sig TEXT,
+      last_sync_at TEXT,
+      create_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (drive_uid, drive_nexus_id)
+    );
+
+    -- Port Link part 3b: a drive Nexus opened straight from the drive. A
+    -- window needs a registry id whose vault carries that same id, and the
+    -- drive's id is the drive's — so the window works on a copy here,
+    -- renumbered to a registry row of its own (nexus_ref), and every save
+    -- goes back to the drive renumbered again. Removed (with its copy) once
+    -- the last write-back succeeds. state: 'open' · 'pending' (the drive was
+    -- not there to take it) · 'conflict' (the drive file changed elsewhere
+    -- meanwhile — the copy stays here, never written over it).
+    CREATE TABLE IF NOT EXISTS port_mount (
+      nexus_ref INTEGER PRIMARY KEY REFERENCES nexus_file(id) ON DELETE CASCADE,
+      drive_uid TEXT NOT NULL,
+      drive_nexus_id INTEGER NOT NULL,
+      work_path TEXT NOT NULL,
+      base_path TEXT, -- the drive file as it was when opened: what a 'conflict' merges against (part 4)
+      local_sig TEXT,
+      drive_sig TEXT,
+      state TEXT NOT NULL DEFAULT 'open' CHECK (state IN ('open','pending','conflict')),
+      create_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (drive_uid, drive_nexus_id)
+    );
+
     -- Plugins (v4.0.0 as "Github extensions", renamed v4.2.0 — see
     -- migratePluginV42 in schema/migrations.js): a downloaded plugin owns its
     -- own plg_<key>_<name> table(s), tracked here so src/db/plugin.js can

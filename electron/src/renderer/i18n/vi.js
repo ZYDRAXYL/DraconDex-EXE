@@ -4,6 +4,14 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('vi', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'Ổ đĩa di động', portRescan:'Tìm lại ổ đĩa', portRunning:'Ứng dụng di động trên ổ này đang mở — hãy đóng nó trước', portEmpty:'Không có Nexus trên ổ này', portOnDrive:'Trên {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'Đã đồng bộ với {d}', portStatusLocal:'Máy này đã thay đổi từ lần đồng bộ trước', portStatusDrive:'Ổ đĩa đã thay đổi từ lần đồng bộ trước', portStatusBoth:'Cả hai bên đã thay đổi — cần hợp nhất', portStatusAway:'Ổ đã liên kết chưa được cắm', portCloneTo:'Sao chép sang {d}', portCloneHere:'Sao chép về máy này', portCloning:'Đang sao chép…', portCloned:'Đã sao chép — liên kết với {d}', portCloneFailed:'Sao chép thất bại — không có gì thay đổi',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'Mở từ {d} — mỗi lần lưu đều ghi về ổ đĩa', portMountPending:'Chưa ghi lại vào {d} — hãy cắm lại ổ đĩa', portMountConflict:'{d} đã bị sửa ở nơi khác — bản này được giữ tại đây, không ghi đè', portOpenFailed:'Không thể mở từ ổ đĩa',
+  // Procress 32 part 5: sync, eject, conflicts
+  portSyncNow:'Đồng bộ ngay', portUnlink:'Ngừng đồng bộ với ổ đĩa', portUnlinked:'Đã hủy liên kết — hai bản vẫn còn, riêng biệt', portEject:'Đồng bộ rồi tháo', portEjectReady:'Mọi thứ đã ở trên {d} — có thể rút ra', portEjectPending:'Chưa lên ổ đĩa: {n}', portSynced:'Đã đồng bộ {name} — thêm {a} · sửa {u} · xóa {r}', portSyncFailed:'Đồng bộ thất bại — không có gì thay đổi', portSyncOpen:'Hãy đóng cửa sổ trước — đóng lại sẽ đồng bộ', portChooseTitle:'Thay đổi ở cả hai bên', portChooseHint:'{n} mục bị sửa khác nhau trên máy này và trên ổ đĩa. Chọn giá trị giữ lại cho từng mục — chưa ghi gì cho đến khi bạn áp dụng.', portUseLocalAll:'Giữ của máy này cho tất cả', portUseDriveAll:'Giữ của ổ đĩa cho tất cả', portThisMachine:'Máy này', portTheDrive:'Ổ đĩa',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Bản cập nhật đã sẵn sàng', updateReadyHint:'Phiên bản {v} đã được tải và kiểm tra — cài ngay, DraconDex sẽ tự mở lại.', updateInstallRestart:'Cài đặt và khởi động lại', updateLater:'Để sau', updateMode:'Khi có phiên bản mới', updateModeAsk:'Tải về rồi hỏi', updateModeQuit:'Cài khi đóng', updateModeNotify:'Chỉ thông báo', updateModeOff:'Không kiểm tra', updateModeQuitUnsigned:'Bản phát hành chưa được ký nên vẫn hỏi trước khi cài.', updateDone:'Đã cập nhật lên {v}', updateWhatsNew:'Có gì mới',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

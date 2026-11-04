@@ -30,6 +30,9 @@ const tempDataPath = isPackaged
       : path.join(app.getPath('appData'), 'DraconDex', 'novel-manager-data'))
   : (process.env.DRACONDEX_DATA_DIR || path.join(__dirname, '..', 'tmp-user-data'));
 if (!fs.existsSync(tempDataPath)) fs.mkdirSync(tempDataPath, { recursive: true });
+// Procress 32 part 0: only a packaged portable copy rebases its paths and
+// writes the drive marker (src/db/portable.js).
+db.portable.setPortableRoot(isPackaged ? portableRoot : null);
 const electronUserDataPath = path.join(tempDataPath, 'electron-user-data');
 app.setPath('userData', electronUserDataPath);
 app.commandLine.appendSwitch('no-sandbox');
@@ -167,7 +170,12 @@ function createWindow(bootstrapNexusId, bootstrapTabKey) {
         }
         db.locate.forget(nexusId);
         db.unpinVault(nexusId);
+        // Procress 32 part 3b: opened straight from a drive — back onto the
+        // drive, and the working copy goes (kept if the drive is not there)
+        if (db.portlink.mountOf(nexusId)) { try { db.portlink.closeMount(nexusId); } catch (_) {} portlinkBroadcast(); }
         db.closeVault(nexusId);
+        // part 5: a linked Nexus syncs with its drive once its last window is gone
+        if (db.portlink.linkOf(nexusId)) { portlinkAutoSync(nexusId); portlinkBroadcast(); }
       }
     });
   }
@@ -450,6 +458,24 @@ app.whenReady().then(() => {
     { role: 'viewMenu' },
   ]));
   registerDisplayImageProtocol();
+  // Procress 32 part 0: before anything reads a path — the drive may have
+  // another letter on this machine.
+  try { db.portable.rebasePortable(); } catch (e) { console.error('[portable] rebase failed', e); }
+  db.portable.writePortableMarker(app.getVersion());
+  // Procress 32 part 1: a portable copy says it is running (so an installed
+  // copy on this machine leaves its drive alone); an installed copy watches
+  // for portable drives being plugged in.
+  if (db.portable.portableRoot()) {
+    db.portable.writeRunningLock();
+    app.on('will-quit', () => db.portable.clearRunningLock());
+  } else {
+    // a drive back in may let a pending opened-from-drive Nexus be written
+    db.portlink.startWatching(() => { settlePortMounts(); portlinkAutoSync(); portlinkBroadcast(); });
+    settlePortMounts(); // leftovers from a crash or an unplugged drive
+    portlinkAutoSync(); // part 5: a drive already in at start-up syncs too
+    app.on('will-quit', () => { try { db.portlink.syncLinks({ isOpen: () => false }); } catch (_) {} });
+    setInterval(settlePortMounts, 60000).unref(); // part 3b: an open one is saved to the drive every minute
+  }
   db.cleanupUpdateLeftovers(); // Procress 28 part 7: the Setup / old portable an update left behind
   db.scheduleUpdateChecks();   // Procress 29 part 9: check, download and get ready in the background
   // On-disk half of the v4.2.0 extensions -> plugins rename (the DB half is
@@ -566,7 +592,7 @@ app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) creat
 // commit before its awaits), and never the channels that open, swap, sync or
 // back up the vault file itself.
 const TX_VERB = /^(create|update|upsert|delete|add|remove|move|set|duplicate|restore|rename|save|apply|insert|reorder|clear|toggle|split|revert|link|unlink|merge|pin|attach|detach)/;
-const TX_SKIP = new Set(['nexus', 'vault', 'db', 'sync', 'drive', 'cloud', 'transfer', 'window', 'app', 'plugin', 'pkg', 'update', 'trx', 'importdock', 'asset', 'file', 'locate', 'export', 'backup']);
+const TX_SKIP = new Set(['nexus', 'vault', 'db', 'sync', 'drive', 'cloud', 'transfer', 'window', 'app', 'plugin', 'pkg', 'update', 'trx', 'importdock', 'asset', 'file', 'locate', 'export', 'backup', 'portlink']); // portlink: whole-file copies (VACUUM INTO) that manage their own transactions
 const { getDB: vaultDB } = require('./src/db/core');
 const h = (ch, fn) => {
   const [ns, verb = ''] = ch.split(':');
@@ -1772,6 +1798,52 @@ h('cloud:disconnect',      (id)      => db.cloudDisconnect(id));
 h('cloud:status',          (id)      => db.cloudStatus(id));
 
 // GitHub Releases — app-update notice + user-initiated in-app install
+// Procress 32 part 1: portable drives plugged in right now (read-only)
+h('portlink:listDrives', () => db.portlink.listDrives());
+h('portlink:rescan',     () => db.portlink.rescan());
+// Procress 32 part 3b: every window learns of drive / link / mount changes;
+// a mount still held by a window is only written back, never closed out.
+function portlinkBroadcast() {
+  const list = db.portlink.listDrives();
+  for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('portlink:drives', list);
+}
+// Part 5: merges what changed, reports each result to every window (Welcome
+// toasts them; a 'needs_choice' waits for the user's "Sync now").
+const portIsOpen = (id) => [...windowNexus.values()].includes(id);
+function portlinkAutoSync(only = null) {
+  let res = [];
+  try { res = db.portlink.syncLinks({ isOpen: portIsOpen, only }); } catch (e) { console.error('[portlink] sync', e); }
+  if (res.length) for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('portlink:synced', res);
+  return res;
+}
+function settlePortMounts() {
+  try { db.portlink.settleMounts((id) => [...windowNexus.values()].includes(id)); } catch (e) { console.error('[portlink] settle', e); }
+}
+h('portlink:mounts',         ()           => db.portlink.listMounts());
+h('portlink:openFromDrive',  (uid, dId)   => db.portlink.openFromDrive(String(uid), Number(dId)));
+// Part 4: the 3-way merge. Not while a window has the Nexus open — its file is
+// replaced. choices: { '<table>:<id>:<col>': 'local'|'drive', '*': … }
+h('portlink:merge', (id, choices) => {
+  const c = choices && typeof choices === 'object' ? Object.fromEntries(Object.entries(choices).filter(([, v]) => v === 'local' || v === 'drive')) : {};
+  const r = db.portlink.mergeLink(Number(id), { choices: c, isOpen: (n) => [...windowNexus.values()].includes(n) });
+  if (r.ok) portlinkBroadcast();
+  return r;
+});
+h('portlink:mountToLink', (id) => db.portlink.mountToLink(Number(id)));
+h('portlink:unlink',      (id) => db.portlink.unlink(Number(id)));
+h('portlink:eject',       (uid) => { const r = db.portlink.ejectDrive(String(uid), portIsOpen); portlinkBroadcast(); return r; });
+// Procress 32 part 3: links + clone, both ways
+h('portlink:links',          ()           => db.portlink.listLinksWithStatus());
+h('portlink:cloneToDrive',   (id, uid)    => db.portlink.cloneToDrive(Number(id), String(uid)));
+h('portlink:cloneFromDrive', (uid, dId)   => db.portlink.cloneFromDrive(String(uid), Number(dId)));
+// The path comes from the drive scan, never from the renderer — the renderer
+// names a drive and a Nexus on it, nothing else.
+h('portlink:reveal', (uid, id) => {
+  const n = db.portlink.listDrives().find((d) => d.driveUid === uid)?.nexuses.find((v) => v.id === Number(id));
+  if (!n?.file_path || !fs.existsSync(n.file_path)) return { ok: false, code: 'not_found' };
+  shell.showItemInFolder(n.file_path);
+  return { ok: true };
+});
 h('update:check',        ()    => db.checkForUpdate());
 h('update:install',      ()    => db.installUpdate());
 h('update:dismiss',      (v)   => db.dismissUpdate(v));

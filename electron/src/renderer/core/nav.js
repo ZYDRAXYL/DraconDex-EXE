@@ -76,7 +76,10 @@ function toggleLayoutMenu(force){
 
 function updateTitlebarVault(){
   const el = q('#titlebar-vault');
-  if(el) el.textContent = S.nexus ? `${S.nexus.name} — DraconDex` : S.isCreateNexus ? t('cnTitle') : 'DraconDex';
+  if(!el) return;
+  el.textContent = S.nexus ? `${S.nexus.name} — DraconDex` : S.isCreateNexus ? t('cnTitle') : 'DraconDex';
+  // Procress 32: linked to a portable drive — the mark right after the name
+  if (S.nexus && typeof portlinkBadgeHtml === 'function') el.insertAdjacentHTML('beforeend', portlinkBadgeHtml(S.nexus.id));
 }
 
 // v3 module tabs are pane-scoped now (Phase 19): opening a module books it

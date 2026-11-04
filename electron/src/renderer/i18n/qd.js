@@ -4,6 +4,14 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('qd', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'Wanderynge drives', portRescan:'Seke the drives agayn', portRunning:'The wanderynge app upon this drive is opyn — close it there fyrst', portEmpty:'No Nexus upon this drive', portOnDrive:'Upon {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'At one with {d}', portStatusLocal:'Chaunged upon this machyne sith the last sync', portStatusDrive:'Chaunged upon the drive sith the last sync', portStatusBoth:'Chaunged upon bothe — a mergynge is nedeful', portStatusAway:'The bounden drive is nat in', portCloneTo:'Clone unto {d}', portCloneHere:'Clone unto this machyne', portCloning:'Clonynge…', portCloned:'Cloned — bounden with {d}', portCloneFailed:'The clonynge fayled — nothynge was chaunged',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'Opyned from {d} — eche savynge goeth bak unto the drive', portMountPending:'Nat yet writen bak unto {d} — sette the drive in agayn', portMountConflict:'{d} was chaunged elleswhere — this copie is kept here, nat writen over', portOpenFailed:'It myghte nat be opyned from the drive',
+  // Procress 32 part 5: sync, eject, conflicts
+  portSyncNow:'Sync now', portUnlink:'Ceasse the syncynge with the drive', portUnlinked:'Unbounden — bothe copies abide, apart', portEject:'Sync and take out', portEjectReady:'Al is upon {d} — thou mayst pulle it', portEjectPending:'Nat yet upon the drive: {n}', portSynced:'Synced {name} — {a} added · {u} chaunged · {r} taken awey', portSyncFailed:'The sync fayled — nothynge was chaunged', portSyncOpen:'Close its wyndowe fyrst — it syncs whan the wyndowe closeth', portChooseTitle:'Chaunged upon bothe sydes', portChooseHint:'{n} were chaunged diversly upon this machyne and upon the drive. Chese which to kepe for eche — nothynge is writen til thou applyest.', portUseLocalAll:'Kepe this machyne\'s for alle', portUseDriveAll:'Kepe the drive\'s for alle', portThisMachine:'This machyne', portTheDrive:'The drive',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Thyn amendement is redy', updateReadyHint:'Versioun {v} is fet and proved — sette it in now and DraconDex openeth agayn by itself.', updateInstallRestart:'Sette in and begynne agayn', updateLater:'Later', updateMode:'Whan a newe versioun cometh', updateModeAsk:'Fecche, then aske', updateModeQuit:'Sette in at closynge', updateModeNotify:'Onely telle me', updateModeOff:'Seke not', updateModeQuitUnsigned:'The releses ben not yet sealed, so it asketh ere it setteth in.', updateDone:'Amended to {v}', updateWhatsNew:'What is newe',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
