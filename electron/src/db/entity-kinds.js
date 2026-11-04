@@ -104,4 +104,13 @@ function keysOwnedBy(db, moduleIds) {
   return out;
 }
 
-module.exports = { ENTITY_KINDS, KEY_COLUMNS, entityKeyMaps, keysOwnedBy };
+// Every row id stored without an FK or an entity key (SDB idRefs, Procress 32
+// 9.0) — what a merge must remap when it renumbers rows. SDB's generator fails
+// if vault.sql gains such a column without declaring it here.
+//   shape  id · prefixedKey · jsonIdList · jsonObjectIdLists   (SDB entity-kinds.json idRefsComment)
+const ID_REFS = (DECL.idRefs || []).map((r) => ({
+  table: r.table, col: r.col, shape: r.shape, to: r.to || null, prefix: r.prefix || null, keys: r.keys || null,
+  when: r.when ? { col: r.when.col, in: new Set(r.when.in) } : null,
+}));
+
+module.exports = { ENTITY_KINDS, KEY_COLUMNS, ID_REFS, entityKeyMaps, keysOwnedBy };
