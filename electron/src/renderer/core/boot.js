@@ -101,6 +101,7 @@ async function init() {
     // old welcome modal used — there is still no persisted first-run flag.
     S.welcomeStep = S.nexuses.length ? null : 0;
     renderWelcomeWindow();
+    if (!S.isCreateNexus) portlinkWatch(); // Procress 32 part 2: portable drives under the local list
     window.__splash?.finish();
     return;
   }

@@ -35,7 +35,12 @@ function driveRoots() {
 }
 
 const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (_) { return null; } };
-const isMarker = (m) => m && m.format === 'dracondex-portable' && typeof m.driveUid === 'string' && m.driveUid;
+// A marker is a file on a drive someone plugged in: untrusted. driveUid ends
+// up inside renderer markup and onclick strings, so it is held to the shape
+// portable.js writes (a UUID) — anything else is not a DraconDex drive.
+const UID_RE = /^[A-Za-z0-9-]{1,64}$/;
+const isMarker = (m) => m && m.format === 'dracondex-portable' && typeof m.driveUid === 'string' && UID_RE.test(m.driveUid);
+const COLOR_RE = /^#[0-9a-f]{3,8}$/i;
 
 // Portable roots on one drive: the drive root itself, or a folder right under it.
 function findPortableRoots(driveRoot) {
@@ -81,7 +86,12 @@ function readDriveNexuses(root, marker) {
     return db.prepare(`SELECT id, name, memo, color_code, file_path, locate_dir, update_at, project_count FROM nexus_file ORDER BY name COLLATE NOCASE`).all()
       .map((r) => {
         const file_path = fix(r.file_path), locate_dir = fix(r.locate_dir);
-        return { ...r, file_path, locate_dir, missing: file_path && fs.existsSync(file_path) ? 0 : 1 };
+        return {
+          id: Number(r.id), name: String(r.name ?? ''), memo: r.memo == null ? null : String(r.memo),
+          color_code: COLOR_RE.test(String(r.color_code || '')) ? r.color_code : null,
+          file_path, locate_dir, update_at: r.update_at, project_count: Number(r.project_count) || 0,
+          missing: file_path && fs.existsSync(file_path) ? 0 : 1,
+        };
       });
   } finally {
     try { db?.close(); } catch (_) {}
@@ -104,7 +114,8 @@ function scan() {
       seen.add(marker.driveUid);
       let nexuses = [], error = null;
       try { nexuses = readDriveNexuses(root, marker); } catch (e) { error = String(e?.message || e); }
-      out.push({ driveUid: marker.driveUid, root, appVersion: marker.appVersion || null, running: portableRunning(root), nexuses, error });
+      // label: what the list shows — E:\DDX on Windows, the folder name elsewhere (root goes in the tooltip)
+      out.push({ driveUid: marker.driveUid, root, label: process.platform === 'win32' ? root : path.basename(root), appVersion: marker.appVersion || null, running: portableRunning(root), nexuses, error });
     }
   }
   return out;

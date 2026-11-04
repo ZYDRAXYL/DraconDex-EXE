@@ -34,7 +34,8 @@ function renderWelcomeWindow() {
       <button class="btn btn-p btn-sm" onclick="welcomeCreateNexus()">+ ${t('nexusNew')}</button>
     </div>
     ${hasVaults ? listHtml({ list: 'nexuses', aria: t('nexus'), body: ordered.map(n => nexusRowHtml(n, `welcomeOpenNexus(${n.id})`, t('wmOpenNexus'))).join('') }) : ''}
-    ${hasVaults ? '' : `<div class="welcome-side-empty">${t('nexusEmpty')}</div>`}`;
+    ${hasVaults ? '' : `<div class="welcome-side-empty">${t('nexusEmpty')}</div>`}
+    ${portlinkSectionHtml()}`;
   q('#left-panel-foot').innerHTML = '';
   q('#main-inner').innerHTML = `
     <div class="welcome-hero">

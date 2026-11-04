@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('tr', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'Taşınabilir sürücüler', portRescan:'Sürücüleri yeniden ara', portRunning:'Bu sürücüdeki taşınabilir uygulama açık — önce onu kapat', portEmpty:'Bu sürücüde Nexus yok', portOnDrive:'{d} üzerinde',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Güncelleme hazır', updateReadyHint:'{v} sürümü indirildi ve doğrulandı — şimdi kurun, DraconDex kendiliğinden yeniden açılır.', updateInstallRestart:'Kur ve yeniden başlat', updateLater:'Sonra', updateMode:'Yeni sürüm çıktığında', updateModeAsk:'İndir, sonra sor', updateModeQuit:'Kapanırken kur', updateModeNotify:'Sadece bildir', updateModeOff:'Denetleme', updateModeQuitUnsigned:'Sürümler henüz imzalı değil, bu yüzden kurulumdan önce yine sorulur.', updateDone:'{v} sürümüne güncellendi', updateWhatsNew:'Yenilikler',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

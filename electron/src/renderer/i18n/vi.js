@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('vi', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'Ổ đĩa di động', portRescan:'Tìm lại ổ đĩa', portRunning:'Ứng dụng di động trên ổ này đang mở — hãy đóng nó trước', portEmpty:'Không có Nexus trên ổ này', portOnDrive:'Trên {d}',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Bản cập nhật đã sẵn sàng', updateReadyHint:'Phiên bản {v} đã được tải và kiểm tra — cài ngay, DraconDex sẽ tự mở lại.', updateInstallRestart:'Cài đặt và khởi động lại', updateLater:'Để sau', updateMode:'Khi có phiên bản mới', updateModeAsk:'Tải về rồi hỏi', updateModeQuit:'Cài khi đóng', updateModeNotify:'Chỉ thông báo', updateModeOff:'Không kiểm tra', updateModeQuitUnsigned:'Bản phát hành chưa được ký nên vẫn hỏi trước khi cài.', updateDone:'Đã cập nhật lên {v}', updateWhatsNew:'Có gì mới',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

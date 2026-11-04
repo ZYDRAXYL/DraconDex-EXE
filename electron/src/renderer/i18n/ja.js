@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('ja', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'ポータブルドライブ', portRescan:'ドライブを再検索', portRunning:'このドライブのポータブル版が起動中です — 先にそちらを閉じてください', portEmpty:'このドライブにNexusはありません', portOnDrive:'{d} 上',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'アップデートの準備ができました', updateReadyHint:'バージョン {v} をダウンロードして確認しました — 今インストールすると DraconDex は自動で再起動します。', updateInstallRestart:'インストールして再起動', updateLater:'後で', updateMode:'新しいバージョンが出たら', updateModeAsk:'ダウンロードしてから確認', updateModeQuit:'終了時にインストール', updateModeNotify:'通知のみ', updateModeOff:'確認しない', updateModeQuitUnsigned:'リリースはまだ署名されていないため、インストール前に確認します。', updateDone:'{v} に更新しました', updateWhatsNew:'新機能',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

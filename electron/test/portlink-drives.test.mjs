@@ -88,3 +88,15 @@ test('watching: change is reported once per real change, and when a drive goes a
   assert.deepEqual(seen, [2, 1]);
   drives.stopWatching();
 });
+
+test('a marker or registry row that does not look like ours is not trusted', () => {
+  const evil = join(dir, 'driveEvil');
+  mkdirSync(evil, { recursive: true });
+  writeFileSync(join(evil, MARKER), JSON.stringify({ format: 'dracondex-portable', driveUid: "x');alert(1);('" }));
+  assert.deepEqual(drives.findPortableRoots(evil), [], 'a uid that could break out of an onclick string');
+  const db = new Database(join(data, 'app.ddx'));
+  db.run(`UPDATE nexus_file SET color_code=? WHERE id=1`, ['red;background:url(http://x)']);
+  db.close();
+  const n = drives.readDriveNexuses(root, { dataDir: 'novel-manager-data' }).find((r) => r.id === 1);
+  assert.equal(n.color_code, null);
+});

@@ -367,6 +367,7 @@ contextBridge.exposeInMainWorld('api', {
   portlink: {
     listDrives: ()   => inv('portlink:listDrives'),
     rescan:     ()   => inv('portlink:rescan'),
+    reveal:     (uid,id) => inv('portlink:reveal', uid, id),
     onDrives:   (cb) => { const f = (_, l) => cb(l); ipcRenderer.on('portlink:drives', f); return () => ipcRenderer.removeListener('portlink:drives', f); },
   },
   update: {

@@ -4,6 +4,8 @@
 // t('key') strings; the second is this language's column of COMMON_UI_TEXT,
 // keyed by the Thai or English source text tr()/translateCommonUiText() see.
 i18nAdd('zh', {
+  // Procress 32 part 2: portable drives (Port Link)
+  portDrives:'便携驱动器', portRescan:'重新查找驱动器', portRunning:'此驱动器上的便携版正在运行 — 请先在那里关闭', portEmpty:'此驱动器上没有 Nexus', portOnDrive:'位于 {d}',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'更新已就绪', updateReadyHint:'版本 {v} 已下载并校验——现在安装，DraconDex 会自动重新打开。', updateInstallRestart:'安装并重启', updateLater:'稍后', updateMode:'有新版本时', updateModeAsk:'下载后询问', updateModeQuit:'关闭时安装', updateModeNotify:'仅通知', updateModeOff:'不检查', updateModeQuitUnsigned:'发行版尚未签名，因此安装前仍会询问。', updateDone:'已更新到 {v}', updateWhatsNew:'新功能',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

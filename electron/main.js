@@ -1793,6 +1793,14 @@ h('cloud:status',          (id)      => db.cloudStatus(id));
 // Procress 32 part 1: portable drives plugged in right now (read-only)
 h('portlink:listDrives', () => db.portlink.listDrives());
 h('portlink:rescan',     () => db.portlink.rescan());
+// The path comes from the drive scan, never from the renderer — the renderer
+// names a drive and a Nexus on it, nothing else.
+h('portlink:reveal', (uid, id) => {
+  const n = db.portlink.listDrives().find((d) => d.driveUid === uid)?.nexuses.find((v) => v.id === Number(id));
+  if (!n?.file_path || !fs.existsSync(n.file_path)) return { ok: false, code: 'not_found' };
+  shell.showItemInFolder(n.file_path);
+  return { ok: true };
+});
 h('update:check',        ()    => db.checkForUpdate());
 h('update:install',      ()    => db.installUpdate());
 h('update:dismiss',      (v)   => db.dismissUpdate(v));
