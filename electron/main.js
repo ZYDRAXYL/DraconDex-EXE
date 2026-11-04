@@ -584,7 +584,7 @@ app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) creat
 // commit before its awaits), and never the channels that open, swap, sync or
 // back up the vault file itself.
 const TX_VERB = /^(create|update|upsert|delete|add|remove|move|set|duplicate|restore|rename|save|apply|insert|reorder|clear|toggle|split|revert|link|unlink|merge|pin|attach|detach)/;
-const TX_SKIP = new Set(['nexus', 'vault', 'db', 'sync', 'drive', 'cloud', 'transfer', 'window', 'app', 'plugin', 'pkg', 'update', 'trx', 'importdock', 'asset', 'file', 'locate', 'export', 'backup']);
+const TX_SKIP = new Set(['nexus', 'vault', 'db', 'sync', 'drive', 'cloud', 'transfer', 'window', 'app', 'plugin', 'pkg', 'update', 'trx', 'importdock', 'asset', 'file', 'locate', 'export', 'backup', 'portlink']); // portlink: whole-file copies (VACUUM INTO) that manage their own transactions
 const { getDB: vaultDB } = require('./src/db/core');
 const h = (ch, fn) => {
   const [ns, verb = ''] = ch.split(':');
@@ -1793,6 +1793,10 @@ h('cloud:status',          (id)      => db.cloudStatus(id));
 // Procress 32 part 1: portable drives plugged in right now (read-only)
 h('portlink:listDrives', () => db.portlink.listDrives());
 h('portlink:rescan',     () => db.portlink.rescan());
+// Procress 32 part 3: links + clone, both ways
+h('portlink:links',          ()           => db.portlink.listLinksWithStatus());
+h('portlink:cloneToDrive',   (id, uid)    => db.portlink.cloneToDrive(Number(id), String(uid)));
+h('portlink:cloneFromDrive', (uid, dId)   => db.portlink.cloneFromDrive(String(uid), Number(dId)));
 // The path comes from the drive scan, never from the renderer — the renderer
 // names a drive and a Nexus on it, nothing else.
 h('portlink:reveal', (uid, id) => {

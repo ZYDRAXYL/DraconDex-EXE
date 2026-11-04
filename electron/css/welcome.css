@@ -53,6 +53,12 @@ body.welcome-mode #main-inner{display:flex;align-items:center;justify-content:ce
 }
 .port-drive-label>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .port-drive-label .icon{flex:none}
+/* a local Nexus linked to a drive: the link mark after its name, coloured by status (away = grey) */
+.port-mark{display:inline-flex;align-items:center;color:var(--t3-aa,var(--t2));margin-left:var(--sp-1)}
+.port-mark .icon{width:14px;height:14px}
+.port-mark.port-synced{color:var(--success)}
+.port-mark.port-changed{color:var(--info)}
+.port-mark.port-both{color:var(--warn)}
 
 /* ── First-run setup wizard ─────────────────────────────────────────── */
 /* The wizard has no left panel — it is one centered column, so the step lists
@@ -225,3 +231,5 @@ body.create-nexus-mode #main-inner{padding:0;display:flex;overflow:hidden}
 	.cn[data-step="form"] .cn-back{display:inline-flex}
 	.cn[data-step="form"] .cn-form{max-width:560px;width:100%;justify-self:center}
 }
+/* a Nexus that is on a plugged-in drive only (core/portlink.js): grey name */
+.ls-row.port-on-drive .ls-title{color:var(--t3-aa,var(--t2))}

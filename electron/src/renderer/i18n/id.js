@@ -6,6 +6,8 @@
 i18nAdd('id', {
   // Procress 32 part 2: portable drives (Port Link)
   portDrives:'Drive portabel', portRescan:'Cari drive lagi', portRunning:'Aplikasi portabel di drive ini sedang terbuka — tutup dulu di sana', portEmpty:'Tidak ada Nexus di drive ini', portOnDrive:'Di {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'Selaras dengan {d}', portStatusLocal:'Berubah di komputer ini sejak sinkron terakhir', portStatusDrive:'Berubah di drive sejak sinkron terakhir', portStatusBoth:'Berubah di kedua sisi — perlu digabung', portStatusAway:'Drive tertaut tidak terpasang', portCloneTo:'Klon ke {d}', portCloneHere:'Klon ke komputer ini', portCloning:'Mengklon…', portCloned:'Terklon — tertaut dengan {d}', portCloneFailed:'Klon gagal — tidak ada yang berubah',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Pembaruan siap', updateReadyHint:'Versi {v} sudah diunduh dan diperiksa — pasang sekarang, DraconDex akan terbuka lagi sendiri.', updateInstallRestart:'Pasang dan mulai ulang', updateLater:'Nanti', updateMode:'Saat ada versi baru', updateModeAsk:'Unduh, lalu tanya', updateModeQuit:'Pasang saat ditutup', updateModeNotify:'Hanya beri tahu', updateModeOff:'Jangan periksa', updateModeQuitUnsigned:'Rilis belum ditandatangani, jadi tetap ditanya sebelum dipasang.', updateDone:'Diperbarui ke {v}', updateWhatsNew:'Yang baru',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

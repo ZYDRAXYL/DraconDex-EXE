@@ -6,6 +6,8 @@
 i18nAdd('ko', {
   // Procress 32 part 2: portable drives (Port Link)
   portDrives:'휴대용 드라이브', portRescan:'드라이브 다시 찾기', portRunning:'이 드라이브의 휴대용 앱이 열려 있습니다 — 먼저 그쪽을 닫으세요', portEmpty:'이 드라이브에 Nexus가 없습니다', portOnDrive:'{d}에 있음',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'{d}와 동기화됨', portStatusLocal:'마지막 동기화 후 이 컴퓨터에서 변경됨', portStatusDrive:'마지막 동기화 후 드라이브에서 변경됨', portStatusBoth:'양쪽 모두 변경됨 — 병합 필요', portStatusAway:'연결된 드라이브가 꽂혀 있지 않음', portCloneTo:'{d}에 복제', portCloneHere:'이 컴퓨터로 복제', portCloning:'복제 중…', portCloned:'복제됨 — {d}와 연결', portCloneFailed:'복제 실패 — 아무것도 변경되지 않음',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'업데이트 준비됨', updateReadyHint:'버전 {v}을(를) 다운로드하고 확인했습니다 — 지금 설치하면 DraconDex가 저절로 다시 열립니다.', updateInstallRestart:'설치하고 다시 시작', updateLater:'나중에', updateMode:'새 버전이 나오면', updateModeAsk:'다운로드 후 확인', updateModeQuit:'종료 시 설치', updateModeNotify:'알림만', updateModeOff:'확인 안 함', updateModeQuitUnsigned:'릴리스가 아직 서명되지 않아 설치 전에 계속 묻습니다.', updateDone:'{v}(으)로 업데이트됨', updateWhatsNew:'새로운 기능',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

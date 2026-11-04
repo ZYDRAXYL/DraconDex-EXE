@@ -218,9 +218,32 @@ function relinkNexusFile(id, filePath) {
 // `nexus` row is renumbered to the new registry id, because that id/row match
 // is the invariant every vault-scoped query relies on — two files carrying the
 // same nexus id would each look correct alone and collide in the registry.
-// Only six tables reference nexus(id) directly, so the renumber is a short
-// list rather than a graph walk.
-const NEXUS_REF_TABLES = ['note_folder', 'note', 'wiki_link', 'module', 'import_file', 'entity_relation', 'calendar_template'];
+//
+// Procress 32 part 3: which tables carry nexus_ref is read from the file
+// itself. The hand-kept list this replaced had drifted to 7 of the 14 —
+// module_preset, nexus_history and trash stayed on the old id, so a
+// duplicate silently lost its presets, its history and its trash. Port Link's
+// clone renumbers across two registries through the same function.
+function renumberNexusIn(db, fromId, toId, name = null) {
+  const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`).all()
+    .map((r) => r.name)
+    .filter((t) => db.prepare(`PRAGMA table_info("${t.replace(/"/g, '""')}")`).all().some((c) => c.name === 'nexus_ref'));
+  db.transaction(() => {
+    db.exec('PRAGMA defer_foreign_keys = ON');
+    if (name == null) db.prepare(`UPDATE nexus SET id=? WHERE id=?`).run(toId, fromId);
+    else db.prepare(`UPDATE nexus SET id=?, name=? WHERE id=?`).run(toId, name, fromId);
+    for (const t of tables) db.prepare(`UPDATE "${t.replace(/"/g, '""')}" SET nexus_ref=? WHERE nexus_ref=?`).run(toId, fromId);
+  })();
+  return tables;
+}
+
+// The first free name of candidate(1), candidate(2), … — "<base>", "<base> (2)"
+// by default. null after 99 (the caller says name_taken).
+function freeName(base, taken, candidate = (i) => (i === 1 ? base : `${base} (${i})`)) {
+  for (let i = 1; i <= 99; i++) if (!taken(candidate(i))) return candidate(i);
+  return null;
+}
+const localNameTaken = (n) => { try { assertNameFree(n); return false; } catch (_) { return true; } };
 
 function duplicateNexus(id) {
   const src = getVault(id);
@@ -228,12 +251,8 @@ function duplicateNexus(id) {
   if (!fs.existsSync(src.file_path)) return { ok: false, code: 'file_missing' };
 
   // "<name> (copy)", then "(copy 2)", … — the registry enforces unique names.
-  let name = `${src.name} (copy)`;
-  for (let i = 2; ; i++) {
-    try { assertNameFree(name); break; }
-    catch (_) { name = `${src.name} (copy ${i})`; }
-    if (i > 50) return { ok: false, code: 'name_taken' };
-  }
+  const name = freeName(src.name, localNameTaken, (i) => (i === 1 ? `${src.name} (copy)` : `${src.name} (copy ${i})`));
+  if (!name) return { ok: false, code: 'name_taken' };
 
   const newId = insertVault({ name, memo: src.memo, colorCode: src.color_code, filePath: null });
   const target = vaultDefaultPath(name, newId);
@@ -244,16 +263,7 @@ function duplicateNexus(id) {
     getVaultDB(id).prepare(`VACUUM INTO ?`).run(target);
 
     const copy = createVaultDB(newId, target);
-    copy.transaction(() => {
-      copy.exec('PRAGMA defer_foreign_keys = ON');
-      copy.prepare(`UPDATE nexus SET id=?, name=? WHERE id=?`).run(newId, name, id);
-      for (const t of NEXUS_REF_TABLES) {
-        try { copy.prepare(`UPDATE ${t} SET nexus_ref=? WHERE nexus_ref=?`).run(newId, id); } catch (_) {}
-      }
-      for (const t of NEXUS_PROJECT_TABLES) {
-        try { copy.prepare(`UPDATE ${t} SET nexus_ref=? WHERE nexus_ref=?`).run(newId, id); } catch (_) {}
-      }
-    })();
+    renumberNexusIn(copy, id, newId, name);
     setVaultPath(newId, target);
     refreshVaultCounts(newId);
     return { ok: true, id: newId, name, filePath: target };
@@ -282,7 +292,7 @@ function exportNexusVaultFile(id, targetPath) {
 
 module.exports = {
   getNexuses, getNexus, createNexus, updateNexus, deleteNexus, relinkNexusFile,
-  duplicateNexus, exportNexusVaultFile,
+  duplicateNexus, exportNexusVaultFile, renumberNexusIn, freeName, localNameTaken,
   vaultDefaultPath, vaultsDir, refreshVaultCounts, NEXUS_PROJECT_TABLES,
   touchVaultOpened, listVaults,
 };

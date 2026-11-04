@@ -6,6 +6,8 @@
 i18nAdd('tr', {
   // Procress 32 part 2: portable drives (Port Link)
   portDrives:'Taşınabilir sürücüler', portRescan:'Sürücüleri yeniden ara', portRunning:'Bu sürücüdeki taşınabilir uygulama açık — önce onu kapat', portEmpty:'Bu sürücüde Nexus yok', portOnDrive:'{d} üzerinde',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'{d} ile eşit', portStatusLocal:'Son eşitlemeden beri bu bilgisayarda değişti', portStatusDrive:'Son eşitlemeden beri sürücüde değişti', portStatusBoth:'İki tarafta da değişti — birleştirme gerekli', portStatusAway:'Bağlı sürücü takılı değil', portCloneTo:'{d} sürücüsüne klonla', portCloneHere:'Bu bilgisayara klonla', portCloning:'Klonlanıyor…', portCloned:'Klonlandı — {d} ile bağlandı', portCloneFailed:'Klonlama başarısız — hiçbir şey değişmedi',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Güncelleme hazır', updateReadyHint:'{v} sürümü indirildi ve doğrulandı — şimdi kurun, DraconDex kendiliğinden yeniden açılır.', updateInstallRestart:'Kur ve yeniden başlat', updateLater:'Sonra', updateMode:'Yeni sürüm çıktığında', updateModeAsk:'İndir, sonra sor', updateModeQuit:'Kapanırken kur', updateModeNotify:'Sadece bildir', updateModeOff:'Denetleme', updateModeQuitUnsigned:'Sürümler henüz imzalı değil, bu yüzden kurulumdan önce yine sorulur.', updateDone:'{v} sürümüne güncellendi', updateWhatsNew:'Yenilikler',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

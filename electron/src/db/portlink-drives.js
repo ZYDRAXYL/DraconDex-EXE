@@ -66,10 +66,14 @@ function portableRunning(root) {
 // The drive's registry, read from a scratch copy. Paths come back rebased
 // onto where the drive is mounted now (the portable copy rebases them itself
 // on its next start, but it may not have run on this machine yet).
+const driveDataDir = (root, marker) => path.join(root, ...String(marker.dataDir || 'novel-manager-data').split('/').filter((x) => x && x !== '..'));
+
+// → { nexuses, ownRoot } — ownRoot: the root the portable app last ran from,
+// which every path in its files is written against.
 function readDriveNexuses(root, marker) {
-  const dataDir = path.join(root, ...String(marker.dataDir || 'novel-manager-data').split('/'));
+  const dataDir = driveDataDir(root, marker);
   const src = path.join(dataDir, 'app.ddx');
-  if (!fs.existsSync(src)) return [];
+  if (!fs.existsSync(src)) return { nexuses: [], ownRoot: null };
   const tmp = path.join(os.tmpdir(), `dracondex-portlink-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.ddx`);
   const clean = () => { for (const s of ['', '-wal', '-shm']) { try { fs.rmSync(tmp + s, { force: true }); } catch (_) {} } };
   let db;
@@ -80,10 +84,10 @@ function readDriveNexuses(root, marker) {
       try { fs.copyFileSync(src + '-shm', tmp + '-shm'); } catch (_) {}
     } else forceLegacyJournalMode(tmp);
     db = adaptDb(new _RawDatabase(tmp, { readOnly: true }));
-    if (!hasTable(db, 'nexus_file')) return [];
+    if (!hasTable(db, 'nexus_file')) return { nexuses: [], ownRoot: null };
     const was = hasTable(db, 'app_setting') ? db.prepare(`SELECT value FROM app_setting WHERE key='portableRoot'`).get()?.value : null;
     const fix = (p) => (p && was ? rebase(p, was, root) : p);
-    return db.prepare(`SELECT id, name, memo, color_code, file_path, locate_dir, update_at, project_count FROM nexus_file ORDER BY name COLLATE NOCASE`).all()
+    const nexuses = db.prepare(`SELECT id, name, memo, color_code, file_path, locate_dir, update_at, project_count FROM nexus_file ORDER BY name COLLATE NOCASE`).all()
       .map((r) => {
         const file_path = fix(r.file_path), locate_dir = fix(r.locate_dir);
         return {
@@ -93,6 +97,7 @@ function readDriveNexuses(root, marker) {
           missing: file_path && fs.existsSync(file_path) ? 0 : 1,
         };
       });
+    return { nexuses, ownRoot: was || null };
   } finally {
     try { db?.close(); } catch (_) {}
     clean();
@@ -112,10 +117,10 @@ function scan() {
     for (const { root, marker } of findPortableRoots(dr)) {
       if (seen.has(marker.driveUid)) continue; // the same folder reached twice
       seen.add(marker.driveUid);
-      let nexuses = [], error = null;
-      try { nexuses = readDriveNexuses(root, marker); } catch (e) { error = String(e?.message || e); }
+      let nexuses = [], ownRoot = null, error = null;
+      try { ({ nexuses, ownRoot } = readDriveNexuses(root, marker)); } catch (e) { error = String(e?.message || e); }
       // label: what the list shows — E:\DDX on Windows, the folder name elsewhere (root goes in the tooltip)
-      out.push({ driveUid: marker.driveUid, root, label: process.platform === 'win32' ? root : path.basename(root), appVersion: marker.appVersion || null, running: portableRunning(root), nexuses, error });
+      out.push({ driveUid: marker.driveUid, root, label: process.platform === 'win32' ? root : path.basename(root), dataDir: driveDataDir(root, marker), ownRoot, appVersion: marker.appVersion || null, running: portableRunning(root), nexuses, error });
     }
   }
   return out;

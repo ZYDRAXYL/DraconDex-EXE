@@ -97,6 +97,6 @@ test('a marker or registry row that does not look like ours is not trusted', () 
   const db = new Database(join(data, 'app.ddx'));
   db.run(`UPDATE nexus_file SET color_code=? WHERE id=1`, ['red;background:url(http://x)']);
   db.close();
-  const n = drives.readDriveNexuses(root, { dataDir: 'novel-manager-data' }).find((r) => r.id === 1);
+  const n = drives.readDriveNexuses(root, { dataDir: 'novel-manager-data' }).nexuses.find((r) => r.id === 1);
   assert.equal(n.color_code, null);
 });

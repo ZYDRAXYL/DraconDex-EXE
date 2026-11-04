@@ -6,6 +6,8 @@
 i18nAdd('ja', {
   // Procress 32 part 2: portable drives (Port Link)
   portDrives:'ポータブルドライブ', portRescan:'ドライブを再検索', portRunning:'このドライブのポータブル版が起動中です — 先にそちらを閉じてください', portEmpty:'このドライブにNexusはありません', portOnDrive:'{d} 上',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'{d} と同期済み', portStatusLocal:'前回の同期後にこのPCで変更あり', portStatusDrive:'前回の同期後にドライブで変更あり', portStatusBoth:'両方で変更あり — マージが必要', portStatusAway:'リンクしたドライブが接続されていません', portCloneTo:'{d} にクローン', portCloneHere:'このPCにクローン', portCloning:'クローン中…', portCloned:'クローン完了 — {d} とリンク', portCloneFailed:'クローン失敗 — 何も変更されていません',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'アップデートの準備ができました', updateReadyHint:'バージョン {v} をダウンロードして確認しました — 今インストールすると DraconDex は自動で再起動します。', updateInstallRestart:'インストールして再起動', updateLater:'後で', updateMode:'新しいバージョンが出たら', updateModeAsk:'ダウンロードしてから確認', updateModeQuit:'終了時にインストール', updateModeNotify:'通知のみ', updateModeOff:'確認しない', updateModeQuitUnsigned:'リリースはまだ署名されていないため、インストール前に確認します。', updateDone:'{v} に更新しました', updateWhatsNew:'新機能',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

@@ -6,6 +6,8 @@
 i18nAdd('pt', {
   // Procress 32 part 2: portable drives (Port Link)
   portDrives:'Unidades portáteis', portRescan:'Procurar unidades de novo', portRunning:'O app portátil desta unidade está aberto — feche-o primeiro', portEmpty:'Nenhum Nexus nesta unidade', portOnDrive:'Em {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'Sincronizado com {d}', portStatusLocal:'Alterado neste computador desde a última sincronização', portStatusDrive:'Alterado na unidade desde a última sincronização', portStatusBoth:'Alterado nos dois — precisa mesclar', portStatusAway:'A unidade vinculada não está conectada', portCloneTo:'Clonar para {d}', portCloneHere:'Clonar para este computador', portCloning:'Clonando…', portCloned:'Clonado — vinculado a {d}', portCloneFailed:'Falha ao clonar — nada foi alterado',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Atualização pronta', updateReadyHint:'A versão {v} foi baixada e verificada — instale agora e o DraconDex reabre sozinho.', updateInstallRestart:'Instalar e reiniciar', updateLater:'Mais tarde', updateMode:'Quando houver uma nova versão', updateModeAsk:'Baixar e perguntar', updateModeQuit:'Ao fechar', updateModeNotify:'Só avisar', updateModeOff:'Não verificar', updateModeQuitUnsigned:'As versões ainda não são assinadas, então ainda perguntamos antes de instalar.', updateDone:'Atualizado para {v}', updateWhatsNew:'Novidades',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

@@ -6,6 +6,8 @@
 i18nAdd('vi', {
   // Procress 32 part 2: portable drives (Port Link)
   portDrives:'Ổ đĩa di động', portRescan:'Tìm lại ổ đĩa', portRunning:'Ứng dụng di động trên ổ này đang mở — hãy đóng nó trước', portEmpty:'Không có Nexus trên ổ này', portOnDrive:'Trên {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'Đã đồng bộ với {d}', portStatusLocal:'Máy này đã thay đổi từ lần đồng bộ trước', portStatusDrive:'Ổ đĩa đã thay đổi từ lần đồng bộ trước', portStatusBoth:'Cả hai bên đã thay đổi — cần hợp nhất', portStatusAway:'Ổ đã liên kết chưa được cắm', portCloneTo:'Sao chép sang {d}', portCloneHere:'Sao chép về máy này', portCloning:'Đang sao chép…', portCloned:'Đã sao chép — liên kết với {d}', portCloneFailed:'Sao chép thất bại — không có gì thay đổi',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Bản cập nhật đã sẵn sàng', updateReadyHint:'Phiên bản {v} đã được tải và kiểm tra — cài ngay, DraconDex sẽ tự mở lại.', updateInstallRestart:'Cài đặt và khởi động lại', updateLater:'Để sau', updateMode:'Khi có phiên bản mới', updateModeAsk:'Tải về rồi hỏi', updateModeQuit:'Cài khi đóng', updateModeNotify:'Chỉ thông báo', updateModeOff:'Không kiểm tra', updateModeQuitUnsigned:'Bản phát hành chưa được ký nên vẫn hỏi trước khi cài.', updateDone:'Đã cập nhật lên {v}', updateWhatsNew:'Có gì mới',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

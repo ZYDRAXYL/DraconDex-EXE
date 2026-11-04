@@ -6,6 +6,8 @@
 i18nAdd('th', {
   // Procress 32 part 2: portable drives (Port Link)
   portDrives:'ไดร์ฟพกพา', portRescan:'ค้นหาไดร์ฟอีกครั้ง', portRunning:'แอป portable บนไดร์ฟนี้เปิดอยู่ — ปิดที่นั่นก่อน', portEmpty:'ไดร์ฟนี้ยังไม่มี Nexus', portOnDrive:'อยู่บน {d}',
+  // Procress 32 part 3: link status + clone
+  portStatusSynced:'ตรงกับ {d}', portStatusLocal:'เครื่องนี้มีการแก้ตั้งแต่ sync ครั้งล่าสุด', portStatusDrive:'ไดร์ฟมีการแก้ตั้งแต่ sync ครั้งล่าสุด', portStatusBoth:'แก้ทั้งสองฝั่ง — ต้อง merge', portStatusAway:'ไม่ได้เสียบไดร์ฟที่ link ไว้', portCloneTo:'Clone ไปที่ {d}', portCloneHere:'Clone มาเครื่องนี้', portCloning:'กำลัง clone…', portCloned:'Clone แล้ว — link กับ {d}', portCloneFailed:'Clone ไม่สำเร็จ — ไม่มีอะไรถูกเปลี่ยน',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'อัปเดตพร้อมติดตั้ง', updateReadyHint:'ดาวน์โหลดและตรวจเวอร์ชัน {v} แล้ว — ติดตั้งตอนนี้ แล้ว DraconDex จะเปิดใหม่เอง', updateInstallRestart:'ติดตั้งและรีสตาร์ท', updateLater:'ภายหลัง', updateMode:'เมื่อมีเวอร์ชันใหม่', updateModeAsk:'ดาวน์โหลดเอง แล้วถามก่อนติดตั้ง', updateModeQuit:'ติดตั้งเงียบตอนปิดแอป', updateModeNotify:'แจ้งเตือนอย่างเดียว', updateModeOff:'ไม่ต้องตรวจ', updateModeQuitUnsigned:'release ยังไม่มีลายเซ็น — จึงยังถามก่อนติดตั้งเหมือนเดิม', updateDone:'อัปเดตเป็น {v} แล้ว', updateWhatsNew:'ดูว่ามีอะไรใหม่',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own
