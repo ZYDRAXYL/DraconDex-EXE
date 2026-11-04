@@ -141,7 +141,7 @@ function mergeInto(B, L, W, choices = {}) {
   const remap = makeRemap(idMap);
   const conflicts = [];
   const written = []; // [table, W id] — every row W took from L, for the reference pass
-  const sum = { fromLocal: 0, updated: 0, deleted: 0, kept: 0, merged: 0, conflicts: 0 };
+  const sum = { fromLocal: 0, updated: 0, deleted: 0, kept: 0, merged: 0, conflicts: 0, driveAdded: 0, driveChanged: 0, driveRemoved: 0 };
   const mapFks = (t, r) => { for (const f of shapes[t].fks) if (r[f.from] != null) r[f.from] = remap.id(f.table, r[f.from]); return r; };
   const pick = (r, cols) => Object.fromEntries(cols.map((c) => [c, r[c]]));
   const insert = (t, r) => {
@@ -173,6 +173,9 @@ function mergeInto(B, L, W, choices = {}) {
       }
       const b = byId(rowsOf(B, t, bT.has(t))), l = byId(rowsOf(L, t, true)), d = byId(rowsOf(W, t, true));
       const cols = s.cols.filter((c) => c !== 'id');
+      // what the drive did since the base — for the summary only
+      for (const [id, dr] of d) { const br = b.get(id); if (!br) sum.driveAdded++; else if (cols.some((c) => !same(dr[c], br[c]))) sum.driveChanged++; }
+      for (const id of b.keys()) if (!d.has(id)) sum.driveRemoved++;
       let nextId = Math.max(0, ...b.keys(), ...l.keys(), ...d.keys()) + 1;
       for (const [id, lr] of l) {
         const br = b.get(id), dr = d.get(id);

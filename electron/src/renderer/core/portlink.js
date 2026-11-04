@@ -44,6 +44,8 @@ function portlinkWatch() {
   };
   api.portlink.onDrives(redraw);
   api.portlink.listDrives().then(redraw).catch(() => {});
+  // part 5: a sync main ran by itself (a drive in, a window closed) — said once, in Welcome
+  if (S.isWelcome && api.portlink.onSynced) api.portlink.onSynced((list) => { for (const r of list || []) portlinkSyncToast(r); });
 }
 
 async function portlinkRescan() {
@@ -110,7 +112,8 @@ function portlinkSectionHtml() {
   const head = `<div class="ph"><h4>${t('portDrives')}</h4>
     <button class="btn btn-g btn-i" onclick="portlinkRescan()" title="${x(t('portRescan'))}" aria-label="${x(t('portRescan'))}">${I.refresh}</button></div>`;
   return head + S.portDrives.map((d) => {
-    const label = `<div class="welcome-recent-label port-drive-label" data-no-i18n title="${x(d.running ? `${d.root} — ${t('portRunning')}` : d.root)}">${I.drive}<span>${x(d.label || d.root)}</span>${d.running ? I.lock : ''}</div>`;
+    const eject = d.running ? '' : `<button class="btn btn-g btn-i" onclick="portlinkEject('${x(d.driveUid)}')" title="${x(t('portEject'))}" aria-label="${x(t('portEject'))}">${I.arrowUp}</button>`;
+    const label = `<div class="welcome-recent-label port-drive-label" data-no-i18n title="${x(d.running ? `${d.root} — ${t('portRunning')}` : d.root)}">${I.drive}<span>${x(d.label || d.root)}</span>${d.running ? I.lock : eject}</div>`;
     const own = d.nexuses.filter((n) => !portLinkedOnDrive(d.driveUid, n.id));
     const body = own.length
       ? listHtml({ list: `port-${d.driveUid}`, aria: d.root, body: own.map((n) => portlinkRowHtml(d, n)).join('') })
@@ -140,7 +143,11 @@ function portlinkNexusMenu(anchor, uid, id) {
 // plugged in, while it is not linked yet. Empty in an app window, which does
 // not watch drives.
 function portlinkMenuRowsHtml(nexusId) {
-  if (!S.portDrives.length || portLinkOf(nexusId) || portMountOf(nexusId)) return '';
+  const l = portLinkOf(nexusId);
+  // part 5: a linked one syncs, or stops syncing
+  if (l) return portMenuRow(`portlinkSyncNow(${Number(nexusId)})`, t('portSyncNow'), l.status === 'away' || l.status === 'synced')
+    + portMenuRow(`portlinkUnlink(${Number(nexusId)})`, t('portUnlink')) + '<div class="ctx-sep"></div>';
+  if (!S.portDrives.length || portMountOf(nexusId)) return '';
   return S.portDrives.map((d) => portMenuRow(`portlinkCloneToDrive(${Number(nexusId)},'${x(d.driveUid)}')`,
     d.running ? `${x(d.label || d.root)} — ${t('portRunning')}` : t('portCloneTo').replace('{d}', x(d.label || d.root)), d.running)).join('')
     + '<div class="ctx-sep"></div>';
@@ -161,6 +168,94 @@ async function portlinkCloneToDrive(nexusId, uid) {
 async function portlinkCloneFromDrive(uid, id) {
   toast(t('portCloning'));
   portlinkAfterClone(await api.portlink.cloneFromDrive(uid, id).catch(() => null), uid);
+}
+
+// ── Part 5: sync, the conflict chooser, eject, unlink ─────────────────────
+const portNexusName = (id) => (S.nexuses.find((n) => n.id === id) || {}).name || '';
+function portlinkSyncToast(r) {
+  if (r.ok) {
+    const s = r.summary || {};
+    return toast(t('portSynced').replace('{name}', r.name || portNexusName(r.nexusId))
+      .replace('{a}', (s.fromLocal || 0) + (s.driveAdded || 0)).replace('{u}', (s.updated || 0) + (s.driveChanged || 0)).replace('{r}', (s.deleted || 0) + (s.driveRemoved || 0)), 'ok');
+  }
+  // a choice to make: the toast takes you straight to it
+  if (r.code === 'needs_choice') return toastAction(`${r.name || portNexusName(r.nexusId)} — ${t('portStatusBoth')}`, t('portSyncNow'), () => portlinkSyncNow(r.nexusId), '', 9000);
+  if (r.code === 'open') return toast(t('portSyncOpen'));
+  if (r.code === 'drive_busy') return toast(t('portRunning'), 'error');
+  toast(t('portSyncFailed'), 'error');
+}
+async function portlinkAfterSync(id, r) {
+  portlinkSyncToast({ nexusId: id, ...r });
+  await reloadNexuses();
+  await portlinkLoadLinks();
+  portRedraw();
+}
+async function portlinkSyncNow(id, choices = null) {
+  const r = await api.portlink.merge(id, choices || {}).catch(() => null);
+  if (r?.code === 'needs_choice') return portlinkChoose(id, r.conflicts || []);
+  portlinkAfterSync(id, r || { ok: false });
+}
+
+// One row per field both sides changed: the two values, and which to keep.
+// Closing the dialog writes nothing — the merge only runs on Apply.
+let _portChoice = { id: null, list: [], pick: {} };
+function portlinkChoose(id, conflicts) {
+  _portChoice = { id, list: conflicts, pick: {} };
+  const val = (v) => (v == null || v === '' ? '—' : String(v));
+  const rows = conflicts.map((c, i) => `
+    <div class="port-choice" data-i="${i}">
+      <div class="port-choice-head" data-no-i18n>${x(c.label || c.table)} · ${x(c.col)}</div>
+      ${segmentedHtml([
+        { value: 'local', text: `${t('portThisMachine')}: ${val(c.local)}`, title: c.localAt || '' },
+        { value: 'drive', text: `${t('portTheDrive')}: ${val(c.drive)}`, title: c.driveAt || '' },
+      ], null, { role: 'radiogroup', aria: `${c.label || c.table} · ${c.col}`, fill: true, noI18n: true, onclick: (v) => `portlinkPick(this,${i},'${v}')` })}
+    </div>`).join('');
+  openModal(t('portChooseTitle'), `<div class="port-choices">${rows}</div>`, {
+    hint: t('portChooseHint').replace('{n}', conflicts.length), size: 'lg',
+    footer: `<button class="btn btn-s" onclick="portlinkPickAll('local')">${t('portUseLocalAll')}</button>
+      <button class="btn btn-s" onclick="portlinkPickAll('drive')">${t('portUseDriveAll')}</button>
+      <button class="btn btn-p" id="port-apply" disabled onclick="portlinkApplyChoices()">${t('apply')}</button>`,
+  });
+}
+function portlinkPick(btn, i, v) {
+  _portChoice.pick[_portChoice.list[i].key] = v;
+  segmentedSelect(btn.closest('.seg'), v);
+  const ap = q('#port-apply');
+  if (ap) ap.disabled = Object.keys(_portChoice.pick).length < _portChoice.list.length;
+}
+function portlinkPickAll(v) {
+  document.querySelectorAll('.port-choice').forEach((row) => {
+    const i = Number(row.dataset.i);
+    _portChoice.pick[_portChoice.list[i].key] = v;
+    segmentedSelect(row.querySelector('.seg'), v);
+  });
+  const ap = q('#port-apply');
+  if (ap) ap.disabled = false;
+}
+function portlinkApplyChoices() {
+  const { id, pick } = _portChoice;
+  closeModal();
+  portlinkSyncNow(id, pick);
+}
+
+async function portlinkUnlink(id) {
+  if (!(await uiConfirm(t('portUnlink'), { okText: t('portUnlink'), cancelText: t('cancel'), danger: false }))) return;
+  const r = await api.portlink.unlink(id).catch(() => null);
+  if (!r?.ok) return toast(t('portSyncFailed'), 'error');
+  toast(t('portUnlinked'), 'ok');
+  await portlinkLoadLinks();
+  portRedraw();
+}
+
+async function portlinkEject(uid) {
+  const name = portDriveName(uid);
+  const r = await api.portlink.eject(uid).catch(() => null);
+  for (const s of r?.synced || []) portlinkSyncToast(s);
+  if (r?.ok) toast(t('portEjectReady').replace('{d}', name), 'ok');
+  else toast(t('portEjectPending').replace('{n}', (r?.pending || []).join(', ')));
+  await reloadNexuses();
+  await portlinkLoadLinks();
+  portRedraw();
 }
 
 async function portlinkOpenFromDrive(uid, id) {

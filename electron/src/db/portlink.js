@@ -218,4 +218,13 @@ function linkStatus(l, driveList = drives.listDrives()) {
 }
 const listLinksWithStatus = () => { const ds = drives.listDrives(); return listLinks().map((l) => ({ ...l, status: linkStatus(l, ds) })); };
 
-module.exports = { openRaw, openDriveRegistry, driveOrThrow, baseDir, tmpOf, rmQuiet, sigOf, listLinks, listLinksWithStatus, linkOf, linkOfDrive, linkStatus, cloneToDrive, cloneFromDrive };
+// Part 5: stop syncing. Both copies stay — two independent Nexuses from now on.
+function unlink(nexusId) {
+  const l = linkOf(nexusId);
+  if (!l) return { ok: false, code: 'not_linked' };
+  getAppDB().prepare(`DELETE FROM port_link WHERE link_uid=?`).run(l.linkUid);
+  rmQuiet(l.basePath);
+  return { ok: true };
+}
+
+module.exports = { unlink, openRaw, openDriveRegistry, driveOrThrow, baseDir, tmpOf, rmQuiet, sigOf, listLinks, listLinksWithStatus, linkOf, linkOfDrive, linkStatus, cloneToDrive, cloneFromDrive };

@@ -174,6 +174,8 @@ function createWindow(bootstrapNexusId, bootstrapTabKey) {
         // drive, and the working copy goes (kept if the drive is not there)
         if (db.portlink.mountOf(nexusId)) { try { db.portlink.closeMount(nexusId); } catch (_) {} portlinkBroadcast(); }
         db.closeVault(nexusId);
+        // part 5: a linked Nexus syncs with its drive once its last window is gone
+        if (db.portlink.linkOf(nexusId)) { portlinkAutoSync(nexusId); portlinkBroadcast(); }
       }
     });
   }
@@ -468,8 +470,10 @@ app.whenReady().then(() => {
     app.on('will-quit', () => db.portable.clearRunningLock());
   } else {
     // a drive back in may let a pending opened-from-drive Nexus be written
-    db.portlink.startWatching(() => { settlePortMounts(); portlinkBroadcast(); });
+    db.portlink.startWatching(() => { settlePortMounts(); portlinkAutoSync(); portlinkBroadcast(); });
     settlePortMounts(); // leftovers from a crash or an unplugged drive
+    portlinkAutoSync(); // part 5: a drive already in at start-up syncs too
+    app.on('will-quit', () => { try { db.portlink.syncLinks({ isOpen: () => false }); } catch (_) {} });
     setInterval(settlePortMounts, 60000).unref(); // part 3b: an open one is saved to the drive every minute
   }
   db.cleanupUpdateLeftovers(); // Procress 28 part 7: the Setup / old portable an update left behind
@@ -1803,6 +1807,15 @@ function portlinkBroadcast() {
   const list = db.portlink.listDrives();
   for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('portlink:drives', list);
 }
+// Part 5: merges what changed, reports each result to every window (Welcome
+// toasts them; a 'needs_choice' waits for the user's "Sync now").
+const portIsOpen = (id) => [...windowNexus.values()].includes(id);
+function portlinkAutoSync(only = null) {
+  let res = [];
+  try { res = db.portlink.syncLinks({ isOpen: portIsOpen, only }); } catch (e) { console.error('[portlink] sync', e); }
+  if (res.length) for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('portlink:synced', res);
+  return res;
+}
 function settlePortMounts() {
   try { db.portlink.settleMounts((id) => [...windowNexus.values()].includes(id)); } catch (e) { console.error('[portlink] settle', e); }
 }
@@ -1817,6 +1830,8 @@ h('portlink:merge', (id, choices) => {
   return r;
 });
 h('portlink:mountToLink', (id) => db.portlink.mountToLink(Number(id)));
+h('portlink:unlink',      (id) => db.portlink.unlink(Number(id)));
+h('portlink:eject',       (uid) => { const r = db.portlink.ejectDrive(String(uid), portIsOpen); portlinkBroadcast(); return r; });
 // Procress 32 part 3: links + clone, both ways
 h('portlink:links',          ()           => db.portlink.listLinksWithStatus());
 h('portlink:cloneToDrive',   (id, uid)    => db.portlink.cloneToDrive(Number(id), String(uid)));

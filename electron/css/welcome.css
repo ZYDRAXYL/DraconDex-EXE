@@ -237,3 +237,7 @@ body.create-nexus-mode #main-inner{padding:0;display:flex;overflow:hidden}
 }
 /* a Nexus that is on a plugged-in drive only (core/portlink.js): grey name */
 .ls-row.port-on-drive .ls-title{color:var(--t3-aa,var(--t2))}
+/* Procress 32 part 5: the "changed on both sides" chooser (core/portlink.js) */
+.port-choices{display:flex;flex-direction:column;gap:var(--sp-4);max-height:60vh;overflow:auto}
+.port-choice-head{font-size:var(--fs-sm);color:var(--t2);margin-bottom:var(--sp-2)}
+.port-choice .seg-opt{white-space:normal;text-align:left;justify-content:flex-start}
