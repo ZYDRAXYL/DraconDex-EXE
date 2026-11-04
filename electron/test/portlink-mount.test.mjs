@@ -121,6 +121,14 @@ test('the drive file changed elsewhere meanwhile: never written over — the cop
   assert.ok(conn.getVaultDB(nexusId).prepare(`SELECT 1 FROM module WHERE name='Mine'`).get(), 'and so does ours');
   mount.settleMounts();
   assert.equal(mount.mountOf(nexusId).state, 'conflict', 'settling leaves a conflict alone');
+
+  // part 4: the conflict becomes a linked Nexus, and the merge keeps both edits
+  assert.deepEqual(mount.mountToLink(nexusId), { ok: true });
+  assert.equal(mount.mountOf(nexusId), null);
+  assert.notEqual(vaults.getVault(nexusId).locate_dir, join(root, 'DraconDex', 'Cinder'), 'its folder is here now, not the drive\'s');
+  const r = require('../src/db/portlink-merge.js').mergeLink(nexusId);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual(inFile(driveFile(dId), `SELECT name FROM module ORDER BY name`).map((x) => x.name), ['Mine', 'Theirs']);
 });
 
 test('a drive Nexus that is linked here opens its local twin', () => {

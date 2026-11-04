@@ -33,7 +33,7 @@ const pl = require('./portlink');
 const mountDir = () => path.join(pl.baseDir(), 'mounts');
 const mountRow = (r) => (!r ? null : {
   nexusId: r.nexus_ref, driveUid: r.drive_uid, driveNexusId: r.drive_nexus_id,
-  workPath: r.work_path, localSig: r.local_sig, driveSig: r.drive_sig, state: r.state,
+  workPath: r.work_path, basePath: r.base_path, localSig: r.local_sig, driveSig: r.drive_sig, state: r.state,
 });
 const listMounts = () => getAppDB().prepare(`SELECT * FROM port_mount`).all().map(mountRow);
 const mountOf = (nexusId) => mountRow(getAppDB().prepare(`SELECT * FROM port_mount WHERE nexus_ref=?`).get(nexusId));
@@ -68,10 +68,13 @@ function openFromDrive(driveUid, driveNexusId) {
       if (drive.ownRoot) repointAssets(copy, id, drive.ownRoot, drive.root);
     } finally { copy.close(); }
     fs.renameSync(tmp, work);
+    // the drive file as opened — if a conflict ever comes, it is the base the merge needs
+    const base = path.join(pl.baseDir(), `${crypto.randomUUID()}.base.ddx`);
+    fs.copyFileSync(dn.file_path, base);
     setVaultPath(id, work);
     setVaultLocateDir(id, dn.locate_dir || null);
-    getAppDB().prepare(`INSERT INTO port_mount (nexus_ref, drive_uid, drive_nexus_id, work_path, local_sig, drive_sig) VALUES (?,?,?,?,?,?)`)
-      .run(id, driveUid, dn.id, work, pl.sigOf(work), pl.sigOf(dn.file_path));
+    getAppDB().prepare(`INSERT INTO port_mount (nexus_ref, drive_uid, drive_nexus_id, work_path, base_path, local_sig, drive_sig) VALUES (?,?,?,?,?,?,?)`)
+      .run(id, driveUid, dn.id, work, base, pl.sigOf(work), pl.sigOf(dn.file_path));
     return { ok: true, nexusId: id };
   } catch (e) {
     closeVault(id);
@@ -119,6 +122,8 @@ function writeBack(nexusId) {
           .run(name || null, reg.toDrive(getVault(nexusId)?.locate_dir) || null, m.driveNexusId);
       } finally { reg.db.close(); }
     } catch (_) {}
+    // the drive now holds exactly this: the base moves with it
+    if (m.basePath) fs.copyFileSync(dn.file_path, m.basePath);
     setMount(nexusId, { state: 'open', local_sig: pl.sigOf(local.file_path), drive_sig: pl.sigOf(dn.file_path) });
     return { ok: true, wrote: true };
   } catch (e) {
@@ -137,6 +142,7 @@ function closeMount(nexusId) {
   closeVault(nexusId);
   removeVault(nexusId); // cascades port_mount
   pl.rmQuiet(m.workPath);
+  if (m.basePath) pl.rmQuiet(m.basePath);
   return { ok: true, closed: true };
 }
 
@@ -149,4 +155,33 @@ function settleMounts(isOpen = () => false) {
   }
 }
 
-module.exports = { listMounts, mountOf, openFromDrive, writeBack, closeMount, settleMounts };
+// Part 4: a 'conflict' (the drive changed elsewhere while this was open)
+// stops being a mount and becomes a linked Nexus — same file, same base —
+// so the 3-way merge can bring the two together. The caller then merges.
+function mountToLink(nexusId) {
+  const m = mountOf(nexusId);
+  if (!m) return { ok: false, code: 'not_mounted' };
+  if (!m.basePath || !fs.existsSync(m.basePath)) return { ok: false, code: 'no_base' };
+  if (pl.linkOfDrive(m.driveUid, m.driveNexusId)) return { ok: false, code: 'already_linked' };
+  // A linked Nexus keeps its assets in a folder here (a mount used the
+  // drive's): copied, and the rows pointed at the copy — as a clone does.
+  const v = getVault(nexusId);
+  if (v?.locate_dir && fs.existsSync(v.locate_dir)) {
+    const { locateRoot } = require('./locate');
+    const { dirNameOf } = require('./mirror');
+    const parent = locateRoot();
+    let loc = path.join(parent, dirNameOf(v.name || 'Nexus'));
+    for (let i = 2; fs.existsSync(loc); i++) loc = path.join(parent, `${dirNameOf(v.name || 'Nexus')} (${i})`);
+    fs.cpSync(v.locate_dir, loc, { recursive: true });
+    repointAssets(getVaultDB(nexusId), nexusId, v.locate_dir, loc);
+    setVaultLocateDir(nexusId, loc);
+  }
+  getAppDB().transaction(() => {
+    getAppDB().prepare(`INSERT INTO port_link (link_uid, nexus_ref, drive_uid, drive_nexus_id, base_path, local_sig, drive_sig, last_sync_at)
+      VALUES (?,?,?,?,?,?,?,NULL)`).run(crypto.randomUUID(), nexusId, m.driveUid, m.driveNexusId, m.basePath, m.localSig, m.driveSig);
+    getAppDB().prepare(`DELETE FROM port_mount WHERE nexus_ref=?`).run(nexusId);
+  })();
+  return { ok: true };
+}
+
+module.exports = { listMounts, mountOf, openFromDrive, writeBack, closeMount, settleMounts, mountToLink };

@@ -1808,6 +1808,15 @@ function settlePortMounts() {
 }
 h('portlink:mounts',         ()           => db.portlink.listMounts());
 h('portlink:openFromDrive',  (uid, dId)   => db.portlink.openFromDrive(String(uid), Number(dId)));
+// Part 4: the 3-way merge. Not while a window has the Nexus open — its file is
+// replaced. choices: { '<table>:<id>:<col>': 'local'|'drive', '*': … }
+h('portlink:merge', (id, choices) => {
+  const c = choices && typeof choices === 'object' ? Object.fromEntries(Object.entries(choices).filter(([, v]) => v === 'local' || v === 'drive')) : {};
+  const r = db.portlink.mergeLink(Number(id), { choices: c, isOpen: (n) => [...windowNexus.values()].includes(n) });
+  if (r.ok) portlinkBroadcast();
+  return r;
+});
+h('portlink:mountToLink', (id) => db.portlink.mountToLink(Number(id)));
 // Procress 32 part 3: links + clone, both ways
 h('portlink:links',          ()           => db.portlink.listLinksWithStatus());
 h('portlink:cloneToDrive',   (id, uid)    => db.portlink.cloneToDrive(Number(id), String(uid)));

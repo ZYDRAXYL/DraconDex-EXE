@@ -108,6 +108,7 @@ const APP_DDL_SQL = `
       drive_uid TEXT NOT NULL,
       drive_nexus_id INTEGER NOT NULL,
       work_path TEXT NOT NULL,
+      base_path TEXT, -- the drive file as it was when opened: what a 'conflict' merges against (part 4)
       local_sig TEXT,
       drive_sig TEXT,
       state TEXT NOT NULL DEFAULT 'open' CHECK (state IN ('open','pending','conflict')),
