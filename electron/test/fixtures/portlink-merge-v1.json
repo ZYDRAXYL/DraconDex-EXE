@@ -1,0 +1,137 @@
+{
+  "format": "dracondex-portlink-merge-fixture",
+  "version": 1,
+  "_comment": "Procress 32 9.0 — the 3-way merge cases both apps' engines are held to (EXE src/db/portlink-merge.js, APK portlink_merge.dart). Per case: three databases from the vault DDL; `seed` runs on all three (it is the base B); then `local` runs on L (this machine) and `drive` on D (the drive); the merge is run as mergeInto(B, L, W = D) with `choices`. `expect.ok` true = every `expect.queries[i].sql` on W returns exactly `rows`; `expect.code` 'needs_choice' = the conflict keys are exactly `expect.conflicts` and nothing was written. Ids in queries are never assumed for rows made after the seed: both sides get max+1, which is the point. See fixtures/README.md.",
+  "nexusId": 1,
+  "seed": [
+    "INSERT INTO nexus (id, name) VALUES (1, 'Fixture')",
+    "INSERT INTO module (id, nexus_ref, name, kind) VALUES (10, 1, 'Heroes', 'classifier')",
+    "INSERT INTO classifier_object (id, module_ref, name) VALUES (100, 10, 'A')"
+  ],
+  "cases": [
+    {
+      "name": "owner-example",
+      "why": "The owner's own example: A renamed to B on the drive while this machine made C → B and C.",
+      "local": ["INSERT INTO classifier_object (module_ref, name) VALUES (10, 'C')"],
+      "drive": ["UPDATE classifier_object SET name='B' WHERE id=100"],
+      "expect": { "ok": true, "queries": [{ "sql": "SELECT name FROM classifier_object ORDER BY name", "rows": [{ "name": "B" }, { "name": "C" }] }] }
+    },
+    {
+      "name": "nothing-changed",
+      "why": "No edits anywhere: the result is the base.",
+      "local": [], "drive": [],
+      "expect": { "ok": true, "queries": [{ "sql": "SELECT name FROM classifier_object", "rows": [{ "name": "A" }] }] }
+    },
+    {
+      "name": "different-columns",
+      "why": "Both sides edited the same row but different columns: both edits kept, no question.",
+      "local": ["UPDATE classifier_object SET name='Ann' WHERE id=100"],
+      "drive": ["UPDATE classifier_object SET note='from the drive' WHERE id=100"],
+      "expect": { "ok": true, "queries": [{ "sql": "SELECT name, note FROM classifier_object", "rows": [{ "name": "Ann", "note": "from the drive" }] }] }
+    },
+    {
+      "name": "same-column-asks",
+      "why": "Both sides set the same column to different values: a conflict, and nothing is decided for the user.",
+      "local": ["UPDATE classifier_object SET name='Local' WHERE id=100"],
+      "drive": ["UPDATE classifier_object SET name='Drive' WHERE id=100"],
+      "expect": { "code": "needs_choice", "conflicts": ["classifier_object:100:name"] }
+    },
+    {
+      "name": "same-column-chosen",
+      "why": "The same conflict, answered: the chosen side's value.",
+      "local": ["UPDATE classifier_object SET name='Local' WHERE id=100"],
+      "drive": ["UPDATE classifier_object SET name='Drive' WHERE id=100"],
+      "choices": { "classifier_object:100:name": "local" },
+      "expect": { "ok": true, "queries": [{ "sql": "SELECT name FROM classifier_object", "rows": [{ "name": "Local" }] }] }
+    },
+    {
+      "name": "same-value-both",
+      "why": "Both sides made the same change: not a conflict.",
+      "local": ["UPDATE classifier_object SET name='Same' WHERE id=100"],
+      "drive": ["UPDATE classifier_object SET name='Same' WHERE id=100"],
+      "expect": { "ok": true, "queries": [{ "sql": "SELECT name FROM classifier_object", "rows": [{ "name": "Same" }] }] }
+    },
+    {
+      "name": "edit-beats-delete",
+      "why": "Deleted on one side, edited on the other: kept, with the edit. A delete of something the other side left alone goes through.",
+      "seedExtra": [
+        "INSERT INTO classifier_object (id, module_ref, name) VALUES (101, 10, 'X')",
+        "INSERT INTO classifier_object (id, module_ref, name) VALUES (102, 10, 'Y')",
+        "INSERT INTO classifier_object (id, module_ref, name) VALUES (103, 10, 'Z')"
+      ],
+      "local": ["DELETE FROM classifier_object WHERE id=101", "UPDATE classifier_object SET note='local note' WHERE id=102", "DELETE FROM classifier_object WHERE id=103"],
+      "drive": ["UPDATE classifier_object SET note='drive note' WHERE id=101", "DELETE FROM classifier_object WHERE id=102"],
+      "expect": { "ok": true, "queries": [{ "sql": "SELECT name, note FROM classifier_object WHERE id<>100 ORDER BY name", "rows": [{ "name": "X", "note": "drive note" }, { "name": "Y", "note": "local note" }] }] }
+    },
+    {
+      "name": "new-ids-collide",
+      "why": "Both sides made a row with the same next id: the drive's keeps it, this machine's is renumbered, and an entity key pointing at it follows.",
+      "local": [
+        "INSERT INTO classifier_object (module_ref, name) VALUES (10, 'P')",
+        "INSERT INTO entity_relation (nexus_ref, from_key, to_key, label) VALUES (1, 'cobj_' || (SELECT id FROM classifier_object WHERE name='P'), 'cobj_100', 'P knows A')"
+      ],
+      "drive": ["INSERT INTO classifier_object (module_ref, name) VALUES (10, 'Q')"],
+      "expect": { "ok": true, "queries": [
+        { "sql": "SELECT name FROM classifier_object ORDER BY name", "rows": [{ "name": "A" }, { "name": "P" }, { "name": "Q" }] },
+        { "sql": "SELECT (SELECT id FROM classifier_object WHERE name='Q') = 101 AS drive_kept_id", "rows": [{ "drive_kept_id": 1 }] },
+        { "sql": "SELECT from_key = 'cobj_' || (SELECT id FROM classifier_object WHERE name='P') AS follows, to_key FROM entity_relation WHERE label='P knows A'", "rows": [{ "follows": 1, "to_key": "cobj_100" }] }
+      ] }
+    },
+    {
+      "name": "id-refs-follow",
+      "why": "Every idRefs shape follows a renumbered row: nexus_history.module_ref (id), module_ui pageHead: (prefixedKey), mapModule (id as text), clsRelInclude (jsonIdList), exhibit_node.props (jsonObjectIdLists).",
+      "seedExtra": ["INSERT INTO module (id, nexus_ref, name, kind) VALUES (20, 1, 'Board', 'exhibitor')"],
+      "local": [
+        "INSERT INTO module (nexus_ref, name, kind) VALUES (1, 'Local mod', 'classifier')",
+        "INSERT INTO classifier_object (module_ref, name) VALUES (10, 'Local obj')",
+        "INSERT INTO classifier_template (module_ref, description) VALUES (10, 'Local field')",
+        "INSERT INTO nexus_history (nexus_ref, seq, action, module_ref, module_name) VALUES (1, 1, 'create', (SELECT id FROM module WHERE name='Local mod'), 'Local mod')",
+        "INSERT INTO module_ui (module_ref, ui_key, ui_value) VALUES (10, 'pageHead:cobj_' || (SELECT id FROM classifier_object WHERE name='Local obj'), '{}')",
+        "INSERT INTO module_ui (module_ref, ui_key, ui_value) VALUES (10, 'mapModule', CAST((SELECT id FROM module WHERE name='Local mod') AS TEXT))",
+        "INSERT INTO module_ui (module_ref, ui_key, ui_value) VALUES (10, 'clsRelInclude', '[' || (SELECT id FROM module WHERE name='Local mod') || ']')",
+        "INSERT INTO exhibit_node (module_ref, props) VALUES (20, '{\"fields\":[' || (SELECT id FROM classifier_template WHERE description='Local field') || ']}')"
+      ],
+      "drive": [
+        "INSERT INTO module (nexus_ref, name, kind) VALUES (1, 'Drive mod', 'classifier')",
+        "INSERT INTO classifier_object (module_ref, name) VALUES (10, 'Drive obj')",
+        "INSERT INTO classifier_template (module_ref, description) VALUES (10, 'Drive field')"
+      ],
+      "expect": { "ok": true, "queries": [
+        { "sql": "SELECT module_ref = (SELECT id FROM module WHERE name='Local mod') AS ok FROM nexus_history WHERE module_name='Local mod'", "rows": [{ "ok": 1 }] },
+        { "sql": "SELECT COUNT(*) AS n FROM module_ui WHERE ui_key = 'pageHead:cobj_' || (SELECT id FROM classifier_object WHERE name='Local obj')", "rows": [{ "n": 1 }] },
+        { "sql": "SELECT ui_value = CAST((SELECT id FROM module WHERE name='Local mod') AS TEXT) AS ok FROM module_ui WHERE ui_key='mapModule'", "rows": [{ "ok": 1 }] },
+        { "sql": "SELECT ui_value = '[' || (SELECT id FROM module WHERE name='Local mod') || ']' AS ok FROM module_ui WHERE ui_key='clsRelInclude'", "rows": [{ "ok": 1 }] },
+        { "sql": "SELECT props = '{\"fields\":[' || (SELECT id FROM classifier_template WHERE description='Local field') || ']}' AS ok FROM exhibit_node", "rows": [{ "ok": 1 }] }
+      ] }
+    },
+    {
+      "name": "same-tag-both",
+      "why": "Both sides made the tag 'fire' (UNIQUE tag_name): one tag, and the join rows of both sides point at it.",
+      "seedExtra": ["INSERT INTO module (id, nexus_ref, name, kind) VALUES (11, 1, 'Places', 'classifier')"],
+      "local": ["INSERT INTO hashtag (tag_name) VALUES ('fire')", "INSERT INTO module_hashtag (module_ref, hashtag_id) VALUES (11, (SELECT id FROM hashtag WHERE tag_name='fire'))"],
+      "drive": ["INSERT INTO hashtag (tag_name) VALUES ('fire')", "INSERT INTO module_hashtag (module_ref, hashtag_id) VALUES (10, (SELECT id FROM hashtag WHERE tag_name='fire'))"],
+      "expect": { "ok": true, "queries": [
+        { "sql": "SELECT COUNT(*) AS n FROM hashtag", "rows": [{ "n": 1 }] },
+        { "sql": "SELECT m.name FROM module_hashtag mh JOIN module m ON m.id=mh.module_ref JOIN hashtag h ON h.id=mh.hashtag_id WHERE h.tag_name='fire' ORDER BY m.name", "rows": [{ "name": "Heroes" }, { "name": "Places" }] }
+      ] }
+    },
+    {
+      "name": "join-removed-here",
+      "why": "A join row removed on this machine is removed; one the drive added stays.",
+      "seedExtra": ["INSERT INTO hashtag (id, tag_name) VALUES (5, 'old')", "INSERT INTO module_hashtag (module_ref, hashtag_id) VALUES (10, 5)", "INSERT INTO hashtag (id, tag_name) VALUES (6, 'other')"],
+      "local": ["DELETE FROM module_hashtag WHERE module_ref=10 AND hashtag_id=5"],
+      "drive": ["INSERT INTO module_hashtag (module_ref, hashtag_id) VALUES (10, 6)"],
+      "expect": { "ok": true, "queries": [{ "sql": "SELECT hashtag_id FROM module_hashtag ORDER BY hashtag_id", "rows": [{ "hashtag_id": 6 }] }] }
+    },
+    {
+      "name": "parent-comes-back",
+      "why": "The drive deleted a module this machine added to: the module comes back, with both sides' content, and no row is left pointing nowhere.",
+      "local": ["INSERT INTO classifier_object (module_ref, name) VALUES (10, 'New here')"],
+      "drive": ["DELETE FROM module WHERE id=10"],
+      "expect": { "ok": true, "queries": [
+        { "sql": "SELECT name FROM module", "rows": [{ "name": "Heroes" }] },
+        { "sql": "SELECT COUNT(*) AS n FROM classifier_object WHERE name='New here'", "rows": [{ "n": 1 }] }
+      ] }
+    }
+  ]
+}

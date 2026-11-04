@@ -350,5 +350,60 @@
       ]
     }
   ],
-  "keyColumnsComment": "json: the column holds a JSON list of {key, …}, not one key. only: a regex; only matching values are keys (rel_type is free text too; page_block.item_key \"*\" is the shared layout)."
+  "keyColumnsComment": "json: the column holds a JSON list of {key, …}, not one key. only: a regex; only matching values are keys (rel_type is free text too; page_block.item_key \"*\" is the shared layout).",
+  "idRefs": [
+    {
+      "table": "nexus_history",
+      "col": "module_ref",
+      "to": "module",
+      "shape": "id",
+      "why": "history outlives the module it names, so no FK (a delete must not erase the history row)"
+    },
+    {
+      "table": "module_ui",
+      "col": "ui_key",
+      "shape": "prefixedKey",
+      "prefix": "pageHead:",
+      "why": "an element page's title layout is keyed by the element (APP docs/REDESIGN.md C6)"
+    },
+    {
+      "table": "module_ui",
+      "col": "ui_value",
+      "to": "module",
+      "shape": "id",
+      "when": {
+        "col": "ui_key",
+        "in": [
+          "mapModule",
+          "timelineModule"
+        ]
+      },
+      "why": "a Chronicler/Locator remembers the module it draws on"
+    },
+    {
+      "table": "module_ui",
+      "col": "ui_value",
+      "to": "module",
+      "shape": "jsonIdList",
+      "when": {
+        "col": "ui_key",
+        "in": [
+          "clsRelInclude"
+        ]
+      },
+      "why": "the Classifier relation view's linked modules (Procress 28 part 3)"
+    },
+    {
+      "table": "exhibit_node",
+      "col": "props",
+      "to": "classifier_template",
+      "shape": "jsonObjectIdLists",
+      "keys": [
+        "fields",
+        "columns"
+      ],
+      "why": "a card/table node lists the fields it shows (APP docs/V5.md §7.9)"
+    }
+  ],
+  "idRefsComment": "Every place a row id is stored WITHOUT a foreign key or an entity key — what an importer or a merge must remap when it renumbers rows (EXE src/db/sync.js applySnapshotCore, src/db/portlink-merge.js; APK portlink_merge.dart). shape: id = the column holds the id itself (as INTEGER or TEXT); prefixedKey = '<prefix><entity key>'; jsonIdList = a JSON list of ids; jsonObjectIdLists = a JSON object whose `keys` are lists of ids. when: only rows where `col` is one of `in`. to: the table the ids are of. entity-kinds.mjs fails if an INTEGER *_ref/*_id column in vault.sql has neither a REFERENCES nor an entry here."
 }

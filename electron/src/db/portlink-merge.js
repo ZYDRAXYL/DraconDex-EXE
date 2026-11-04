@@ -25,11 +25,11 @@
 //                               it becomes that row
 // Join tables are sets: what L added is added, what L removed is removed.
 //
-// References a renumber must follow — the same set the snapshot importer
-// (sync.js applySnapshotCore) remaps: foreign keys (from the schema), entity
-// keys (KEY_COLUMNS, from SDB), nexus_history.module_ref, module_ui's
-// pageHead:<key> / mapModule / timelineModule / clsRelInclude, and an
-// Exhibitor node's props.fields / props.columns. A reference to a row that was
+// References a renumber must follow: foreign keys (from the schema), entity
+// keys (KEY_COLUMNS) and every other stored id (ID_REFS: nexus_history
+// .module_ref, module_ui's pageHead:<key> / mapModule / timelineModule /
+// clsRelInclude, an Exhibitor node's props.fields / props.columns) — the
+// last two from SDB's entity-kinds.json, shared with the APK merge. A reference to a row that was
 // NOT renumbered is left as it is — it names a row both sides share.
 //
 // Nothing is written until the whole merge is built; the drive file is put in
@@ -45,7 +45,7 @@ const { getVault } = require('./vaults');
 const { renumberNexusIn } = require('./nexus');
 const { rebase } = require('./portable');
 const { repointAssets } = require('./mirror');
-const { ENTITY_KINDS, KEY_COLUMNS } = require('./entity-kinds');
+const { ENTITY_KINDS, KEY_COLUMNS, ID_REFS } = require('./entity-kinds');
 const drives = require('./portlink-drives');
 const pl = require('./portlink');
 
@@ -109,17 +109,26 @@ function makeRemap(idMap) {
         else if (!kc.only || kc.only.test(String(r[c]))) r[c] = key(r[c]);
       }
     }
-    if (t === 'nexus_history' && r.module_ref != null) r.module_ref = id('module', r.module_ref);
-    if (t === 'module_ui') {
-      if (String(r.ui_key).startsWith('pageHead:')) r.ui_key = `pageHead:${key(String(r.ui_key).slice(9))}`;
-      if ((r.ui_key === 'mapModule' || r.ui_key === 'timelineModule') && r.ui_value != null) r.ui_value = String(id('module', r.ui_value));
-      if (r.ui_key === 'clsRelInclude' && r.ui_value) r.ui_value = json(r.ui_value, (l) => (Array.isArray(l) ? l.map((v) => id('module', v)) : l));
-    }
-    if (t === 'exhibit_node' && r.props) {
-      r.props = json(r.props, (p) => {
-        if (p && typeof p === 'object') for (const k of ['fields', 'columns']) if (Array.isArray(p[k])) p[k] = p[k].map((v) => id('classifier_template', v));
-        return p;
-      });
+    // The rest comes from SDB (idRefs) — the same list the APK merge reads.
+    // `when` is judged on the row as it came in, before any of these rewrites.
+    const orig = { ...r };
+    for (const ir of ID_REFS) {
+      if (ir.table !== t || r[ir.col] == null) continue;
+      if (ir.when && !ir.when.in.has(String(orig[ir.when.col]))) continue;
+      const v = r[ir.col];
+      if (ir.shape === 'id') {
+        const to = id(ir.to, v);
+        r[ir.col] = to !== v && typeof v === 'string' ? String(to) : to; // an id kept as TEXT stays TEXT
+      } else if (ir.shape === 'prefixedKey') {
+        if (String(v).startsWith(ir.prefix)) r[ir.col] = ir.prefix + key(String(v).slice(ir.prefix.length));
+      } else if (ir.shape === 'jsonIdList') {
+        r[ir.col] = json(v, (l) => (Array.isArray(l) ? l.map((x) => id(ir.to, x)) : l));
+      } else if (ir.shape === 'jsonObjectIdLists') {
+        r[ir.col] = json(v, (o) => {
+          if (o && typeof o === 'object') for (const k of ir.keys) if (Array.isArray(o[k])) o[k] = o[k].map((x) => id(ir.to, x));
+          return o;
+        });
+      }
     }
     return r;
   }

@@ -3,8 +3,8 @@
   "self": "EXE",
   "source": {
     "repo": "ZYDRAXYL/DraconDex-SDB",
-    "ref": "sdb-v2.1.4",
-    "version": "2.1.4"
+    "ref": "sdb-v2.1.5",
+    "version": "2.1.5"
   },
   "expect": {
     "vaultSchemaVersion": 7,
@@ -21,7 +21,7 @@
     },
     "src/schema/generated/entity-kinds.json": {
       "artifact": "generated/electron/entity-kinds.json",
-      "sha256": "29fdd294651e2f0e61c8971e335a49de81797075f74171cb8d1810756b4a4913"
+      "sha256": "e680369861c21c5363255879b411375f3ecb62c024247c60170c832ee791515a"
     },
     "src/design/generated/tokens.css": {
       "artifact": "generated/electron/tokens.css",
@@ -94,6 +94,10 @@
     "electron/test/fixtures/stress-v2.json": {
       "artifact": "fixtures/stress-v2.json",
       "sha256": "4e9d5190388af2d4c194cf29a6a3d28a9399af148d73cfa0d5c6d5624aa7d5d9"
+    },
+    "electron/test/fixtures/portlink-merge-v1.json": {
+      "artifact": "fixtures/portlink-merge-v1.json",
+      "sha256": "af771a25b2454fd16342e9bf0485bfb974bd80fd723767b53cd973c6e48aa637"
     },
     "electron/guide/en.json": {
       "artifact": "templates/guide/en.json",
