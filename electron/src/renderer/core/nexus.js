@@ -44,14 +44,16 @@ function dropRecentNexus(id) {
 // excluded. Falls back to S.nexuses' own (alphabetical) order to fill the
 // list when the MRU is short — a fresh install has no history at all.
 function recentNexuses(limit, excludeId = S.nexus?.id) {
-  const byId = new Map(S.nexuses.map(n => [n.id, n]));
+  // Procress 32 part 3b: a drive Nexus opened from the drive is listed under its drive
+  const list = typeof portlinkHidesLocal === 'function' ? S.nexuses.filter((n) => !portlinkHidesLocal(n.id)) : S.nexuses;
+  const byId = new Map(list.map(n => [n.id, n]));
   const out = [];
   for (const id of loadRecentNexusIds()) {
     if (id === excludeId || !byId.has(id)) continue;
     out.push(byId.get(id));
     if (out.length >= limit) return out;
   }
-  for (const n of S.nexuses) {
+  for (const n of list) {
     if (n.id === excludeId || out.some(v => v.id === n.id)) continue;
     out.push(n);
     if (out.length >= limit) break;

@@ -95,6 +95,26 @@ const APP_DDL_SQL = `
       UNIQUE (drive_uid, drive_nexus_id)
     );
 
+    -- Port Link part 3b: a drive Nexus opened straight from the drive. A
+    -- window needs a registry id whose vault carries that same id, and the
+    -- drive's id is the drive's — so the window works on a copy here,
+    -- renumbered to a registry row of its own (nexus_ref), and every save
+    -- goes back to the drive renumbered again. Removed (with its copy) once
+    -- the last write-back succeeds. state: 'open' · 'pending' (the drive was
+    -- not there to take it) · 'conflict' (the drive file changed elsewhere
+    -- meanwhile — the copy stays here, never written over it).
+    CREATE TABLE IF NOT EXISTS port_mount (
+      nexus_ref INTEGER PRIMARY KEY REFERENCES nexus_file(id) ON DELETE CASCADE,
+      drive_uid TEXT NOT NULL,
+      drive_nexus_id INTEGER NOT NULL,
+      work_path TEXT NOT NULL,
+      local_sig TEXT,
+      drive_sig TEXT,
+      state TEXT NOT NULL DEFAULT 'open' CHECK (state IN ('open','pending','conflict')),
+      create_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (drive_uid, drive_nexus_id)
+    );
+
     -- Plugins (v4.0.0 as "Github extensions", renamed v4.2.0 — see
     -- migratePluginV42 in schema/migrations.js): a downloaded plugin owns its
     -- own plg_<key>_<name> table(s), tracked here so src/db/plugin.js can

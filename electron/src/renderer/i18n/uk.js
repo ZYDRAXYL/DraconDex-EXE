@@ -8,6 +8,8 @@ i18nAdd('uk', {
   portDrives:'Переносні диски', portRescan:'Шукати диски знову', portRunning:'Портативний застосунок на цьому диску відкрито — спершу закрийте його', portEmpty:'На цьому диску немає Nexus', portOnDrive:'На {d}',
   // Procress 32 part 3: link status + clone
   portStatusSynced:'Синхронізовано з {d}', portStatusLocal:'Змінено на цьому комп’ютері після останньої синхронізації', portStatusDrive:'Змінено на диску після останньої синхронізації', portStatusBoth:'Змінено з обох боків — потрібне злиття', portStatusAway:'Пов’язаний диск не під’єднано', portCloneTo:'Клонувати на {d}', portCloneHere:'Клонувати на цей комп’ютер', portCloning:'Клонування…', portCloned:'Клоновано — пов’язано з {d}', portCloneFailed:'Не вдалося клонувати — нічого не змінено',
+  // Procress 32 part 3b: opened straight from a drive
+  portMountOpen:'Відкрито з {d} — кожне збереження повертається на диск', portMountPending:'Ще не записано на {d} — під’єднайте диск знову', portMountConflict:'{d} змінено деінде — цю копію залишено тут, без перезапису', portOpenFailed:'Не вдалося відкрити з диска',
   // Procress 29 part 9: updating by itself
   updateReadyTitle:'Оновлення готове', updateReadyHint:'Версію {v} завантажено й перевірено — встановіть зараз, і DraconDex відкриється сам.', updateInstallRestart:'Встановити й перезапустити', updateLater:'Пізніше', updateMode:'Коли виходить нова версія', updateModeAsk:'Завантажити й запитати', updateModeQuit:'Під час закриття', updateModeNotify:'Лише повідомити', updateModeOff:'Не перевіряти', updateModeQuitUnsigned:'Релізи ще не підписані, тож перед встановленням і далі буде запит.', updateDone:'Оновлено до {v}', updateWhatsNew:'Що нового',
   // Procress 29 part 5: icon sets, a custom icon, a colour of your own

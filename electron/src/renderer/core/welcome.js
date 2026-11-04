@@ -23,7 +23,7 @@ function renderWelcomeWindow() {
   document.body.classList.toggle('welcome-wizard-mode', S.welcomeStep != null);
   if (S.welcomeStep != null) return renderWelcomeWizard();
   const recent = recentNexuses(3, null);
-  const hasVaults = S.nexuses.length > 0;
+  const hasVaults = recentNexuses(1, null).length > 0; // Procress 32: not counting drive Nexuses opened from the drive
   // Left panel: every vault, most-recently-opened first so the list matches
   // the order of the cards on the right, then the rest in the alphabetical
   // order getNexuses() returns — until the user drags it into an order of

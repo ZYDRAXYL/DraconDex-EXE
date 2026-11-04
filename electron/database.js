@@ -57,8 +57,8 @@ const dbTransfer = require('./src/db/db-transfer');
 const mirror    = require('./src/db/mirror');
 const locate    = require('./src/db/locate');
 const portable  = require('./src/db/portable');
-// db.portlink.* — the drives plugged in (portlink-drives) + links and clone (portlink); no name is in both
-const portlink  = { ...require('./src/db/portlink-drives'), ...require('./src/db/portlink') };
+// db.portlink.* — the drives plugged in (portlink-drives) + links and clone (portlink) + opened-from-drive (portlink-mount); no name is in two
+const portlink  = { ...require('./src/db/portlink-drives'), ...require('./src/db/portlink'), ...require('./src/db/portlink-mount') };
 const assetPack = require('./src/db/asset-pack');
 const vaults    = require('./src/db/vaults');
 const transfer  = require('./src/db/transfer');

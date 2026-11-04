@@ -170,6 +170,9 @@ function createWindow(bootstrapNexusId, bootstrapTabKey) {
         }
         db.locate.forget(nexusId);
         db.unpinVault(nexusId);
+        // Procress 32 part 3b: opened straight from a drive — back onto the
+        // drive, and the working copy goes (kept if the drive is not there)
+        if (db.portlink.mountOf(nexusId)) { try { db.portlink.closeMount(nexusId); } catch (_) {} portlinkBroadcast(); }
         db.closeVault(nexusId);
       }
     });
@@ -464,9 +467,10 @@ app.whenReady().then(() => {
     db.portable.writeRunningLock();
     app.on('will-quit', () => db.portable.clearRunningLock());
   } else {
-    db.portlink.startWatching((list) => {
-      for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('portlink:drives', list);
-    });
+    // a drive back in may let a pending opened-from-drive Nexus be written
+    db.portlink.startWatching(() => { settlePortMounts(); portlinkBroadcast(); });
+    settlePortMounts(); // leftovers from a crash or an unplugged drive
+    setInterval(settlePortMounts, 60000).unref(); // part 3b: an open one is saved to the drive every minute
   }
   db.cleanupUpdateLeftovers(); // Procress 28 part 7: the Setup / old portable an update left behind
   db.scheduleUpdateChecks();   // Procress 29 part 9: check, download and get ready in the background
@@ -1793,6 +1797,17 @@ h('cloud:status',          (id)      => db.cloudStatus(id));
 // Procress 32 part 1: portable drives plugged in right now (read-only)
 h('portlink:listDrives', () => db.portlink.listDrives());
 h('portlink:rescan',     () => db.portlink.rescan());
+// Procress 32 part 3b: every window learns of drive / link / mount changes;
+// a mount still held by a window is only written back, never closed out.
+function portlinkBroadcast() {
+  const list = db.portlink.listDrives();
+  for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('portlink:drives', list);
+}
+function settlePortMounts() {
+  try { db.portlink.settleMounts((id) => [...windowNexus.values()].includes(id)); } catch (e) { console.error('[portlink] settle', e); }
+}
+h('portlink:mounts',         ()           => db.portlink.listMounts());
+h('portlink:openFromDrive',  (uid, dId)   => db.portlink.openFromDrive(String(uid), Number(dId)));
 // Procress 32 part 3: links + clone, both ways
 h('portlink:links',          ()           => db.portlink.listLinksWithStatus());
 h('portlink:cloneToDrive',   (id, uid)    => db.portlink.cloneToDrive(Number(id), String(uid)));

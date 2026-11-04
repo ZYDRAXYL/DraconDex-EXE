@@ -218,4 +218,4 @@ function linkStatus(l, driveList = drives.listDrives()) {
 }
 const listLinksWithStatus = () => { const ds = drives.listDrives(); return listLinks().map((l) => ({ ...l, status: linkStatus(l, ds) })); };
 
-module.exports = { sigOf, listLinks, listLinksWithStatus, linkOf, linkOfDrive, linkStatus, cloneToDrive, cloneFromDrive };
+module.exports = { openRaw, openDriveRegistry, driveOrThrow, baseDir, tmpOf, rmQuiet, sigOf, listLinks, listLinksWithStatus, linkOf, linkOfDrive, linkStatus, cloneToDrive, cloneFromDrive };
