@@ -190,6 +190,10 @@ function forget(nx) {
 // into the real Documents folder; DRACONDEX_LOCATE_ROOT overrides both.
 function defaultLocateRoot() {
   if (process.env.DRACONDEX_LOCATE_ROOT) return path.resolve(process.env.DRACONDEX_LOCATE_ROOT);
+  // Procress 32 part 0: a portable copy keeps its folders on its own drive,
+  // or the assets stay behind on whichever machine it last ran on.
+  const portable = require('./portable').portableRoot();
+  if (portable) return path.join(portable, 'DraconDex');
   const { app } = require('electron');
   if (process.env.DRACONDEX_DATA_DIR || !app?.isPackaged) return path.join(dataDir(), 'Documents', 'DraconDex');
   return path.join(app.getPath('documents'), 'DraconDex');

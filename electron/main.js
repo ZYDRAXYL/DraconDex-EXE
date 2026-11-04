@@ -30,6 +30,9 @@ const tempDataPath = isPackaged
       : path.join(app.getPath('appData'), 'DraconDex', 'novel-manager-data'))
   : (process.env.DRACONDEX_DATA_DIR || path.join(__dirname, '..', 'tmp-user-data'));
 if (!fs.existsSync(tempDataPath)) fs.mkdirSync(tempDataPath, { recursive: true });
+// Procress 32 part 0: only a packaged portable copy rebases its paths and
+// writes the drive marker (src/db/portable.js).
+require('./src/db/portable').setPortableRoot(isPackaged ? portableRoot : null);
 const electronUserDataPath = path.join(tempDataPath, 'electron-user-data');
 app.setPath('userData', electronUserDataPath);
 app.commandLine.appendSwitch('no-sandbox');
@@ -450,6 +453,10 @@ app.whenReady().then(() => {
     { role: 'viewMenu' },
   ]));
   registerDisplayImageProtocol();
+  // Procress 32 part 0: before anything reads a path — the drive may have
+  // another letter on this machine.
+  try { require('./src/db/portable').rebasePortable(); } catch (e) { console.error('[portable] rebase failed', e); }
+  require('./src/db/portable').writePortableMarker(app.getVersion());
   db.cleanupUpdateLeftovers(); // Procress 28 part 7: the Setup / old portable an update left behind
   db.scheduleUpdateChecks();   // Procress 29 part 9: check, download and get ready in the background
   // On-disk half of the v4.2.0 extensions -> plugins rename (the DB half is
