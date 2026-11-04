@@ -106,7 +106,7 @@ function updateStatusBar(patch = {}) {
   const st = S.settings.statusToggles || {};
   const parts = [];
   // Procress 24: the Nexus's name opens its settings (Settings → This Nexus).
-  if (S.nexus && st.vault !== false) parts.push(`<span class="sb-item sb-nexus" role="button" tabindex="0" onclick="openSettingWindow('workspace','thisnexus')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" title="${x(t('settingPageThisNexus'))}"><span class="nexus-vault-dot" style="${S.nexus.color_code ? `background:${x(S.nexus.color_code)}` : ''}"></span><span data-no-i18n>${x(S.nexus.name)}</span></span>`);
+  if (S.nexus && st.vault !== false) parts.push(`<span class="sb-item sb-nexus" role="button" tabindex="0" onclick="openSettingWindow('workspace','thisnexus')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" title="${x(t('settingPageThisNexus'))}"><span class="nexus-vault-dot" style="${S.nexus.color_code ? `background:${x(S.nexus.color_code)}` : ''}"></span><span data-no-i18n>${x(S.nexus.name)}</span>${typeof portlinkBadgeHtml === 'function' ? portlinkBadgeHtml(S.nexus.id) : ''}</span>`);
   // UX-LAYOUT §6.7 (E4): left = the whole vault, right = this page, the way
   // VS Code splits its status bar. The breadcrumb that used to sit here is
   // gone — the page's address row already shows it, one place is enough.

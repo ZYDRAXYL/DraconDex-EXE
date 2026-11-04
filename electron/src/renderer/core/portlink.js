@@ -14,12 +14,21 @@ S.portDrives = [];
 S.portLinks = [];
 let _portWatching = false;
 
-const portRedraw = () => { if (S.isWelcome && !S.isCreateNexus && S.welcomeStep == null) renderWelcomeWindow(); };
+// Welcome: the whole list. An app window: just the two places its own Nexus's
+// name is shown (title bar, status bar), so the mark follows the drive.
+const portRedraw = () => {
+  if (S.isWelcome) { if (!S.isCreateNexus && S.welcomeStep == null) renderWelcomeWindow(); return; }
+  if (!S.nexus) return;
+  updateTitlebarVault(); updateStatusBar();
+  // the left panel's Nexus header is drawn before the links arrive: a slot
+  // (hub/sections.js) filled here instead of redrawing the panel
+  document.querySelectorAll('[data-port-nexus]').forEach((el) => { el.innerHTML = portlinkBadgeHtml(Number(el.dataset.portNexus)); });
+};
 async function portlinkLoadLinks() {
   S.portLinks = (await api.portlink.links().catch(() => null)) || [];
 }
 
-// Once per Welcome window: the current list, then every change main sends.
+// Once per window (Welcome and app windows): the current list, then every change main sends.
 // Links are re-read with it — their status depends on what is plugged in.
 function portlinkWatch() {
   if (_portWatching || !api.portlink) return;

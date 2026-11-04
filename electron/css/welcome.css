@@ -56,6 +56,10 @@ body.welcome-mode #main-inner{display:flex;align-items:center;justify-content:ce
 /* a local Nexus linked to a drive: the link mark after its name, coloured by status (away = grey) */
 .port-mark{display:inline-flex;align-items:center;color:var(--t3-aa,var(--t2));margin-left:var(--sp-1)}
 .port-mark .icon{width:14px;height:14px}
+/* inside the Nest header's switch button, whose .icon rule (nav-hub.css) would grey it */
+.btn.nexus-switch .port-mark .icon{width:14px;height:14px;color:inherit}
+.port-slot{display:inline-flex}
+.port-slot:empty{display:none}
 .port-mark.port-synced{color:var(--success)}
 .port-mark.port-changed{color:var(--info)}
 .port-mark.port-both{color:var(--warn)}
