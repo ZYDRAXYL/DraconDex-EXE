@@ -149,7 +149,8 @@ function mergeInto(B, L, W, choices = {}) {
   const idMap = {}; // table → Map(L id → W id), only for rows that had to move
   const remap = makeRemap(idMap);
   const conflicts = [];
-  const written = []; // [table, W id] — every row W took from L, for the reference pass
+  // [table, W id, L row as read, the columns W took from it] — for the reference pass
+  const written = [];
   const sum = { fromLocal: 0, updated: 0, deleted: 0, kept: 0, merged: 0, conflicts: 0, driveAdded: 0, driveChanged: 0, driveRemoved: 0 };
   const mapFks = (t, r) => { for (const f of shapes[t].fks) if (r[f.from] != null) r[f.from] = remap.id(f.table, r[f.from]); return r; };
   const pick = (r, cols) => Object.fromEntries(cols.map((c) => [c, r[c]]));
@@ -193,7 +194,7 @@ function mergeInto(B, L, W, choices = {}) {
           const r = mapFks(t, { ...lr });
           let wid = id;
           if (dr) { wid = nextId++; r.id = wid; (idMap[t] ||= new Map()).set(id, wid); }
-          try { insert(t, r); written.push([t, wid]); sum.fromLocal++; }
+          try { insert(t, r); written.push([t, wid, lr, cols]); sum.fromLocal++; }
           catch (e) {
             // a UNIQUE says the drive already has it (both made the same tag …): that row it is
             const u = s.uniques.find((cs) => cs.every((c) => r[c] != null));
@@ -201,8 +202,9 @@ function mergeInto(B, L, W, choices = {}) {
             if (!ex) throw e;
             (idMap[t] ||= new Map()).set(id, Number(ex.id));
             if (String(lr.update_at || '') > String(ex.update_at || '')) {
-              update(t, ex.id, r, cols.filter((c) => !u.includes(c) && !same(r[c], ex[c])));
-              written.push([t, Number(ex.id)]);
+              const up = cols.filter((c) => !u.includes(c) && !same(r[c], ex[c]));
+              update(t, ex.id, r, up);
+              written.push([t, Number(ex.id), lr, up]);
             }
             sum.merged++;
           }
@@ -212,7 +214,7 @@ function mergeInto(B, L, W, choices = {}) {
         if (!lc.length) continue; // unchanged here: W (= the drive) already has the answer
         if (!dr) {
           // the drive deleted it, this machine edited it: kept
-          insert(t, mapFks(t, { ...lr })); written.push([t, id]); sum.kept++;
+          insert(t, mapFks(t, { ...lr })); written.push([t, id, lr, cols]); sum.kept++;
           continue;
         }
         const r = mapFks(t, { ...lr });
@@ -225,7 +227,7 @@ function mergeInto(B, L, W, choices = {}) {
           if (choice === 'local') take.push(c);
           else if (choice !== 'drive') conflicts.push({ key: k, table: t, id, col: c, base: br[c], local: lr[c], drive: dr[c], label: lr.name ?? lr.title ?? dr.name ?? dr.title ?? null, localAt: lr.update_at ?? null, driveAt: dr.update_at ?? null });
         }
-        update(t, id, r, take); if (take.length) { written.push([t, id]); sum.updated++; }
+        update(t, id, r, take); if (take.length) { written.push([t, id, lr, take]); sum.updated++; }
       }
       for (const [id, br] of b) {
         if (l.has(id) || !d.has(id)) continue;
@@ -236,15 +238,19 @@ function mergeInto(B, L, W, choices = {}) {
     }
     for (const [t, id] of deletes) { W.prepare(`DELETE FROM ${q(t)} WHERE id=?`).run(id); sum.deleted++; }
 
-    // References: every row W took from L, through every map (FKs again too —
-    // a parent in the same table may have been renumbered after its child went in).
+    // References: every column W took from L, mapped ONCE from L's own value
+    // through every map (FKs again too — a parent in the same table may have
+    // been renumbered after its child went in). Only those columns: the rest
+    // of the row is the drive's, its ids are already W's, and mapping them
+    // would move a drive-side reference onto a renumbered row of this machine.
     if (Object.keys(idMap).length) {
-      for (const [t, id] of written) {
+      for (const [t, id, lr, from] of written) {
         const r = W.prepare(`SELECT * FROM ${q(t)} WHERE id=?`).get(id);
         if (!r) continue;
-        const before = { ...r };
-        remap.refs(t, mapFks(t, r));
-        update(t, id, r, shapes[t].cols.filter((c) => c !== 'id' && !same(r[c], before[c])));
+        const m = remap.refs(t, mapFks(t, { ...lr }));
+        const up = from.filter((c) => !same(m[c], r[c]));
+        for (const c of up) r[c] = m[c];
+        update(t, id, r, up);
       }
     }
 

@@ -117,6 +117,23 @@ test('both sides made a new row with the same id: ours is renumbered, and what p
   assert.deepEqual(res.rel, { from_key: `cobj_${res.p}`, to_key: `cobj_${x.oid.A}` }, 'the relation follows P, not Q');
 });
 
+test('a renumber only moves what came from this machine: the drive\'s own reference stays put', () => {
+  // both make a module (same next id → ours is renumbered); the drive moves A
+  // into its module, this machine only renames A. A must stay in the drive's module.
+  const x = linked('Moved', ['A']);
+  onDrive(x.file, (db) => {
+    db.run(`INSERT INTO module (nexus_ref, name, kind) VALUES (?, 'Drive mod', 'classifier')`, [x.dId]);
+    db.run(`UPDATE classifier_object SET module_ref=(SELECT id FROM module WHERE name='Drive mod') WHERE id=?`, [x.oid.A]);
+  });
+  const h = x.here();
+  h.prepare(`INSERT INTO module (nexus_ref, name, kind) VALUES (?, 'Local mod', 'classifier')`).run(x.id);
+  h.prepare(`UPDATE classifier_object SET name='A2' WHERE id=?`).run(x.oid.A);
+  const r = mergeLink(x.id);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const rows = onDrive(x.file, (db) => db.all(`SELECT o.name, m.name AS mod FROM classifier_object o JOIN module m ON m.id=o.module_ref`));
+  assert.deepEqual(rows, [{ name: 'A2', mod: 'Drive mod' }]);
+});
+
 test('both made the same tag: one tag, both modules tagged', () => {
   const x = linked('Tags', []);
   onDrive(x.file, (db) => { const t = db.run(`INSERT INTO hashtag (tag_name) VALUES ('fire')`).lastInsertRowid; db.run(`INSERT INTO module_hashtag (module_ref, hashtag_id) VALUES (?,?)`, [x.mid, t]); });
