@@ -3,8 +3,8 @@
   "self": "EXE",
   "source": {
     "repo": "ZYDRAXYL/DraconDex-SDB",
-    "ref": "sdb-v2.1.5",
-    "version": "2.1.5"
+    "ref": "sdb-v2.1.6",
+    "version": "2.1.6"
   },
   "expect": {
     "vaultSchemaVersion": 7,
@@ -97,7 +97,7 @@
     },
     "electron/test/fixtures/portlink-merge-v1.json": {
       "artifact": "fixtures/portlink-merge-v1.json",
-      "sha256": "af771a25b2454fd16342e9bf0485bfb974bd80fd723767b53cd973c6e48aa637"
+      "sha256": "12db42fa33c4614d37a76af8a6c8f6e661162bbe464aa295cf1e00e5d477fb63"
     },
     "electron/guide/en.json": {
       "artifact": "templates/guide/en.json",

@@ -105,6 +105,16 @@
       ] }
     },
     {
+      "name": "drive-ref-stays",
+      "why": "Both sides made a module (same next id, so this machine's is renumbered); the drive moved A into its module while this machine only renamed A. A renumber moves only what this machine wrote: A stays in the drive's module.",
+      "local": ["INSERT INTO module (nexus_ref, name, kind) VALUES (1, 'Local mod', 'classifier')", "UPDATE classifier_object SET name='A2' WHERE id=100"],
+      "drive": ["INSERT INTO module (nexus_ref, name, kind) VALUES (1, 'Drive mod', 'classifier')", "UPDATE classifier_object SET module_ref=(SELECT id FROM module WHERE name='Drive mod') WHERE id=100"],
+      "expect": { "ok": true, "queries": [
+        { "sql": "SELECT o.name, m.name AS mod FROM classifier_object o JOIN module m ON m.id=o.module_ref", "rows": [{ "name": "A2", "mod": "Drive mod" }] },
+        { "sql": "SELECT name FROM module ORDER BY name", "rows": [{ "name": "Drive mod" }, { "name": "Heroes" }, { "name": "Local mod" }] }
+      ] }
+    },
+    {
       "name": "same-tag-both",
       "why": "Both sides made the tag 'fire' (UNIQUE tag_name): one tag, and the join rows of both sides point at it.",
       "seedExtra": ["INSERT INTO module (id, nexus_ref, name, kind) VALUES (11, 1, 'Places', 'classifier')"],
