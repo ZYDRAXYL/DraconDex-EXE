@@ -91,7 +91,11 @@ function buildNestRow(m, depth, parentId) {
     ? `<span class="kind kind-icon"${kindTip} data-no-i18n>${I[KIND_ICON[m.kind]] || I.layer}</span>`
     : sigMode === 'handle' && m.handle
       ? `<span class="kind kind-handle"${kindTip} data-no-i18n>@${x(m.handle)}</span>`
-      : `<span class="kind">${x(kindLabel(m.kind))}</span>`;
+      : sigMode === 'handle'
+        // no handle: the kind name, swapped for its icon by fitNestKindBadges
+        // when the name beside it would be cut off
+        ? `<span class="kind kind-fallback"${kindTip}><span class="kind-label">${x(kindLabel(m.kind))}</span><span class="kind-ico" data-no-i18n>${I[KIND_ICON[m.kind]] || I.layer}</span></span>`
+        : `<span class="kind">${x(kindLabel(m.kind))}</span>`;
   // a content module's element count, when its elements are hidden or folded
   const countBadge = isContentKind && itemCount && (collapsed || !nestShowItems) ? `<span class="nest-count" data-no-i18n>${itemCount}</span>` : '';
   // The drag is on the whole row, not just a dedicated grip icon (Plan
@@ -111,6 +115,23 @@ function buildNestRow(m, depth, parentId) {
     ${countBadge}${kindBadge}
     <button class="btn btn-g btn-i nest-row-more" tabindex="-1" onclick="event.stopPropagation();openModuleContextMenu(event,${m.id})" title="${t('moreActions')}" aria-label="${t('moreActions')}">${I.options}</button>
   </div>${childrenWrap}`;
+}
+
+// Handle mode, module with no handle: its kind name shows as a word, unless
+// that word pushes the module's own name into an ellipsis — then the kind
+// icon takes the slot instead. Runs after each Nest render and on panel resize.
+// Batched (all writes, then all reads, then all writes) so N rows cost one layout.
+let _nestKindRo = null;
+function fitNestKindBadges() {
+  const panel = q('#left-panel-inner');
+  if (panel && !_nestKindRo && typeof ResizeObserver === 'function') {
+    _nestKindRo = new ResizeObserver(() => requestAnimationFrame(fitNestKindBadges));
+    _nestKindRo.observe(panel);
+  }
+  const badges = [...document.querySelectorAll('#nest-tree-body .kind-fallback')];
+  badges.forEach((b) => b.classList.remove('kind-icon'));
+  const cut = badges.map((b) => { const n = b.parentElement.querySelector('.name'); return !!n && n.scrollWidth > n.clientWidth; });
+  badges.forEach((b, i) => { if (cut[i]) b.classList.add('kind-icon'); });
 }
 
 // Procress 17 P2: at most NEST_ITEM_CAP element rows per module, then one

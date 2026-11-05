@@ -91,6 +91,8 @@ function mountLeftPanel() {
     fillLeftTrash();
   } else if (dest === 'tools' && S.leftTool === 'problems' && typeof loadProblemsPanel === 'function') {
     loadProblemsPanel();
+  } else if (dest === 'nest') {
+    fitNestKindBadges();
   }
 }
 

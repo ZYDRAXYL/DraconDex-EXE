@@ -185,7 +185,7 @@ let _nestFilterSay = null;
 function setNestFilter(v) {
   S.nestFilter = String(v || '');
   const body = q('#nest-tree-body');
-  if (body) body.innerHTML = nestTreeBodyHtml();
+  if (body) { body.innerHTML = nestTreeBodyHtml(); fitNestKindBadges(); }
   // Procress 18 part 5: a screen reader hears how many matched, once typing pauses
   clearTimeout(_nestFilterSay);
   if (!S.nestFilter.trim() || !body) return;

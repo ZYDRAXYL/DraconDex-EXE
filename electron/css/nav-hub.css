@@ -178,6 +178,8 @@
 .li .kind-handle{color:var(--accentH);border-color:var(--accent);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .li .kind-icon{display:inline-flex;align-items:center;justify-content:center;padding:2px}
 .li .kind-icon .icon{width:10px;height:10px;stroke-width:2.2}
+.li .kind-fallback .kind-ico,.li .kind-fallback.kind-icon .kind-label{display:none}
+.li .kind-fallback.kind-icon .kind-ico{display:inline-flex}
 .li .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .li.indent1{padding-left:22px}
 .li.indent2{padding-left:34px}
