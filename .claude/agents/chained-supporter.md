@@ -19,7 +19,7 @@ job, and doing it here would surprise the caller.
 ## What you are given
 
 The repo you are running in, and nothing else. Everything you need about the
-other nine is in `chain/chain.json`. Start with:
+other ten is in `chain/chain.json`. Start with:
 
 ```bash
 node tools/chain-lib.mjs        # this repo's resolved place in the chain

@@ -24,9 +24,9 @@ node tools/chain-propagate.mjs --dry-run      # show the PRs it would open
 
 | carries | from → to | What propagation actually does |
 |---|---|---|
-| `claude-tooling` | APP → all nine | `node tools/mirror-claude.mjs`, commit the changed mirror |
+| `claude-tooling` | APP → all ten | `node tools/mirror-claude.mjs`, commit the changed mirror |
 | `generated-schema` | SDB → EXE, APK | rewrite the vendored artifacts, bump `sdb.lock.json` |
-| `app-source` | EXE, APK → PWA | bump the commit pin in `app-source.json`, let PWA rebuild |
+| `app-source` | EXE, APK → PWA; EXE → RUT | bump the commit pin in `app-source.json`, let PWA rebuild |
 | `release-mirror` | EXE, APK → WEB | already handled by `.github/scripts/mirror-release.sh` — do not duplicate it |
 | `package-targets` | EXE, APK → PKG | update `minAppVersion` in the affected package manifests |
 | `plugin-contract` | EXE → PGI, EXT | the template's own `node tools/plugin-contract.mjs --vendor --from <EXE>` re-copies `plugin-manifest.js` and rewrites `plugin-contract.lock.json`; read its `review` lines — a changed `preload-plugin.js` means `app.js` and the extension-* skills need a look |
@@ -87,7 +87,7 @@ working in `electron/src/renderer/**` can never conflict with the bot.
 ## Auth
 
 Cross-repo writes need `CHAIN_TOKEN`, a PAT with `contents: write` and
-`pull_requests: write` on all ten repos — a workflow's own `GITHUB_TOKEN` is
+`pull_requests: write` on all eleven repos — a workflow's own `GITHUB_TOKEN` is
 scoped to its own repo and cannot do it. This repo already learned that lesson
 building the release mirror; `.github/scripts/mirror-release.sh` is the
 reference for how it must fail when the secret is absent:
