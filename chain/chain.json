@@ -126,6 +126,19 @@
       ],
       "releases": null,
       "versionSource": "dracondex-plugin.json#version"
+    },
+    "RUT": {
+      "repo": "DraconDex-RUT",
+      "role": "app",
+      "private": false,
+      "owns": [
+        "src-tauri/",
+        "sidecar/",
+        "assets/",
+        "test/"
+      ],
+      "releases": null,
+      "versionSource": "package.json#version"
     }
   },
   "chains": {
@@ -179,6 +192,15 @@
         "PGI",
         "EXT"
       ]
+    ],
+    "rut": [
+      "APP",
+      [
+        "SDB",
+        "TRX"
+      ],
+      "EXE",
+      "RUT"
     ]
   },
   "edges": [
@@ -225,6 +247,11 @@
     {
       "from": "APP",
       "to": "EXT",
+      "carries": "claude-tooling"
+    },
+    {
+      "from": "APP",
+      "to": "RUT",
       "carries": "claude-tooling"
     },
     {
@@ -280,6 +307,11 @@
     {
       "from": "PWA",
       "to": "WEB",
+      "carries": "app-source"
+    },
+    {
+      "from": "EXE",
+      "to": "RUT",
       "carries": "app-source"
     },
     {

@@ -1,6 +1,6 @@
 ---
 name: multi-repository-architecture
-description: The contract for DraconDex's 10-repository architecture — which of APP/SDB/TRX/EXE/APK/PWA/PKG/WEB/PGI/EXT owns a given file, which direction changes flow, and where a new piece of work belongs. Read this BEFORE creating a file, moving code between repos, or answering "where does this live" — guessing produces a change in the wrong repo that the chain then propagates everywhere. Use when starting work in any DraconDex repo, when a change touches more than one repo, when adding a repo or an edge to the chain, or when asked "อยู่ repo ไหน", "ควรแก้ที่ไหน", "โครงสร้าง repo", "multi-repo", "which repo owns this".
+description: The contract for DraconDex's 11-repository architecture — which of APP/SDB/TRX/EXE/APK/PWA/PKG/WEB/PGI/EXT/RUT owns a given file, which direction changes flow, and where a new piece of work belongs. Read this BEFORE creating a file, moving code between repos, or answering "where does this live" — guessing produces a change in the wrong repo that the chain then propagates everywhere. Use when starting work in any DraconDex repo, when a change touches more than one repo, when adding a repo or an edge to the chain, or when asked "อยู่ repo ไหน", "ควรแก้ที่ไหน", "โครงสร้าง repo", "multi-repo", "which repo owns this".
 ---
 
 <!-- mirrored-from-app: do not edit here -->
@@ -18,7 +18,7 @@ view for the repo you are standing in with:
 node tools/chain-lib.mjs
 ```
 
-## The ten repos
+## The eleven repos
 
 | Repo | Role | Owns | Releases |
 |---|---|---|---|
@@ -32,13 +32,15 @@ node tools/chain-lib.mjs
 | **WEB** | site | the website, its Docs pages, and the public release mirror | mirror |
 | **PGI** | template | `DraconDex-PGI-Template` — the minimal plugin starter (one window, one table) | — |
 | **EXT** | template | `DraconDex-EXT-Template` — the full extension template (window + side panel, kv persistence) | — |
+| **RUT** | app | `src-tauri/`, `sidecar/` — the Tauri shell; runs EXE's `electron/` renderer + main process under a Node sidecar | — |
 
-## The three chains
+## The four chains
 
 ```
 EXE   APP > SDB, TRX > EXE > PKG, WEB, PWA > PGI, EXT
 APK   APP > SDB, TRX > APK > PKG, WEB, PWA > PGI, EXT
 PWA   APP > SDB, TRX > EXE, APK > PWA > WEB > PGI, EXT
+RUT   APP > SDB, TRX > EXE > RUT
 ```
 
 PGI and EXT close every chain: the plugin templates are the last thing a
@@ -145,6 +147,6 @@ which is every install of the app.
 
 ## Related skills
 
-- `chained-supporter` — run before work: what changed in the other nine repos
+- `chained-supporter` — run before work: what changed in the other ten repos
 - `chained-updated` — run after work: push the change downstream
 - `merge-release` — after a merge: is a release due, and cut it
