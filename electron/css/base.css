@@ -49,8 +49,9 @@ select option{background:var(--surface);color:var(--t1)}
 /* Text boxes grow with what is typed (Setting → Text size, on by default).
    Zero specificity so a component's own min/max-height still wins; the Markdown
    editor's overlay textarea is sized by its backdrop and is left alone. With
-   the setting off every textarea goes back to its rows, user-resizable. */
-:where(textarea:not(.mded-text)){field-sizing:content;min-height:2lh;max-height:24lh}
+   the setting off every textarea goes back to its rows, user-resizable. No
+   max-height: a grown box never gets a scrollbar of its own, the page scrolls. */
+:where(textarea:not(.mded-text)){field-sizing:content;min-height:2lh}
 body[data-ta-fixed] textarea:not(.mded-text){field-sizing:fixed;max-height:none;resize:vertical}
 
 /* Process 6 part 1: same "no ad-hoc class needed" reasoning as <select>

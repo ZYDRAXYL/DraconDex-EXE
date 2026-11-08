@@ -166,9 +166,12 @@ function mountAuthorRichEditor(el, ch) {
         ${AUTHOR_STATUSES.map((s) => `<option value="${s}"${ch.status === s ? ' selected' : ''}>${t(AUTHOR_STATUS_KEY[s])}</option>`).join('')}
       </select>
       </div>
+      <div class="au-meta-synwrap${authorSynFolded() ? ' folded' : ''}">
+      <button type="button" class="btn btn-g btn-i au-syn-fold" aria-expanded="${!authorSynFolded()}" title="${x(t('auSynFold'))}" aria-label="${x(t('auSynFold'))}" onclick="toggleAuthorSynFold(this)">${I.chevronDown}</button>
       <textarea class="au-meta-syn" rows="1" placeholder="${x(t('auSynopsis'))}" aria-label="${x(t('auSynopsis'))}"
         oninput="clearTimeout(this._t);this._t=setTimeout(()=>saveAuthorChapterMeta(${ch.id},{synopsis:this.value}),600)"
         onchange="clearTimeout(this._t);saveAuthorChapterMeta(${ch.id},{synopsis:this.value})">${x(ch.synopsis || '')}</textarea>
+      </div>
     </div>
     <div class="au-rich-toolbar" data-no-i18n>
       ${AUTHOR_FMT_ACTIONS.map(([label, cmd]) => `<button type="button" class="btn btn-s btn-sm" data-cmd="${cmd}">${label}</button>`).join('')}
@@ -220,6 +223,17 @@ function mountAuthorRichEditor(el, ch) {
     _authorSaveTimer = setTimeout(doSave, 800);
   };
   body.addEventListener('input', scheduleSave);
+}
+
+// Synopsis folded to one line — a per-machine view preference, not vault data.
+function authorSynFolded() {
+  try { return localStorage.getItem('ddx.auSynFolded') === '1'; } catch { return false; }
+}
+function toggleAuthorSynFold(btn) {
+  const wrap = btn.closest('.au-meta-synwrap');
+  const folded = wrap.classList.toggle('folded');
+  btn.setAttribute('aria-expanded', String(!folded));
+  try { localStorage.setItem('ddx.auSynFolded', folded ? '1' : '0'); } catch { /* private window */ }
 }
 
 function authorTitleKey(ev, inp, id, field = 'name') {
