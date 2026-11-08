@@ -219,8 +219,13 @@
 .au-meta-pov{display:flex;align-items:center;gap:4px}
 .mded-title.au-title.au-no{flex:0 0 auto;width:4.5ch;text-align:right;margin-left:0;font-variant-numeric:tabular-nums}
 .au-stats{flex:0 0 auto;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t3-aa,var(--t2));font-variant-numeric:tabular-nums;white-space:nowrap}
-.au-meta-syn{flex:1;min-height:0;field-sizing:content;max-height:9lh;resize:none;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);background:transparent;border:1px dashed var(--border)}
+.au-meta-syn{flex:1;min-height:0;field-sizing:content;resize:none;font-size:calc(var(--fs-meta) * var(--fsc,1));color:var(--t2);background:transparent;border:1px dashed var(--border)}
 .au-meta-syn:focus{color:var(--t1);border-style:solid}
+/* Synopsis folded to one line (the chevron beside it; remembered per machine). */
+.au-meta-synwrap{flex:1;min-width:0;display:flex;gap:4px;align-items:flex-start}
+.au-meta-synwrap.folded .au-meta-syn{field-sizing:fixed;height:calc(1lh + 14px);min-height:0;overflow:hidden;resize:none}
+.au-syn-fold svg{transition:transform var(--anim-dur,.15s)}
+.au-meta-synwrap.folded .au-syn-fold svg{transform:rotate(-90deg)}
 /* Author rich-text (contenteditable) editor (Plan part5 Author #1/#2) */
 .au-rich-toolbar{display:flex;gap:4px;padding:6px 0;flex-wrap:wrap;align-items:center}
 .au-rich-toolbar .btn{min-width:30px;font-size:calc(12px * var(--fsc,1));font-weight:700;color:var(--t2)}
@@ -231,6 +236,12 @@
 	background:var(--surface);overflow-y:auto;outline:none;
 }
 .au-rich-body:focus{border-color:var(--accent)}
+/* Text grows the editor downward and .author-main scrolls — no scrollbar inside
+   the box; the toolbar pins to the top while you scroll. "Text boxes grow" off
+   (body[data-ta-fixed]) keeps the old fixed-height box with its own scroll. */
+body:not([data-ta-fixed]) .au-editor{height:auto}
+body:not([data-ta-fixed]) .au-rich-body{flex:none;overflow-y:visible}
+.au-rich-toolbar{position:sticky;top:-14px;z-index:calc(var(--z-base) + 2);background:var(--bg)}
 /* Author Book view — paginated reading + .doc export (Plan part5 Author #5) */
 .au-book-export{width:100%;margin-top:10px;justify-content:center}
 .au-book-pages{display:flex;flex-direction:column;align-items:flex-start;gap:24px;background:var(--bg);overflow-x:auto}
