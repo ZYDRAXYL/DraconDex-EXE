@@ -96,6 +96,8 @@ function applyUiSettings(){
   else delete document.body.dataset.glass;
   if (S.settings.reduceTransparency) document.body.dataset.reduceTransparency = '';
   else delete document.body.dataset.reduceTransparency;
+  if (S.settings.textAutoGrow === false) document.body.dataset.taFixed = '';
+  else delete document.body.dataset.taFixed;
   if (typeof glassSync === 'function') glassSync();
   if (typeof systemGlassSync === 'function') systemGlassSync();
   document.documentElement.style.setProperty('--fsc', String((S.settings.fontScale || 100) / 100));
@@ -129,6 +131,7 @@ function setUiSetting(key, value){
   if(key === 'uiStyle' && !UI_STYLE_OPTIONS.includes(value)) return;
   if(key === 'reduceTransparency') value = value === true || value === 'true';
   if(key === 'systemGlass') value = value === true || value === 'true';
+  if(key === 'textAutoGrow') value = value === true || value === 'true';
   if(key === 'fontScale'){
     value = Math.min(130, Math.max(80, Math.round(Number(value) || 100)));
   }

@@ -414,7 +414,9 @@ function loadUiSettings(){
   // Procress 23: "Use system glass" — experimental, off until tested on real
   // hardware (core/glass.js systemGlassSync, src/db/system-glass.js).
   const systemGlass = saved.systemGlass === true;
-  return { reduceTransparency, systemGlass, theme: theme2, language, size, nameMode, fontScale, customThemes, nestShowItems, nestShowMajorIcon, nestShowMinorIcon, nestSignatureMode, quickExtras, navToggles, hubQuickToggles, statusToggles, workspaceStyle, uiStyle, navOrientation, navHorizontalDisplay, navVerticalAlwaysLabel, dragonView, animationsEnabled, animationSpeed };
+  // Text boxes grow with their content — on unless turned off (css/base.css).
+  const textAutoGrow = saved.textAutoGrow !== false;
+  return { textAutoGrow, reduceTransparency, systemGlass, theme: theme2, language, size, nameMode, fontScale, customThemes, nestShowItems, nestShowMajorIcon, nestShowMinorIcon, nestSignatureMode, quickExtras, navToggles, hubQuickToggles, statusToggles, workspaceStyle, uiStyle, navOrientation, navHorizontalDisplay, navVerticalAlwaysLabel, dragonView, animationsEnabled, animationSpeed };
 }
 
 // Kind display names (Phase 22): the Unique set (KIND_LABEL, locale-

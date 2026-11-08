@@ -421,6 +421,7 @@ function settingTextSizePageHtml(){
     <div class="settings-group">
       <div class="settings-label">${t('fontSize')}</div>
       ${fontSizeSliderHtml()}
+      ${settingTextAutoGrowHtml()}
     </div>
     <button class="btn ${S.settingAdvanced ? 'btn-p' : 'btn-s'}" onclick="toggleSettingAdvanced()">${t('advanced')}</button>
     ${S.settingAdvanced ? `<div class="prefs-advanced">
@@ -431,6 +432,11 @@ function settingTextSizePageHtml(){
       <div class="setting-wide-btns"><button class="btn btn-s" onclick="openShortcutsModal()">${I.info} ${t('shortcuts')}</button>
       <button class="btn btn-s" onclick="replayGuideTour()">${I.book} ${t('replayTour')}</button></div>
     </div>` : ''}`;
+}
+function settingTextAutoGrowHtml(){
+  const on = S.settings.textAutoGrow !== false;
+  return `<div class="togglerow setting-switch" role="switch" tabindex="0" aria-checked="${on}" onclick="setUiSetting('textAutoGrow', ${!on})"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><span class="tg${on ? ' on' : ''}"></span>${t('settingTextAutoGrow')}</div>`;
 }
 function toggleSettingAdvanced(){
   S.settingAdvanced = !S.settingAdvanced;
