@@ -179,7 +179,7 @@ async function init() {
     q('#window-frame')?.classList.add('popup-mode');
     await builderOpenPage(builderParseKey(popupTabKey));
     const meta = builderTabMeta(popupTabKey);
-    if (meta) document.title = meta.name;
+    if (meta) document.title = S.nexus ? `${meta.name} — ${S.nexus.name}` : meta.name;
   }
   // Pending work from the Create Nexus window (Procress 25, was the tour-only
   // handoff of v4.6.0): the vault was made there, but its template, App Docs
@@ -190,6 +190,7 @@ async function init() {
   bindNav();
   bindWikilinkClicks();
   bindGlobalShortcuts();
+  bindHideCursorWhileTyping();
   updateStatusBar();
   initDriveAutoBackup();   // fire-and-forget — must not block first paint
   initVersionCheck();      // fire-and-forget — must not block first paint

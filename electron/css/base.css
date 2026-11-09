@@ -16,6 +16,10 @@
    default appearance. Only the few `line-height:1` sites that can hold
    translated Thai are candidates, and only if they visibly clip. */
 
+/* core/typing-cursor.js: the pointer is hidden while typing, back on the next
+   real mouse move. !important: every component sets its own cursor. */
+html.typing-hide-cursor, html.typing-hide-cursor *{cursor:none !important}
+
 /* Plan part4 #1: bare <select> elements with no wrapper class (many v3
    module toolbars/modals) fell through to the OS-native white dropdown —
    this base rule themes every <select> in the app by default so none of

@@ -75,9 +75,15 @@ function toggleLayoutMenu(force){
 }
 
 function updateTitlebarVault(){
+  const title = S.nexus ? `${S.nexus.name} — DraconDex` : S.isCreateNexus ? t('cnTitle') : 'DraconDex';
+  // The OS window title too — it is what the taskbar's hover preview (and
+  // Alt+Tab) shows; it used to stay "Novel Manager" from index.html, so every
+  // open Nexus looked the same there. A popped-out tab keeps its own
+  // "<tab> — <Nexus>" title (boot.js).
+  if (!S.isPopup) document.title = title;
   const el = q('#titlebar-vault');
   if(!el) return;
-  el.textContent = S.nexus ? `${S.nexus.name} — DraconDex` : S.isCreateNexus ? t('cnTitle') : 'DraconDex';
+  el.textContent = title;
   // Procress 32: linked to a portable drive — the mark right after the name
   if (S.nexus && typeof portlinkBadgeHtml === 'function') el.insertAdjacentHTML('beforeend', portlinkBadgeHtml(S.nexus.id));
 }
