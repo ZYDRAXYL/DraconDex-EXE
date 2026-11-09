@@ -24,7 +24,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { Database: _RawDatabase } = require('node-sqlite3-wasm');
 const { getAppDB, getVaultDB, adaptDb, forceLegacyJournalMode, closeVault, dataDir } = require('./conn');
-const { getVault, insertVault, setVaultPath, setVaultLocateDir, removeVault, vaultDefaultPath, refreshVaultCounts } = require('./vaults');
+const { getVault, insertVault, setVaultPath, setVaultLocateDir, removeVault, vaultDefaultPath, refreshVaultCounts, countVaultItems } = require('./vaults');
 const { renumberNexusIn, freeName, localNameTaken } = require('./nexus');
 const { rebase } = require('./portable');
 const drives = require('./portlink-drives');
@@ -128,10 +128,14 @@ function cloneToDrive(nexusId, driveUid) {
       made.push(tmp);
       getVaultDB(nexusId).prepare(`VACUUM INTO ?`).run(tmp);
       const copy = openRaw(tmp);
+      let count;
       try {
         renumberNexusIn(copy, nexusId, dId, name);
         made.push(loc);
         copyFolder(v.locate_dir, loc, copy, dId, v.locate_dir, reg.toDrive(loc));
+        // the portable app's Welcome list shows this cached count until the
+        // Nexus is first opened there — without it the clone reads "0 projects"
+        count = countVaultItems(copy, dId);
       } finally { copy.close(); }
       // 2. the base: this machine's copy of exactly what is now on the drive
       fs.mkdirSync(baseDir(), { recursive: true });
@@ -141,7 +145,7 @@ function cloneToDrive(nexusId, driveUid) {
       // 3. into place, then the registry row points at it
       fs.renameSync(tmp, file);
       made[0] = file;
-      reg.db.prepare(`UPDATE nexus_file SET file_path=?, locate_dir=? WHERE id=?`).run(reg.toDrive(file), reg.toDrive(loc), dId);
+      reg.db.prepare(`UPDATE nexus_file SET file_path=?, locate_dir=?, project_count=?, counts_at=datetime('now') WHERE id=?`).run(reg.toDrive(file), reg.toDrive(loc), count, dId);
       out = { dId, file, base, name };
     })();
     committed = true;
@@ -227,4 +231,4 @@ function unlink(nexusId) {
   return { ok: true };
 }
 
-module.exports = { unlink, openRaw, openDriveRegistry, driveOrThrow, baseDir, tmpOf, rmQuiet, sigOf, listLinks, listLinksWithStatus, linkOf, linkOfDrive, linkStatus, cloneToDrive, cloneFromDrive };
+module.exports = { unlink, openRaw, openDriveRegistry, driveOrThrow, baseDir, tmpOf, rmQuiet, sigOf, freeDirIn, listLinks, listLinksWithStatus, linkOf, linkOfDrive, linkStatus, cloneToDrive, cloneFromDrive };

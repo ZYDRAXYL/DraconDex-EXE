@@ -42,6 +42,29 @@ const setMount = (nexusId, patch) => {
   getAppDB().prepare(`UPDATE port_mount SET ${cols.map((c) => `${c}=?`).join(', ')} WHERE nexus_ref=?`).run(...cols.map((c) => patch[c]), nexusId);
 };
 
+// A drive Nexus with no folder of its own (made by an older version, or
+// converted from a 1.x copy) gets one ON THE DRIVE — <root>\DraconDex\<name>,
+// where a clone puts it — and the drive's registry is told, so its pictures
+// travel with the drive. Without this, opening it here made the folder in this
+// machine's Documents and the write-back put that C:\ path in the drive's
+// registry. null when the registry can't be written (the folder then follows
+// the usual local fallback, as before).
+function driveFolderFor(drive, dn) {
+  let reg;
+  try {
+    reg = pl.openDriveRegistry(drive);
+    const loc = pl.freeDirIn(path.join(drive.root, 'DraconDex'), require('./mirror').dirNameOf(dn.name || 'Nexus'));
+    fs.mkdirSync(loc, { recursive: true });
+    reg.db.prepare(`UPDATE nexus_file SET locate_dir=? WHERE id=? AND locate_dir IS NULL`).run(reg.toDrive(loc), dn.id);
+    drives.rescan();
+    return loc;
+  } catch (_) {
+    return null;
+  } finally {
+    try { reg?.db.close(); } catch (_) {}
+  }
+}
+
 // → { ok, nexusId } — the existing mount when it is already open.
 function openFromDrive(driveUid, driveNexusId) {
   let drive;
@@ -72,7 +95,7 @@ function openFromDrive(driveUid, driveNexusId) {
     const base = path.join(pl.baseDir(), `${crypto.randomUUID()}.base.ddx`);
     fs.copyFileSync(dn.file_path, base);
     setVaultPath(id, work);
-    setVaultLocateDir(id, dn.locate_dir || null);
+    setVaultLocateDir(id, dn.locate_dir || driveFolderFor(drive, dn));
     getAppDB().prepare(`INSERT INTO port_mount (nexus_ref, drive_uid, drive_nexus_id, work_path, base_path, local_sig, drive_sig) VALUES (?,?,?,?,?,?,?)`)
       .run(id, driveUid, dn.id, work, base, pl.sigOf(work), pl.sigOf(dn.file_path));
     return { ok: true, nexusId: id };

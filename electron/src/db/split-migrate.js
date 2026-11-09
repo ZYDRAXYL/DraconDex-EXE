@@ -31,11 +31,14 @@ const { NEXUS_PROJECT_TABLES } = require('./vaults');
 // Tables app.ddx keeps. Everything else in sqlite_master is dropped from it —
 // derived by SUBTRACTION deliberately, so a table this file forgot about is
 // caught automatically instead of being silently duplicated into every vault.
-const APP_KEEP = new Set(['use_color', 'app_setting', 'nexus_file', 'plugin', 'plugin_table', 'plugin_dependency', 'sqlite_sequence']);
-// The mirror image: what a VAULT file must not keep. use_color and
-// sqlite_sequence are in APP_KEEP but belong in both, so they are named
-// separately rather than derived from it.
-const VAULT_DROP = new Set(['app_setting', 'nexus_file', 'plugin', 'plugin_table', 'plugin_dependency']);
+// Both lists come from APP_DDL_SQL (schema/tables.js): hand-written, they
+// missed port_link / port_mount / installed_package, which then stayed in
+// every vault (breaking renumbering) and were thrown out of app.ddx.
+const { APP_TABLES, APP_ONLY_TABLES } = require('./schema/tables');
+const APP_KEEP = new Set([...APP_TABLES, 'sqlite_sequence']);
+// The mirror image: what a VAULT file must not keep (use_color and
+// sqlite_sequence belong in both).
+const VAULT_DROP = APP_ONLY_TABLES;
 const PLUGIN_TABLE_RE = /^(plg|ext)_[a-z0-9_]{1,41}$/;
 
 // Relations declared without ON DELETE, i.e. NO ACTION: a single cross-project

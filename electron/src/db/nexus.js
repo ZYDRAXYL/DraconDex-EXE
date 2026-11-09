@@ -225,6 +225,12 @@ function relinkNexusFile(id, filePath) {
 // duplicate silently lost its presets, its history and its trash. Port Link's
 // clone renumbers across two registries through the same function.
 function renumberNexusIn(db, fromId, toId, name = null) {
+  // A vault made by an older split can still carry app tables (port_link,
+  // port_mount) whose foreign keys name nexus_file — not in a vault — so the
+  // UPDATE below failed with "no such table: main.nexus_file". Every copy
+  // path (clone, open from drive, write-back, merge, duplicate) comes through
+  // here, so this is where such a file gets cleaned.
+  require('./schema/tables').dropAppOnlyTables(db);
   const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`).all()
     .map((r) => r.name)
     .filter((t) => db.prepare(`PRAGMA table_info("${t.replace(/"/g, '""')}")`).all().some((c) => c.name === 'nexus_ref'));

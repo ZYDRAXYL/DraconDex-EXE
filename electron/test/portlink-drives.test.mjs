@@ -48,6 +48,19 @@ test('finds the marker one folder down; ignores a file that is not a DraconDex m
   assert.deepEqual(drives.findPortableRoots(driveB), []);
 });
 
+// A portable copy kept with other apps — E:\Saved-Software\DraconDex-5.8.2 —
+// is two folders down; it must be found too. Three down is not looked at.
+test('finds the marker two folders down, not three', () => {
+  const drive = join(dir, 'driveC');
+  const two = join(drive, 'Saved-Software', 'DraconDex-5.8.2');
+  const three = join(drive, 'a', 'b', 'c');
+  for (const d of [two, three]) mkdirSync(d, { recursive: true });
+  writeFileSync(join(two, MARKER), JSON.stringify({ format: 'dracondex-portable', version: 1, driveUid: 'uid-C', dataDir: 'novel-manager-data' }));
+  writeFileSync(join(three, MARKER), JSON.stringify({ format: 'dracondex-portable', version: 1, driveUid: 'uid-deep', dataDir: 'novel-manager-data' }));
+  assert.deepEqual(drives.findPortableRoots(drive).map((f) => f.root), [two]);
+  rmSync(drive, { recursive: true, force: true });
+});
+
 test('reads the drive\'s Nexus list with paths rebased onto where it is mounted now — and leaves the drive untouched', () => {
   const before = readFileSync(join(data, 'app.ddx'));
   const list = drives.rescan();

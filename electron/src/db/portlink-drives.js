@@ -42,14 +42,25 @@ const UID_RE = /^[A-Za-z0-9-]{1,64}$/;
 const isMarker = (m) => m && m.format === 'dracondex-portable' && typeof m.driveUid === 'string' && UID_RE.test(m.driveUid);
 const COLOR_RE = /^#[0-9a-f]{3,8}$/i;
 
-// Portable roots on one drive: the drive root itself, or a folder right under it.
+// Portable roots on one drive: the drive root itself, or up to two folders
+// down — E:\DDX, or E:\Saved-Software\DraconDex-5.8.2 kept with other apps.
+// Runs only when the set of plugged-in drives changes, so one readdir per
+// top-level folder is cheap. ponytail: deeper than two is not searched.
 function findPortableRoots(driveRoot) {
   const found = [];
   const at = (dir) => { const m = readJson(path.join(dir, MARKER)); if (isMarker(m)) found.push({ root: dir, marker: m }); };
+  const kids = (dir) => {
+    try {
+      return fs.readdirSync(dir, { withFileTypes: true })
+        .filter((e) => e.isDirectory() && !e.name.startsWith('$') && !e.name.startsWith('.')) // $RECYCLE.BIN, .Trashes…
+        .map((e) => path.join(dir, e.name));
+    } catch (_) { return []; }
+  };
   at(driveRoot);
-  let names = [];
-  try { names = fs.readdirSync(driveRoot, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name); } catch (_) {}
-  for (const n of names) if (!n.startsWith('$') && !n.startsWith('.')) at(path.join(driveRoot, n)); // $RECYCLE.BIN, .Trashes…
+  for (const one of kids(driveRoot)) {
+    at(one);
+    for (const two of kids(one)) at(two);
+  }
   return found;
 }
 

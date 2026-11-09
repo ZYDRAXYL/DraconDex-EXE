@@ -227,6 +227,23 @@ function forceLegacyJournalMode(filePath) {
   } catch (_) {}
 }
 
+// A -wal that holds no frames — just its 32-byte header, or nothing — is what
+// a clean shutdown of an older WAL-mode build leaves beside its file (a 1.x
+// portable copy on a flash drive, for one). It carries no data, but while it
+// is there the WAL header is never reset and node-sqlite3-wasm fails with
+// "unable to open database file". Drop it (and its -shm) so the header reset
+// above can run. A -wal with frames holds data not yet in the main file: it
+// is never touched. ponytail: such a file still fails to open; checkpoint it
+// with a native sqlite if that case ever turns up.
+const WAL_HEADER_BYTES = 32;
+function dropEmptyWal(filePath) {
+  try {
+    if (fs.statSync(`${filePath}-wal`).size > WAL_HEADER_BYTES) return;
+    fs.rmSync(`${filePath}-wal`, { force: true });
+    fs.rmSync(`${filePath}-shm`, { force: true });
+  } catch (_) {}
+}
+
 // The directory every database file lives in by default. app.getPath('userData')
 // was pointed at <dataDir>/electron-user-data by main.js, so the data dir is one
 // level up.
@@ -266,6 +283,7 @@ function openDdx(filePath, { kind, create = false, register = null } = {}) {
   // Must run for every file, including user-chosen locations on removable or
   // network drives: node-sqlite3-wasm HARD-ABORTS (does not throw) on a
   // WAL-declared header with no -wal sidecar.
+  dropEmptyWal(filePath);
   if (fs.existsSync(filePath) && !fs.existsSync(filePath + '-wal')) forceLegacyJournalMode(filePath);
   try { fs.rmSync(filePath + '.lock', { recursive: true, force: true }); } catch (_) {}
 
@@ -311,6 +329,7 @@ function openDdx(filePath, { kind, create = false, register = null } = {}) {
 // ─── The connection registry ────────────────────────────────────────────────
 const appPath = () => path.join(dataDir(), 'app.ddx');
 const legacyPath = () => path.join(dataDir(), 'novel-manager.ddx');
+const legacyDotDbPath = () => path.join(dataDir(), 'novel-manager.db'); // pre-v3.11 name
 
 let appDb = null;
 const vaultDbs = new Map(); // nexusId -> { conn, filePath, lastUsed }
@@ -325,7 +344,7 @@ function openLegacySingle() {
   const dir = dataDir();
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   const dbPath = legacyPath();
-  const legacyDotDb = path.join(dir, 'novel-manager.db');
+  const legacyDotDb = legacyDotDbPath();
   if (!fs.existsSync(dbPath) && fs.existsSync(legacyDotDb)) {
     // v.3.11+: the app's own working file is renamed .db -> .ddx once, in
     // place (same file, no data copy) — non-destructive, no-op on every
@@ -353,7 +372,9 @@ function getAppDB() {
   // "already migrated" marker, written last by the migration itself. A throw
   // here propagates: booting into a half-split state would be far worse than
   // failing to boot with the original file still intact.
-  if (!fs.existsSync(appPath()) && fs.existsSync(legacyPath())) {
+  // A pre-v3.11 folder only has novel-manager.db: openLegacySingle renames it
+  // to .ddx first, so it has to count here too, or that user starts empty.
+  if (!fs.existsSync(appPath()) && (fs.existsSync(legacyPath()) || fs.existsSync(legacyDotDbPath()))) {
     const legacy = openLegacySingle();
     try { legacy.close(); } catch (_) {}
     require('./split-migrate').splitLegacyDatabase(dir);
@@ -490,6 +511,6 @@ module.exports = {
   adaptDb, getDB, getAppDB, getVaultDB, openDdx, dataDir,
   createVaultDB, openVaultProbe, closeVault, closeAllVaults, pinVault, unpinVault, openVaultIds,
   VaultFileMissingError, NoVaultError,
-  perfLog, forceLegacyJournalMode,
+  perfLog, forceLegacyJournalMode, dropEmptyWal,
   hasTable, hasColumn, hasAnyMissingColumns, _now, _t,
 };

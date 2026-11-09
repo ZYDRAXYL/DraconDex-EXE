@@ -65,6 +65,10 @@ test('this machine → drive: renumbered into the drive\'s id space, assets copi
   assert.equal(r.driveNexusId, 2);
   const row = reg(`SELECT * FROM nexus_file WHERE id=2`)[0];
   assert.equal(row.name, 'Atlas');
+  // the portable app's Welcome list reads this cached count; 0 would make the clone look empty
+  assert.equal(row.project_count, vaults.countVaultItems(v(id), id), 'project count carried onto the drive');
+  assert.ok(row.project_count > 0);
+  assert.ok(row.counts_at, 'counts_at stamped');
   assert.ok(row.file_path.startsWith(OWN), `registry path in the drive's own root: ${row.file_path}`);
   const onDrive = join(data, 'vaults', 'Atlas-2.ddx');
   assert.ok(existsSync(onDrive));

@@ -60,6 +60,29 @@ function driveOnly(name, withAsset = false) {
   return r.driveNexusId;
 }
 
+// A Nexus the drive keeps no folder for (one an older version made, or one
+// converted from a 1.x copy): opening it here used to make its folder in THIS
+// machine's Documents, and the write-back then wrote that C:\ path into the
+// drive's registry. Its folder belongs on the drive, as a clone's does.
+test('open: a drive Nexus with no folder gets one on the drive, not on this machine', () => {
+  const dId = driveOnly('Folderless');
+  const reg = new Database(join(data, 'app.ddx'));
+  reg.run(`UPDATE nexus_file SET locate_dir=NULL WHERE id=?`, [dId]);
+  reg.close();
+  drives.rescan();
+  const r = mount.openFromDrive('drive-m', dId);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const loc = vaults.getVault(r.nexusId).locate_dir;
+  assert.ok(loc && loc.startsWith(join(root, 'DraconDex')), `folder on the drive: ${loc}`);
+  assert.ok(existsSync(loc));
+  const onDrive = inFile(join(data, 'app.ddx'), `SELECT locate_dir FROM nexus_file WHERE id=?`, dId)[0].locate_dir;
+  assert.ok(onDrive && onDrive.startsWith(OWN), `drive registry names it in the drive's own root: ${onDrive}`);
+  assert.equal(mount.closeMount(r.nexusId).ok, true);
+  const again = mount.openFromDrive('drive-m', dId);
+  assert.equal(vaults.getVault(again.nexusId).locate_dir, loc, 'opened again: the same folder, not a second one');
+  mount.closeMount(again.nexusId);
+});
+
 test('open: a working copy under this machine\'s own id, assets still on the drive', () => {
   const dId = driveOnly('Atlas', true);
   make('Local one'); // so the next local id is not the drive's by luck
